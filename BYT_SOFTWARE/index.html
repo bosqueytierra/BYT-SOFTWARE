@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BYT SOFTWARE - Bosque y Tierra</title>
+    <link rel="stylesheet" href="src/styles/global.css">
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <img src="src/assets/logo_byt.png" alt="Logo BYT" class="loading-logo">
+            <h2>BYT SOFTWARE</h2>
+            <p>Sistema de Gestión - Bosque y Tierra</p>
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        // Redirigir al login después de la pantalla de carga
+        setTimeout(() => {
+            window.location.href = 'src/pages/login/login.html';
+        }, 2000);
+    </script>
+</body>
+</html>

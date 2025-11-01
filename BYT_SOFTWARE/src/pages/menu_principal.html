@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Principal - BYT SOFTWARE</title>
+    <link rel="stylesheet" href="../styles/global.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="../assets/logo_byt.png" alt="Logo BYT" class="logo">
+                    <div>
+                        <h1 class="header-title">BYT SOFTWARE</h1>
+                        <p class="header-subtitle">Sistema de Gestión - Bosque y Tierra</p>
+                    </div>
+                </div>
+                <div>
+                    <span id="userInfo">Usuario: <strong id="currentUser"></strong></span>
+                    <button class="btn btn-secondary" onclick="logout()" style="margin-left: 15px;">
+                        Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="card">
+                <h2 class="card-title">Bienvenido al Sistema de Gestión</h2>
+                <p>Selecciona el módulo con el que deseas trabajar:</p>
+            </div>
+
+            <div class="menu-grid">
+                <a href="proyectos/index.html" class="menu-item">
+                    <div class="menu-icon">📋</div>
+                    <h3 class="menu-title">Proyectos</h3>
+                    <p class="menu-description">Gestión de proyectos de muebles personalizados</p>
+                </a>
+
+                <a href="cotizaciones/index.html" class="menu-item">
+                    <div class="menu-icon">💰</div>
+                    <h3 class="menu-title">Cotizaciones</h3>
+                    <p class="menu-description">Crear, consultar, editar e imprimir cotizaciones</p>
+                </a>
+
+                <a href="compras/index.html" class="menu-item">
+                    <div class="menu-icon">🛒</div>
+                    <h3 class="menu-title">Compras</h3>
+                    <p class="menu-description">Gestión de compras y proveedores</p>
+                </a>
+
+                <a href="finanzas/index.html" class="menu-item">
+                    <div class="menu-icon">📊</div>
+                    <h3 class="menu-title">Finanzas</h3>
+                    <p class="menu-description">Control financiero y reportes</p>
+                </a>
+
+                <a href="configuracion/index.html" class="menu-item">
+                    <div class="menu-icon">⚙️</div>
+                    <h3 class="menu-title">Configuración</h3>
+                    <p class="menu-description">Materiales, datos maestros y configuración del sistema</p>
+                </a>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Verificar si el usuario está logueado
+        if (!localStorage.getItem('byt_logged_in')) {
+            window.location.href = 'login/login.html';
+        }
+
+        // Mostrar información del usuario
+        document.getElementById('currentUser').textContent = localStorage.getItem('byt_user') || 'Admin';
+
+        function logout() {
+            localStorage.removeItem('byt_logged_in');
+            localStorage.removeItem('byt_user');
+            window.location.href = 'login/login.html';
+        }
+    </script>
+</body>
+</html>
