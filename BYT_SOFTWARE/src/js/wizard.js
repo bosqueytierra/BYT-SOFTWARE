@@ -767,4 +767,546 @@ class WizardCotizacion {
                 </div>
                 
                 <div style="margin: 20px 0; padding: 15px; background: #f0f8f0; border-left: 4px solid #4caf50; border-radius: 8px;">
-                    <h4 style="color: #2e7d32;
+                    <h4 style="color: #2e7d32; margin-bottom: 10px;">💵 Cálculo de Ganancia BYT</h4>
+                    <div style="font-family: monospace; background: white; padding: 10px; border-radius: 4px; font-size: 14px;">
+                        Ganancia = TOTAL DEL PROYECTO - Materiales - Traspasados<br>
+                        Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()}
+                    </div>
+                    <div style="text-align: center; font-size: 18px; color: #2e7d32; font-weight: bold; margin-top: 10px;">
+                        = $${totales.ganancia.toLocaleString()}
+                    </div>
+                </div>
+                
+                <!-- Fórmula BYT Completa -->
+                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-left: 4px solid var(--color-primary); border-radius: 8px;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 10px;">🧮 Fórmula BYT Completa Aplicada</h4>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">
+                            (Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)
+                        </div>
+                        <div style="font-family: monospace; font-size: 14px; line-height: 1.6;">
+                            <div>• Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}</div>
+                            <div>• Traspasados Base: $${totales.totalTraspasos.toLocaleString()}</div>
+                            <div>• Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}</div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold;">
+                                SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-size: 20px; color: #2e5e4e; font-weight: bold; background: #f0f8f0; padding: 10px; border-radius: 6px;">
+                        NETO = $${totales.subtotalSinIVA.toLocaleString()}
+                    </div>
+                </div>
+                
+                <div style="margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px;">
+                    <h4 style="color: var(--color-primary); text-align: center; margin-bottom: 20px;">💰 Totales Finales</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Subtotal (sin IVA)</span>
+                            <span class="summary-value">$${totales.subtotalSinIVA.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">IVA (19%)</span>
+                            <span class="summary-value">$${totales.iva.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label"><strong>TOTAL PROYECTO</strong></span>
+                            <span class="summary-value" style="font-size: 24px; color: #2e5e4e; font-weight: bold;">
+                                $${totales.totalConIVA.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: #fff; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    <h4 style="color: var(--color-primary);">👤 Información del Proyecto</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px;">
+                        <div><strong>Proyecto:</strong> ${this.datos.cliente.nombre_proyecto || 'Sin nombre'}</div>
+                        <div><strong>Cliente:</strong> ${this.datos.cliente.nombre || 'Sin especificar'}</div>
+                        <div><strong>Dirección:</strong> ${this.datos.cliente.direccion || 'No especificada'}</div>
+                        <div><strong>Encargado:</strong> ${this.datos.cliente.encargado || 'No especificado'}</div>
+                    </div>
+                    ${this.datos.cliente.notas ? `<div style="margin-top: 10px;"><strong>Notas:</strong> ${this.datos.cliente.notas}</div>` : ''}
+                </div>
+                
+                <div style="margin-top: 30px; text-align: center; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                    <button type="button" class="btn" onclick="wizard.guardarCotizacion()" 
+                            style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, var(--color-primary), #245847);">
+                        💾 Guardar Cotización Completa
+                    </button>
+                    <button type="button" class="btn" onclick="wizard.imprimirCotizacion()" 
+                            style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, #2196F3, #1976D2); color: white;">
+                        🖨️ Imprimir Cotización
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    actualizarBotonesNavegacion() {
+        const btnAnterior = document.getElementById('btn-anterior');
+        const btnSiguiente = document.getElementById('btn-siguiente');
+        
+        if (btnAnterior) {
+            btnAnterior.style.display = this.pasoActual > 1 ? 'inline-block' : 'none';
+        }
+        
+        if (btnSiguiente) {
+            btnSiguiente.textContent = this.pasoActual < this.totalPasos ? 'Siguiente →' : 'Finalizar';
+        }
+    }
+    
+    anteriorPaso() {
+        if (this.pasoActual > 1) {
+            this.pasoActual--;
+            this.actualizarProgreso();
+            this.mostrarPaso(this.pasoActual);
+        }
+    }
+    
+    siguientePaso() {
+        if (this.pasoActual < this.totalPasos) {
+            this.pasoActual++;
+            this.actualizarProgreso();
+            this.mostrarPaso(this.pasoActual);
+        } else {
+            this.guardarCotizacion();
+        }
+    }
+    
+    validarPasoActual() {
+        const pasoInfo = this.pasosPlan[this.pasoActual - 1];
+        
+        if (pasoInfo.tipo === 'cliente') {
+            const nombre = document.getElementById('nombre_proyecto');
+            const cliente = document.getElementById('nombre_cliente');
+            
+            if (!nombre?.value || !cliente?.value) {
+                alert('Por favor complete los campos obligatorios');
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    async guardarCotizacion() {
+        try {
+            const cotizacion = {
+                ...this.datos,
+                fecha: new Date().toISOString(),
+                numero: 'COT-' + Date.now()
+            };
+            
+            console.log('Guardando cotización:', cotizacion);
+            alert('¡Cotización guardada exitosamente!');
+            
+        } catch (error) {
+            console.error('Error al guardar cotización:', error);
+            alert('Error al guardar la cotización: ' + error.message);
+        }
+    }
+    
+    imprimirCotizacion() {
+        const totales = this.calcularTotalesBYT();
+        const fecha = new Date().toLocaleDateString('es-CO');
+        const numero = 'COT-' + Date.now();
+        
+        // Crear ventana de impresión
+        const ventanaImpresion = window.open('', '_blank');
+        
+        ventanaImpresion.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Cotización ${numero} - BYT SOFTWARE</title>
+                <style>
+                    ${this.obtenerEstilosImpresion()}
+                </style>
+            </head>
+            <body>
+                ${this.generarHTMLImpresion(totales, fecha, numero)}
+            </body>
+            </html>
+        `);
+        
+        ventanaImpresion.document.close();
+        
+        // Esperar a que cargue y luego imprimir
+        ventanaImpresion.onload = function() {
+            setTimeout(() => {
+                ventanaImpresion.print();
+            }, 500);
+        };
+    }
+    
+    obtenerEstilosImpresion() {
+        return `
+            @media print {
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
+                .no-print { display: none !important; }
+            }
+            
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 210mm;
+                margin: 0 auto;
+                padding: 15mm;
+                background: white;
+                color: #333;
+            }
+            
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 3px solid #2e5e4e;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .logo-section {
+                flex: 1;
+            }
+            
+            .company-name {
+                font-size: 28px;
+                font-weight: bold;
+                color: #2e5e4e;
+                margin-bottom: 5px;
+            }
+            
+            .company-subtitle {
+                font-size: 14px;
+                color: #666;
+            }
+            
+            .cotizacion-info {
+                text-align: right;
+                flex: 1;
+            }
+            
+            .cotizacion-numero {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2e5e4e;
+            }
+            
+            .section {
+                margin: 25px 0;
+            }
+            
+            .section-title {
+                background: #2e5e4e;
+                color: white;
+                padding: 8px 15px;
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 15px;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .info-item {
+                padding: 8px;
+                border-left: 4px solid #2e5e4e;
+                background: #f8f9fa;
+            }
+            
+            .info-label {
+                font-weight: bold;
+                color: #2e5e4e;
+            }
+            
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+            }
+            
+            .table th,
+            .table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            
+            .table th {
+                background: #f5f5f5;
+                font-weight: bold;
+                color: #333;
+            }
+            
+            .table tr:nth-child(even) {
+                background: #fafafa;
+            }
+            
+            .formula-box {
+                background: #e3f2fd;
+                border: 2px solid #2196F3;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 20px 0;
+            }
+            
+            .formula-title {
+                font-size: 16px;
+                font-weight: bold;
+                color: #1976D2;
+                margin-bottom: 10px;
+            }
+            
+            .formula-content {
+                font-family: monospace;
+                background: white;
+                padding: 10px;
+                border-radius: 4px;
+                font-size: 11px;
+                line-height: 1.6;
+            }
+            
+            .totales-finales {
+                background: #f0f8f0;
+                border: 3px solid #4CAF50;
+                padding: 20px;
+                border-radius: 8px;
+                margin: 25px 0;
+            }
+            
+            .total-final {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2e7d32;
+                text-align: center;
+                margin-top: 15px;
+            }
+            
+            .footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 2px solid #2e5e4e;
+                text-align: center;
+                color: #666;
+                font-size: 11px;
+            }
+        `;
+    }
+    
+    generarHTMLImpresion(totales, fecha, numero) {
+        // Generar detalle de materiales
+        let detalleMateriales = '';
+        Object.keys(this.datos.materiales).forEach(categoria => {
+            const materiales = this.datos.materiales[categoria];
+            let hayMateriales = false;
+            let filasCategoria = '';
+            
+            Object.values(materiales).forEach(material => {
+                if ((material.cantidad || 0) > 0) {
+                    hayMateriales = true;
+                    const subtotal = (material.cantidad || 0) * (material.precio || 0);
+                    filasCategoria += `
+                        <tr>
+                            <td>${material.nombre}</td>
+                            <td>${material.descripcion || '-'}</td>
+                            <td>${material.lugar || '-'}</td>
+                            <td style="text-align: center;">${material.cantidad}</td>
+                            <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
+                            <td style="text-align: right; font-weight: bold;">$${subtotal.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (hayMateriales) {
+                detalleMateriales += `
+                    <tr style="background: #e8f5e8;">
+                        <td colspan="6" style="font-weight: bold; color: #2e7d32; text-transform: uppercase;">
+                            ${categoria.replace(/_/g, ' ')}
+                        </td>
+                    </tr>
+                    ${filasCategoria}
+                `;
+            }
+        });
+        
+        // Generar detalle de traspasados
+        let detalleTraspasados = '';
+        Object.keys(this.datos.valoresTraspasados).forEach(categoriaKey => {
+            const categoria = this.datos.valoresTraspasados[categoriaKey];
+            let hayTraspasados = false;
+            let filasCategoria = '';
+            
+            Object.values(categoria.materiales).forEach(material => {
+                if ((material.cantidad || 0) > 0) {
+                    hayTraspasados = true;
+                    const subtotal = (material.cantidad || 0) * (material.precio || 0);
+                    filasCategoria += `
+                        <tr>
+                            <td>${material.nombre}</td>
+                            <td>${material.descripcion || '-'}</td>
+                            <td style="text-align: center;">${material.cantidad}</td>
+                            <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
+                            <td style="text-align: right;">$${subtotal.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (hayTraspasados) {
+                detalleTraspasados += `
+                    <tr style="background: #fff3e0;">
+                        <td colspan="5" style="font-weight: bold; color: #f57c00; text-transform: uppercase;">
+                            ${categoriaKey} (Factor: ${categoria.factor})
+                        </td>
+                    </tr>
+                    ${filasCategoria}
+                `;
+            }
+        });
+        
+        return `
+            <div class="header">
+                <div class="logo-section">
+                    <div class="company-name">BYT SOFTWARE</div>
+                    <div class="company-subtitle">Sistemas de Cotización y Gestión</div>
+                </div>
+                <div class="cotizacion-info">
+                    <div class="cotizacion-numero">${numero}</div>
+                    <div>Fecha: ${fecha}</div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">📋 INFORMACIÓN DEL PROYECTO</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Proyecto:</div>
+                        <div>${this.datos.cliente.nombre_proyecto || 'Sin especificar'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Cliente:</div>
+                        <div>${this.datos.cliente.nombre || 'Sin especificar'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Dirección:</div>
+                        <div>${this.datos.cliente.direccion || 'No especificada'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Encargado:</div>
+                        <div>${this.datos.cliente.encargado || 'No especificado'}</div>
+                    </div>
+                </div>
+                ${this.datos.cliente.notas ? `
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <div class="info-label">Notas:</div>
+                    <div>${this.datos.cliente.notas}</div>
+                </div>` : ''}
+            </div>
+            
+            ${detalleMateriales ? `
+            <div class="section">
+                <div class="section-title">🔧 DETALLE DE MATERIALES</div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Descripción</th>
+                            <th>Lugar de Compra</th>
+                            <th>Cant.</th>
+                            <th>Valor Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${detalleMateriales}
+                    </tbody>
+                </table>
+            </div>` : ''}
+            
+            ${detalleTraspasados ? `
+            <div class="section">
+                <div class="section-title">🏢 SERVICIOS TRASPASADOS</div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Descripción</th>
+                            <th>Cant.</th>
+                            <th>Valor Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${detalleTraspasados}
+                    </tbody>
+                </table>
+            </div>` : ''}
+            
+            <div class="formula-box">
+                <div class="formula-title">🧮 FÓRMULA BYT APLICADA</div>
+                <div class="formula-content">
+                    <strong>(Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)</strong><br><br>
+                    • Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}<br>
+                    • Traspasados Base: $${totales.totalTraspasos.toLocaleString()}<br>
+                    • Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}<br><br>
+                    <strong>SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()} = $${totales.subtotalSinIVA.toLocaleString()}</strong><br><br>
+                    <strong>Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()} = $${totales.ganancia.toLocaleString()}</strong>
+                </div>
+            </div>
+            
+            <div class="totales-finales">
+                <table class="table" style="margin: 0;">
+                    <tr>
+                        <td><strong>Subtotal (sin IVA):</strong></td>
+                        <td style="text-align: right; font-weight: bold;">$${totales.subtotalSinIVA.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IVA (19%):</strong></td>
+                        <td style="text-align: right; font-weight: bold;">$${totales.iva.toLocaleString()}</td>
+                    </tr>
+                    <tr style="background: #e8f5e8; font-size: 16px;">
+                        <td><strong>TOTAL FINAL:</strong></td>
+                        <td style="text-align: right; font-weight: bold; color: #2e7d32;">$${totales.totalConIVA.toLocaleString()}</td>
+                    </tr>
+                    <tr style="background: #f0f8f0;">
+                        <td><strong>Ganancia del Proyecto:</strong></td>
+                        <td style="text-align: right; font-weight: bold; color: #4caf50;">$${totales.ganancia.toLocaleString()}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="footer">
+                <p>Cotización generada por BYT SOFTWARE - Sistema de Gestión de Proyectos</p>
+                <p>Esta cotización es válida por 30 días a partir de la fecha de emisión</p>
+            </div>
+        `;
+    }
+}
+
+// Instancia global del wizard
+let wizard;
+
+// Funciones globales para navegación
+function anteriorPaso() {
+    wizard?.anteriorPaso();
+}
+
+function siguientePaso() {
+    wizard?.siguientePaso();
+}
+
+// Inicializar cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.querySelector('.wizard-container')) {
+        wizard = new WizardCotizacion();
+    }
+});
+
