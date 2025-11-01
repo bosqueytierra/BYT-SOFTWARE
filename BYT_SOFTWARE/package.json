@@ -3,17 +3,16 @@
   "version": "1.0.0",
   "description": "BYT Software - Sistema de Cotizaciones",
   "main": "server.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "build": "echo 'No build process required'",
-    "vercel-build": "echo 'Static files ready for deployment'"
+    "dev": "node server.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   },
   "keywords": ["byt", "cotizaciones", "muebles", "furniture", "quotes"],
   "author": "Bosque y Tierra",
