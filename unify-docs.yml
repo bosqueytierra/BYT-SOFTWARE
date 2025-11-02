@@ -1,0 +1,77 @@
+name: Unify BYT_SOFTWARE to docs
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  unify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare timestamp
+        run: |
+          TS=$(date +%s)
+          echo "TS=$TS" >> $GITHUB_ENV
+
+      - name: Backup existing docs (temporary)
+        run: |
+          if [ -d docs ]; then mv docs /tmp/docs_backup_$TS; fi
+
+      - name: Copy BYT_SOFTWARE contents into docs
+        run: |
+          mkdir -p docs
+          cp -a BYT_SOFTWARE/. docs/
+          # Remove files that should not be exposed via Pages
+          rm -f docs/server.js || true
+          rm -f docs/package.json || true
+          rm -f docs/.env || true
+          rm -f docs/.env.local || true
+          # Ensure styles and assets folders exist and copy originals if present
+          mkdir -p docs/src/styles
+          mkdir -p docs/src/assets
+          if [ -f BYT_SOFTWARE/src/styles/global.css ]; then cp BYT_SOFTWARE/src/styles/global.css docs/src/styles/global.css; fi
+          if [ -d BYT_SOFTWARE/src/assets ]; then cp -a BYT_SOFTWARE/src/assets/. docs/src/assets/; fi
+
+      - name: Normalize asset filenames to lowercase
+        run: |
+          if [ -d docs/src/assets ]; then
+            find docs/src/assets -depth | while read -r f; do
+              dir=$(dirname -- "$f")
+              base=$(basename -- "$f")
+              lower=$(echo "$base" | tr '[:upper:]' '[:lower:]')
+              if [ "$base" != "$lower" ]; then
+                if [ ! -e "$dir/$lower" ]; then
+                  mv "$f" "$dir/$lower"
+                else
+                  echo "Aviso: $dir/$lower ya existe, no sobrescribiendo $f"
+                fi
+              fi
+            done
+          fi
+
+      - name: Search for references to 'BYT_SOFTWARE/' inside docs (for manual review)
+        run: |
+          grep -R --line-number --binary-files=without-match "BYT_SOFTWARE/" docs || true
+
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git commit -m "Unify site: copy BYT_SOFTWARE contents into docs for GitHub Pages" || echo "No changes to commit"
+          git push origin HEAD:main
+
+      - name: Cleanup temporary backup
+        if: always()
+        run: |
+          if [ -d /tmp/docs_backup_$TS ]; then rm -rf /tmp/docs_backup_$TS; fi
+
+      - name: Output site URL
+        run: |
+          echo "Site should be available at: https://bosqueytierra.github.io/BYT-SOFTWARE/ after Pages finishes deployment."
