@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Materiales - BYT SOFTWARE</title>
+    <link rel="stylesheet" href="../../styles/global.css">
+    <style>
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            color: #2e5e4e;
+            border-bottom-color: #2e5e4e;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .search-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .search-row {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+        }
+        
+        .form-group {
+            flex: 1;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .simple-table-container {
+            overflow-x: auto;
+        }
+
+        .simple-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .simple-table th,
+        .simple-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .simple-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #2e5e4e;
+        }
+
+        .simple-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8em;
+            margin: 0 2px;
+        }
+
+        .material-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            background: white;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .material-item:last-child {
+            border-bottom: none;
+        }
+
+        .material-info {
+            flex: 1;
+        }
+
+        .material-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .material-category {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-icon {
+            padding: 6px 10px;
+            font-size: 0.8em;
+            min-width: auto;
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="btn-back">← Atrás</a>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo">
+                    <div>
+                        <h1 class="header-title">Gestión de Materiales</h1>
+                        <p class="header-subtitle">Administración de Materiales y Categorías</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Pestañas -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('categorias')">📁 Categorías</button>
+                <button class="tab" onclick="showTab('consultar')">🔍 Consultar Materiales</button>
+                <button class="tab" onclick="showTab('crear')">➕ Crear Material</button>
+                <button class="tab" onclick="showTab('editar')">✏️ Editar Material</button>
+                <button class="tab" onclick="showTab('eliminar')">🗑️ Eliminar Material</button>
+            </div>
+
+            <!-- Pestaña Categorías -->
+            <div id="categorias" class="tab-content active">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 class="card-title">📁 Gestión de Categorías</h2>
+                        <button class="btn" onclick="mostrarModalAgregarCategoria()">+ Nueva Categoría</button>
+                    </div>
+                    
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+                        <p><strong>ℹ️ Información:</strong> En esta sección solo se gestionan las <strong>categorías</strong>. Los materiales se gestionan en las pestañas correspondientes.</p>
+                    </div>
+                    
+                    <div class="simple-table-container">
+                        <table class="simple-table">
+                            <thead>
+                                <tr>
+                                    <th>Categoría</th>
+                                    <th>Cantidad de Materiales</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaCategorias">
+                                <!-- Las categorías se cargarán dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pestaña Consultar -->
+            <div id="consultar" class="tab-content">
+                <div class="search-section">
+                    <h3>🔍 Consultar Materiales (Solo Lectura)</h3>
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>Seleccionar Categoría *</label>
+                            <select id="consultarCategoria" onchange="consultarMaterialesPorCategoria()">
+                                <option value="">-- Seleccione una categoría --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Buscar por nombre (opcional)</label>
+                            <input type="text" id="filtroNombre" placeholder="Filtrar por nombre..." onkeyup="filtrarMateriales()">
+                        </div>
+                        <button class="btn" onclick="consultarTodosMateriales()">📋 Ver Todos</button>
+                        <button class="btn-secondary" onclick="limpiarConsulta()">🗑️ Limpiar</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div style="background: #e7f3ff; border: 1px solid #b3d7ff; border-radius: 5px; padding: 10px; margin-bottom: 15px;">
+                        <p style="margin: 0; color: #0066cc; font-size: 0.9em;"><strong>📖 Solo Consulta:</strong> Esta pestaña es únicamente para ver materiales. Para modificar use las pestañas correspondientes.</p>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h3 id="tituloResultados">Materiales por Categoría</h3>
+                        <div id="contadorMateriales" style="color: #666; font-size: 0.9em;"></div>
+                    </div>
+                    <div id="consultarResultados">
+                        <p style="color: #666; text-align: center; padding: 40px;">
+                            📦 Seleccione una categoría para ver sus materiales<br>
+                            <small>o haga clic en "Ver Todos" para consultar todos los materiales</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pestaña Crear -->
+            <div id="crear" class="tab-content">
+                <div class="card">
+                    <h2 class="card-title">➕ Crear Nuevo Material</h2>
+                    
+                    <form id="crearMaterialForm">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>Categoría *</label>
+                                <select id="crearCategoria" required>
+                                    <option value="">Seleccione una categoría</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Nombre del Material *</label>
+                                <input type="text" id="crearNombre" required placeholder="Ej: Melamina Blanca 18mm">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Unidad de Medida</label>
+                                <select id="crearUnidad">
+                                    <option value="pza">Pieza</option>
+                                    <option value="mt">Metro</option>
+                                    <option value="m2">Metro cuadrado</option>
+                                    <option value="kg">Kilogramo</option>
+                                    <option value="lt">Litro</option>
+                                    <option value="caja">Caja</option>
+                                    <option value="par">Par</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Descripción</label>
+                                <textarea id="crearDescripcion" rows="3" placeholder="Descripción detallada del material..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 30px;">
+                            <button type="button" class="btn-secondary" onclick="limpiarFormularioCrear()">🗑️ Limpiar</button>
+                            <button type="submit" class="btn">✅ Crear Material</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Pestaña Editar -->
+            <div id="editar" class="tab-content">
+                <div class="search-section">
+                    <h3>✏️ Buscar Material a Editar</h3>
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <select id="editarBuscarCategoria" onchange="cargarMaterialesParaEditar()">
+                                <option value="">-- Seleccione una categoría --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Material</label>
+                            <select id="editarBuscarMaterial" onchange="cargarDatosMaterialEditar()">
+                                <option value="">-- Primero seleccione una categoría --</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="cargarDatosMaterialEditar()">📝 Cargar para Editar</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">✏️ Editar Material</h2>
+                    
+                    <form id="editarMaterialForm">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label>Categoría Original</label>
+                                <input type="text" id="editarCategoriaOriginal" readonly style="background: #f5f5f5;">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Nombre Original</label>
+                                <input type="text" id="editarNombreOriginal" readonly style="background: #f5f5f5;">
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Nuevo Nombre *</label>
+                                <input type="text" id="editarNuevoNombre" required placeholder="Nuevo nombre del material">
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 30px;">
+                            <button type="button" class="btn-secondary" onclick="limpiarFormularioEditar()">🗑️ Limpiar</button>
+                            <button type="submit" class="btn">✏️ Actualizar Material</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Pestaña Eliminar -->
+            <div id="eliminar" class="tab-content">
+                <div class="search-section">
+                    <h3>🗑️ Buscar Material a Eliminar</h3>
+                    <div class="search-row">
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <select id="eliminarBuscarCategoria" onchange="cargarMaterialesParaEliminar()">
+                                <option value="">-- Seleccione una categoría --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Material</label>
+                            <select id="eliminarBuscarMaterial">
+                                <option value="">-- Primero seleccione una categoría --</option>
+                            </select>
+                        </div>
+                        <button class="btn-danger" onclick="eliminarMaterialSeleccionado()">🗑️ Eliminar Material</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚠️ Zona de Eliminación</h3>
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 20px; margin: 15px 0;">
+                        <p><strong>⚠️ Advertencia:</strong> La eliminación de materiales es <strong>permanente</strong> y no se puede deshacer.</p>
+                        <p>Asegúrese de seleccionar el material correcto antes de proceder con la eliminación.</p>
+                    </div>
+                    
+                    <div id="materialAEliminar" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                        <h4>Material seleccionado para eliminar:</h4>
+                        <div id="datosMaterialEliminar"></div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <p style="color: #666;">Seleccione una categoría y material arriba para proceder</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../../js/categorias_reales.js"></script>
+    <script>
+        // Verificar autenticación
+        if (!localStorage.getItem('byt_logged_in')) {
+            window.location.href = '../login/login.html';
+        }
+
+        // Gestión de pestañas
+        function showTab(tabName) {
+            // Ocultar todas las pestañas
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Mostrar pestaña seleccionada
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            // Cargar contenido específico de la pestaña
+            if (tabName === 'categorias') {
+                loadCategories();
+            } else if (tabName === 'consultar') {
+                loadConsultarCategories();
+            } else if (tabName === 'crear') {
+                loadCrearCategories();
+            } else if (tabName === 'editar') {
+                loadEditarCategories();
+            } else if (tabName === 'eliminar') {
+                loadEliminarCategories();
+            }
+        }
+
+        // ===== PESTAÑA CATEGORÍAS =====
+        function loadCategories() {
+            const tbody = document.getElementById('tablaCategorias');
+            tbody.innerHTML = '';
+            
+            Object.keys(categoriasMateriales).forEach(categoria => {
+                const materiales = categoriasMateriales[categoria];
+                const cantidadMateriales = materiales.length;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${categoria}</strong></td>
+                    <td>${cantidadMateriales} material(es)</td>
+                    <td>
+                        <button class="btn-secondary btn-small" onclick="editarCategoria('${categoria}')" title="Editar categoría">✏️</button>
+                        <button class="btn-danger btn-small" onclick="eliminarCategoria('${categoria}')" title="Eliminar categoría">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function mostrarModalAgregarCategoria() {
+            const nombreCategoria = prompt('Ingrese el nombre de la nueva categoría:');
+            if (nombreCategoria && nombreCategoria.trim()) {
+                const nombre = nombreCategoria.trim();
+                if (categoriasMateriales[nombre]) {
+                    alert('Ya existe una categoría con ese nombre');
+                    return;
+                }
+                categoriasMateriales[nombre] = [];
+                loadCategories();
+                actualizarTodosLosSelects();
+                alert('✅ Categoría creada correctamente');
+            }
+        }
+
+        function editarCategoria(categoriaActual) {
+            const nuevoNombre = prompt(`Editar nombre de categoría:\nNombre actual: ${categoriaActual}`, categoriaActual);
+            if (nuevoNombre && nuevoNombre.trim() && nuevoNombre.trim() !== categoriaActual) {
+                const nombre = nuevoNombre.trim();
+                if (categoriasMateriales[nombre]) {
+                    alert('Ya existe una categoría con ese nombre');
+                    return;
+                }
+                // Mover materiales a la nueva categoría
+                categoriasMateriales[nombre] = categoriasMateriales[categoriaActual];
+                delete categoriasMateriales[categoriaActual];
+                loadCategories();
+                actualizarTodosLosSelects();
+                alert('✅ Categoría actualizada correctamente');
+            }
+        }
+
+        function eliminarCategoria(categoria) {
+            const cantidadMateriales = categoriasMateriales[categoria].length;
+            const mensaje = cantidadMateriales > 0 
+                ? `⚠️ ¿Está seguro de eliminar la categoría "${categoria}"?\n\nEsta categoría contiene ${cantidadMateriales} material(es) que también se eliminarán.\n\n❌ Esta acción NO se puede deshacer.`
+                : `¿Está seguro de eliminar la categoría "${categoria}"?`;
+                
+            if (confirm(mensaje)) {
+                delete categoriasMateriales[categoria];
+                loadCategories();
+                actualizarTodosLosSelects();
+                alert('✅ Categoría eliminada correctamente');
+            }
+        }
+
+        // ===== CARGAR CATEGORÍAS EN SELECTS =====
+        function loadConsultarCategories() {
+            const select = document.getElementById('consultarCategoria');
+            select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
+            
+            Object.keys(categoriasMateriales).forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria;
+                option.textContent = categoria;
+                select.appendChild(option);
+            });
+        }
+
+        function loadCrearCategories() {
+            const select = document.getElementById('crearCategoria');
+            select.innerHTML = '<option value="">Seleccione una categoría</option>';
+            
+            Object.keys(categoriasMateriales).forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria;
+                option.textContent = categoria;
+                select.appendChild(option);
+            });
+        }
+
+        function loadEditarCategories() {
+            const select = document.getElementById('editarBuscarCategoria');
+            select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
+            
+            Object.keys(categoriasMateriales).forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria;
+                option.textContent = categoria;
+                select.appendChild(option);
+            });
+        }
+
+        function loadEliminarCategories() {
+            const select = document.getElementById('eliminarBuscarCategoria');
+            select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
+            
+            Object.keys(categoriasMateriales).forEach(categoria => {
+                const option = document.createElement('option');
+                option.value = categoria;
+                option.textContent = categoria;
+                select.appendChild(option);
+            });
+        }
+
+        function actualizarTodosLosSelects() {
+            loadConsultarCategories();
+            loadCrearCategories();
+            loadEditarCategories();
+            loadEliminarCategories();
+        }
+
+        // ===== FUNCIONES DE CONSULTAR =====
+        function consultarMaterialesPorCategoria() {
+            const categoria = document.getElementById('consultarCategoria').value;
+            const resultsDiv = document.getElementById('consultarResultados');
+            const tituloDiv = document.getElementById('tituloResultados');
+            const contadorDiv = document.getElementById('contadorMateriales');
+            
+            if (!categoria) {
+                resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📦 Seleccione una categoría para ver sus materiales</p>';
+                tituloDiv.textContent = 'Materiales por Categoría';
+                contadorDiv.textContent = '';
+                return;
+            }
+            
+            const materiales = categoriasMateriales[categoria];
+            
+            tituloDiv.textContent = `Categoría: ${categoria}`;
+            contadorDiv.textContent = `${materiales.length} material(es)`;
+            
+            if (materiales.length === 0) {
+                resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📭 Esta categoría no tiene materiales</p>';
+                return;
+            }
+            
+            mostrarMateriales(materiales.map(material => ({
+                categoria: categoria,
+                material: material
+            })));
+        }
+        
+        function consultarTodosMateriales() {
+            const resultsDiv = document.getElementById('consultarResultados');
+            const tituloDiv = document.getElementById('tituloResultados');
+            const contadorDiv = document.getElementById('contadorMateriales');
+            
+            let todosMateriales = [];
+            
+            Object.keys(categoriasMateriales).forEach(categoria => {
+                categoriasMateriales[categoria].forEach(material => {
+                    todosMateriales.push({
+                        categoria: categoria,
+                        material: material
+                    });
+                });
+            });
+            
+            tituloDiv.textContent = 'Todos los Materiales';
+            contadorDiv.textContent = `${todosMateriales.length} material(es) total`;
+            
+            if (todosMateriales.length === 0) {
+                resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📭 No hay materiales en el sistema</p>';
+                return;
+            }
+            
+            // Ordenar por categoría y luego por nombre
+            todosMateriales.sort((a, b) => {
+                if (a.categoria !== b.categoria) {
+                    return a.categoria.localeCompare(b.categoria);
+                }
+                return a.material.localeCompare(b.material);
+            });
+            
+            mostrarMateriales(todosMateriales);
+        }
+        
+        function filtrarMateriales() {
+            const filtro = document.getElementById('filtroNombre').value.toLowerCase();
+            const categoria = document.getElementById('consultarCategoria').value;
+            
+            if (!categoria && !filtro) {
+                return;
+            }
+            
+            let materiales = [];
+            
+            if (categoria) {
+                // Filtrar dentro de la categoría seleccionada
+                categoriasMateriales[categoria].forEach(material => {
+                    if (material.toLowerCase().includes(filtro)) {
+                        materiales.push({
+                            categoria: categoria,
+                            material: material
+                        });
+                    }
+                });
+            } else {
+                // Filtrar en todas las categorías
+                Object.keys(categoriasMateriales).forEach(cat => {
+                    categoriasMateriales[cat].forEach(material => {
+                        if (material.toLowerCase().includes(filtro)) {
+                            materiales.push({
+                                categoria: cat,
+                                material: material
+                            });
+                        }
+                    });
+                });
+            }
+            
+            const tituloDiv = document.getElementById('tituloResultados');
+            const contadorDiv = document.getElementById('contadorMateriales');
+            
+            if (filtro) {
+                tituloDiv.textContent = `Búsqueda: "${filtro}"${categoria ? ` en ${categoria}` : ''}`;
+                contadorDiv.textContent = `${materiales.length} resultado(s)`;
+            } else if (categoria) {
+                consultarMaterialesPorCategoria();
+                return;
+            }
+            
+            if (materiales.length === 0) {
+                document.getElementById('consultarResultados').innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">🔍 No se encontraron materiales</p>';
+                return;
+            }
+            
+            mostrarMateriales(materiales);
+        }
+        
+        function mostrarMateriales(materiales) {
+            const resultsDiv = document.getElementById('consultarResultados');
+            
+            resultsDiv.innerHTML = materiales.map(item => `
+                <div class="material-item">
+                    <div class="material-info">
+                        <div class="material-name">${item.material}</div>
+                        <div class="material-category">Categoría: <strong>${item.categoria}</strong></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function limpiarConsulta() {
+            document.getElementById('consultarCategoria').value = '';
+            document.getElementById('filtroNombre').value = '';
+            document.getElementById('consultarResultados').innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📦 Seleccione una categoría para ver sus materiales<br><small>o haga clic en "Ver Todos" para consultar todos los materiales</small></p>';
+            document.getElementById('tituloResultados').textContent = 'Materiales por Categoría';
+            document.getElementById('contadorMateriales').textContent = '';
+        }
+
+        // ===== FUNCIONES DE CREAR =====
+        function limpiarFormularioCrear() {
+            document.getElementById('crearMaterialForm').reset();
+        }
+
+        // Manejar envío del formulario de CREAR
+        document.getElementById('crearMaterialForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const categoria = document.getElementById('crearCategoria').value;
+            const nombre = document.getElementById('crearNombre').value.trim();
+            
+            if (!categoria || !nombre) {
+                alert('Por favor complete todos los campos requeridos');
+                return;
+            }
+            
+            if (categoriasMateriales[categoria].includes(nombre)) {
+                if (!confirm(`Ya existe un material "${nombre}" en "${categoria}". ¿Desea continuar?`)) {
+                    return;
+                }
+            } else {
+                agregarMaterial(categoria, nombre);
+                alert('✅ Material creado correctamente');
+            }
+            
+            limpiarFormularioCrear();
+            
+            // Si estamos viendo la pestaña de categorías, recargarla
+            if (document.getElementById('categorias').classList.contains('active')) {
+                loadCategories();
+            }
+        });
+
+        // ===== FUNCIONES DE EDITAR =====
+        function cargarMaterialesParaEditar() {
+            const categoria = document.getElementById('editarBuscarCategoria').value;
+            const selectMaterial = document.getElementById('editarBuscarMaterial');
+            
+            selectMaterial.innerHTML = '<option value="">-- Seleccione un material --</option>';
+            
+            if (!categoria) {
+                selectMaterial.innerHTML = '<option value="">-- Primero seleccione una categoría --</option>';
+                return;
+            }
+            
+            const materiales = categoriasMateriales[categoria];
+            materiales.forEach(material => {
+                const option = document.createElement('option');
+                option.value = material;
+                option.textContent = material;
+                selectMaterial.appendChild(option);
+            });
+        }
+        
+        function cargarDatosMaterialEditar() {
+            const categoria = document.getElementById('editarBuscarCategoria').value;
+            const material = document.getElementById('editarBuscarMaterial').value;
+            
+            if (!categoria || !material) {
+                alert('Por favor seleccione una categoría y un material');
+                return;
+            }
+            
+            document.getElementById('editarCategoriaOriginal').value = categoria;
+            document.getElementById('editarNombreOriginal').value = material;
+            document.getElementById('editarNuevoNombre').value = material;
+        }
+        
+        function limpiarFormularioEditar() {
+            document.getElementById('editarMaterialForm').reset();
+            document.getElementById('editarBuscarCategoria').value = '';
+            document.getElementById('editarBuscarMaterial').innerHTML = '<option value="">-- Primero seleccione una categoría --</option>';
+        }
+
+        // Manejar envío del formulario de EDITAR
+        document.getElementById('editarMaterialForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const categoriaOriginal = document.getElementById('editarCategoriaOriginal').value;
+            const nombreOriginal = document.getElementById('editarNombreOriginal').value;
+            const nuevoNombre = document.getElementById('editarNuevoNombre').value.trim();
+            
+            if (!nuevoNombre) {
+                alert('Por favor complete el nuevo nombre');
+                return;
+            }
+            
+            // Si cambió el nombre, verificar que no exista
+            if (nuevoNombre !== nombreOriginal && categoriasMateriales[categoriaOriginal].includes(nuevoNombre)) {
+                alert(`Ya existe un material "${nuevoNombre}" en "${categoriaOriginal}"`);
+                return;
+            }
+            
+            editarMaterial(categoriaOriginal, nombreOriginal, nuevoNombre);
+            alert('✅ Material actualizado correctamente');
+            limpiarFormularioEditar();
+            
+            // Actualizar vistas
+            if (document.getElementById('categorias').classList.contains('active')) {
+                loadCategories();
+            }
+        });
+
+        // ===== FUNCIONES DE ELIMINAR =====
+        function cargarMaterialesParaEliminar() {
+            const categoria = document.getElementById('eliminarBuscarCategoria').value;
+            const selectMaterial = document.getElementById('eliminarBuscarMaterial');
+            
+            selectMaterial.innerHTML = '<option value="">-- Seleccione un material --</option>';
+            
+            if (!categoria) {
+                selectMaterial.innerHTML = '<option value="">-- Primero seleccione una categoría --</option>';
+                document.getElementById('materialAEliminar').style.display = 'none';
+                return;
+            }
+            
+            const materiales = categoriasMateriales[categoria];
+            materiales.forEach(material => {
+                const option = document.createElement('option');
+                option.value = material;
+                option.textContent = material;
+                selectMaterial.appendChild(option);
+            });
+        }
+        
+        function eliminarMaterialSeleccionado() {
+            const categoria = document.getElementById('eliminarBuscarCategoria').value;
+            const material = document.getElementById('eliminarBuscarMaterial').value;
+            
+            if (!categoria || !material) {
+                alert('Por favor seleccione una categoría y un material para eliminar');
+                return;
+            }
+            
+            // Mostrar información del material
+            document.getElementById('materialAEliminar').style.display = 'block';
+            document.getElementById('datosMaterialEliminar').innerHTML = `
+                <p><strong>Categoría:</strong> ${categoria}</p>
+                <p><strong>Material:</strong> ${material}</p>
+            `;
+            
+            if (confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de eliminar este material?\n\nCategoría: ${categoria}\nMaterial: ${material}\n\n❌ Esta acción NO se puede deshacer.`)) {
+                eliminarMaterial(categoria, material);
+                alert('✅ Material eliminado correctamente');
+                
+                // Limpiar formulario
+                document.getElementById('eliminarBuscarMaterial').value = '';
+                cargarMaterialesParaEliminar();
+                document.getElementById('materialAEliminar').style.display = 'none';
+                
+                // Actualizar vista de categorías si está activa
+                if (document.getElementById('categorias').classList.contains('active')) {
+                    loadCategories();
+                }
+            }
+        }
+
+        // Cargar todo al inicio
+        loadCategories();
+        actualizarTodosLosSelects();
+    </script>
+</body>
+</html>
