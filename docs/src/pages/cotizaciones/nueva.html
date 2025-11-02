@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nueva Cotización - BYT SOFTWARE</title>
+  <link rel="stylesheet" href="../styles/global.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <div class="logo-section">
+          <img src="../assets/logo_byt.png" alt="Logo BYT" class="logo">
+          <div>
+            <h1 class="header-title">BYT SOFTWARE - Cotizaciones</h1>
+            <p class="header-subtitle">Wizard de Cotización</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Barra superior resumen -->
+    <div class="summary-bar">
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-label">Total Materiales</span>
+          <span class="summary-value" id="total-materiales">$0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Factor</span>
+          <span class="summary-value" id="factor-valor">1.3x</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Neto</span>
+          <span class="summary-value" id="neto-valor">$0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">IVA</span>
+          <span class="summary-value" id="iva-valor">$0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Total Proyecto</span>
+          <span class="summary-value" id="total-proyecto">$0</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-label">Ganancia</span>
+          <span class="summary-value" id="ganancia-valor">$0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wizard container -->
+    <div class="wizard-container card" style="margin-top:20px; padding:20px;">
+      <div class="wizard-progress" style="margin-bottom:10px;">
+        <div class="progress-bar" style="background:#eee; height:8px; border-radius:4px; overflow:hidden;">
+          <div id="progreso-barra" class="progress-fill" style="width:0%"></div>
+        </div>
+        <div id="progreso-texto" style="margin-top:8px; color:#666;">Paso 1 de 10</div>
+      </div>
+
+      <!-- Pasos: 1..10 -->
+      <div id="paso-1" class="paso" style="display:block;"></div>
+      <div id="paso-2" class="paso" style="display:none;"></div>
+      <div id="paso-3" class="paso" style="display:none;"></div>
+      <div id="paso-4" class="paso" style="display:none;"></div>
+      <div id="paso-5" class="paso" style="display:none;"></div>
+      <div id="paso-6" class="paso" style="display:none;"></div>
+      <div id="paso-7" class="paso" style="display:none;"></div>
+      <div id="paso-8" class="paso" style="display:none;"></div>
+      <div id="paso-9" class="paso" style="display:none;"></div>
+      <div id="paso-10" class="paso" style="display:none;"></div>
+
+      <div style="margin-top:20px; text-align:center;">
+        <button id="btn-anterior" class="btn btn-secondary" onclick="anteriorPaso()" style="display:none;">← Anterior</button>
+        <button id="btn-siguiente" class="btn" onclick="siguientePaso()">Siguiente →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../src/js/wizard.js"></script>
+  <script src="../../src/js/globalSupabase.js"></script>
+</body>
+</html>
