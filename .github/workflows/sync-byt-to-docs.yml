@@ -1,0 +1,106 @@
+name: Sync BYT_SOFTWARE -> docs (for Pages)
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'BYT_SOFTWARE/**'
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Show repo tree (quick debug)
+        run: |
+          echo "Root files:"
+          ls -la
+
+      - name: Prepare timestamp
+        run: |
+          TS=$(date +%s)
+          echo "TS=$TS" >> $GITHUB_ENV
+
+      - name: Backup existing docs (temporary)
+        run: |
+          if [ -d docs ]; then mv docs /tmp/docs_backup_$TS || true; fi
+          mkdir -p docs
+
+      - name: Copy BYT_SOFTWARE contents into docs (preserve structure)
+        run: |
+          echo "Copying BYT_SOFTWARE -> docs ..."
+          cp -a BYT_SOFTWARE/. docs/ || true
+
+      - name: Ensure styles & assets in docs and copy assets explicitly
+        run: |
+          mkdir -p docs/src/styles docs/src/assets
+          if [ -f BYT_SOFTWARE/src/styles/global.css ]; then
+            cp -f BYT_SOFTWARE/src/styles/global.css docs/src/styles/global.css
+            echo "Copied global.css"
+          else
+            echo "Warning: BYT_SOFTWARE/src/styles/global.css not found"
+          fi
+          if [ -d BYT_SOFTWARE/src/assets ]; then
+            rm -rf docs/src/assets/* || true
+            cp -a BYT_SOFTWARE/src/assets/. docs/src/assets/
+            echo "Copied BYT_SOFTWARE/src/assets into docs/src/assets"
+          else
+            echo "Warning: BYT_SOFTWARE/src/assets not found"
+          fi
+
+      - name: Normalize asset filenames to lowercase (reduce Page case issues)
+        run: |
+          if [ -d docs/src/assets ]; then
+            find docs/src/assets -depth | while read -r f; do
+              dir=$(dirname -- "$f")
+              base=$(basename -- "$f")
+              lower=$(echo "$base" | tr '[:upper:]' '[:lower:]')
+              if [ "$base" != "$lower" ]; then
+                if [ ! -e "$dir/$lower" ]; then
+                  mv "$f" "$dir/$lower"
+                else
+                  echo "Notice: $dir/$lower already exists, skipping rename of $f"
+                fi
+              fi
+            done
+          fi
+
+      - name: List docs/src/assets (verification)
+        run: |
+          echo "Listing docs/src/assets:"
+          ls -la docs/src/assets || echo "docs/src/assets missing or empty"
+          echo "Check for logo files:"
+          ls -la docs/src/assets | grep -i logo || true
+
+      - name: Remove sensitive/backend files from docs
+        run: |
+          rm -f docs/server.js docs/package.json docs/.env docs/.env.local || true
+
+      - name: Search for references to 'BYT_SOFTWARE/' inside docs
+        run: |
+          echo "Searching for BYT_SOFTWARE/ references inside docs (for manual review)"
+          grep -R --line-number --binary-files=without-match "BYT_SOFTWARE/" docs || true
+
+      - name: Commit and push docs update
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git commit -m "Sync BYT_SOFTWARE -> docs for Pages (automated)" || echo "No changes to commit"
+          git push origin HEAD:main || echo "Push may have failed"
+
+      - name: Cleanup temporary backup
+        if: always()
+        run: |
+          if [ -d /tmp/docs_backup_$TS ]; then rm -rf /tmp/docs_backup_$TS || true; fi
+
+      - name: Output site URL
+        run: |
+          echo "Site will be available at: https://bosqueytierra.github.io/BYT-SOFTWARE/ after Pages finishes deployment."
