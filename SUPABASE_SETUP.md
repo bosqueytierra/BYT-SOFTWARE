@@ -12,7 +12,11 @@ All other files import the client from these centralized locations instead of cr
 
 ## Security Notice
 
-**IMPORTANT**: The Public ANON KEY is currently hardcoded in the source files. While this is acceptable for the PUBLIC anon key (it's meant to be public), for better security practices in production, you should:
+**IMPORTANT**: The Public ANON KEY is currently hardcoded in the source files as requested. The ANON key's JWT payload references a different project ID than the URL, which may indicate:
+- Different environments (dev/staging/prod) 
+- A potential configuration error that should be verified with the Supabase project settings
+
+While the public ANON key is meant to be public, for better security practices in production, you should:
 
 1. Move the keys to environment variables
 2. Use GitHub Secrets for CI/CD pipelines
