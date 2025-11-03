@@ -14,11 +14,7 @@
 // wizard.stop();
 
 import { tryAcquireLock, tryReleaseLock, upsertQuote, subscribeToQuotes } from './supabase.client.test.js';
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-const SUPABASE_URL = window.SUPABASE_URL || 'https://lpxsqxgrxdssjoqtdgve.supabase.co';
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '<eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxweHNxeGdyeGRzc2pvcXRkZ3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NTQ2ODksImV4cCI6MjA3NzUzMDY4OX0.uwNO82cwjiP-SUtEluS39jw8HrHQo6ANmziHxDdOiGY>';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from '../supabaseClient.js';
 
 export function initWizard(options = {}) {
   const {

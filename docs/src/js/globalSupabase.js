@@ -1,27 +1,11 @@
 // ===== CONFIGURACIÓN SUPABASE =====
 // Configuración del cliente Supabase
-const SUPABASE_URL = 'https://tu-proyecto.supabase.co'; // Reemplazar con tu URL
-const SUPABASE_ANON_KEY = 'tu-clave-anonima'; // Reemplazar con tu clave
-
-// Cliente Supabase (se cargará dinámicamente)
-let supabase = null;
+import { supabase } from '../supabaseClient.js';
 
 // Función para inicializar Supabase
 async function initSupabase() {
     try {
-        // Cargar la librería de Supabase desde CDN
-        if (!window.supabase) {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-            document.head.appendChild(script);
-            
-            await new Promise((resolve) => {
-                script.onload = resolve;
-            });
-        }
-
-        // Inicializar el cliente
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Use the centralized supabase client
         console.log('Supabase inicializado correctamente');
         return true;
     } catch (error) {

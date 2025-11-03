@@ -1,10 +1,5 @@
 // Test helpers para probar lock / upsert / subscribe / upload
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-const SUPABASE_URL = 'https://lpxsqxgrxdssjoqtdgve.supabase.co';
-const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '<REPLACE_WITH_ANON_KEY>';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase } from '../supabaseClient.js';
 
 // Obtener usuario actual (si ya estás logueado en la app)
 async function currentUserId(){
