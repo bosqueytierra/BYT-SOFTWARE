@@ -65,18 +65,24 @@ For local development:
 
 ## Files Modified in This Update
 
-The following files were updated to use the centralized Supabase client:
+The following files were updated to use the centralized Supabase configuration:
 
-### Updated Files:
-- `src/supabaseClient.js` (created)
-- `BYT_SOFTWARE/src/supabaseClient.js` (updated)
-- `BYT_SOFTWARE/src/js/supabase.js` (updated)
-- `BYT_SOFTWARE/src/js/globalSupabase.js` (updated)
-- `docs/src/supabaseClient.js` (updated)
-- `docs/src/js/supabase.js` (updated)
-- `docs/src/js/globalSupabase.js` (updated)
-- `src/js/wizard.js` (updated)
-- `src/js/supabase.client.test.js` (updated)
+### Created Files:
+- `src/supabaseClient.js` - Central singleton for ES6 module imports
+
+### Updated Files (ES6 Modules):
+- `BYT_SOFTWARE/src/supabaseClient.js` - Now imports from @supabase/supabase-js with new credentials
+- `BYT_SOFTWARE/src/js/supabase.js` - Now imports from ../supabaseClient.js
+- `docs/src/supabaseClient.js` - Updated with new credentials
+- `docs/src/js/supabase.js` - Now imports from ../supabaseClient.js
+- `src/js/wizard.js` - Now imports from ../supabaseClient.js (ES6 module version)
+- `src/js/supabase.client.test.js` - Now imports from ../supabaseClient.js
+
+### Updated Files (Browser Scripts with Dynamic Loading):
+- `BYT_SOFTWARE/src/js/globalSupabase.js` - Updated with new URL and ANON_KEY (uses CDN)
+- `docs/src/js/globalSupabase.js` - Updated with new URL and ANON_KEY (uses CDN)
+
+Note: Some files like `BYT_SOFTWARE/src/js/wizard.js` and `docs/src/js/wizard.js` are different implementations from `src/js/wizard.js` and were not modified as they don't use createClient directly.
 
 ### Backup Files Created:
 - `*.bak` files contain the original versions before modification

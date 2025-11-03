@@ -1,10 +1,27 @@
 // ===== CONFIGURACIÓN SUPABASE =====
-// Import centralized Supabase client
-import { supabase } from '../supabaseClient.js';
+// Configuración del cliente Supabase (centralizada)
+const SUPABASE_URL = 'https://paatfcaylifoqbsqqvpq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYXRmY2F5bGlmb3FxdnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzODg2NTgsImV4cCI6MjA3NTk2NDY1OH0.A4-1_eqqWhYDTFvqrdolwNQgx4HUsVNE07Y_VK25feE';
 
-// Función para inicializar Supabase (mantener por compatibilidad)
+// Cliente Supabase (se cargará dinámicamente)
+let supabase = null;
+
+// Función para inicializar Supabase
 async function initSupabase() {
     try {
+        // Cargar la librería de Supabase desde CDN
+        if (!window.supabase) {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+            document.head.appendChild(script);
+            
+            await new Promise((resolve) => {
+                script.onload = resolve;
+            });
+        }
+
+        // Inicializar el cliente
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log('Supabase inicializado correctamente');
         return true;
     } catch (error) {
