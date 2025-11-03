@@ -57,12 +57,34 @@ BYT_SOFTWARE/
 
 #### 1. Configurar Supabase
 
-1. Crear proyecto en [Supabase](https://supabase.com)
-2. Editar `src/js/globalSupabase.js`:
+**IMPORTANTE: Uso de Secrets y Claves**
+
+El proyecto actualmente tiene las credenciales de Supabase hardcodeadas en los archivos de código para facilitar el desarrollo local. **Para producción, es altamente recomendable usar GitHub Secrets o variables de entorno.**
+
+**Configuración Actual (Desarrollo):**
+- Las credenciales están en los siguientes archivos:
+  - `src/supabaseClient.js` (archivo principal centralizado)
+  - `BYT_SOFTWARE/src/supabaseClient.js`
+  - `docs/src/supabaseClient.js`
+  - `BYT_SOFTWARE/src/js/globalSupabase.js`
+  - `docs/src/js/globalSupabase.js`
+
+**Migración a GitHub Secrets (Recomendado para Producción):**
+
+1. En tu repositorio de GitHub, ve a Settings → Secrets and variables → Actions
+2. Agrega los siguientes secrets:
+   - `SUPABASE_URL`: `https://paatfcaylifoqbsqqvpq.supabase.co`
+   - `SUPABASE_ANON_KEY`: Tu clave pública anónima
+3. Modifica los archivos para usar variables de entorno:
    ```javascript
-   const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
-   const SUPABASE_ANON_KEY = 'tu-clave-anonima';
+   const SUPABASE_URL = process.env.SUPABASE_URL || 'https://paatfcaylifoqbsqqvpq.supabase.co';
+   const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'tu-clave-por-defecto';
    ```
+4. Configura tu workflow de GitHub Actions para inyectar estos secrets
+
+**Proyecto Actual en Supabase:**
+- URL: `https://paatfcaylifoqbsqqvpq.supabase.co`
+- Clave pública ANON KEY: Incluida en los archivos (ver nota de seguridad arriba)
 
 #### 2. Crear Tabla de Cotizaciones
 
