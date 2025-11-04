@@ -1,3 +1,5 @@
+name: Build and deploy (Pages)
+
 on:
   push:
     branches: [ main ]
@@ -31,7 +33,7 @@ jobs:
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v1
         with:
-          path: ./dist # Cambia esta ruta si tu build genera otro directorio (por ejemplo 'build')
+          path: ./dist
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v1
