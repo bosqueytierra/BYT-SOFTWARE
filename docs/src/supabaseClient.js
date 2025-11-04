@@ -1,19 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
-
-/**
- * Supabase client singleton (archivo canónico)
- * URL y ANON KEY apuntan al proyecto paatf.
- *
- * NOTA: Si en producción vas a ocultar la ANON KEY, sustituilo por
- * process.env o variable de entorno en el build.
- */
-
-const SUPABASE_URL = 'https://paatfcaylifoqbsqqvpq.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYXRmY2F5bGlmb3FxdnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzODg2NTgsImV4cCI6MjA3NTk2NDY1OH0.A4-1_eqqWhYDTFvqrdolwNQgx4HUsVNE07Y_VK25feE';
-
-if (!globalThis.__supabaseClient) {
-  globalThis.__supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-}
-
-export const supabase = globalThis.__supabaseClient;
-export default supabase;
+// Placeholder docs copy - no keys included.
+// This file intentionally contains no real keys to avoid accidental exposure.
+// Use src/supabaseClient.js as the canonical runtime client.
+export const SUPABASE_URL = '<PAATF_URL_PLACEHOLDER>';
+export const SUPABASE_ANON_KEY = '<ANON_KEY_PLACEHOLDER>';
+export default null;
