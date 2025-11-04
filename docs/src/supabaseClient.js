@@ -2,14 +2,13 @@ import { createClient } from '@supabase/supabase-js';
 
 /**
  * Supabase client singleton
- * (Generado por petición del propietario)
+ * (Archivo para pegar tal cual en src/supabaseClient.js)
  *
- * NOTA: Este archivo contiene la Public ANON KEY hardcodeada por instrucción expresa.
- * En producción es más seguro mover la clave a variables de entorno / GitHub Secrets.
+ * NOTA: ANON KEY y URL apuntan al proyecto correcto (lpxs...) tal como probaste.
  */
 
-const SUPABASE_URL = 'https://paatfcaylifoqbsqqvpq.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYXRmY2F5bGlmb3FxdnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzODg2NTgsImV4cCI6MjA3NTk2NDY1OH0.A4-1_eqqWhYDTFvqrdolwNQgx4HUsVNE07Y_VK25feE';
+const SUPABASE_URL = 'https://lpxsqxgrxdssjoqtdgve.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzYSIsInJlZiI6ImxweHNxeGdyeGRzc2pvcXRkZ3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NTQ2ODksImV4cCI6MjA3NzUzMDY4OX0.uwNO82cwjiP-SUtEluS39jw8HrHQo6ANmziHxDdOiGY';
 
 if (!globalThis.__supabaseClient) {
   globalThis.__supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
