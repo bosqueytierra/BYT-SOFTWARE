@@ -1,19 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../supabaseClient.js';
 
 /**
- * Archivo listo para pegar en BYT_SOFTWARE/src/js/globalSupabase.js
- * Contiene la URL y la ANON KEY integradas, además de las funciones
- * principales y una función de prueba con las credenciales que nos diste.
+ * Global Supabase utility functions
+ * Uses the canonical Supabase client from ../supabaseClient.js
  *
- * NOTA: Esto hardcodea la ANON KEY en el archivo tal como pediste.
+ * NOTA: El cliente ahora se importa del singleton canónico.
  */
 
-// ===== CONFIGURACIÓN SUPABASE (hardcodeada) =====
+// For backwards compatibility, expose the URL and KEY through window
 const SUPABASE_URL = 'https://paatfcaylifoqbsqqvpq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYXRmY2F5bGlmb3FxdnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzODg2NTgsImV4cCI6MjA3NTk2NDY1OH0.A4-1_eqqWhYDTFvqrdolwNQgx4HUsVNE07Y_VK25feE';
-
-// Cliente Supabase singleton para este archivo
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== FUNCIONES DE PRUEBA =====
 /**
