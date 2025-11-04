@@ -30,9 +30,10 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
-      # Si en algún otro workflow usabas actions/upload-artifact@v3, cámbialo por @v4
-      # (Este paso es un ejemplo; lo puedes quitar si no lo necesitas)
-      - name: Upload artifact (example - use v4)
+      # Si tu repo usa actions/upload-artifact directamente en otros workflows,
+      # reemplazá @v3 por @v4. Este paso de ejemplo está marcado con if:false,
+      # lo puedes quitar si no lo necesitás.
+      - name: Example upload-artifact v4 (no se ejecuta)
         if: false
         uses: actions/upload-artifact@v4
         with:
