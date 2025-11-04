@@ -15,8 +15,9 @@
 
 import { tryAcquireLock, tryReleaseLock, upsertQuote, subscribeToQuotes } from './supabase.client.test.js';
 
-// Note: This file uses the supabase client from the test file.
-// The test file should be updated to use the canonical client.
+// NOTE: Credentials duplicated here because this file uses CDN imports (not npm)
+// and cannot import from the canonical client. These values set window.SUPABASE_*
+// for use by the test file and other browser scripts.
 const SUPABASE_URL = window.SUPABASE_URL || 'https://paatfcaylifoqbsqqvpq.supabase.co';
 const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYXRmY2F5bGlmb3FxdnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzODg2NTgsImV4cCI6MjA3NTk2NDY1OH0.A4-1_eqqWhYDTFvqrdolwNQgx4HUsVNE07Y_VK25feE';
 

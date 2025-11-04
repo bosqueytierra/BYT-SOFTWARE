@@ -1,5 +1,6 @@
 // Test helpers para probar lock / upsert / subscribe / upload
-// Uses canonical Supabase configuration
+// NOTE: This file creates its own client because it uses CDN imports (not npm)
+// and cannot import from the canonical client. Credentials match the canonical client.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 const SUPABASE_URL = 'https://paatfcaylifoqbsqqvpq.supabase.co';

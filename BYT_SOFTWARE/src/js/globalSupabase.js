@@ -8,6 +8,9 @@ import { supabase } from '../supabaseClient.js';
  */
 
 // For backwards compatibility, expose the URL and KEY through window
+// These constants are duplicated here because:
+// 1. They are exposed to window.supabaseClient for backwards compatibility
+// 2. The actual client is imported from the canonical singleton above
 const SUPABASE_URL = 'https://paatfcaylifoqbsqqvpq.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYXRmY2F5bGlmb3FxdnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzODg2NTgsImV4cCI6MjA3NTk2NDY1OH0.A4-1_eqqWhYDTFvqrdolwNQgx4HUsVNE07Y_VK25feE';
 
