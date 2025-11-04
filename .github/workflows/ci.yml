@@ -30,11 +30,19 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
+      # Si en algún otro workflow usabas actions/upload-artifact@v3, cámbialo por @v4
+      # (Este paso es un ejemplo; lo puedes quitar si no lo necesitas)
+      - name: Upload artifact (example - use v4)
+        if: false
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-artifact
+          path: ./dist
+
       - name: Upload artifact for GitHub Pages
         uses: actions/upload-pages-artifact@v1
         with:
           path: ./dist
-
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v1
