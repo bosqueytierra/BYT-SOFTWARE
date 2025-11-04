@@ -1,12 +1,20 @@
 // Configuración de Supabase para BYT SOFTWARE (Documentación)
-// NOTA: Este archivo es para documentación. La aplicación real debe usar
-// BYT_SOFTWARE/src/supabaseClient.js como cliente canónico.
+// ⚠️ WARNING: Este archivo es SOLO para documentación.
+// ⚠️ La aplicación real debe usar BYT_SOFTWARE/src/supabaseClient.js como cliente canónico.
+// ⚠️ NO USES este archivo en producción sin reemplazar las credenciales.
 
 import { createClient } from '@supabase/supabase-js';
 
-// PLACEHOLDER - Replace with your actual values in production
+// PLACEHOLDER - MUST be replaced with actual values before use
 const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
 const supabaseKey = process.env.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+
+// Validate that placeholder values are not being used
+if (supabaseUrl === 'https://your-project.supabase.co' || supabaseKey === 'YOUR_SUPABASE_ANON_KEY') {
+  console.error('⚠️ CONFIGURATION ERROR: Placeholder Supabase credentials detected!');
+  console.error('Please set SUPABASE_URL and SUPABASE_ANON_KEY environment variables.');
+  throw new Error('Invalid Supabase configuration - placeholder values detected');
+}
 
 // Cliente de Supabase
 export const supabase = createClient(supabaseUrl, supabaseKey);

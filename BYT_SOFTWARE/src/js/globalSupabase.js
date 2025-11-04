@@ -1,5 +1,4 @@
 import { supabase } from '../supabaseClient.js';
-import { createClient } from '@supabase/supabase-js';
 
 /**
  * Global Supabase API functions for the application
@@ -165,6 +164,8 @@ async function eliminarCotizacion(id) {
 async function testWithCustom(url, anonKey, email, password) {
   try {
     console.log('Testing with custom credentials:', { url, email });
+    // Lazy import createClient only when needed for testing
+    const { createClient } = await import('@supabase/supabase-js');
     const tempClient = createClient(url, anonKey);
     const res = await tempClient.auth.signInWithPassword({ email, password });
     console.log('testWithCustom response:', res);
