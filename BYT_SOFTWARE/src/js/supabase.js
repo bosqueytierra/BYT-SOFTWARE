@@ -1,12 +1,5 @@
 // Configuración de Supabase para BYT SOFTWARE
-import { createClient } from '@supabase/supabase-js';
-
-// Variables de entorno (se configuran en Vercel)
-const supabaseUrl = process.env.SUPABASE_URL || 'https://lpxsqxgrxdssjoqtdgve.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxweHNxeGdyeGRzc2pvcXRkZ3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NTQ2ODksImV4cCI6MjA3NzUzMDY4OX0.uwNO82cwjiP-SUtEluS39jw8HrHQo6ANmziHxDdOiGY';
-
-// Cliente de Supabase
-export const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabase } from '../supabaseClient.js';
 
 // Funciones para manejar cotizaciones
 export class SupabaseManager {
@@ -139,3 +132,6 @@ export class SupabaseManager {
         }
     }
 }
+
+// Re-export supabase for backward compatibility
+export { supabase };

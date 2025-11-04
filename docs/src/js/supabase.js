@@ -1,9 +1,12 @@
-// Configuración de Supabase para BYT SOFTWARE
+// Configuración de Supabase para BYT SOFTWARE (Documentación)
+// NOTA: Este archivo es para documentación. La aplicación real debe usar
+// BYT_SOFTWARE/src/supabaseClient.js como cliente canónico.
+
 import { createClient } from '@supabase/supabase-js';
 
-// Variables de entorno (se configuran en Vercel)
-const supabaseUrl = process.env.SUPABASE_URL || 'https://lpxsqxgrxdssjoqtdgve.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxweHNxeGdyeGRzc2pvcXRkZ3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NTQ2ODksImV4cCI6MjA3NzUzMDY4OX0.uwNO82cwjiP-SUtEluS39jw8HrHQo6ANmziHxDdOiGY';
+// PLACEHOLDER - Replace with your actual values in production
+const supabaseUrl = process.env.SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
 
 // Cliente de Supabase
 export const supabase = createClient(supabaseUrl, supabaseKey);

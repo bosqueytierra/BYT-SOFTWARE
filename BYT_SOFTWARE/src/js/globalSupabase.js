@@ -1,19 +1,10 @@
+import { supabase } from '../supabaseClient.js';
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * Archivo listo para pegar en BYT_SOFTWARE/src/js/globalSupabase.js
- * Contiene la URL y la ANON KEY integradas, además de las funciones
- * principales y una función de prueba con las credenciales que nos diste.
- *
- * NOTA: Esto hardcodea la ANON KEY en el archivo tal como pediste.
+ * Global Supabase API functions for the application
+ * Uses the canonical singleton from src/supabaseClient.js
  */
-
-// ===== CONFIGURACIÓN SUPABASE (hardcodeada) =====
-const SUPABASE_URL = 'https://paatfcaylifoqbsqqvpq.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYXRmY2F5bGlmb3FxdnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzODg2NTgsImV4cCI6MjA3NTk2NDY1OH0.A4-1_eqqWhYDTFvqrdolwNQgx4HUsVNE07Y_VK25feE';
-
-// Cliente Supabase singleton para este archivo
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== FUNCIONES DE PRUEBA =====
 /**
@@ -160,6 +151,30 @@ async function eliminarCotizacion(id) {
   }
 }
 
+// ===== TEST FUNCTION WITH CUSTOM CREDENTIALS =====
+/**
+ * Test function to create a temporary client with custom credentials
+ * for manual testing without changing the global client
+ * 
+ * @param {string} url - Custom Supabase URL
+ * @param {string} anonKey - Custom Supabase ANON KEY
+ * @param {string} email - Email for authentication test
+ * @param {string} password - Password for authentication test
+ * @returns {Promise} Test result
+ */
+async function testWithCustom(url, anonKey, email, password) {
+  try {
+    console.log('Testing with custom credentials:', { url, email });
+    const tempClient = createClient(url, anonKey);
+    const res = await tempClient.auth.signInWithPassword({ email, password });
+    console.log('testWithCustom response:', res);
+    return res;
+  } catch (err) {
+    console.error('testWithCustom error:', err);
+    return { error: err };
+  }
+}
+
 // ===== FUNCIONES DE UTILIDAD =====
 function mostrarNotificacion(mensaje, tipo = 'info') {
   const notification = document.createElement('div');
@@ -197,13 +212,10 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
 
 // ===== EXPORT GLOBAL PARA PRUEBAS Y USO EN LA APP =====
 window.supabaseClient = {
-  // configuración visible
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-
   // pruebas rápidas
   testLogin,
   validarConexionSupabase,
+  testWithCustom,
 
   // CRUD cotizaciones
   guardarCotizacion,
