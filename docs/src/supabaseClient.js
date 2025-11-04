@@ -1,14 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
 /**
- * Supabase client singleton
- * (Archivo para pegar tal cual en src/supabaseClient.js)
+ * Supabase client singleton (docs copy)
+ * URL y ANON KEY actualizados para paatf project.
  *
- * NOTA: ANON KEY y URL apuntan al proyecto correcto (lpxs...) tal como probaste.
+ * Nota: si este archivo es sólo documentación, considera eliminarlo
+ * o convertirlo en un ejemplo sin claves. Si se usa en runtime,
+ * mantenlo sincronizado con src/supabaseClient.js.
  */
 
-const SUPABASE_URL = 'https://lpxsqxgrxdssjoqtdgve.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzYSIsInJlZiI6ImxweHNxeGdyeGRzc2pvcXRkZ3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5NTQ2ODksImV4cCI6MjA3NzUzMDY4OX0.uwNO82cwjiP-SUtEluS39jw8HrHQo6ANmziHxDdOiGY';
+const SUPABASE_URL = 'https://paatfcaylifoqbsqqvpq.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhYXRmY2F5bGlmb3FxdnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAzODg2NTgsImV4cCI6MjA3NTk2NDY1OH0.A4-1_eqqWhYDTFvqrdolwNQgx4HUsVNE07Y_VK25feE';
 
 if (!globalThis.__supabaseClient) {
   globalThis.__supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
