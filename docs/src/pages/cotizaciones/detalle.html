@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle Cotización - BYT SOFTWARE</title>
+    <link rel="stylesheet" href="../../styles/global.css">
+    <style>
+        .detalle-section {
+            margin-bottom: 30px;
+        }
+        
+        .detalle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .detalle-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid var(--color-primary);
+        }
+        
+        .detalle-label {
+            font-size: 12px;
+            color: var(--color-text-light);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .detalle-value {
+            font-size: 16px;
+            color: var(--color-text);
+            font-weight: 500;
+        }
+        
+        @media print {
+            .btn-back, .no-print { display: none !important; }
+            body { background: white !important; }
+            .card { box-shadow: none !important; border: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body>
+    <a href="consultar.html" class="btn-back no-print">← Atrás</a>
+
+    <div class="container">
+        <header class="header no-print">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo">
+                    <div>
+                        <h1 class="header-title">Detalle de Cotización</h1>
+                        <p class="header-subtitle">Información Completa del Proyecto</p>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="window.print()">
+                        🖨️ Imprimir
+                    </button>
+                    <button class="btn" onclick="exportarPDF()">
+                        📄 Exportar PDF
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Estado de carga -->
+        <div id="loading-state" class="card text-center">
+            <div class="loading-spinner" style="margin: 20px auto;"></div>
+            <p>Cargando cotización...</p>
+        </div>
+
+        <!-- Contenido del detalle -->
+        <div id="detalle-content" style="display: none;">
+            
+            <!-- Información del Cliente -->
+            <div class="card detalle-section">
+                <h3 class="card-title">📋 Información del Proyecto</h3>
+                <div class="detalle-grid" id="info-proyecto">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Resumen Financiero -->
+            <div class="card detalle-section">
+                <h3 class="card-title">💰 Resumen Financiero</h3>
+                <div class="detalle-grid" id="resumen-financiero">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Materiales -->
+            <div class="card detalle-section">
+                <h3 class="card-title">🔧 Materiales</h3>
+                <div id="materiales-detalle">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Valores Traspasados -->
+            <div class="card detalle-section">
+                <h3 class="card-title">📊 Valores Traspasados</h3>
+                <div id="valores-detalle">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Información de la Empresa -->
+            <div class="card detalle-section" style="text-align: center; margin-top: 40px;">
+                <h4 style="color: var(--color-primary); margin-bottom: 10px;">Bosque y Tierra</h4>
+                <p style="color: #666; margin: 5px 0;">Diseño y Fabricación de Muebles Personalizados</p>
+                <p style="color: #666; margin: 5px 0;">Fecha de cotización: <span id="fecha-cotizacion"></span></p>
+                <p style="color: #666; margin: 5px 0; font-size: 12px;">
+                    © 2025 BYT SOFTWARE - Sistema Interno de Gestión
+                </p>
+            </div>
+        </div>
+
+        <!-- Estado de error -->
+        <div id="error-state" class="card text-center" style="display: none;">
+            <div style="font-size: 64px; color: #f44336; margin: 20px 0;">❌</div>
+            <h3 style="color: #f44336;">Error al cargar cotización</h3>
+            <p style="color: #999;" id="error-message">No se pudo cargar la información de la cotización.</p>
+            <button class="btn" onclick="cargarCotizacion()">
+                🔄 Reintentar
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../js/globalSupabase.js"></script>
+    <script src="../../js/categorias.js"></script>
+
+    <script>
+        let cotizacionActual = null;
+        let cotizacionId = null;
+
+        // Verificar autenticación
+        if (!localStorage.getItem('byt_logged_in')) {
+            window.location.href = '../login/login.html';
+        }
+
+        // Obtener ID de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        cotizacionId = urlParams.get('id');
+
+        if (!cotizacionId) {
+            mostrarError('ID de cotización no proporcionado');
+        } else {
+            cargarCotizacion();
+        }
+
+        // Cargar cotización desde Supabase
+        async function cargarCotizacion() {
+            mostrarEstado('loading');
+            
+            try {
+                const resultado = await window.supabaseClient.obtenerCotizacionPorId(cotizacionId);
+                
+                if (resultado.success && resultado.data) {
+                    cotizacionActual = resultado.data;
+                    mostrarDetalle();
+                } else {
+                    throw new Error(resultado.error || 'Cotización no encontrada');
+                }
+                
+            } catch (error) {
+                console.error('Error al cargar cotización:', error);
+                mostrarError('Error al cargar cotización: ' + error.message);
+            }
+        }
+
+        // Mostrar diferentes estados
+        function mostrarEstado(estado) {
+            const loading = document.getElementById('loading-state');
+            const content = document.getElementById('detalle-content');
+            const error = document.getElementById('error-state');
+            
+            loading.style.display = estado === 'loading' ? 'block' : 'none';
+            content.style.display = estado === 'content' ? 'block' : 'none';
+            error.style.display = estado === 'error' ? 'block' : 'none';
+        }
+
+        // Mostrar error
+        function mostrarError(mensaje) {
+            mostrarEstado('error');
+            document.getElementById('error-message').textContent = mensaje;
+        }
+
+        // Mostrar detalle de la cotización
+        function mostrarDetalle() {
+            mostrarEstado('content');
+            
+            // Información del proyecto
+            mostrarInfoProyecto();
+            
+            // Resumen financiero
+            mostrarResumenFinanciero();
+            
+            // Materiales
+            mostrarMateriales();
+            
+            // Valores traspasados
+            mostrarValoresTraspasados();
+            
+            // Fecha
+            const fecha = new Date(cotizacionActual.created_at).toLocaleDateString('es-CL', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            document.getElementById('fecha-cotizacion').textContent = fecha;
+        }
+
+        // Mostrar información del proyecto
+        function mostrarInfoProyecto() {
+            const container = document.getElementById('info-proyecto');
+            
+            const items = [
+                { label: 'Nombre del Proyecto', value: cotizacionActual.nombre_proyecto || 'N/A' },
+                { label: 'Cliente', value: cotizacionActual.cliente || 'N/A' },
+                { label: 'Dirección', value: cotizacionActual.direccion || 'N/A' },
+                { label: 'Encargado', value: cotizacionActual.encargado || 'N/A' },
+                { label: 'ID Cotización', value: `#${cotizacionActual.id}` },
+                { label: 'Fecha de Creación', value: new Date(cotizacionActual.created_at).toLocaleDateString('es-CL') }
+            ];
+            
+            let html = '';
+            items.forEach(item => {
+                html += `
+                    <div class="detalle-item">
+                        <div class="detalle-label">${item.label}</div>
+                        <div class="detalle-value">${item.value}</div>
+                    </div>
+                `;
+            });
+            
+            if (cotizacionActual.notas) {
+                html += `
+                    <div class="detalle-item" style="grid-column: 1 / -1;">
+                        <div class="detalle-label">Notas del Proyecto</div>
+                        <div class="detalle-value">${cotizacionActual.notas}</div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Mostrar resumen financiero
+        function mostrarResumenFinanciero() {
+            const container = document.getElementById('resumen-financiero');
+            
+            const items = [
+                { label: 'Total Materiales', value: window.categorias.formatearPrecio(cotizacionActual.total_materiales || 0) },
+                { label: 'Factor Aplicado', value: `${cotizacionActual.factor || 1.3}x` },
+                { label: 'Subtotal con Factor', value: window.categorias.formatearPrecio(cotizacionActual.total_neto || 0) },
+                { label: 'IVA (19%)', value: window.categorias.formatearPrecio(cotizacionActual.iva || 0) },
+                { label: 'Total del Proyecto', value: window.categorias.formatearPrecio(cotizacionActual.total_proyecto || 0), destacado: true },
+                { label: 'Ganancia Estimada', value: window.categorias.formatearPrecio(cotizacionActual.ganancia || 0) }
+            ];
+            
+            let html = '';
+            items.forEach(item => {
+                const estilo = item.destacado ? 'background: var(--color-primary); color: white; font-weight: 600;' : '';
+                html += `
+                    <div class="detalle-item" style="${estilo}">
+                        <div class="detalle-label" style="${item.destacado ? 'color: rgba(255,255,255,0.8);' : ''}">${item.label}</div>
+                        <div class="detalle-value" style="${item.destacado ? 'color: white; font-size: 18px;' : ''}">${item.value}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Mostrar materiales
+        function mostrarMateriales() {
+            const container = document.getElementById('materiales-detalle');
+            let html = '';
+            
+            const categoriasMateriales = ['quincalleria', 'tableros', 'tapacantos', 'corte', 'madera', 'led'];
+            
+            categoriasMateriales.forEach(categoria => {
+                const datosCategoria = JSON.parse(cotizacionActual[categoria] || '{}');
+                const categoriaInfo = window.categorias.materiales[categoria];
+                
+                if (!categoriaInfo || Object.keys(datosCategoria).length === 0) return;
+                
+                let tieneDatos = false;
+                let tablaItems = '';
+                let subtotal = 0;
+                
+                categoriaInfo.items.forEach(item => {
+                    const cantidad = parseFloat(datosCategoria[item.id]) || 0;
+                    if (cantidad > 0) {
+                        tieneDatos = true;
+                        const total = cantidad * item.precio;
+                        subtotal += total;
+                        
+                        tablaItems += `
+                            <tr>
+                                <td>${item.nombre}</td>
+                                <td style="text-align: center;">${cantidad} ${item.unidad}</td>
+                                <td style="text-align: right;">${window.categorias.formatearPrecio(item.precio)}</td>
+                                <td style="text-align: right; font-weight: 600;">${window.categorias.formatearPrecio(total)}</td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                if (tieneDatos) {
+                    html += `
+                        <div style="margin-bottom: 25px;">
+                            <h4 style="color: var(--color-primary); margin-bottom: 15px;">${categoriaInfo.nombre}</h4>
+                            <div class="table-container">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Material</th>
+                                            <th style="text-align: center;">Cantidad</th>
+                                            <th style="text-align: right;">Precio Unit.</th>
+                                            <th style="text-align: right;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${tablaItems}
+                                        <tr style="background: rgba(46, 94, 78, 0.1); font-weight: 600;">
+                                            <td colspan="3" style="text-align: right;">Subtotal ${categoriaInfo.nombre}:</td>
+                                            <td style="text-align: right; color: var(--color-primary);">${window.categorias.formatearPrecio(subtotal)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            if (!html) {
+                html = '<p style="color: #666; text-align: center; padding: 20px;">No se registraron materiales para este proyecto.</p>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Mostrar valores traspasados
+        function mostrarValoresTraspasados() {
+            const container = document.getElementById('valores-detalle');
+            let html = '';
+            let totalTraspasados = 0;
+            
+            const conceptos = ['fierro', 'cuarzo', 'ventanas', 'transporte', 'almuerzo'];
+            let tablaItems = '';
+            
+            conceptos.forEach(concepto => {
+                const valor = parseFloat(cotizacionActual[concepto]) || 0;
+                if (valor > 0) {
+                    const conceptoInfo = window.categorias.valoresTraspasados[concepto];
+                    totalTraspasados += valor;
+                    
+                    tablaItems += `
+                        <tr>
+                            <td>${conceptoInfo.nombre}</td>
+                            <td>${conceptoInfo.descripcion}</td>
+                            <td style="text-align: right; font-weight: 600;">${window.categorias.formatearPrecio(valor)}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            // Extras
+            const extras = JSON.parse(cotizacionActual.extras || '{}');
+            Object.keys(extras).forEach(key => {
+                const valor = parseFloat(extras[key]) || 0;
+                if (valor > 0) {
+                    totalTraspasados += valor;
+                    tablaItems += `
+                        <tr>
+                            <td>Extra</td>
+                            <td>${key.replace('extra_', '').replace(/\d+/, '') || 'Gasto adicional'}</td>
+                            <td style="text-align: right; font-weight: 600;">${window.categorias.formatearPrecio(valor)}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (tablaItems) {
+                html = `
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Concepto</th>
+                                    <th>Descripción</th>
+                                    <th style="text-align: right;">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tablaItems}
+                                <tr style="background: rgba(46, 94, 78, 0.1); font-weight: 600;">
+                                    <td colspan="2" style="text-align: right;">Total Valores Traspasados:</td>
+                                    <td style="text-align: right; color: var(--color-primary);">${window.categorias.formatearPrecio(totalTraspasados)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                html = '<p style="color: #666; text-align: center; padding: 20px;">No se registraron valores traspasados para este proyecto.</p>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Exportar a PDF (función placeholder)
+        function exportarPDF() {
+            window.utils.mostrarNotificacion('Función de exportación PDF en desarrollo', 'info');
+            // TODO: Implementar exportación a PDF con jsPDF o similar
+        }
+    </script>
+</body>
+</html>
