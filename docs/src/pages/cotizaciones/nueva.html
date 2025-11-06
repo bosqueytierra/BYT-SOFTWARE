@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Cotización - BYT SOFTWARE</title>
+    <link rel="stylesheet" href="../../styles/global.css">
+</head>
+<body>
+    <a href="../menu_principal.html" class="btn-back">← Atrás</a>
+    
+    <!-- Barra de Resumen Superior -->
+    <div class="summary-bar">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <span class="summary-label">Total Materiales</span>
+                <span class="summary-value" id="total-materiales">$0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Factor</span>
+                <span class="summary-value" id="factor-valor">1.3x</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Neto</span>
+                <span class="summary-value" id="neto-valor">$0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">IVA (19%)</span>
+                <span class="summary-value" id="iva-valor">$0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Total Proyecto</span>
+                <span class="summary-value" id="total-proyecto">$0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Ganancia</span>
+                <span class="summary-value" id="ganancia-valor">$0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo">
+                    <div>
+                        <h1 class="header-title">Nueva Cotización</h1>
+                        <p class="header-subtitle">Wizard de 14 Pasos - Bosque y Tierra</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra de Progreso -->
+        <div class="wizard-progress">
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="step-info">
+                <span>Paso 1 de 10</span>
+                <span><strong>Datos del Cliente</strong></span>
+            </div>
+        </div>
+
+        <!-- Contenedor del Wizard -->
+        <div class="wizard-container">
+            <!-- Paso 1: Datos del Cliente -->
+            <div id="paso-1" class="wizard-step">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 2: Quincallería -->
+            <div id="paso-2" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 3: Tableros -->
+            <div id="paso-3" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 4: Tapacantos -->
+            <div id="paso-4" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 5: Tableros de Madera -->
+            <div id="paso-5" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 6: LED y Electricidad -->
+            <div id="paso-6" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 7: Otras Compras -->
+            <div id="paso-7" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 8: Valores Traspasados -->
+            <div id="paso-8" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 9: Factor General -->
+            <div id="paso-9" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+
+            <!-- Paso 10: Resumen Final -->
+            <div id="paso-10" class="wizard-step" style="display: none;">
+                <!-- Se genera dinámicamente -->
+            </div>
+        </div>
+
+        <!-- Botones de Navegación -->
+        <div class="card" style="text-align: center; margin-top: 30px;">
+            <button type="button" class="btn btn-secondary" id="btn-anterior" onclick="anteriorPaso()">
+                ← Anterior
+            </button>
+            <button type="button" class="btn" id="btn-siguiente" onclick="siguientePaso()" style="margin-left: 15px;">
+                Siguiente →
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../js/globalSupabase.js"></script>
+    <script src="../../js/categorias_reales.js"></script>
+    <script src="../../js/wizard.js"></script>
+
+    <script>
+        // Verificar autenticación
+        if (!localStorage.getItem('byt_logged_in')) {
+            window.location.href = '../login/login.html';
+        }
+
+        // Inicializar Supabase al cargar la página
+        window.addEventListener('load', async () => {
+            const conexionOk = await window.supabaseClient.validarConexion();
+            if (!conexionOk) {
+                console.warn('Conexión con Supabase no disponible - funcionando en modo offline');
+                window.utils.mostrarNotificacion('Trabajando en modo offline', 'warning');
+            }
+        });
+    </script>
+</body>
+</html>
