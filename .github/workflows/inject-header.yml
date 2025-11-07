@@ -1,0 +1,46 @@
+# Workflow: inyecta el placeholder del header en los HTML del repo
+# Ejecutalo manualmente desde GitHub Actions -> Run workflow
+name: Inject siteHeader into pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  inject-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Run inject script
+        run: |
+          # asegurarse de que el script exista
+          ls -la BYT_SOFTWARE/src/pages/scripts || true
+          node BYT_SOFTWARE/src/pages/scripts/inject-header.js
+
+      - name: Commit changes to new branch
+        env:
+          BRANCH_NAME: supabase-header-apply
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # crear branch basado en main (o en la rama por defecto que checkout devolvió)
+          git checkout -b "$BRANCH_NAME" || git checkout "$BRANCH_NAME"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No hay cambios para commitear"
+          else
+            git commit -m "chore: inject global user header loader into pages"
+            git push -u origin "$BRANCH_NAME"
+            echo "Pushed changes to branch $BRANCH_NAME"
+          fi
