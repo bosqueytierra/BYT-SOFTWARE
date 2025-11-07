@@ -24,9 +24,12 @@ jobs:
 
       - name: Run inject script
         run: |
-          # asegurarse de que el script exista
+          # asegurarse de que el script exista (listar para debug)
           ls -la BYT_SOFTWARE/src/pages/scripts || true
+          # ejecutar el script que inyecta el placeholder
           node BYT_SOFTWARE/src/pages/scripts/inject-header.js
+          # eliminar backups creados por el script (no queremos commitearlos)
+          find BYT_SOFTWARE/src/pages -name '*.bak' -print -delete || true
 
       - name: Commit changes to new branch
         env:
@@ -34,8 +37,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # crear branch basado en main (o en la rama por defecto que checkout devolvió)
-          git checkout -b "$BRANCH_NAME" || git checkout "$BRANCH_NAME"
+          # asegurarse de tener las refs remotas actualizadas
+          git fetch origin || true
+          # crear/forzar la rama local desde el checkout actual
+          git checkout -B "$BRANCH_NAME"
+          # agregar cambios (tras eliminar .bak no serán incluidos)
           git add -A
           if git diff --cached --quiet; then
             echo "No hay cambios para commitear"
