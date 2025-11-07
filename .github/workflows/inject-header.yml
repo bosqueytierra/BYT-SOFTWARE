@@ -1,5 +1,5 @@
 # Workflow: inyecta el placeholder del header en los HTML del repo
-# Ejecutalo manualmente desde GitHub Actions -> Run workflow
+# Ejecutalo manualmente desde GitHub Actions -> Run workflow.
 name: Inject siteHeader into pages
 
 on:
