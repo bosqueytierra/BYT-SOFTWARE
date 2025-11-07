@@ -1,140 +1,140 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menú Principal - BYT SOFTWARE</title>
-    <link rel="stylesheet" href="../styles/global.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Menú Principal - BYT SOFTWARE</title>
+  <link rel="stylesheet" href="../styles/global.css" />
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <div class="header-content">
-                <div class="logo-section">
-                    <img src="../assets/logo_byt.png" alt="Logo BYT" class="logo">
-                    <div>
-                        <h1 class="header-title">BYT SOFTWARE</h1>
-                        <p class="header-subtitle">Sistema de Gestión - Bosque y Tierra</p>
-                    </div>
-                </div>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <div class="logo-section">
+          <img src="../assets/logo_byt.png" alt="Logo BYT" class="logo" />
+          <div>
+            <h1 class="header-title">BYT SOFTWARE</h1>
+            <p class="header-subtitle">Sistema de Gestión - Bosque y Tierra</p>
+          </div>
+        </div>
 
-                <!-- User widget: muestra campos amigables en lugar del JSON -->
-                <div id="userWidget" style="display:flex;align-items:center;gap:12px;">
-                    <img id="userAvatar" src="" alt="avatar" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#f0f0f0;">
-                    <div style="min-width:220px;">
-                        <div id="userName" style="font-weight:600;color:#16362e;"></div>
-                        <div id="userEmail" style="font-size:13px;color:#666;"></div>
-                    </div>
-                    <div style="margin-left:auto;">
-                        <button id="logoutBtn" class="btn btn-secondary">Cerrar Sesión</button>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <!-- User widget: muestra campos amigables en lugar del JSON -->
+        <div id="userWidget" style="display:flex;align-items:center;gap:12px;margin-left:auto;">
+          <img id="userAvatar" src="" alt="avatar" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#f0f0f0;" />
+          <div style="min-width:220px;">
+            <div id="userName" style="font-weight:600;color:#16362e;"></div>
+            <div id="userEmail" style="font-size:13px;color:#666;"></div>
+          </div>
+          <div style="margin-left:12px;">
+            <button id="logoutBtn" class="btn btn-secondary">Cerrar Sesión</button>
+          </div>
+        </div>
+      </div>
+    </header>
 
-        <main>
-            <div class="card">
-                <h2 class="card-title">Bienvenido al Sistema de Gestión</h2>
-                <p>Selecciona el módulo con el que deseas trabajar:</p>
-            </div>
+    <main>
+      <div class="card">
+        <h2 class="card-title">Bienvenido al Sistema de Gestión</h2>
+        <p>Selecciona el módulo con el que deseas trabajar:</p>
+      </div>
 
-            <div class="menu-grid">
-                <a href="proyectos/index.html" class="menu-item">
-                    <div class="menu-icon">📋</div>
-                    <h3 class="menu-title">Proyectos</h3>
-                    <p class="menu-description">Gestión de proyectos de muebles personalizados</p>
-                </a>
+      <div class="menu-grid">
+        <a href="proyectos/index.html" class="menu-item">
+          <div class="menu-icon">📋</div>
+          <h3 class="menu-title">Proyectos</h3>
+          <p class="menu-description">Gestión de proyectos de muebles personalizados</p>
+        </a>
 
-                <a href="cotizaciones/index.html" class="menu-item">
-                    <div class="menu-icon">💰</div>
-                    <h3 class="menu-title">Cotizaciones</h3>
-                    <p class="menu-description">Crear, consultar, editar e imprimir cotizaciones</p>
-                </a>
+        <a href="cotizaciones/index.html" class="menu-item">
+          <div class="menu-icon">💰</div>
+          <h3 class="menu-title">Cotizaciones</h3>
+          <p class="menu-description">Crear, consultar, editar e imprimir cotizaciones</p>
+        </a>
 
-                <a href="compras/index.html" class="menu-item">
-                    <div class="menu-icon">🛒</div>
-                    <h3 class="menu-title">Compras</h3>
-                    <p class="menu-description">Gestión de compras y proveedores</p>
-                </a>
+        <a href="compras/index.html" class="menu-item">
+          <div class="menu-icon">🛒</div>
+          <h3 class="menu-title">Compras</h3>
+          <p class="menu-description">Gestión de compras y proveedores</p>
+        </a>
 
-                <a href="finanzas/index.html" class="menu-item">
-                    <div class="menu-icon">📊</div>
-                    <h3 class="menu-title">Finanzas</h3>
-                    <p class="menu-description">Control financiero y reportes</p>
-                </a>
+        <a href="finanzas/index.html" class="menu-item">
+          <div class="menu-icon">📊</div>
+          <h3 class="menu-title">Finanzas</h3>
+          <p class="menu-description">Control financiero y reportes</p>
+        </a>
 
-                <a href="configuracion/index.html" class="menu-item">
-                    <div class="menu-icon">⚙️</div>
-                    <h3 class="menu-title">Configuración</h3>
-                    <p class="menu-description">Materiales, datos maestros y configuración del sistema</p>
-                </a>
-            </div>
-        </main>
-    </div>
+        <a href="configuracion/index.html" class="menu-item">
+          <div class="menu-icon">⚙️</div>
+          <h3 class="menu-title">Configuración</h3>
+          <p class="menu-description">Materiales, datos maestros y configuración del sistema</p>
+        </a>
+      </div>
+    </main>
+  </div>
 
-    <script type="module">
-        // Renderizado seguro del user: toma localStorage.byt_user (JSON) o consulta la sesión de Supabase.
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+  <script type="module">
+    // Renderizado seguro del user: toma localStorage.byt_user (JSON) o consulta la sesión de Supabase.
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-        const SUPABASE_URL = window.__SUPABASE_URL || 'https://qwbeectinjasekkjzxls.supabase.co';
-        const ANON_KEY = window.__SUPABASE_ANON_KEY || null;
-        const sup = ANON_KEY ? createClient(SUPABASE_URL, ANON_KEY) : null;
+    const SUPABASE_URL = window.__SUPABASE_URL || 'https://qwbeectinjasekkjzxls.supabase.co';
+    const ANON_KEY = window.__SUPABASE_ANON_KEY || null;
+    const sup = ANON_KEY ? createClient(SUPABASE_URL, ANON_KEY) : null;
 
-        function safeParse(s) {
-            try { return JSON.parse(s); } catch (e) { return null; }
+    function safeParse(s) {
+      try { return JSON.parse(s); } catch (e) { return null; }
+    }
+
+    async function getUser() {
+      const stored = safeParse(localStorage.getItem('byt_user') || '{}');
+      if (stored && Object.keys(stored).length) return stored;
+      if (sup) {
+        try {
+          const { data } = await sup.auth.getSession();
+          const session = data?.session;
+          if (session && session.user) return session.user;
+        } catch (e) {
+          console.warn('No se pudo obtener sesión:', e);
         }
+      }
+      return null;
+    }
 
-        async function getUser() {
-            const stored = safeParse(localStorage.getItem('byt_user') || '{}');
-            if (stored && Object.keys(stored).length) return stored;
-            if (sup) {
-                try {
-                    const { data } = await sup.auth.getSession();
-                    const session = data?.session;
-                    if (session && session.user) return session.user;
-                } catch (e) {
-                    console.warn('No se pudo obtener sesión:', e);
-                }
-            }
-            return null;
+    (async () => {
+      // Redirigir al login si no está logueado
+      if (!localStorage.getItem('byt_logged_in')) {
+        window.location.href = 'login/login.html';
+        return;
+      }
+
+      const user = await getUser();
+      const nameEl = document.getElementById('userName');
+      const emailEl = document.getElementById('userEmail');
+      const avatarEl = document.getElementById('userAvatar');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      if (user) {
+        const displayName = user.user_metadata?.full_name || user.full_name || user.email || 'Usuario';
+        nameEl.textContent = displayName;
+        emailEl.textContent = user.email || '';
+        const avatar = user.avatar_url || user.user_metadata?.avatar_url || '';
+        avatarEl.src = avatar || 'https://www.gravatar.com/avatar/' + (user.email || '').trim().toLowerCase() + '?d=mp&s=64';
+      } else {
+        nameEl.textContent = 'Usuario';
+        emailEl.textContent = '';
+        avatarEl.src = 'https://www.gravatar.com/avatar/?d=mp&s=64';
+      }
+
+      logoutBtn.addEventListener('click', async () => {
+        try {
+          if (sup) await sup.auth.signOut();
+        } catch (e) {
+          console.warn('signOut error', e);
         }
-
-        (async () => {
-            // Redirigir al login si no está logueado (mantiene comportamiento original)
-            if (!localStorage.getItem('byt_logged_in')) {
-                window.location.href = 'login/login.html';
-                return;
-            }
-
-            const user = await getUser();
-            const nameEl = document.getElementById('userName');
-            const emailEl = document.getElementById('userEmail');
-            const avatarEl = document.getElementById('userAvatar');
-            const logoutBtn = document.getElementById('logoutBtn');
-
-            if (user) {
-                const displayName = user.user_metadata?.full_name || user.full_name || user.email || 'Usuario';
-                nameEl.textContent = displayName;
-                emailEl.textContent = user.email || '';
-                const avatar = user.avatar_url || user.user_metadata?.avatar_url || '';
-                avatarEl.src = avatar || 'https://www.gravatar.com/avatar/' + (user.email || '').trim().toLowerCase() + '?d=mp&s=64';
-            } else {
-                nameEl.textContent = 'Usuario';
-                emailEl.textContent = '';
-                avatarEl.src = 'https://www.gravatar.com/avatar/?d=mp&s=64';
-            }
-
-            logoutBtn.addEventListener('click', async () => {
-                try {
-                    if (sup) await sup.auth.signOut();
-                } catch (e) {
-                    console.warn('signOut error', e);
-                }
-                localStorage.removeItem('byt_logged_in');
-                localStorage.removeItem('byt_user');
-                window.location.href = 'login/login.html';
-            });
-        })();
-    </script>
+        localStorage.removeItem('byt_logged_in');
+        localStorage.removeItem('byt_user');
+        window.location.href = 'login/login.html';
+      });
+    })();
+  </script>
 </body>
 </html>
