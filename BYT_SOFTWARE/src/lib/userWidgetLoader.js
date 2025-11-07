@@ -1,7 +1,5 @@
-// BYT_SOFTWARE/src/lib/userWidgetLoader.js
-// Loader simple: importa el renderizador y lo ejecuta.
+// Small loader: importa y ejecuta el render del header.
+import { renderUserHeader } from '/BYT_SOFTWARE/src/lib/userWidget.js';
 
-import { renderUserHeader } from '/BYT-SOFTWARE/src/lib/userWidget.js';
-
-// Renderiza el header en el div#siteHeader por defecto
-renderUserHeader('siteHeader').catch(console.error);
+// Ejecutar inmediatamente. Si no existe #siteHeader en la página, no hace nada.
+renderUserHeader('siteHeader');
