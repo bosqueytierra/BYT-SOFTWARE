@@ -1,23 +1,15 @@
 // BYT_SOFTWARE/src/lib/providersApi.js
-// Wrapper mínimo para CRUD de providers en Supabase.
-// Requiere que window.__SUPABASE_URL y window.__SUPABASE_ANON_KEY estén definidos en la página antes de importar este módulo.
+// Wrapper mínimo para CRUD de providers usando el cliente canonical en src/supabaseClient.js
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+// Importar el cliente singleton que ya existe en tu repo.
+// Usamos la ruta absoluta que coincide con GitHub Pages deploy: ajusta si tu estructura es distinta.
+import { supabase } from '/BYT_SOFTWARE/src/supabaseClient.js';
 
-const SUPABASE_URL = window.__SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY || '';
-
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn('Supabase URL/ANON KEY no encontrados en window.__SUPABASE_*');
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-/* Providers API */
+// Providers API
 export async function listProviders({ onlyActive = true } = {}) {
-  const q = supabase.from('providers').select('id,name,website,phone,notes,active').order('name', { ascending: true });
-  if (onlyActive) q.eq('active', true);
-  const { data, error } = await q;
+  const query = supabase.from('providers').select('id,name,website,phone,notes,active').order('name', { ascending: true });
+  if (onlyActive) query.eq('active', true);
+  const { data, error } = await query;
   return { data, error };
 }
 
@@ -27,7 +19,6 @@ export async function getProvider(id) {
 }
 
 export async function createProvider(payload) {
-  // payload: { name, website?, phone?, notes?, active? }
   const { data, error } = await supabase.from('providers').insert([payload]).select().single();
   return { data, error };
 }
@@ -38,10 +29,10 @@ export async function updateProvider(id, payload) {
 }
 
 export async function deleteProvider(id) {
-  // opcional: soft-delete -> set active = false
+  // Soft-delete: marcar como inactive
   const { data, error } = await supabase.from('providers').update({ active: false }).eq('id', id).select().single();
   return { data, error };
 }
 
-// útil para debugging
+// para debugging
 export function getClient() { return supabase; }
