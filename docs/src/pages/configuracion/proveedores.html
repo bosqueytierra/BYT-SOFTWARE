@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestión de Proveedores - BYT</title>
+  <link rel="stylesheet" href="../styles/global.css" />
+</head>
+<body>
+  <!-- placeholder global header (si ya inyectaste) -->
+  <div id="siteHeader"></div>
+
+  <main class="container">
+    <h1>Gestión de Proveedores</h1>
+
+    <div style="margin-bottom:12px;">
+      <button id="btnRefresh">Refrescar</button>
+      <button id="btnAdd">Agregar Proveedor</button>
+    </div>
+
+    <table id="providersTable" border="0" cellpadding="8" style="width:100%;border-collapse:collapse;">
+      <thead style="text-align:left;">
+        <tr><th>Nombre</th><th>Website</th><th>Teléfono</th><th>Activo</th><th>Acciones</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <script>
+    // definir acá tus credenciales si no lo hiciste globalmente
+    // window.__SUPABASE_URL = 'https://tusupabase.supabase.co';
+    // window.__SUPABASE_ANON_KEY = 'PUBLIC_ANON_KEY';
+  </script>
+
+  <script type="module">
+    import { listProviders, createProvider, updateProvider, deleteProvider } from '/BYT_SOFTWARE/src/lib/providersApi.js';
+
+    const tbody = document.querySelector('#providersTable tbody');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const btnAdd = document.getElementById('btnAdd');
+
+    async function refresh() {
+      tbody.innerHTML = '<tr><td colspan="5">Cargando...</td></tr>';
+      const { data, error } = await listProviders({ onlyActive: false });
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="5">Error: ${error.message}</td></tr>`;
+        return;
+      }
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">No hay proveedores.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '';
+      data.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(p.name)}</td>
+          <td>${escapeHtml(p.website || '')}</td>
+          <td>${escapeHtml(p.phone || '')}</td>
+          <td>${p.active ? 'Sí' : 'No'}</td>
+          <td>
+            <button data-id="${p.id}" class="edit">Editar</button>
+            <button data-id="${p.id}" class="del">${p.active ? 'Desactivar' : 'Eliminar'}</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // attach events
+      tbody.querySelectorAll('button.edit').forEach(b => b.addEventListener('click', onEdit));
+      tbody.querySelectorAll('button.del').forEach(b => b.addEventListener('click', onDelete));
+    }
+
+    function escapeHtml(s = '') {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function onEdit(e) {
+      const id = e.currentTarget.dataset.id;
+      const name = prompt('Nombre del proveedor (editar):');
+      if (!name) return;
+      // podrías pedir más campos en un formulario
+      const payload = { name };
+      const { data, error } = await updateProvider(id, payload);
+      if (error) return alert('Error: ' + error.message);
+      await refresh();
+    }
+
+    async function onDelete(e) {
+      const id = e.currentTarget.dataset.id;
+      if (!confirm('¿Desactivar este proveedor (marca como inactivo)?')) return;
+      const { data, error } = await deleteProvider(id);
+      if (error) return alert('Error: ' + error.message);
+      await refresh();
+    }
+
+    async function onAdd() {
+      const name = prompt('Nombre del nuevo proveedor:');
+      if (!name) return;
+      const payload = { name: name.trim(), active: true };
+      const { data, error } = await createProvider(payload);
+      if (error) return alert('Error: ' + error.message);
+      await refresh();
+    }
+
+    btnRefresh.addEventListener('click', refresh);
+    btnAdd.addEventListener('click', onAdd);
+
+    // init
+    refresh();
+  </script>
+</body>
+</html>
