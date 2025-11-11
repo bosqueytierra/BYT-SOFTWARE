@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestión de Proveedores - BYT</title>
+  <style>
+    /* Estilos mínimos para la tabla y botones */
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; padding: 18px; color:#0f2f2a;}
+    .container { max-width:1100px; margin: 0 auto; }
+    h1{ margin: 8px 0 18px 0; color:#16362e; }
+    table { width:100%; border-collapse:collapse; background:#fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.04); }
+    th, td { padding:10px 12px; border-bottom:1px solid #efefef; text-align:left; font-size:14px; }
+    th { background:#f7f7f7; font-weight:600; color:#37474f; }
+    button { padding:8px 10px; border-radius:6px; border:1px solid #2e5e4e; background:#fff; color:#2e5e4e; cursor:pointer; }
+    .btn-primary { background:#2e5e4e;color:#fff;border:none; }
+    .controls { display:flex; gap:10px; margin-bottom:12px; }
+    .small { font-size:12px; padding:6px 8px; }
+    .center { text-align:center; }
+    .muted { color:#6b6b6b; font-size:13px; }
+  </style>
+</head>
+<body>
+  <!-- Header loader y configuración Supabase -->
+  <script src="/BYT_SOFTWARE/src/lib/supabaseConfig.js"></script>
+  <script type="module" src="/BYT_SOFTWARE/src/lib/userWidgetLoader.js"></script>
+
+  <div id="siteHeader"></div>
+
+  <main class="container" role="main">
+    <h1>Gestión de Proveedores</h1>
+
+    <div class="controls">
+      <button id="btnRefresh" class="small">Refrescar</button>
+      <button id="btnAdd" class="small btn-primary">Agregar Proveedor</button>
+      <div style="flex:1"></div>
+      <div class="muted">Proveedores: <span id="providersCount">0</span></div>
+    </div>
+
+    <table id="providersTable" aria-live="polite">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Website</th>
+          <th>Teléfono</th>
+          <th>Activo</th>
+          <th class="center">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5" class="center muted">Cargando...</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script type="module">
+    import { listProviders, createProvider, updateProvider, deleteProvider } from '/BYT_SOFTWARE/src/lib/providersApi.js';
+
+    const tbody = document.querySelector('#providersTable tbody');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const btnAdd = document.getElementById('btnAdd');
+    const providersCount = document.getElementById('providersCount');
+
+    function escapeHtml(s = '') {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function refresh() {
+      tbody.innerHTML = '<tr><td colspan="5" class="center muted">Cargando...</td></tr>';
+      providersCount.textContent = '...';
+      const { data, error } = await listProviders({ onlyActive: false });
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="5" class="center muted">Error: ${escapeHtml(error.message || error)}</td></tr>`;
+        providersCount.textContent = '0';
+        console.error('listProviders error', error);
+        return;
+      }
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="center muted">No hay proveedores.</td></tr>';
+        providersCount.textContent = '0';
+        return;
+      }
+      providersCount.textContent = String(data.length);
+      tbody.innerHTML = '';
+      data.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(p.name)}</td>
+          <td>${escapeHtml(p.website || '')}</td>
+          <td>${escapeHtml(p.phone || '')}</td>
+          <td>${p.active ? 'Sí' : 'No'}</td>
+          <td class="center">
+            <button data-id="${p.id}" data-action="edit" class="small">Editar</button>
+            <button data-id="${p.id}" data-action="toggle" class="small">${p.active ? 'Desactivar' : 'Activar'}</button>
+            <button data-id="${p.id}" data-action="delete" class="small">Eliminar</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('button').forEach(btn => btn.addEventListener('click', onRowAction));
+    }
+
+    async function onRowAction(e) {
+      const id = e.currentTarget.dataset.id;
+      const action = e.currentTarget.dataset.action;
+      if (!id || !action) return;
+      if (action === 'edit') {
+        const name = prompt('Editar nombre del proveedor:', e.currentTarget.closest('tr').cells[0].textContent);
+        if (!name) return;
+        const website = prompt('Website (opcional):', e.currentTarget.closest('tr').cells[1].textContent) || null;
+        const phone = prompt('Teléfono (opcional):', e.currentTarget.closest('tr').cells[2].textContent) || null;
+        const payload = { name: name.trim(), website: website ? website.trim() : null, phone: phone ? phone.trim() : null };
+        const { error } = await updateProvider(id, payload);
+        if (error) return alert('Error: ' + (error.message || JSON.stringify(error)));
+        await refresh();
+      } else if (action === 'toggle') {
+        const currentActive = e.currentTarget.closest('tr').cells[3].textContent.trim() === 'Sí';
+        const payload = { active: !currentActive };
+        const { error } = await updateProvider(id, payload);
+        if (error) return alert('Error: ' + (error.message || JSON.stringify(error)));
+        await refresh();
+      } else if (action === 'delete') {
+        if (!confirm('Eliminar de forma permanente este proveedor? (No se podrá revertir)')) return;
+        // Si querés física: llamar a supabase .delete() en providersApi (no implementado allí)
+        const { error } = await deleteProvider(id); // actualmente hace soft-delete; ajustar si quieres delete real
+        if (error) return alert('Error: ' + (error.message || JSON.stringify(error)));
+        await refresh();
+      }
+    }
+
+    async function onAdd() {
+      const name = prompt('Nombre del nuevo proveedor:');
+      if (!name) return;
+      const website = prompt('Website (opcional):') || null;
+      const phone = prompt('Teléfono (opcional):') || null;
+      const payload = { name: name.trim(), website: website ? website.trim() : null, phone: phone ? phone.trim() : null, active: true };
+      const { error } = await createProvider(payload);
+      if (error) {
+        alert('Error: ' + (error.message || JSON.stringify(error)));
+        return;
+      }
+      await refresh();
+    }
+
+    btnRefresh.addEventListener('click', refresh);
+    btnAdd.addEventListener('click', onAdd);
+
+    // init
+    refresh();
+  </script>
+</body>
+</html>
