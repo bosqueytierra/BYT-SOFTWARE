@@ -1,14 +1,23 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
 // Ruta: BYT_SOFTWARE/src/js/wizard.js
-// Nota: este archivo se actualizó para rellenar automáticamente los "Lugares de compra"
-// desde la tabla providers (Supabase) usando providersApi.js.
-// providersApi.js debe estar disponible en ../lib/providersApi.js (desde esta ruta).
+// Nota: este archivo está parcheado para cargar proveedores desde Supabase (window.supabase),
+// usar un fallback local mientras carga, y almacenar provider_id + provider name en cada material.
 
 class WizardCotizacion {
     constructor() {
         this.pasoActual = 1;
         this.totalPasos = 10;
         this.proveedores = null; // cache de proveedores cargados desde Supabase
+
+        // Fallback local (seed) en caso de que Supabase no responda inmediatamente
+        this.providerSeed = [
+          'Otro Proveedor','Imperial','Homecenter','WantingChile','Demasled','Dph','Eplum',
+          'Ferreteria Santa Rosa','Masisa','CasaChic','MercadoLibre','LedStudio','Marco Cuarzo',
+          'Quincalleria Rey','Eli Cortes','OV Estructuras Metalicas','HBT','Doer','Ikea',
+          'Emilio Pohl','CasaMusa','Provelcar','Enko','Ferreteria San Martin','Arteformas',
+          'Ferretek','Sergio Astorga Pinturas','Bertrand','MyR','Placacentro','Bookstore','RyR','Pernos Kim'
+        ];
+
         this.datos = {
             cliente: {},
             materiales: {
@@ -93,31 +102,76 @@ class WizardCotizacion {
         });
     }
 
-    // Cargar proveedores desde providersApi (cached)
+    // Cargar proveedores: intenta window.supabase -> REST anon -> seed local
     async loadProviders() {
         try {
-            // import dinámico para evitar break si módulo no está listo en build
-            const mod = await import('../lib/providersApi.js');
-            const res = await mod.listProviders({ onlyActive: true });
-            if (res?.error) {
-                console.error('providersApi.listProviders error', res.error);
-                this.proveedores = [];
+            // Si ya cargados devolver cache
+            if (Array.isArray(this.proveedores) && this.proveedores.length) return this.proveedores;
+
+            let providers = [];
+
+            // 1) Intentar con window.supabase (respeta sesión / RLS)
+            if (window.supabase && typeof window.supabase.from === 'function') {
+                try {
+                    const { data, error } = await window.supabase
+                        .from('providers')
+                        .select('id,name,website,phone,notes,active,created_at')
+                        .order('name', { ascending: true });
+                    if (!error && Array.isArray(data)) {
+                        providers = data;
+                        console.log('Proveedores cargados desde window.supabase:', providers.length);
+                    } else if (error) {
+                        console.warn('Supabase client error al listar providers:', error);
+                    }
+                } catch (e) {
+                    console.warn('Error usando window.supabase:', e);
+                }
             } else {
-                this.proveedores = res.data || [];
+                console.warn('window.supabase no disponible en esta página.');
             }
-            // rellenar selects actuales en la UI si existen
+
+            // 2) Fallback REST público con ANON KEY (si CORS/policies lo permiten)
+            if ((!providers || providers.length === 0)) {
+                try {
+                    const url = 'https://qwbeectinjasekkjzxls.supabase.co/rest/v1/providers?select=id,name,active&order=name.asc';
+                    const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
+                    const r = await fetch(url, {
+                        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, Accept: 'application/json' }
+                    });
+                    if (r.ok) {
+                        const body = await r.json();
+                        if (Array.isArray(body)) {
+                            providers = body.map(p => ({ id: p.id, name: p.name, active: p.active }));
+                            console.log('Proveedores cargados por REST fallback:', providers.length);
+                        }
+                    } else {
+                        console.warn('REST fallback providers status:', r.status);
+                    }
+                } catch (e) {
+                    console.warn('Error fetch REST fallback providers:', e);
+                }
+            }
+
+            // 3) Si no hay proveedores desde Supabase/REST, usar seed local
+            if (!providers || providers.length === 0) {
+                providers = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
+                console.log('Usando providerSeed local:', providers.length);
+            }
+
+            this.proveedores = providers;
             this.fillProviderSelects();
             return this.proveedores;
         } catch (err) {
-            console.error('Error al importar providersApi o listar proveedores', err);
-            this.proveedores = [];
-            return [];
+            console.error('loadProviders error:', err);
+            this.proveedores = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
+            this.fillProviderSelects();
+            return this.proveedores;
         }
     }
 
-    // Rellenar todos los <select class="lugar-select"> con los proveedores cargados
+    // Rellenar todos los <select class="lugar-select"> con los proveedores cargados o seed
     fillProviderSelects() {
-        if (!this.proveedores) return;
+        const list = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
         const selects = document.querySelectorAll('select.lugar-select');
         selects.forEach(select => {
             const currentVal = select.getAttribute('data-current') || select.value || '';
@@ -127,14 +181,13 @@ class WizardCotizacion {
             placeholder.value = '';
             placeholder.textContent = '-- Selecciona proveedor --';
             select.appendChild(placeholder);
-            this.proveedores.forEach(p => {
+            list.forEach(p => {
                 const opt = document.createElement('option');
-                // mantengo el value como el nombre para compatibilidad con el código existente
-                opt.value = p.name || '';
-                opt.textContent = p.name || p.id;
+                opt.value = p.id || p.name || '';
+                opt.textContent = p.name || p.id || '';
                 select.appendChild(opt);
             });
-            // restaurar valor si corresponde (puede ser nombre guardado previamente)
+            // restaurar valor si corresponde (puede ser id o nombre guardado previamente)
             if (currentVal) select.value = currentVal;
         });
     }
@@ -412,19 +465,15 @@ class WizardCotizacion {
         
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
-            // construir opciones para el select a partir de this.proveedores si existen
+
+            // construir opciones para el select: preferimos this.proveedores (id + name), si no usamos providerSeed (name as id)
             let opcionesHtml = '';
-            if (Array.isArray(this.proveedores) && this.proveedores.length > 0) {
-                opcionesHtml += `<option value="">-- Selecciona proveedor --</option>`;
-                this.proveedores.forEach(p => {
-                    const selected = (p.name === (material.lugar || '')) ? 'selected' : '';
-                    // value = name (compatibilidad). Cambia a p.id si prefieres.
-                    opcionesHtml += `<option value="${(p.name||'').replace(/"/g,'&quot;')}" ${selected}>${(p.name||p.id)}</option>`;
-                });
-            } else {
-                // aún no cargados
-                opcionesHtml = `<option value="">Cargando proveedores...</option>`;
-            }
+            const listaProv = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n }));
+            opcionesHtml += `<option value="">-- Selecciona proveedor --</option>`;
+            listaProv.forEach(p => {
+                const selected = ( (material.lugar_id && p.id === material.lugar_id) || (!material.lugar_id && p.name === material.lugar) ) ? 'selected' : '';
+                opcionesHtml += `<option value="${(p.id||p.name).toString().replace(/"/g,'&quot;')}" ${selected}>${(p.name||p.id)}</option>`;
+            });
 
             html += `
                 <tr>
@@ -435,8 +484,8 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <!-- Select de proveedores: se rellena dinámicamente -->
-                        <select class="form-control lugar-select" data-current="${(material.lugar||'')}" onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'lugar', this.value)">
+                        <!-- Select de proveedores: value = provider.id (o seed name), llama a onProveedorChange -->
+                        <select class="form-control lugar-select" data-current="${(material.lugar_id||material.lugar||'')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
                             ${opcionesHtml}
                         </select>
                     </td>
@@ -457,6 +506,26 @@ class WizardCotizacion {
         // Después de insertar el HTML, rellenamos selects si ya tenemos proveedores cargados
         this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
+    }
+
+    // Maneja selección de proveedor en select (value = provider id o seed name)
+    onProveedorChange(categoria, materialId, value) {
+        // resolver nombre si value es un id conocido
+        let nombre = value;
+        if (Array.isArray(this.proveedores) && this.proveedores.length) {
+            const p = this.proveedores.find(x => (x.id === value || x.name === value));
+            if (p) nombre = p.name;
+        } else if (this.providerSeed && this.providerSeed.includes(value)) {
+            nombre = value;
+        }
+
+        // actualizar datos del wizard (guardamos lugar_id y lugar)
+        if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
+        this.datos.materiales[categoria][materialId].lugar_id = value || '';
+        this.datos.materiales[categoria][materialId].lugar = nombre || '';
+        // re-render de la categoría para reflejar cambios y recalcular subtotales
+        this.cargarMaterialesCategoria(categoria);
+        this.actualizarBarraSuperior();
     }
     
     agregarMaterial(categoria) {
