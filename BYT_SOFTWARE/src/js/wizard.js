@@ -1,3 +1,10 @@
+// ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
+// Ruta: BYT_SOFTWARE/src/js/wizard.js
+// Nota: este archivo está parcheado para cargar proveedores desde Supabase (window.supabase),
+// usar un fallback local mientras carga, y almacenar provider_id + provider name en cada material.
+// También suscribe un BroadcastChannel y un listener de localStorage para refrescar providers
+// cuando se actualicen desde el panel de configuración.
+
 class WizardCotizacion {
     constructor() {
         this.pasoActual = 1;
@@ -90,11 +97,36 @@ class WizardCotizacion {
         this.actualizarProgreso();
         this.mostrarPaso(1);
         this.actualizarBarraSuperior(); // ⚡ Inicializar barra superior
+
         // Cargar proveedores en background para rellenar selects de "Lugar de compra"
+        // (no await para no bloquear render; loadProviders actualiza la UI cuando termine)
         this.loadProviders().catch(err => {
             // No bloquear la interfaz si falla; solo log
             console.warn('No se pudieron cargar proveedores:', err);
         });
+
+        // --- NOTIFICACIONES ENTRE PESTAÑAS: BroadcastChannel + storage fallback ---
+        try {
+          const bc = new BroadcastChannel('byt-providers');
+          bc.onmessage = (ev) => {
+            if (ev.data?.type === 'providers-updated') {
+              console.log('Notificación: providers updated -> recargando');
+              this.loadProviders().catch(console.error);
+            }
+          };
+          this._providersBroadcastChannel = bc;
+        } catch (e) {
+          // BroadcastChannel no soportado -> fallback a storage event
+        }
+
+        // Storage event fallback (funciona entre pestañas)
+        window.addEventListener('storage', (e) => {
+          if (e.key === 'byt_providers_updated_at') {
+            console.log('Storage event: providers updated -> recargando');
+            this.loadProviders().catch(console.error);
+          }
+        });
+        // --- fin notificaciones ---
     }
 
     // Cargar proveedores: intenta window.supabase -> REST anon -> seed local
@@ -905,37 +937,6 @@ class WizardCotizacion {
         `;
     }
     
-    actualizarBotonesNavegacion() {
-        const btnAnterior = document.getElementById('btn-anterior');
-        const btnSiguiente = document.getElementById('btn-siguiente');
-        
-        if (btnAnterior) {
-            btnAnterior.style.display = this.pasoActual > 1 ? 'inline-block' : 'none';
-        }
-        
-        if (btnSiguiente) {
-            btnSiguiente.textContent = this.pasoActual < this.totalPasos ? 'Siguiente →' : 'Finalizar';
-        }
-    }
-    
-    anteriorPaso() {
-        if (this.pasoActual > 1) {
-            this.pasoActual--;
-            this.actualizarProgreso();
-            this.mostrarPaso(this.pasoActual);
-        }
-    }
-    
-    siguientePaso() {
-        if (this.pasoActual < this.totalPasos) {
-            this.pasoActual++;
-            this.actualizarProgreso();
-            this.mostrarPaso(this.pasoActual);
-        } else {
-            this.guardarCotizacion();
-        }
-    }
-    
     validarPasoActual() {
         const pasoInfo = this.pasosPlan[this.pasoActual - 1];
         
@@ -1194,5 +1195,3 @@ document.addEventListener('DOMContentLoaded', function() {
         wizard = new WizardCotizacion();
     }
 });
-
-
