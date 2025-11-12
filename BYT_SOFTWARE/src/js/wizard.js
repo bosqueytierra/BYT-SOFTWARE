@@ -2,6 +2,12 @@
 // Ruta: BYT_SOFTWARE/src/js/wizard.js
 // Nota: este archivo está parcheado para cargar proveedores desde Supabase (window.supabase),
 // usar un fallback local mientras carga, y almacenar provider_id + provider name en cada material.
+<!-- cargar cliente ESM que expone window.supabase -->
+<script type="module" src="/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
+
+<!-- luego cargar wizard -->
+<script type="module" src="/BYT_SOFTWARE/src/js/wizard.js"></script>
+
 
 class WizardCotizacion {
     constructor() {
