@@ -94,21 +94,21 @@ class WizardCotizacion {
         
         if (textoProgreso) {
             const pasoInfo = this.pasosPlan[this.pasoActual - 1];
-            textoProgreso.textContent = `Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'}`;
+            textoProgreso.textContent = Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'};
         }
     }
     
     mostrarPaso(numeroPaso) {
         // Ocultar todos los pasos
         for (let i = 1; i <= this.totalPasos; i++) {
-            const paso = document.getElementById(`paso-${i}`);
+            const paso = document.getElementById(paso-${i});
             if (paso) {
                 paso.style.display = 'none';
             }
         }
         
         // Mostrar paso actual
-        const pasoActivo = document.getElementById(`paso-${numeroPaso}`);
+        const pasoActivo = document.getElementById(paso-${numeroPaso});
         if (pasoActivo) {
             pasoActivo.style.display = 'block';
         }
@@ -122,7 +122,7 @@ class WizardCotizacion {
     
     generarContenidoPaso(paso) {
         const pasoInfo = this.pasosPlan[paso - 1];
-        const container = document.getElementById(`paso-${paso}`);
+        const container = document.getElementById(paso-${paso});
         
         if (!container) return;
         
@@ -292,7 +292,7 @@ class WizardCotizacion {
         // Inicializar materiales si no existen
         if (!this.datos.materiales[categoria] || Object.keys(this.datos.materiales[categoria]).length === 0) {
             estructura.materiales.forEach((material, index) => {
-                const id = `${categoria}_${index}`;
+                const id = ${categoria}_${index};
                 this.datos.materiales[categoria][id] = {
                     nombre: material.nombre,
                     cantidad: material.cantidad,
@@ -344,7 +344,7 @@ class WizardCotizacion {
     }
     
     cargarMaterialesCategoria(categoria) {
-        const tbody = document.getElementById(`tabla-${categoria}`);
+        const tbody = document.getElementById(tabla-${categoria});
         if (!tbody) return;
         
         let html = '';
@@ -420,7 +420,7 @@ class WizardCotizacion {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
         });
         
-        const elemento = document.getElementById(`subtotal_${categoria}`);
+        const elemento = document.getElementById(subtotal_${categoria});
         if (elemento) {
             elemento.textContent = '$' + subtotal.toLocaleString();
         }
@@ -520,7 +520,7 @@ class WizardCotizacion {
             `;
         });
         
-        html += `</div>`;
+        html += </div>;
         container.innerHTML = html;
     }
     
@@ -529,7 +529,7 @@ class WizardCotizacion {
         for (let i = 0; i <= 40; i++) {
             const valor = i * 0.1;
             const selected = Math.abs(valor - factorActual) < 0.01 ? 'selected' : '';
-            opciones += `<option value="${valor}" ${selected}>${valor.toFixed(1)}</option>`;
+            opciones += <option value="${valor}" ${selected}>${valor.toFixed(1)}</option>;
         }
         return opciones;
     }
@@ -546,8 +546,8 @@ class WizardCotizacion {
         const cobroPorTraspaso = totalTraspaso * parseFloat(nuevoFactor);
         
         // Actualizar UI
-        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
-        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
+        const totalElement = document.getElementById(total_traspaso_${categoria});
+        const cobroElement = document.getElementById(cobro_traspaso_${categoria});
         
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
@@ -569,14 +569,14 @@ class WizardCotizacion {
         const cobroPorTraspaso = totalTraspaso * factor;
         
         // Actualizar UI
-        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
-        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
+        const totalElement = document.getElementById(total_traspaso_${categoria});
+        const cobroElement = document.getElementById(cobro_traspaso_${categoria});
         
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
         
         // Actualizar fila específica
-        this.generarPasoTraspasados(document.getElementById(`paso-8`));
+        this.generarPasoTraspasados(document.getElementById(paso-8));
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
     
@@ -826,7 +826,7 @@ class WizardCotizacion {
                         <div><strong>Dirección:</strong> ${this.datos.cliente.direccion || 'No especificada'}</div>
                         <div><strong>Encargado:</strong> ${this.datos.cliente.encargado || 'No especificado'}</div>
                     </div>
-                    ${this.datos.cliente.notas ? `<div style="margin-top: 10px;"><strong>Notas:</strong> ${this.datos.cliente.notas}</div>` : ''}
+                    ${this.datos.cliente.notas ? <div style="margin-top: 10px;"><strong>Notas:</strong> ${this.datos.cliente.notas}</div> : ''}
                 </div>
                 
                 <div style="margin-top: 30px; text-align: center; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
