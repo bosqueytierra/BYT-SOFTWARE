@@ -1,9 +1,4 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
-// Ruta: BYT_SOFTWARE/src/js/wizard.js
-// Nota: conservé EXACTAMENTE tu estructura y lógica original.
-// Cambios: únicamente mejoré la visual del "Resumen Final" (generarPasoResumen) y la plantilla de impresión
-// (obtenerEstilosImpresion, generarHTMLImpresion) para que queden más lindos y delimitados.
-// No eliminé ni recorté nada del resto del código que compartiste.
 
 class WizardCotizacion {
     constructor() {
@@ -103,7 +98,11 @@ class WizardCotizacion {
         }
     }
     
+    // Parche aplicado: versión segura de mostrarPaso que evita TypeError si actualizarBotonesNavegacion no existe
     mostrarPaso(numeroPaso) {
+        // Actualizar paso actual
+        this.pasoActual = numeroPaso;
+
         // Ocultar todos los pasos
         for (let i = 1; i <= this.totalPasos; i++) {
             const paso = document.getElementById(`paso-${i}`);
@@ -118,11 +117,23 @@ class WizardCotizacion {
             pasoActivo.style.display = 'block';
         }
         
-        // Generar contenido del paso
-        this.generarContenidoPaso(numeroPaso);
+        // Generar contenido del paso protegido
+        try {
+            this.generarContenidoPaso(numeroPaso);
+        } catch (e) {
+            console.error('Error en generarContenidoPaso:', e);
+        }
         
-        // Actualizar botones de navegación
-        this.actualizarBotonesNavegacion();
+        // Llamada segura a actualizarBotonesNavegacion para evitar TypeError
+        if (typeof this.actualizarBotonesNavegacion === 'function') {
+            try {
+                this.actualizarBotonesNavegacion();
+            } catch (e) {
+                console.error('Error en actualizarBotonesNavegacion:', e);
+            }
+        } else {
+            console.warn('actualizarBotonesNavegacion no está definida en este contexto — se ha omitido su ejecución.');
+        }
     }
     
     generarContenidoPaso(paso) {
@@ -962,179 +973,102 @@ class WizardCotizacion {
     }
     
     obtenerEstilosImpresion() {
-        // Estilos más limpios para impresión A4 y visual en pantalla
         return `
             @media print {
-                *{box-sizing:border-box}
-                body{font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#222}
-                .no-print{display:none!important}
-                .page-break{page-break-after:always}
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
+                .no-print { display: none !important; }
             }
-            body{
-                font-family:Arial, Helvetica, sans-serif;
-                color:#222;
-                padding:18px;
-                max-width:210mm;
-                margin:0 auto;
-                background:white;
+            
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 210mm;
+                margin: 0 auto;
+                padding: 15mm;
+                background: white;
+                color: #333;
             }
-            .header{display:flex;justify-content:space-between;align-items:center;border-bottom:3px solid #2e5e4e;padding-bottom:12px;margin-bottom:14px}
-            .company-name{font-size:20px;font-weight:800;color:#2e5e4e}
-            .company-subtitle{font-size:12px;color:#666}
-            .cotizacion-info{text-align:right;font-size:12px;color:#333}
-            .section-title{background:#225e47;color:#fff;padding:8px 12px;border-radius:4px;margin-bottom:10px;display:inline-block}
-            .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-            .info-item{background:#f8f9fa;padding:8px;border-left:4px solid #2e5e4e}
-            table{width:100%;border-collapse:collapse;margin-bottom:12px}
-            table th, table td{border:1px solid #ddd;padding:8px;vertical-align:middle}
-            table th{background:#f7f7f7;font-weight:700}
-            .category-header{background:#f2fbf6;padding:8px;border-radius:4px;font-weight:700;color:#2e6b57;margin-top:10px}
-            .formula-box{background:#e8f7ff;border:1px solid #d3eefb;padding:12px;border-radius:8px}
-            .totales{display:flex;gap:12px;justify-content:flex-end}
-            .totales .box{background:#f7f7f7;padding:10px 12px;border-radius:6px;text-align:right}
-            .big-total{font-size:18px;font-weight:900;color:#2e7d32}
-            .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e6eef0;color:#666;font-size:11px;text-align:center}
-        `;
-    }
-    
-    generarHTMLImpresion(totales, fecha, numero) {
-        // Construir tablas por categoría
-        let categoriasHtml = '';
-        Object.keys(this.datos.materiales).forEach(cat => {
-            const materiales = this.datos.materiales[cat] || {};
-            const filas = Object.values(materiales).map(m => {
-                const subtotal = ((m.cantidad || 0) * (m.precio || 0));
-                return `<tr>
-                    <td style="padding:6px;border:1px solid #ddd">${m.nombre}</td>
-                    <td style="padding:6px;border:1px solid #ddd">${m.descripcion || '-'}</td>
-                    <td style="padding:6px;border:1px solid #ddd">${m.lugar || '-'}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:center">${m.cantidad || 0}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${subtotal.toLocaleString()}</td>
-                </tr>`;
-            }).join('');
-            const subtotalCat = Object.values(materiales).reduce((s,m) => s + ((m.cantidad || 0)*(m.precio || 0)), 0);
-            categoriasHtml += `
-                <div class="category-header">${cat.replace(/_/g,' ').toUpperCase()}</div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width:35%">Material</th>
-                            <th style="width:20%">Descripción</th>
-                            <th style="width:15%">Lugar</th>
-                            <th style="width:8%;text-align:center">Cant.</th>
-                            <th style="width:11%;text-align:right">V.Unit.</th>
-                            <th style="width:11%;text-align:right">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${filas || `<tr><td colspan="6" style="padding:10px;text-align:center;color:#666">Sin materiales</td></tr>`}
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="5" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Subtotal ${cat.replace(/_/g,' ')}:</td>
-                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            `;
-        });
-
-        // Traspasados
-        let traspasadosHtml = '';
-        Object.keys(this.datos.valoresTraspasados).forEach(key => {
-            const cat = this.datos.valoresTraspasados[key];
-            const filas = Object.values(cat.materiales).map(m => {
-                const subtotal = ((m.cantidad || 0) * (m.precio || 0));
-                return `<tr>
-                    <td style="padding:6px;border:1px solid #ddd">${m.nombre}</td>
-                    <td style="padding:6px;border:1px solid #ddd">${m.descripcion || '-'}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:center">${m.cantidad || 0}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${subtotal.toLocaleString()}</td>
-                </tr>`;
-            }).join('');
-            const subtotalCat = Object.values(cat.materiales).reduce((s,m) => s + ((m.cantidad || 0)*(m.precio || 0)), 0);
-            const cobro = subtotalCat * (cat.factor || 0);
-            traspasadosHtml += `
-                <div class="category-header">${cat.nombre} (Factor: ${cat.factor || 0})</div>
-                <table>
-                    <thead><tr><th>Servicio</th><th>Descripción</th><th style="text-align:center">Cant.</th><th style="text-align:right">V.Unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
-                    <tbody>${filas || `<tr><td colspan="5" style="padding:10px;text-align:center;color:#666">Sin servicios</td></tr>`}</tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Subtotal ${cat.nombre}:</td>
-                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Cobro por factor (${(cat.factor||0)*100}%):</td>
-                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${cobro.toLocaleString()}</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            `;
-        });
-
-        return `
-            <div class="header">
-                <div>
-                    <div class="company-name">BYT SOFTWARE</div>
-                    <div class="company-subtitle">Sistemas de Cotización y Gestión</div>
-                </div>
-                <div class="cotizacion-info">
-                    <div>Cotización: ${numero}</div>
-                    <div>Fecha: ${fecha}</div>
-                </div>
-            </div>
-
-            <div style="margin-bottom:12px">
-                <div class="section-title">📋 INFORMACIÓN DEL PROYECTO</div>
-                <div class="info-grid">
-                    <div class="info-item"><strong>Proyecto:</strong> ${this.datos.cliente.nombre_proyecto || '-'}</div>
-                    <div class="info-item"><strong>Cliente:</strong> ${this.datos.cliente.nombre || '-'}</div>
-                    <div class="info-item"><strong>Dirección:</strong> ${this.datos.cliente.direccion || '-'}</div>
-                    <div class="info-item"><strong>Encargado:</strong> ${this.datos.cliente.encargado || '-'}</div>
-                    ${this.datos.cliente.notas ? `<div style="grid-column:1 / -1" class="info-item"><strong>Notas:</strong> ${this.datos.cliente.notas}</div>` : ''}
-                </div>
-            </div>
-
-            ${categoriasHtml}
-
-            ${traspasadosHtml ? `<div style="margin-top:12px"><div class="section-title">🏢 SERVICIOS TRASPASADOS</div>${traspasadosHtml}</div>` : ''}
-
-            <div style="margin-top:18px;">
-                <div style="display:flex;gap:12px;justify-content:flex-end;align-items:center;">
-                    <div class="totales">
-                        <div class="box"><div style="font-size:12px;color:#666">Subtotal (sin IVA)</div><strong>$${totales.subtotalSinIVA.toLocaleString()}</strong></div>
-                        <div class="box"><div style="font-size:12px;color:#666">IVA (19%)</div><strong>$${totales.iva.toLocaleString()}</strong></div>
-                        <div class="box"><div style="font-size:12px;color:#666">TOTAL</div><div class="big-total">$${totales.totalConIVA.toLocaleString()}</div></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="footer">
-                <p>Cotización generada por BYT SOFTWARE - Sistema de Gestión de Proyectos</p>
-                <p>Esta cotización es válida por 30 días a partir de la fecha de emisión</p>
-            </div>
-        `;
-    }
-}
-
-// Instancia global del wizard
-let wizard;
-
-// Funciones globales para navegación
-function anteriorPaso() {
-    wizard?.anteriorPaso();
-}
-
-function siguientePaso() {
-    wizard?.siguientePaso();
-}
-
-// Inicializar cuando se carga la página
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.querySelector('.wizard-container')) {
-        wizard = new WizardCotizacion();
-    }
-});
+            
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 3px solid #2e5e4e;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .logo-section {
+                flex: 1;
+            }
+            
+            .company-name {
+                font-size: 28px;
+                font-weight: bold;
+                color: #2e5e4e;
+                margin-bottom: 5px;
+            }
+            
+            .company-subtitle {
+                font-size: 14px;
+                color: #666;
+            }
+            
+            .cotizacion-info {
+                text-align: right;
+                flex: 1;
+            }
+            
+            .cotizacion-numero {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2e5e4e;
+            }
+            
+            .section {
+                margin: 25px 0;
+            }
+            
+            .section-title {
+                background: #2e5e4e;
+                color: white;
+                padding: 8px 15px;
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 15px;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .info-item {
+                padding: 8px;
+                border-left: 4px solid #2e5e4e;
+                background: #f8f9fa;
+            }
+            
+            .info-label {
+                font-weight: bold;
+                color: #2e5e4e;
+            }
+            
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+            }
+            
+            .table th,
+            .table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            
+            .table th {
+                background: #f5f5f5;
+                font-weight
