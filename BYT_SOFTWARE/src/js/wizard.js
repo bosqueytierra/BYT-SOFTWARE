@@ -5,6 +5,8 @@
 // - cargar materiales desde Supabase (materialsApi.js) con cache en this.materiales
 // - suscribir BroadcastChannel + storage fallback para recargar materiales y proveedores
 //   cuando se actualicen desde los paneles de configuración (admin).
+// - Mejoras visuales en Resumen Final y en la plantilla de impresión (tablas por categoría,
+//   subtotales por categoría, totales, colores suaves, encabezado limpio).
 
 class WizardCotizacion {
     constructor() {
@@ -299,21 +301,21 @@ class WizardCotizacion {
         
         if (textoProgreso) {
             const pasoInfo = this.pasosPlan[this.pasoActual - 1];
-            textoProgreso.textContent = Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'};
+            textoProgreso.textContent = `Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'}`;
         }
     }
     
     mostrarPaso(numeroPaso) {
         // Ocultar todos los pasos
         for (let i = 1; i <= this.totalPasos; i++) {
-            const paso = document.getElementById(paso-${i});
+            const paso = document.getElementById(`paso-${i}`);
             if (paso) {
                 paso.style.display = 'none';
             }
         }
         
         // Mostrar paso actual
-        const pasoActivo = document.getElementById(paso-${numeroPaso});
+        const pasoActivo = document.getElementById(`paso-${numeroPaso}`);
         if (pasoActivo) {
             pasoActivo.style.display = 'block';
         }
@@ -327,7 +329,7 @@ class WizardCotizacion {
     
     generarContenidoPaso(paso) {
         const pasoInfo = this.pasosPlan[paso - 1];
-        const container = document.getElementById(paso-${paso});
+        const container = document.getElementById(`paso-${paso}`);
         
         if (!container) return;
         
@@ -497,7 +499,7 @@ class WizardCotizacion {
         // Inicializar materiales si no existen
         if (!this.datos.materiales[categoria] || Object.keys(this.datos.materiales[categoria]).length === 0) {
             estructura.materiales.forEach((material, index) => {
-                const id = ${categoria}_${index};
+                const id = `${categoria}_${index}`;
                 this.datos.materiales[categoria][id] = {
                     nombre: material.nombre,
                     cantidad: material.cantidad,
@@ -549,11 +551,11 @@ class WizardCotizacion {
     }
     
     cargarMaterialesCategoria(categoria) {
-        const tbody = document.getElementById(tabla-${categoria});
+        const tbody = document.getElementById(`tabla-${categoria}`);
         if (!tbody) return;
         
         let html = '';
-        const materiales = this.datos.materiales[categoria];
+        const materiales = this.datos.materiales[categoria] || {};
         
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
@@ -619,13 +621,13 @@ class WizardCotizacion {
     
     actualizarSubtotalCategoria(categoria) {
         let subtotal = 0;
-        const materiales = this.datos.materiales[categoria];
+        const materiales = this.datos.materiales[categoria] || {};
         
         Object.values(materiales).forEach(material => {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
         });
         
-        const elemento = document.getElementById(subtotal_${categoria});
+        const elemento = document.getElementById(`subtotal_${categoria}`);
         if (elemento) {
             elemento.textContent = '$' + subtotal.toLocaleString();
         }
@@ -636,7 +638,7 @@ class WizardCotizacion {
             <div class="card">
                 <h3 class="card-title">💰 Valores Traspasados</h3>
                 <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <strong>� Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
+                    <strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
                     <code>Total = Suma Materiales + (Suma Materiales × Factor 0.1)</code>
                 </p>
         `;
@@ -674,23 +676,23 @@ class WizardCotizacion {
             
             Object.keys(categoria.materiales).forEach(materialKey => {
                 const material = categoria.materiales[materialKey];
-                const total = material.cantidad * material.precio;
+                const total = (material.cantidad || 0) * (material.precio || 0);
                 html += `
                     <tr>
                         <td>${material.nombre}</td>
-                        <td>${material.nombre}</td>
+                        <td>${material.descripcion || ''}</td>
                         <td>
                             <input type="text" class="form-control" value="${material.lugar || ''}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'lugar', this.value)" 
                                    style="width: 120px; font-size: 12px;">
                         </td>
                         <td>
-                            <input type="number" class="form-control" value="${material.cantidad}" 
+                            <input type="number" class="form-control" value="${material.cantidad || 0}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'cantidad', this.value)" 
                                    style="width: 80px;">
                         </td>
                         <td>
-                            <input type="number" class="form-control" value="${material.precio}" 
+                            <input type="number" class="form-control" value="${material.precio || 0}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'precio', this.value)" 
                                    style="width: 100px;">
                         </td>
@@ -702,9 +704,9 @@ class WizardCotizacion {
             // Calcular total traspaso
             let totalTraspaso = 0;
             Object.values(categoria.materiales).forEach(material => {
-                totalTraspaso += material.cantidad * material.precio;
+                totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
             });
-            const cobroPorTraspaso = totalTraspaso * categoria.factor;
+            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
             
             html += `
                             </tbody>
@@ -716,7 +718,7 @@ class WizardCotizacion {
                             <strong>Total Traspaso: <span id="total_traspaso_${key}">$${totalTraspaso.toLocaleString()}</span></strong>
                         </div>
                         <div>
-                            <strong>Cobro por traspaso (${(categoria.factor * 100)}%): 
+                            <strong>Cobro por traspaso (${((categoria.factor||0) * 100)}%): 
                                 <span id="cobro_traspaso_${key}" style="color: #2e7d32;">$${cobroPorTraspaso.toLocaleString()}</span>
                             </strong>
                         </div>
@@ -725,7 +727,7 @@ class WizardCotizacion {
             `;
         });
         
-        html += </div>;
+        html += `</div>`;
         container.innerHTML = html;
     }
     
@@ -734,7 +736,7 @@ class WizardCotizacion {
         for (let i = 0; i <= 40; i++) {
             const valor = i * 0.1;
             const selected = Math.abs(valor - factorActual) < 0.01 ? 'selected' : '';
-            opciones += <option value="${valor}" ${selected}>${valor.toFixed(1)}</option>;
+            opciones += `<option value="${valor}" ${selected}>${valor.toFixed(1)}</option>`;
         }
         return opciones;
     }
@@ -745,14 +747,14 @@ class WizardCotizacion {
         // Recalcular totales
         let totalTraspaso = 0;
         Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
-            totalTraspaso += material.cantidad * material.precio;
+            totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
         });
         
         const cobroPorTraspaso = totalTraspaso * parseFloat(nuevoFactor);
         
         // Actualizar UI
-        const totalElement = document.getElementById(total_traspaso_${categoria});
-        const cobroElement = document.getElementById(cobro_traspaso_${categoria});
+        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
+        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
         
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
@@ -767,21 +769,21 @@ class WizardCotizacion {
         // Recalcular totales
         let totalTraspaso = 0;
         Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
-            totalTraspaso += material.cantidad * material.precio;
+            totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
         });
         
         const factor = this.datos.valoresTraspasados[categoria].factor;
         const cobroPorTraspaso = totalTraspaso * factor;
         
         // Actualizar UI
-        const totalElement = document.getElementById(total_traspaso_${categoria});
-        const cobroElement = document.getElementById(cobro_traspaso_${categoria});
+        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
+        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
         
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
         
-        // Actualizar fila específica
-        this.generarPasoTraspasados(document.getElementById(paso-8));
+        // Actualizar paso traspasados visualmente
+        this.generarPasoTraspasados(document.getElementById(`paso-8`));
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
     
@@ -930,7 +932,7 @@ class WizardCotizacion {
         container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">Resumen Final del Proyecto</h3>
-                <!-- (Contenido igual que antes) -->
+                
                 <div style="margin: 20px 0;">
                     <h4 style="color: var(--color-primary);">📦 Materiales</h4>
                     <div class="summary-grid">
@@ -952,7 +954,87 @@ class WizardCotizacion {
                         </div>
                     </div>
                 </div>
-                <!-- resto del contenido igual... -->
+                
+                <div style="margin: 20px 0;">
+                    <h4 style="color: var(--color-primary);">🏢 Valores Traspasados</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Traspasados Base</span>
+                            <span class="summary-value">$${totales.totalTraspasos.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Factores Individuales</span>
+                            <span class="summary-value">$${totales.totalTraspasosFactor.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label"><strong>Total Traspasados</strong></span>
+                            <span class="summary-value">$${totales.totalTraspasados.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: #f0f8f0; border-left: 4px solid #4caf50; border-radius: 8px;">
+                    <h4 style="color: #2e7d32; margin-bottom: 10px;">💵 Cálculo de Ganancia BYT</h4>
+                    <div style="font-family: monospace; background: white; padding: 10px; border-radius: 4px; font-size: 14px;">
+                        Ganancia = TOTAL DEL PROYECTO - Materiales - Traspasados<br>
+                        Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()}
+                    </div>
+                    <div style="text-align: center; font-size: 18px; color: #2e7d32; font-weight: bold; margin-top: 10px;">
+                        = $${totales.ganancia.toLocaleString()}
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-left: 4px solid var(--color-primary); border-radius: 8px;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 10px;">🧮 Fórmula BYT Completa Aplicada</h4>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">
+                            (Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)
+                        </div>
+                        <div style="font-family: monospace; font-size: 14px; line-height: 1.6;">
+                            <div>• Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}</div>
+                            <div>• Traspasados Base: $${totales.totalTraspasos.toLocaleString()}</div>
+                            <div>• Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}</div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold;">
+                                SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-size: 20px; color: #2e5e4e; font-weight: bold; background: #f0f8f0; padding: 10px; border-radius: 6px;">
+                        NETO = $${totales.subtotalSinIVA.toLocaleString()}
+                    </div>
+                </div>
+                
+                <div style="margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px;">
+                    <h4 style="color: var(--color-primary); text-align: center; margin-bottom: 20px;">💰 Totales Finales</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Subtotal (sin IVA)</span>
+                            <span class="summary-value">$${totales.subtotalSinIVA.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">IVA (19%)</span>
+                            <span class="summary-value">$${totales.iva.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label"><strong>TOTAL PROYECTO</strong></span>
+                            <span class="summary-value" style="font-size: 24px; color: #2e5e4e; font-weight: bold;">
+                                $${totales.totalConIVA.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: #fff; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    <h4 style="color: var(--color-primary);">👤 Información del Proyecto</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px;">
+                        <div><strong>Proyecto:</strong> ${this.datos.cliente.nombre_proyecto || 'Sin nombre'}</div>
+                        <div><strong>Cliente:</strong> ${this.datos.cliente.nombre || 'Sin especificar'}</div>
+                        <div><strong>Dirección:</strong> ${this.datos.cliente.direccion || 'No especificada'}</div>
+                        <div><strong>Encargado:</strong> ${this.datos.cliente.encargado || 'No especificado'}</div>
+                    </div>
+                    ${this.datos.cliente.notas ? `<div style="margin-top: 10px;"><strong>Notas:</strong> ${this.datos.cliente.notas}</div>` : ''}
+                </div>
+                
                 <div style="margin-top: 30px; text-align: center; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
                     <button type="button" class="btn" onclick="wizard.guardarCotizacion()" 
                             style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, var(--color-primary), #245847);">
@@ -1037,172 +1119,163 @@ class WizardCotizacion {
     }
     
     obtenerEstilosImpresion() {
+        // Estilos pensados para A4 y para impresión en blanco y negro/ color suave
         return `
             @media print {
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
+                body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.3; color: #222; }
                 .no-print { display: none !important; }
+                .page-break { page-break-after: always; }
             }
-            /* resto estilos conservados */
             body {
                 font-family: Arial, sans-serif;
                 max-width: 210mm;
                 margin: 0 auto;
-                padding: 15mm;
+                padding: 18mm;
                 background: white;
-                color: #333;
+                color: #222;
             }
-            .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #2e5e4e; padding-bottom:20px; margin-bottom:30px; }
-            /* ... */
+            .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #2e5e4e; padding-bottom:12px; margin-bottom:16px; }
+            .company { color:#2e5e4e; font-size:16px; font-weight:700; }
+            .meta { text-align:right; font-size:12px; color:#444; }
+            h3.section-title { color:#225e47; margin:12px 0; }
+            table { width:100%; border-collapse:collapse; margin-bottom:10px; }
+            th, td { border:1px solid #e0e0e0; padding:8px; vertical-align:middle; }
+            th { background:#f7f9f7; text-align:left; font-weight:700; }
+            .category-header { background:#f2fbf6; padding:6px 10px; font-weight:700; color:#2e6b57; margin-top:8px; }
+            .totals { margin-top:10px; display:flex; gap:12px; justify-content:flex-end; }
+            .totals .box { padding:10px 12px; background:#f7f7f7; border-radius:6px; min-width:150px; text-align:right; }
+            .big-total { font-size:18px; color:#2e7d32; font-weight:900; }
         `;
     }
     
     generarHTMLImpresion(totales, fecha, numero) {
-        // Generar detalle de materiales (idéntico a la lógica previa)
-        let detalleMateriales = '';
-        Object.keys(this.datos.materiales).forEach(categoria => {
-            const materiales = this.datos.materiales[categoria];
-            let hayMateriales = false;
-            let filasCategoria = '';
-            
-            Object.values(materiales).forEach(material => {
-                if ((material.cantidad || 0) > 0) {
-                    hayMateriales = true;
-                    const subtotal = (material.cantidad || 0) * (material.precio || 0);
-                    filasCategoria += `
+        // Construyo tablas por categoría como en el resumen visual
+        let categoriasHtml = '';
+        Object.keys(this.datos.materiales).forEach(cat => {
+            const materiales = this.datos.materiales[cat] || {};
+            const filas = Object.values(materiales).map(m => {
+                const subtotal = ((m.cantidad || 0) * (m.precio || 0));
+                return `<tr>
+                    <td style="padding:6px;border:1px solid #ddd">${m.nombre}</td>
+                    <td style="padding:6px;border:1px solid #ddd">${m.descripcion || '-'}</td>
+                    <td style="padding:6px;border:1px solid #ddd">${m.lugar || '-'}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:center">${m.cantidad || 0}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${subtotal.toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+            const subtotalCat = Object.values(materiales).reduce((s,m) => s + ((m.cantidad || 0)*(m.precio || 0)), 0);
+            categoriasHtml += `
+                <div class="category-header">${cat.replace(/_/g,' ').toUpperCase()}</div>
+                <table>
+                    <thead>
                         <tr>
-                            <td>${material.nombre}</td>
-                            <td>${material.descripcion || '-'}</td>
-                            <td>${material.lugar || '-'}</td>
-                            <td style="text-align: center;">${material.cantidad}</td>
-                            <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
-                            <td style="text-align: right; font-weight: bold;">$${subtotal.toLocaleString()}</td>
+                            <th style="width:35%">Material</th>
+                            <th style="width:20%">Descripción</th>
+                            <th style="width:15%">Lugar</th>
+                            <th style="width:8%;text-align:center">Cant.</th>
+                            <th style="width:11%;text-align:right">V.Unit.</th>
+                            <th style="width:11%;text-align:right">Subtotal</th>
                         </tr>
-                    `;
-                }
-            });
-            
-            if (hayMateriales) {
-                detalleMateriales += `
-                    <tr style="background: #e8f5e8;">
-                        <td colspan="6" style="font-weight: bold; color: #2e7d32; text-transform: uppercase;">
-                            ${categoria.replace(/_/g, ' ')}
-                        </td>
-                    </tr>
-                    ${filasCategoria}
-                `;
-            }
-        });
-        
-        // Generar detalle de traspasados (igual que antes)
-        let detalleTraspasados = '';
-        Object.keys(this.datos.valoresTraspasados).forEach(categoriaKey => {
-            const categoria = this.datos.valoresTraspasados[categoriaKey];
-            let hayTraspasados = false;
-            let filasCategoria = '';
-            
-            Object.values(categoria.materiales).forEach(material => {
-                if ((material.cantidad || 0) > 0) {
-                    hayTraspasados = true;
-                    const subtotal = (material.cantidad || 0) * (material.precio || 0);
-                    filasCategoria += `
+                    </thead>
+                    <tbody>
+                        ${filas || `<tr><td colspan="6" style="padding:10px;text-align:center;color:#666">Sin materiales</td></tr>`}
+                    </tbody>
+                    <tfoot>
                         <tr>
-                            <td>${material.nombre}</td>
-                            <td>${material.descripcion || '-'}</td>
-                            <td style="text-align: center;">${material.cantidad}</td>
-                            <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
-                            <td style="text-align: right;">$${subtotal.toLocaleString()}</td>
+                            <td colspan="5" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Subtotal ${cat.replace(/_/g,' ')}:</td>
+                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
                         </tr>
-                    `;
-                }
-            });
-            
-            if (hayTraspasados) {
-                detalleTraspasados += `
-                    <tr style="background: #fff3e0;">
-                        <td colspan="5" style="font-weight: bold; color: #f57c00; text-transform: uppercase;">
-                            ${categoriaKey} (Factor: ${categoria.factor})
-                        </td>
-                    </tr>
-                    ${filasCategoria}
-                `;
-            }
+                    </tfoot>
+                </table>
+            `;
         });
-        
+
+        // Traspasados (servicios)
+        let traspasadosHtml = '';
+        Object.keys(this.datos.valoresTraspasados).forEach(key => {
+            const cat = this.datos.valoresTraspasados[key];
+            const filas = Object.values(cat.materiales).map(m => {
+                const subtotal = ((m.cantidad || 0) * (m.precio || 0));
+                return `<tr>
+                    <td style="padding:6px;border:1px solid #ddd">${m.nombre}</td>
+                    <td style="padding:6px;border:1px solid #ddd">${m.descripcion || '-'}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:center">${m.cantidad || 0}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${subtotal.toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+            const subtotalCat = Object.values(cat.materiales).reduce((s,m) => s + ((m.cantidad || 0)*(m.precio || 0)), 0);
+            const cobro = subtotalCat * (cat.factor || 0);
+            traspasadosHtml += `
+                <div class="category-header">${cat.nombre} (Factor: ${cat.factor || 0})</div>
+                <table>
+                    <thead><tr><th>Servicio</th><th>Descripción</th><th style="text-align:center">Cant.</th><th style="text-align:right">V.Unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
+                    <tbody>${filas || `<tr><td colspan="5" style="padding:10px;text-align:center;color:#666">Sin servicios</td></tr>`}</tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Subtotal ${cat.nombre}:</td>
+                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Cobro por factor (${(cat.factor||0)*100}%):</td>
+                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${cobro.toLocaleString()}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            `;
+        });
+
         return `
-            <div class="header">
-                <div class="logo-section">
-                    <div class="company-name">BYT SOFTWARE</div>
-                    <div class="company-subtitle">Sistemas de Cotización y Gestión</div>
-                </div>
-                <div class="cotizacion-info">
-                    <div class="cotizacion-numero">${numero}</div>
+            <!doctype html>
+            <html lang="es">
+            <head>
+                <meta charset="utf-8">
+                <title>Cotización ${numero}</title>
+                <meta name="viewport" content="width=device-width,initial-scale=1">
+                <style>
+                  ${this.obtenerEstilosImpresion()}
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                  <div>
+                    <div class="company">BYT SOFTWARE</div>
+                    <div style="font-size:12px;color:#555">Sistemas de Cotización y Gestión</div>
+                  </div>
+                  <div class="meta">
+                    <div>Cotización: ${numero}</div>
                     <div>Fecha: ${fecha}</div>
+                  </div>
                 </div>
-            </div>
-            <!-- resto del HTML de impresión -->
-            <div class="section">
-                <div class="section-title">📋 INFORMACIÓN DEL PROYECTO</div>
-                <div class="info-grid">
-                    <div class="info-item">
-                        <div class="info-label">Proyecto:</div>
-                        <div>${this.datos.cliente.nombre_proyecto || 'Sin especificar'}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Cliente:</div>
-                        <div>${this.datos.cliente.nombre || 'Sin especificar'}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Dirección:</div>
-                        <div>${this.datos.cliente.direccion || 'No especificada'}</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="info-label">Encargado:</div>
-                        <div>${this.datos.cliente.encargado || 'No especificado'}</div>
-                    </div>
+
+                <div style="margin-bottom:12px">
+                  <h3 class="section-title">📋 INFORMACIÓN DEL PROYECTO</h3>
+                  <div style="font-size:13px;color:#222">
+                    <div>Proyecto: ${this.datos.cliente.nombre_proyecto || '-'}</div>
+                    <div>Cliente: ${this.datos.cliente.nombre || '-'}</div>
+                    <div>Dirección: ${this.datos.cliente.direccion || '-'}</div>
+                    <div>Encargado: ${this.datos.cliente.encargado || '-'}</div>
+                  </div>
                 </div>
-            </div>
-            ${detalleMateriales ? `
-            <div class="section">
-                <div class="section-title">🔧 DETALLE DE MATERIALES</div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Material</th>
-                            <th>Descripción</th>
-                            <th>Lugar de Compra</th>
-                            <th>Cant.</th>
-                            <th>Valor Unit.</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${detalleMateriales}
-                    </tbody>
-                </table>
-            </div>` : ''}
-            ${detalleTraspasados ? `
-            <div class="section">
-                <div class="section-title">🏢 SERVICIOS TRASPASADOS</div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Servicio</th>
-                            <th>Descripción</th>
-                            <th>Cant.</th>
-                            <th>Valor Unit.</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${detalleTraspasados}
-                    </tbody>
-                </table>
-            </div>` : ''}
-            <div class="footer">
-                <p>Cotización generada por BYT SOFTWARE - Sistema de Gestión de Proyectos</p>
-                <p>Esta cotización es válida por 30 días a partir de la fecha de emisión</p>
-            </div>
+
+                ${categoriasHtml}
+
+                ${traspasadosHtml ? `<div style="margin-top:12px"><h3 class="section-title">🏢 SERVICIOS TRASPASADOS</h3>${traspasadosHtml}</div>` : ''}
+
+                <div style="margin-top:18px;">
+                  <h3 style="color:#2e5e4e;margin-bottom:8px">Totales</h3>
+                  <div class="totals">
+                    <div class="box"><div style="font-size:12px;color:#666">Subtotal (sin IVA)</div><strong>$${totales.subtotalSinIVA.toLocaleString()}</strong></div>
+                    <div class="box"><div style="font-size:12px;color:#666">IVA (19%)</div><strong>$${totales.iva.toLocaleString()}</strong></div>
+                    <div class="box"><div style="font-size:12px;color:#666">TOTAL</div><div class="big-total">$${totales.totalConIVA.toLocaleString()}</div></div>
+                  </div>
+                </div>
+
+                <div style="margin-top:20px;font-size:11px;color:#666">Documento generado por BYT SOFTWARE - Válido como referencia.</div>
+            </body>
+            </html>
         `;
     }
 }
