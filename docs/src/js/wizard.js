@@ -120,7 +120,7 @@ class WizardCotizacion {
         if (!this.proveedores) return;
         const selects = document.querySelectorAll('select.lugar-select');
         selects.forEach(select => {
-            const currentVal = select.value || '';
+            const currentVal = select.getAttribute('data-current') || select.value || '';
             // Limpiar opciones
             select.innerHTML = '';
             const placeholder = document.createElement('option');
@@ -129,8 +129,7 @@ class WizardCotizacion {
             select.appendChild(placeholder);
             this.proveedores.forEach(p => {
                 const opt = document.createElement('option');
-                // Para compatibilidad con el código existente, almacenamos el nombre como value.
-                // Si prefieres guardar el id, cambia opt.value = p.id;
+                // mantengo el value como el nombre para compatibilidad con el código existente
                 opt.value = p.name || '';
                 opt.textContent = p.name || p.id;
                 select.appendChild(opt);
@@ -413,6 +412,20 @@ class WizardCotizacion {
         
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
+            // construir opciones para el select a partir de this.proveedores si existen
+            let opcionesHtml = '';
+            if (Array.isArray(this.proveedores) && this.proveedores.length > 0) {
+                opcionesHtml += `<option value="">-- Selecciona proveedor --</option>`;
+                this.proveedores.forEach(p => {
+                    const selected = (p.name === (material.lugar || '')) ? 'selected' : '';
+                    // value = name (compatibilidad). Cambia a p.id si prefieres.
+                    opcionesHtml += `<option value="${(p.name||'').replace(/"/g,'&quot;')}" ${selected}>${(p.name||p.id)}</option>`;
+                });
+            } else {
+                // aún no cargados
+                opcionesHtml = `<option value="">Cargando proveedores...</option>`;
+            }
+
             html += `
                 <tr>
                     <td>${material.nombre}</td>
@@ -422,9 +435,9 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <!-- Select de proveedores: se rellena dinámicamente por fillProviderSelects() -->
-                        <select class="form-control lugar-select" onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'lugar', this.value)">
-                            <option value="">Cargando proveedores...</option>
+                        <!-- Select de proveedores: se rellena dinámicamente -->
+                        <select class="form-control lugar-select" data-current="${(material.lugar||'')}" onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'lugar', this.value)">
+                            ${opcionesHtml}
                         </select>
                     </td>
                     <td>
