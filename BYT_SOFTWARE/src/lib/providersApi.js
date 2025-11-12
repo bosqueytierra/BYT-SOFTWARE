@@ -1,5 +1,5 @@
 // BYT_SOFTWARE/src/lib/providersApi.js
-// Wrapper mínimo para CRUD de providers usando el cliente navegador (supabaseBrowserClient)
+// Wrapper mínimo para CRUD de providers usando el cliente navegador (supabaseBrowserClient)  
 
 import { supabase } from '../js/supabaseBrowserClient.js';
 
