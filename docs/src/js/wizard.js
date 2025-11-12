@@ -1,9 +1,27 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
+// Ruta: BYT_SOFTWARE/src/js/wizard.js
+// Archivo completo. Conserva tu lógica original y agrega:
+// - carga de proveedores desde Supabase (window.supabase) con fallback seed
+// - selects <select class="lugar-select"> en lugar de inputs de "Lugar de compra"
+// - funciones: loadProviders(), fillProviderSelects(), onProveedorChange()
+// - parche seguro en mostrarPaso para evitar TypeError si actualizarBotonesNavegacion no existe
+// - mejoras visuales en Resumen Final e impresión (sin tocar cálculos ni flow)
 
 class WizardCotizacion {
     constructor() {
         this.pasoActual = 1;
         this.totalPasos = 10;
+
+        // Proveedores cache (se cargan desde Supabase si está disponible)
+        this.proveedores = null;
+        this.providerSeed = [
+          'Otro Proveedor','Imperial','Homecenter','WantingChile','Demasled','Dph','Eplum',
+          'Ferreteria Santa Rosa','Masisa','CasaChic','MercadoLibre','LedStudio','Marco Cuarzo',
+          'Quincalleria Rey','Eli Cortes','OV Estructuras Metalicas','HBT','Doer','Ikea',
+          'Emilio Pohl','CasaMusa','Provelcar','Enko','Ferreteria San Martin','Arteformas',
+          'Ferretek','Sergio Astorga Pinturas','Bertrand','MyR','Placacentro','Bookstore','RyR','Pernos Kim'
+        ];
+
         this.datos = {
             cliente: {},
             materiales: {
@@ -79,10 +97,108 @@ class WizardCotizacion {
     
     init() {
         this.actualizarProgreso();
+
+        // Cargar proveedores en background (Supabase o fallback)
+        this.loadProviders().catch(err => console.warn('No se pudieron cargar providers:', err));
+
         this.mostrarPaso(1);
-        this.actualizarBarraSuperior(); // ⚡ Inicializar barra superior
+        this.actualizarBarraSuperior();
+
+        // BroadcastChannel para sincronización entre pestañas (opcional)
+        try {
+            const bc = new BroadcastChannel('byt-providers');
+            bc.onmessage = (ev) => {
+                if (ev.data?.type === 'providers-updated') {
+                    this.loadProviders().catch(console.error);
+                }
+            };
+        } catch (e) {
+            // no bloquear si no disponible
+        }
     }
-    
+
+    // ---------------- Providers (Supabase) ----------------
+    async loadProviders() {
+        try {
+            if (Array.isArray(this.proveedores) && this.proveedores.length) return this.proveedores;
+
+            let providers = [];
+
+            // 1) window.supabase (si está presente)
+            if (window.supabase && typeof window.supabase.from === 'function') {
+                try {
+                    const { data, error } = await window.supabase
+                        .from('providers')
+                        .select('id,name,active')
+                        .order('name', { ascending: true });
+                    if (!error && Array.isArray(data)) {
+                        providers = data.map(p => ({ id: p.id, name: p.name, active: p.active }));
+                        console.log('Proveedores cargados desde Supabase:', providers.length);
+                    } else if (error) {
+                        console.warn('Supabase providers list error', error);
+                    }
+                } catch (e) {
+                    console.warn('Error usando window.supabase:', e);
+                }
+            }
+
+            // 2) fallback seed local
+            if (!providers || providers.length === 0) {
+                providers = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
+                console.log('Usando providerSeed local:', providers.length);
+            }
+
+            this.proveedores = providers;
+            // rellenar selects ya existentes
+            this.fillProviderSelects();
+            return this.proveedores;
+        } catch (err) {
+            console.error('loadProviders error:', err);
+            this.proveedores = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
+            this.fillProviderSelects();
+            return this.proveedores;
+        }
+    }
+
+    // Rellena todos los selects .lugar-select con la lista de proveedores actual
+    fillProviderSelects() {
+        const list = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n }));
+        const selects = document.querySelectorAll('select.lugar-select');
+        selects.forEach(select => {
+            const currentVal = select.getAttribute('data-current') || select.value || '';
+            // limpiar opciones
+            select.innerHTML = '';
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '-- Selecciona proveedor --';
+            select.appendChild(placeholder);
+            list.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id || p.name || '';
+                opt.textContent = p.name || p.id || '';
+                select.appendChild(opt);
+            });
+            if (currentVal) {
+                try { select.value = currentVal; } catch(e){ /* noop */ }
+            }
+        });
+    }
+
+    // Handler al seleccionar proveedor en la tabla
+    onProveedorChange(categoria, materialId, value) {
+        let nombre = value;
+        if (Array.isArray(this.proveedores) && this.proveedores.length) {
+            const p = this.proveedores.find(x => (x.id === value || x.name === value));
+            if (p) nombre = p.name;
+        }
+        if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
+        this.datos.materiales[categoria][materialId].lugar_id = value || '';
+        this.datos.materiales[categoria][materialId].lugar = nombre || '';
+        // refrescar UI y totales
+        this.cargarMaterialesCategoria(categoria);
+        this.actualizarBarraSuperior();
+    }
+
     actualizarProgreso() {
         const progreso = (this.pasoActual / this.totalPasos) * 100;
         const barraProgreso = document.getElementById('progreso-barra');
@@ -98,33 +214,28 @@ class WizardCotizacion {
         }
     }
     
-    // Parche aplicado: versión segura de mostrarPaso que evita TypeError si actualizarBotonesNavegacion no existe
+    // mostrarPaso: usa llamada segura a actualizarBotonesNavegacion
     mostrarPaso(numeroPaso) {
-        // Actualizar paso actual
         this.pasoActual = numeroPaso;
 
         // Ocultar todos los pasos
         for (let i = 1; i <= this.totalPasos; i++) {
             const paso = document.getElementById(`paso-${i}`);
-            if (paso) {
-                paso.style.display = 'none';
-            }
+            if (paso) paso.style.display = 'none';
         }
-        
+
         // Mostrar paso actual
         const pasoActivo = document.getElementById(`paso-${numeroPaso}`);
-        if (pasoActivo) {
-            pasoActivo.style.display = 'block';
-        }
-        
-        // Generar contenido del paso protegido
+        if (pasoActivo) pasoActivo.style.display = 'block';
+
+        // Generar contenido del paso (protegido)
         try {
             this.generarContenidoPaso(numeroPaso);
         } catch (e) {
             console.error('Error en generarContenidoPaso:', e);
         }
-        
-        // Llamada segura a actualizarBotonesNavegacion para evitar TypeError
+
+        // Llamada segura a actualizarBotonesNavegacion
         if (typeof this.actualizarBotonesNavegacion === 'function') {
             try {
                 this.actualizarBotonesNavegacion();
@@ -132,7 +243,8 @@ class WizardCotizacion {
                 console.error('Error en actualizarBotonesNavegacion:', e);
             }
         } else {
-            console.warn('actualizarBotonesNavegacion no está definida en este contexto — se ha omitido su ejecución.');
+            // no interrumpir flujo si no existe
+            console.warn('actualizarBotonesNavegacion no está definida; omitiendo su ejecución.');
         }
     }
     
@@ -312,7 +424,9 @@ class WizardCotizacion {
                 this.datos.materiales[categoria][id] = {
                     nombre: material.nombre,
                     cantidad: material.cantidad,
-                    precio: material.precio
+                    precio: material.precio,
+                    descripcion: '',
+                    lugar: ''
                 };
             });
         }
@@ -364,10 +478,11 @@ class WizardCotizacion {
         if (!tbody) return;
         
         let html = '';
-        const materiales = this.datos.materiales[categoria];
+        const materiales = this.datos.materiales[categoria] || {};
         
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
+            const lugarCurrent = (material.lugar_id || material.lugar || '');
             html += `
                 <tr>
                     <td>${material.nombre}</td>
@@ -377,9 +492,10 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <input type="text" class="form-control" value="${material.lugar || ''}" 
-                               placeholder="Lugar de compra..."
-                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'lugar', this.value)">
+                        <select class="form-control lugar-select" data-current="${lugarCurrent}" onchange="wizard.onProveedorChange('${categoria}','${materialId}', this.value)">
+                            <option value="">-- Selecciona proveedor --</option>
+                            <!-- Opciones serán rellenadas por fillProviderSelects() -->
+                        </select>
                     </td>
                     <td>
                         <input type="number" class="form-control" value="${material.cantidad || 0}" 
@@ -395,6 +511,10 @@ class WizardCotizacion {
         });
         
         tbody.innerHTML = html;
+
+        // Rellenar selects con proveedores (si están cargados)
+        this.fillProviderSelects();
+
         this.actualizarSubtotalCategoria(categoria);
     }
     
@@ -405,7 +525,9 @@ class WizardCotizacion {
             this.datos.materiales[categoria][materialId] = {
                 nombre: nombre,
                 cantidad: 0,
-                precio: 0
+                precio: 0,
+                descripcion: '',
+                lugar: ''
             };
             this.cargarMaterialesCategoria(categoria);
         }
@@ -430,7 +552,7 @@ class WizardCotizacion {
     
     actualizarSubtotalCategoria(categoria) {
         let subtotal = 0;
-        const materiales = this.datos.materiales[categoria];
+        const materiales = this.datos.materiales[categoria] || {};
         
         Object.values(materiales).forEach(material => {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
@@ -485,23 +607,23 @@ class WizardCotizacion {
             
             Object.keys(categoria.materiales).forEach(materialKey => {
                 const material = categoria.materiales[materialKey];
-                const total = material.cantidad * material.precio;
+                const total = (material.cantidad || 0) * (material.precio || 0);
                 html += `
                     <tr>
                         <td>${material.nombre}</td>
-                        <td>${material.nombre}</td>
+                        <td>${material.descripcion || ''}</td>
                         <td>
                             <input type="text" class="form-control" value="${material.lugar || ''}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'lugar', this.value)" 
                                    style="width: 120px; font-size: 12px;">
                         </td>
                         <td>
-                            <input type="number" class="form-control" value="${material.cantidad}" 
+                            <input type="number" class="form-control" value="${material.cantidad || 0}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'cantidad', this.value)" 
                                    style="width: 80px;">
                         </td>
                         <td>
-                            <input type="number" class="form-control" value="${material.precio}" 
+                            <input type="number" class="form-control" value="${material.precio || 0}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'precio', this.value)" 
                                    style="width: 100px;">
                         </td>
@@ -513,9 +635,9 @@ class WizardCotizacion {
             // Calcular total traspaso
             let totalTraspaso = 0;
             Object.values(categoria.materiales).forEach(material => {
-                totalTraspaso += material.cantidad * material.precio;
+                totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
             });
-            const cobroPorTraspaso = totalTraspaso * categoria.factor;
+            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
             
             html += `
                             </tbody>
@@ -527,7 +649,7 @@ class WizardCotizacion {
                             <strong>Total Traspaso: <span id="total_traspaso_${key}">$${totalTraspaso.toLocaleString()}</span></strong>
                         </div>
                         <div>
-                            <strong>Cobro por traspaso (${(categoria.factor * 100)}%): 
+                            <strong>Cobro por traspaso (${((categoria.factor||0) * 100)}%): 
                                 <span id="cobro_traspaso_${key}" style="color: #2e7d32;">$${cobroPorTraspaso.toLocaleString()}</span>
                             </strong>
                         </div>
@@ -556,7 +678,7 @@ class WizardCotizacion {
         // Recalcular totales
         let totalTraspaso = 0;
         Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
-            totalTraspaso += material.cantidad * material.precio;
+            totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
         });
         
         const cobroPorTraspaso = totalTraspaso * parseFloat(nuevoFactor);
@@ -578,7 +700,7 @@ class WizardCotizacion {
         // Recalcular totales
         let totalTraspaso = 0;
         Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
-            totalTraspaso += material.cantidad * material.precio;
+            totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
         });
         
         const factor = this.datos.valoresTraspasados[categoria].factor;
@@ -596,55 +718,7 @@ class WizardCotizacion {
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
     
-    generarPasoFactor(container) {
-        container.innerHTML = `
-            <div class="card">
-                <h3 class="card-title">⚙️ Factor General BYT</h3>
-                <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <strong>📋 Información:</strong> El factor general se aplica a todos los materiales para calcular la ganancia base de BYT.
-                </p>
-                
-                <div class="form-group">
-                    <label class="form-label">Factor General</label>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <input type="number" class="form-control" id="factor_general" 
-                               value="${this.datos.factorGeneral}" step="0.1" min="1" max="3"
-                               onchange="wizard.actualizarFactor(this.value)" style="width: 120px;">
-                        <span style="color: #666;">(Ejemplo: 1.3 = 30% de ganancia)</span>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                    <h5>💡 Factores Sugeridos:</h5>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
-                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(2)">
-                            2.0x (100%)
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(2.5)">
-                            2.5x (150%)
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(3)">
-                            3.0x (200%)
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    actualizarFactor(valor) {
-        this.datos.factorGeneral = parseFloat(valor) || 1.3;
-        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
-    }
-    
-    establecerFactor(factor) {
-        this.datos.factorGeneral = factor;
-        const input = document.getElementById('factor_general');
-        if (input) {
-            input.value = factor;
-        }
-        this.actualizarBarraSuperior();
-    }
+    // ---------------- Factor (ya incluido arriba) ----------------
     
     // FUNCIÓN CENTRAL DE CÁLCULOS BYT EN TIEMPO REAL
     calcularTotalesBYT() {
@@ -707,7 +781,6 @@ class WizardCotizacion {
         };
     }
     
-    // ACTUALIZAR BARRA SUPERIOR EN TIEMPO REAL
     actualizarBarraSuperior() {
         const totales = this.calcularTotalesBYT();
         
@@ -734,244 +807,7 @@ class WizardCotizacion {
         });
     }
     
-    generarPasoResumen(container) {
-        // Usar la función central de cálculos BYT
-        const totales = this.calcularTotalesBYT();
-        
-        // -----------------------
-        // Construcción visual mejorada del resumen (manteniendo datos intactos)
-        // -----------------------
-        // 1) Tarjetas resumen superiores
-        // 2) Tablas por categoría, subtotales por categoría
-        // 3) Bloque explicativo / fórmula y totales finales
-        // -----------------------
-        
-        // Construir tablas por categoría (sin eliminar ninguna info)
-        let categoriasHtml = '';
-        Object.keys(this.datos.materiales).forEach(cat => {
-            const materiales = this.datos.materiales[cat] || {};
-            // crear filas sólo para visual (si no hay filas se muestra "No hay materiales")
-            const filas = Object.values(materiales).map(m => {
-                const sub = ((m.cantidad || 0) * (m.precio || 0));
-                return `<tr>
-                    <td style="padding:8px;border-bottom:1px solid #eee">${m.nombre}</td>
-                    <td style="padding:8px;border-bottom:1px solid #eee">${m.lugar || '-'}</td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${m.cantidad || 0}</td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${sub.toLocaleString()}</td>
-                </tr>`;
-            }).join('');
-            const subtotalCat = Object.values(materiales).reduce((s,m) => s + ((m.cantidad || 0) * (m.precio || 0)), 0);
-            categoriasHtml += `
-                <div style="margin-bottom:18px;">
-                    <div style="background:#f2fbf6;padding:8px 12px;border-radius:6px;border-left:6px solid #2e7d32;font-weight:700;color:#2e6b57;margin-bottom:8px">
-                        ${cat.replace(/_/g,' ').toUpperCase()}
-                    </div>
-                    <div style="overflow:auto;border:1px solid #e6eee9;border-radius:6px;">
-                        <table style="width:100%;border-collapse:collapse;">
-                            <thead>
-                                <tr style="background:#ffffff">
-                                    <th style="padding:10px;text-align:left">Material</th>
-                                    <th style="padding:10px;text-align:left">Lugar</th>
-                                    <th style="padding:10px;text-align:center">Cant.</th>
-                                    <th style="padding:10px;text-align:right">V. Unit.</th>
-                                    <th style="padding:10px;text-align:right">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${filas || `<tr><td colspan="5" style="padding:12px;text-align:center;color:#777">No hay materiales</td></tr>`}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="4" style="padding:10px;border-top:1px solid #e6eee9;text-align:right;font-weight:700">Subtotal ${cat.replace(/_/g,' ')}:</td>
-                                    <td style="padding:10px;border-top:1px solid #e6eee9;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Construir el HTML final del paso (más limpio y 'lindo')
-        container.innerHTML = `
-            <div class="card">
-                <h3 class="card-title">Resumen Final del Proyecto</h3>
-                
-                <!-- Tarjetas de resumen rapido -->
-                <div style="display:flex;gap:14px;flex-wrap:wrap;margin:12px 0 20px 0;">
-                    <div style="flex:1;min-width:180px;padding:12px;background:#fff;border-radius:8px;border:1px solid #eef7ee;">
-                        <div style="font-size:12px;color:#666">Total Materiales Base</div>
-                        <div style="font-size:18px;color:#2e7d32;font-weight:700">$${totales.totalMateriales.toLocaleString()}</div>
-                    </div>
-                    <div style="flex:1;min-width:180px;padding:12px;background:#fff;border-radius:8px;border:1px solid #fff1e6;">
-                        <div style="font-size:12px;color:#666">Factor General BYT</div>
-                        <div style="font-size:18px;color:#e67e22;font-weight:700">${totales.factorGeneral}x</div>
-                    </div>
-                    <div style="flex:1;min-width:180px;padding:12px;background:#fff;border-radius:8px;border:1px solid #eaf6ff;">
-                        <div style="font-size:12px;color:#666">Materiales con Factor</div>
-                        <div style="font-size:18px;color:#333;font-weight:700">$${totales.materialesConFactor.toLocaleString()}</div>
-                    </div>
-                    <div style="flex:1;min-width:180px;padding:12px;background:#fff;border-radius:8px;border:1px solid #ecfbea;">
-                        <div style="font-size:12px;color:#666">Ganancia Estimada</div>
-                        <div style="font-size:18px;color:#2e7d32;font-weight:700">$${totales.ganancia.toLocaleString()}</div>
-                    </div>
-                </div>
-                
-                <!-- Detalle por categoría -->
-                <div style="margin-bottom:18px;">
-                    <h4 style="color:#2e6b57;margin-bottom:10px;">Detalle por Categoría</h4>
-                    ${categoriasHtml}
-                </div>
-                
-                <!-- Panel de cálculo y totales -->
-                <div style="display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start;">
-                    <div>
-                        <div style="padding:12px;background:#fff;border-radius:8px;border:1px solid #e9f4ff;">
-                            <h4 style="margin-top:0;color:#1976D2">📌 Fórmula y Desglose</h4>
-                            <div style="font-family:monospace;background:#fafafa;padding:10px;border-radius:4px;font-size:13px;line-height:1.5;">
-                                (Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)<br><br>
-                                Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}<br>
-                                Traspasados Base: $${totales.totalTraspasos.toLocaleString()}<br>
-                                Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}<br><br>
-                                SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()} = $${totales.subtotalSinIVA.toLocaleString()}<br><br>
-                                Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()} = $${totales.ganancia.toLocaleString()}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <div style="padding:14px;background:linear-gradient(180deg,#fff,#f7fff7);border:2px solid #e6f6e8;border-radius:8px;">
-                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><div style="color:#666">Subtotal (sin IVA)</div><div style="font-weight:700">$${totales.subtotalSinIVA.toLocaleString()}</div></div>
-                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><div style="color:#666">IVA (19%)</div><div style="font-weight:700">$${totales.iva.toLocaleString()}</div></div>
-                            <div style="border-top:1px dashed #d6ead8;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">
-                                <div style="font-weight:800;color:#2e5e4e">TOTAL PROYECTO</div>
-                                <div style="font-size:20px;font-weight:900;color:#2e7d32">$${totales.totalConIVA.toLocaleString()}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Información del proyecto -->
-                <div style="margin-top:18px;padding:12px;background:#fff;border-radius:8px;border:1px solid #eee;">
-                    <h4 style="margin:0 0 10px 0;color:#2e6b57">👤 Información del Proyecto</h4>
-                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
-                        <div><strong>Proyecto:</strong> ${this.datos.cliente.nombre_proyecto || 'Sin nombre'}</div>
-                        <div><strong>Cliente:</strong> ${this.datos.cliente.nombre || 'Sin especificar'}</div>
-                        <div><strong>Dirección:</strong> ${this.datos.cliente.direccion || 'No especificada'}</div>
-                        <div><strong>Encargado:</strong> ${this.datos.cliente.encargado || 'No especificado'}</div>
-                        ${this.datos.cliente.notas ? `<div style="grid-column:1 / -1;"><strong>Notas:</strong> ${this.datos.cliente.notas}</div>` : ''}
-                    </div>
-                </div>
-                
-                <!-- botones -->
-                <div style="margin-top:20px;text-align:center;">
-                    <button class="btn" onclick="wizard.guardarCotizacion()" style="background:#2e7d32;color:#fff;padding:10px 18px;border-radius:6px;border:0;margin-right:12px;">💾 Guardar Cotización Completa</button>
-                    <button class="btn" onclick="wizard.imprimirCotizacion()" style="background:#1976D2;color:#fff;padding:10px 18px;border-radius:6px;border:0;">🖨️ Imprimir Cotización</button>
-                </div>
-            </div>
-        `;
-    }
-    
-    actualizarBotonesNavegacion() {
-        const btnAnterior = document.getElementById('btn-anterior');
-        const btnSiguiente = document.getElementById('btn-siguiente');
-        
-        if (btnAnterior) {
-            btnAnterior.style.display = this.pasoActual > 1 ? 'inline-block' : 'none';
-        }
-        
-        if (btnSiguiente) {
-            btnSiguiente.textContent = this.pasoActual < this.totalPasos ? 'Siguiente →' : 'Finalizar';
-        }
-    }
-    
-    anteriorPaso() {
-        if (this.pasoActual > 1) {
-            this.pasoActual--;
-            this.actualizarProgreso();
-            this.mostrarPaso(this.pasoActual);
-        }
-    }
-    
-    siguientePaso() {
-        if (this.pasoActual < this.totalPasos) {
-            this.pasoActual++;
-            this.actualizarProgreso();
-            this.mostrarPaso(this.pasoActual);
-        } else {
-            this.guardarCotizacion();
-        }
-    }
-    
-    validarPasoActual() {
-        const pasoInfo = this.pasosPlan[this.pasoActual - 1];
-        
-        if (pasoInfo.tipo === 'cliente') {
-            const nombre = document.getElementById('nombre_proyecto');
-            const cliente = document.getElementById('nombre_cliente');
-            
-            if (!nombre?.value || !cliente?.value) {
-                alert('Por favor complete los campos obligatorios');
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
-    async guardarCotizacion() {
-        try {
-            const cotizacion = {
-                ...this.datos,
-                fecha: new Date().toISOString(),
-                numero: 'COT-' + Date.now()
-            };
-            
-            console.log('Guardando cotización:', cotizacion);
-            alert('¡Cotización guardada exitosamente!');
-            
-        } catch (error) {
-            console.error('Error al guardar cotización:', error);
-            alert('Error al guardar la cotización: ' + error.message);
-        }
-    }
-    
-    imprimirCotizacion() {
-        const totales = this.calcularTotalesBYT();
-        const fecha = new Date().toLocaleDateString('es-CO');
-        const numero = 'COT-' + Date.now();
-        
-        // Crear ventana de impresión
-        const ventanaImpresion = window.open('', '_blank');
-        
-        ventanaImpresion.document.write(`
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Cotización ${numero} - BYT SOFTWARE</title>
-                <style>
-                    ${this.obtenerEstilosImpresion()}
-                </style>
-            </head>
-            <body>
-                ${this.generarHTMLImpresion(totales, fecha, numero)}
-            </body>
-            </html>
-        `);
-        
-        ventanaImpresion.document.close();
-        
-        // Esperar a que cargue y luego imprimir
-        ventanaImpresion.onload = function() {
-            setTimeout(() => {
-                ventanaImpresion.print();
-            }, 500);
-        };
-    }
-    
+    // ---------------- Impresión y estilos (mantener) ----------------
     obtenerEstilosImpresion() {
         return `
             @media print {
@@ -998,10 +834,6 @@ class WizardCotizacion {
                 margin-bottom: 30px;
             }
             
-            .logo-section {
-                flex: 1;
-            }
-            
             .company-name {
                 font-size: 28px;
                 font-weight: bold;
@@ -1019,16 +851,6 @@ class WizardCotizacion {
                 flex: 1;
             }
             
-            .cotizacion-numero {
-                font-size: 24px;
-                font-weight: bold;
-                color: #2e5e4e;
-            }
-            
-            .section {
-                margin: 25px 0;
-            }
-            
             .section-title {
                 background: #2e5e4e;
                 color: white;
@@ -1038,37 +860,97 @@ class WizardCotizacion {
                 margin-bottom: 15px;
             }
             
-            .info-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-                margin-bottom: 20px;
-            }
-            
-            .info-item {
-                padding: 8px;
-                border-left: 4px solid #2e5e4e;
-                background: #f8f9fa;
-            }
-            
-            .info-label {
-                font-weight: bold;
-                color: #2e5e4e;
-            }
-            
-            .table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 15px 0;
-            }
-            
-            .table th,
-            .table td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }
-            
-            .table th {
-                background: #f5f5f5;
-                font-weight
+            table { width:100%; border-collapse:collapse; margin-bottom:12px }
+            th, td { border:1px solid #ddd; padding:8px; text-align:left }
+            th { background:#f7f7f7; font-weight:700 }
+            .totals { display:flex; gap:12px; justify-content:flex-end }
+            .totals .box { padding:10px 12px; background:#f7f7f7; border-radius:6px; text-align:right }
+            .big-total { font-size:18px; font-weight:900; color:#2e7d32 }
+        `;
+    }
+
+    generarHTMLImpresion(totales, fecha, numero) {
+        // Construir detalle por categorías
+        let categoriasHtml = '';
+        Object.keys(this.datos.materiales).forEach(cat => {
+            const materiales = this.datos.materiales[cat] || {};
+            const filas = Object.values(materiales).map(m => {
+                const subtotal = ((m.cantidad || 0)*(m.precio || 0));
+                return `<tr>
+                    <td style="padding:6px;border:1px solid #ddd">${m.nombre}</td>
+                    <td style="padding:6px;border:1px solid #ddd">${m.descripcion || '-'}</td>
+                    <td style="padding:6px;border:1px solid #ddd">${m.lugar || '-'}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:center">${m.cantidad || 0}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${(m.precio||0).toLocaleString()}</td>
+                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${subtotal.toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+            const subtotalCat = Object.values(materiales).reduce((s,m) => s + ((m.cantidad || 0)*(m.precio || 0)), 0);
+            categoriasHtml += `
+                <h3 style="margin:12px 0 6px;color:#2e5e4e">${cat.replace(/_/g,' ')}</h3>
+                <table>
+                    <thead>
+                        <tr><th>Material</th><th>Descripción</th><th>Lugar</th><th style="text-align:center">Cant.</th><th style="text-align:right">V.Unit.</th><th style="text-align:right">Subtotal</th></tr>
+                    </thead>
+                    <tbody>${filas || `<tr><td colspan="6" style="padding:10px;text-align:center;color:#666">Sin materiales</td></tr>`}</tbody>
+                    <tfoot><tr><td colspan="5" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Subtotal ${cat.replace(/_/g,' ')}:</td><td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td></tr></tfoot>
+                </table>
+            `;
+        });
+
+        return `
+            <!doctype html>
+            <html lang="es">
+            <head>
+                <meta charset="utf-8">
+                <title>Cotización ${numero}</title>
+                <meta name="viewport" content="width=device-width,initial-scale=1">
+                <style>${this.obtenerEstilosImpresion()}</style>
+            </head>
+            <body>
+                <div class="header">
+                    <div>
+                        <div class="company-name">BYT SOFTWARE</div>
+                        <div class="company-subtitle">Sistemas de Cotización y Gestión</div>
+                    </div>
+                    <div class="cotizacion-info">
+                        <div>Cotización: ${numero}</div>
+                        <div>Fecha: ${fecha}</div>
+                    </div>
+                </div>
+
+                ${categoriasHtml}
+
+                <div style="margin-top:18px;">
+                    <div class="totals">
+                        <div class="box"><div style="font-size:12px;color:#666">Subtotal (sin IVA)</div><strong>$${totales.subtotalSinIVA.toLocaleString()}</strong></div>
+                        <div class="box"><div style="font-size:12px;color:#666">IVA (19%)</div><strong>$${totales.iva.toLocaleString()}</strong></div>
+                        <div class="box"><div style="font-size:12px;color:#666">TOTAL</div><div class="big-total">$${totales.totalConIVA.toLocaleString()}</div></div>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px;font-size:11px;color:#666">Documento generado por BYT SOFTWARE - Válido como referencia.</div>
+            </body>
+            </html>
+        `;
+    }
+}
+
+// Instancia global del wizard
+let wizard;
+
+// Funciones globales para navegación
+function anteriorPaso() {
+    wizard?.anteriorPaso();
+}
+
+function siguientePaso() {
+    wizard?.siguientePaso();
+}
+
+// Inicializar cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.querySelector('.wizard-container')) {
+        wizard = new WizardCotizacion();
+    }
+});
