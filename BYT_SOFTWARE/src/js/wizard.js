@@ -1,15 +1,17 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
 // Ruta: BYT_SOFTWARE/src/js/wizard.js
-// Nota: este archivo está parcheado para cargar proveedores desde Supabase (window.supabase),
-// usar un fallback local mientras carga, y almacenar provider_id + provider name en cada material.
-// También suscribe un BroadcastChannel y un listener de localStorage para refrescar providers
-// cuando se actualicen desde el panel de configuración.
+// Nota: parche adicional para:
+// - cargar proveedores desde Supabase (window.supabase) (ya implementado)
+// - cargar materiales desde Supabase (materialsApi.js) con cache en this.materiales
+// - suscribir BroadcastChannel + storage fallback para recargar materiales y proveedores
+//   cuando se actualicen desde los paneles de configuración (admin).
 
 class WizardCotizacion {
     constructor() {
         this.pasoActual = 1;
         this.totalPasos = 10;
         this.proveedores = null; // cache de proveedores cargados desde Supabase
+        this.materiales = null;  // cache de materiales cargados desde Supabase
 
         // Fallback local (seed) en caso de que Supabase no responda inmediatamente
         this.providerSeed = [
@@ -98,25 +100,37 @@ class WizardCotizacion {
         this.mostrarPaso(1);
         this.actualizarBarraSuperior(); // ⚡ Inicializar barra superior
 
-        // Cargar proveedores en background para rellenar selects de "Lugar de compra"
-        // (no await para no bloquear render; loadProviders actualiza la UI cuando termine)
-        this.loadProviders().catch(err => {
-            // No bloquear la interfaz si falla; solo log
-            console.warn('No se pudieron cargar proveedores:', err);
-        });
+        // Cargar proveedores y materiales en background para rellenar selects de "Lugar de compra" y listas
+        this.loadProviders().catch(err => console.warn('No se pudieron cargar proveedores:', err));
+        this.loadMaterials().catch(err => console.warn('No se pudieron cargar materiales:', err));
 
         // --- NOTIFICACIONES ENTRE PESTAÑAS: BroadcastChannel + storage fallback ---
+        // Proveedores
         try {
-          const bc = new BroadcastChannel('byt-providers');
-          bc.onmessage = (ev) => {
+          const bcP = new BroadcastChannel('byt-providers');
+          bcP.onmessage = (ev) => {
             if (ev.data?.type === 'providers-updated') {
               console.log('Notificación: providers updated -> recargando');
               this.loadProviders().catch(console.error);
             }
           };
-          this._providersBroadcastChannel = bc;
+          this._providersBroadcastChannel = bcP;
         } catch (e) {
-          // BroadcastChannel no soportado -> fallback a storage event
+          // fallback a storage event
+        }
+
+        // Materiales
+        try {
+          const bcM = new BroadcastChannel('byt-materials');
+          bcM.onmessage = (ev) => {
+            if (ev.data?.type === 'materials-updated') {
+              console.log('Notificación: materials updated -> recargando');
+              this.loadMaterials().catch(console.error);
+            }
+          };
+          this._materialsBroadcastChannel = bcM;
+        } catch (e) {
+          // fallback a storage event
         }
 
         // Storage event fallback (funciona entre pestañas)
@@ -124,6 +138,10 @@ class WizardCotizacion {
           if (e.key === 'byt_providers_updated_at') {
             console.log('Storage event: providers updated -> recargando');
             this.loadProviders().catch(console.error);
+          }
+          if (e.key === 'byt_materials_updated_at') {
+            console.log('Storage event: materials updated -> recargando');
+            this.loadMaterials().catch(console.error);
           }
         });
         // --- fin notificaciones ---
@@ -194,6 +212,57 @@ class WizardCotizacion {
             this.fillProviderSelects();
             return this.proveedores;
         }
+    }
+
+    // Cargar materiales desde materialsApi (Supabase) — cached
+    async loadMaterials({ onlyActive = true } = {}) {
+        try {
+            // si ya cargados devolver cache
+            if (Array.isArray(this.materiales) && this.materiales.length) return this.materiales;
+
+            // import dinámico para evitar romper builds donde no existe
+            const mod = await import('../lib/materialsApi.js');
+            const res = await mod.listMaterials({ onlyActive });
+            if (res?.error) {
+                console.error('materialsApi.listMaterials error', res.error);
+                this.materiales = [];
+            } else {
+                this.materiales = res.data || [];
+            }
+            // exponer globalmente para depuración y uso por otras partes
+            window.wizardMaterials = this.materiales;
+            // notificar/llenar posibles selects u otros elementos que dependan de materiales
+            this.onMaterialsLoaded();
+            return this.materiales;
+        } catch (err) {
+            console.error('Error al cargar materials:', err);
+            this.materiales = [];
+            this.onMaterialsLoaded();
+            return this.materiales;
+        }
+    }
+
+    // Hook que se llama cuando materiales fueron cargados — actualizar UI si corresponde
+    onMaterialsLoaded() {
+        // Por ahora solo log y exponer en window; si el wizard usa selects/material lists los podríamos rellenar aquí.
+        console.log('Materials cargados en wizard:', (this.materiales || []).length);
+        // ejemplo: rellenar selects con clase 'material-select' si existen
+        try {
+            const selects = document.querySelectorAll('select.material-select');
+            if (selects && selects.length && Array.isArray(this.materiales)) {
+                selects.forEach(select => {
+                    const current = select.getAttribute('data-current') || select.value || '';
+                    select.innerHTML = '<option value="">-- Selecciona material --</option>';
+                    this.materiales.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = m.name + (m.price ? ` ($${m.price})` : '');
+                        select.appendChild(opt);
+                    });
+                    if (current) select.value = current;
+                });
+            }
+        } catch(e){ /* no bloquear */ }
     }
 
     // Rellenar todos los <select class="lugar-select"> con los proveedores cargados o seed
@@ -479,8 +548,8 @@ class WizardCotizacion {
         `;
         
         this.cargarMaterialesCategoria(categoria);
-        // Si ya cargamos proveedores anteriormente, rellenar selects que se generen.
-        // Si no, loadProviders() ya fue invocado en init(); cuando termine llamará fillProviderSelects.
+        // Si ya cargamos proveedores/materiales anteriormente, rellenar selects que se generen.
+        // loadProviders()/loadMaterials() ya fueron invocados en init(); cuando terminen llamarán fillProviderSelects/onMaterialsLoaded.
     }
     
     cargarMaterialesCategoria(categoria) {
@@ -961,7 +1030,7 @@ class WizardCotizacion {
                 numero: 'COT-' + Date.now()
             };
             
-            // Aquí puedes integrar el guardado en Supabase usando tu módulo supabaseClient/providersApi
+            // Aquí puedes integrar el guardado en Supabase usando tu módulo supabaseClient/providersApi/materialsApi
             console.log('Guardando cotización (local):', cotizacion);
             alert('¡Cotización guardada exitosamente!');
             
