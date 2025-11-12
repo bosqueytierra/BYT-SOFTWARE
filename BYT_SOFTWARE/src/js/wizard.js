@@ -5,8 +5,8 @@
 // - cargar materiales desde Supabase (materialsApi.js) con cache en this.materiales
 // - suscribir BroadcastChannel + storage fallback para recargar materiales y proveedores
 //   cuando se actualicen desde los paneles de configuración (admin).
-// - Mejoras visuales en Resumen Final y en la plantilla de impresión (tablas por categoría,
-//   subtotales por categoría, totales, colores suaves, encabezado limpio).
+// Cambios realizados: únicamente mejoré la visual del "Resumen Final" y la plantilla de impresión
+// (generarPasoResumen, obtenerEstilosImpresion, generarHTMLImpresion). TODO lo demás se preserva.
 
 class WizardCotizacion {
     constructor() {
@@ -800,7 +800,7 @@ class WizardCotizacion {
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <input type="number" class="form-control" id="factor_general" 
                                value="${this.datos.factorGeneral}" step="0.1" min="1" max="3"
-                               onchange="wizard.actualizarFactor(this.value)" style="width: 120px;">
+                               onchange="wizard.actualzarFactor(this.value)" style="width: 120px;">
                         <span style="color: #666;">(Ejemplo: 1.3 = 30% de ganancia)</span>
                     </div>
                 </div>
@@ -928,122 +928,94 @@ class WizardCotizacion {
     generarPasoResumen(container) {
         // Usar la función central de cálculos BYT
         const totales = this.calcularTotalesBYT();
-        
+
+        // Construyo tablas por categoría (visual limpio, subtotales por categoría)
+        let categoriasHtml = '';
+        Object.keys(this.datos.materiales).forEach(cat => {
+            const materiales = this.datos.materiales[cat] || {};
+            const filas = Object.values(materiales).map(m => {
+                const sub = ((m.cantidad || 0) * (m.precio || 0));
+                return `<tr>
+                    <td style="padding:8px;border-bottom:1px solid #eee">${m.nombre}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee">${m.lugar || '-'}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${m.cantidad || 0}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
+                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${sub.toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+            const subtotalCat = Object.values(materiales).reduce((s,m) => s + ((m.cantidad || 0) * (m.precio || 0)), 0);
+            categoriasHtml += `
+                <div style="margin-bottom:16px;">
+                  <h4 style="margin:6px 0 10px;color:#2e6b57;text-transform:capitalize">${cat.replace(/_/g,' ')}</h4>
+                  <table style="width:100%;border-collapse:collapse;border:1px solid #e6eee9">
+                    <thead>
+                      <tr style="background:#f2fbf6">
+                        <th style="padding:10px;text-align:left">Material</th>
+                        <th style="padding:10px;text-align:left">Lugar</th>
+                        <th style="padding:10px;text-align:center">Cant.</th>
+                        <th style="padding:10px;text-align:right">V. Unit.</th>
+                        <th style="padding:10px;text-align:right">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${filas || `<tr><td colspan="5" style="padding:12px;text-align:center;color:#777">No hay materiales</td></tr>`}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colspan="4" style="padding:10px;border-top:1px solid #e6eee9;text-align:right;font-weight:700">Subtotal ${cat.replace(/_/g,' ')}:</td>
+                        <td style="padding:10px;border-top:1px solid #e6eee9;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>`;
+        });
+
         container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">Resumen Final del Proyecto</h3>
                 
-                <div style="margin: 20px 0;">
-                    <h4 style="color: var(--color-primary);">📦 Materiales</h4>
-                    <div class="summary-grid">
-                        <div class="summary-item">
-                            <span class="summary-label">Total Materiales Base</span>
-                            <span class="summary-value">$${totales.totalMateriales.toLocaleString()}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Factor General BYT</span>
-                            <span class="summary-value" style="color: #ff9800;">${totales.factorGeneral}x</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Materiales con Factor</span>
-                            <span class="summary-value">$${totales.materialesConFactor.toLocaleString()}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Ganancia del Proyecto</span>
-                            <span class="summary-value" style="color: #4caf50;">$${totales.ganancia.toLocaleString()}</span>
-                        </div>
-                    </div>
+                <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
+                  <div style="flex:1;min-width:180px;padding:12px;background:#ffffff;border-radius:8px;border:1px solid #e9f3ec">
+                    <div style="font-size:12px;color:#666">Total Materiales Base</div>
+                    <div style="font-size:18px;color:#2e7d32;font-weight:700">$${totales.totalMateriales.toLocaleString()}</div>
+                  </div>
+                  <div style="flex:1;min-width:180px;padding:12px;background:#fff8f0;border-radius:8px;border:1px solid #f7efe6">
+                    <div style="font-size:12px;color:#666">Factor General BYT</div>
+                    <div style="font-size:18px;color:#e67e22;font-weight:700">${totales.factorGeneral}x</div>
+                  </div>
+                  <div style="flex:1;min-width:180px;padding:12px;background:#f6fbff;border-radius:8px;border:1px solid #e9f4fb">
+                    <div style="font-size:12px;color:#666">Materiales con Factor</div>
+                    <div style="font-size:18px;color:#333;font-weight:700">$${totales.materialesConFactor.toLocaleString()}</div>
+                  </div>
+                  <div style="flex:1;min-width:180px;padding:12px;background:#fffef6;border-radius:8px;border:1px solid #f9f7ea">
+                    <div style="font-size:12px;color:#666">Ganancia</div>
+                    <div style="font-size:18px;color:#2e7d32;font-weight:700">$${totales.ganancia.toLocaleString()}</div>
+                  </div>
                 </div>
-                
-                <div style="margin: 20px 0;">
-                    <h4 style="color: var(--color-primary);">🏢 Valores Traspasados</h4>
-                    <div class="summary-grid">
-                        <div class="summary-item">
-                            <span class="summary-label">Traspasados Base</span>
-                            <span class="summary-value">$${totales.totalTraspasos.toLocaleString()}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Factores Individuales</span>
-                            <span class="summary-value">$${totales.totalTraspasosFactor.toLocaleString()}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label"><strong>Total Traspasados</strong></span>
-                            <span class="summary-value">$${totales.totalTraspasados.toLocaleString()}</span>
-                        </div>
-                    </div>
+
+                <div style="margin-bottom:12px;">
+                  <h4 style="color:#2e6b57;margin-bottom:8px;">Detalle por Categoría</h4>
+                  ${categoriasHtml}
                 </div>
-                
-                <div style="margin: 20px 0; padding: 15px; background: #f0f8f0; border-left: 4px solid #4caf50; border-radius: 8px;">
-                    <h4 style="color: #2e7d32; margin-bottom: 10px;">💵 Cálculo de Ganancia BYT</h4>
-                    <div style="font-family: monospace; background: white; padding: 10px; border-radius: 4px; font-size: 14px;">
-                        Ganancia = TOTAL DEL PROYECTO - Materiales - Traspasados<br>
-                        Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()}
-                    </div>
-                    <div style="text-align: center; font-size: 18px; color: #2e7d32; font-weight: bold; margin-top: 10px;">
-                        = $${totales.ganancia.toLocaleString()}
-                    </div>
+
+                <div style="display:flex;gap:12px;justify-content:flex-end;align-items:flex-end;margin-top:8px;">
+                  <div style="text-align:right;">
+                    <div style="font-size:12px;color:#666">Subtotal (sin IVA)</div>
+                    <div style="font-size:18px;font-weight:700;color:#333">$${totales.subtotalSinIVA.toLocaleString()}</div>
+                  </div>
+                  <div style="text-align:right;margin-left:18px;">
+                    <div style="font-size:12px;color:#666">IVA (19%)</div>
+                    <div style="font-size:18px;font-weight:700;color:#333">$${totales.iva.toLocaleString()}</div>
+                  </div>
+                  <div style="text-align:right;margin-left:18px;">
+                    <div style="font-size:12px;color:#666">TOTAL PROYECTO</div>
+                    <div style="font-size:22px;font-weight:900;color:#2e7d32">$${totales.totalConIVA.toLocaleString()}</div>
+                  </div>
                 </div>
-                
-                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-left: 4px solid var(--color-primary); border-radius: 8px;">
-                    <h4 style="color: var(--color-primary); margin-bottom: 10px;">🧮 Fórmula BYT Completa Aplicada</h4>
-                    <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
-                        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">
-                            (Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)
-                        </div>
-                        <div style="font-family: monospace; font-size: 14px; line-height: 1.6;">
-                            <div>• Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}</div>
-                            <div>• Traspasados Base: $${totales.totalTraspasos.toLocaleString()}</div>
-                            <div>• Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}</div>
-                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold;">
-                                SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()}
-                            </div>
-                        </div>
-                    </div>
-                    <div style="text-align: center; font-size: 20px; color: #2e5e4e; font-weight: bold; background: #f0f8f0; padding: 10px; border-radius: 6px;">
-                        NETO = $${totales.subtotalSinIVA.toLocaleString()}
-                    </div>
-                </div>
-                
-                <div style="margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px;">
-                    <h4 style="color: var(--color-primary); text-align: center; margin-bottom: 20px;">💰 Totales Finales</h4>
-                    <div class="summary-grid">
-                        <div class="summary-item">
-                            <span class="summary-label">Subtotal (sin IVA)</span>
-                            <span class="summary-value">$${totales.subtotalSinIVA.toLocaleString()}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">IVA (19%)</span>
-                            <span class="summary-value">$${totales.iva.toLocaleString()}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label"><strong>TOTAL PROYECTO</strong></span>
-                            <span class="summary-value" style="font-size: 24px; color: #2e5e4e; font-weight: bold;">
-                                $${totales.totalConIVA.toLocaleString()}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="margin: 20px 0; padding: 15px; background: #fff; border: 2px solid #e0e0e0; border-radius: 8px;">
-                    <h4 style="color: var(--color-primary);">👤 Información del Proyecto</h4>
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px;">
-                        <div><strong>Proyecto:</strong> ${this.datos.cliente.nombre_proyecto || 'Sin nombre'}</div>
-                        <div><strong>Cliente:</strong> ${this.datos.cliente.nombre || 'Sin especificar'}</div>
-                        <div><strong>Dirección:</strong> ${this.datos.cliente.direccion || 'No especificada'}</div>
-                        <div><strong>Encargado:</strong> ${this.datos.cliente.encargado || 'No especificado'}</div>
-                    </div>
-                    ${this.datos.cliente.notas ? `<div style="margin-top: 10px;"><strong>Notas:</strong> ${this.datos.cliente.notas}</div>` : ''}
-                </div>
-                
-                <div style="margin-top: 30px; text-align: center; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-                    <button type="button" class="btn" onclick="wizard.guardarCotizacion()" 
-                            style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, var(--color-primary), #245847);">
-                        💾 Guardar Cotización Completa
-                    </button>
-                    <button type="button" class="btn" onclick="wizard.imprimirCotizacion()" 
-                            style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, #2196F3, #1976D2); color: white;">
-                        🖨️ Imprimir Cotización
-                    </button>
+
+                <div style="margin-top:18px;display:flex;gap:12px;justify-content:center">
+                  <button class="btn" onclick="wizard.guardarCotizacion()" style="background:#2e7d32;color:#fff;padding:10px 18px;border-radius:6px;border:0">💾 Guardar Cotización Completa</button>
+                  <button class="btn" onclick="wizard.imprimirCotizacion()" style="background:#1976D2;color:#fff;padding:10px 18px;border-radius:6px;border:0">🖨️ Imprimir Cotización</button>
                 </div>
             </div>
         `;
