@@ -1,29 +1,9 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
-// Ruta: BYT_SOFTWARE/src/js/wizard.js
-// Nota: parche adicional para:
-// - cargar proveedores desde Supabase (window.supabase) (ya implementado)
-// - cargar materiales desde Supabase (materialsApi.js) con cache en this.materiales
-// - suscribir BroadcastChannel + storage fallback para recargar materiales y proveedores
-//   cuando se actualicen desde los paneles de configuración (admin).
-// Cambios realizados: únicamente mejoré la visual del "Resumen Final" y la plantilla de impresión
-// (generarPasoResumen, obtenerEstilosImpresion, generarHTMLImpresion). TODO lo demás se preserva.
 
 class WizardCotizacion {
     constructor() {
         this.pasoActual = 1;
         this.totalPasos = 10;
-        this.proveedores = null; // cache de proveedores cargados desde Supabase
-        this.materiales = null;  // cache de materiales cargados desde Supabase
-
-        // Fallback local (seed) en caso de que Supabase no responda inmediatamente
-        this.providerSeed = [
-          'Otro Proveedor','Imperial','Homecenter','WantingChile','Demasled','Dph','Eplum',
-          'Ferreteria Santa Rosa','Masisa','CasaChic','MercadoLibre','LedStudio','Marco Cuarzo',
-          'Quincalleria Rey','Eli Cortes','OV Estructuras Metalicas','HBT','Doer','Ikea',
-          'Emilio Pohl','CasaMusa','Provelcar','Enko','Ferreteria San Martin','Arteformas',
-          'Ferretek','Sergio Astorga Pinturas','Bertrand','MyR','Placacentro','Bookstore','RyR','Pernos Kim'
-        ];
-
         this.datos = {
             cliente: {},
             materiales: {
@@ -101,195 +81,8 @@ class WizardCotizacion {
         this.actualizarProgreso();
         this.mostrarPaso(1);
         this.actualizarBarraSuperior(); // ⚡ Inicializar barra superior
-
-        // Cargar proveedores y materiales en background para rellenar selects de "Lugar de compra" y listas
-        this.loadProviders().catch(err => console.warn('No se pudieron cargar proveedores:', err));
-        this.loadMaterials().catch(err => console.warn('No se pudieron cargar materiales:', err));
-
-        // --- NOTIFICACIONES ENTRE PESTAÑAS: BroadcastChannel + storage fallback ---
-        // Proveedores
-        try {
-          const bcP = new BroadcastChannel('byt-providers');
-          bcP.onmessage = (ev) => {
-            if (ev.data?.type === 'providers-updated') {
-              console.log('Notificación: providers updated -> recargando');
-              this.loadProviders().catch(console.error);
-            }
-          };
-          this._providersBroadcastChannel = bcP;
-        } catch (e) {
-          // fallback a storage event
-        }
-
-        // Materiales
-        try {
-          const bcM = new BroadcastChannel('byt-materials');
-          bcM.onmessage = (ev) => {
-            if (ev.data?.type === 'materials-updated') {
-              console.log('Notificación: materials updated -> recargando');
-              this.loadMaterials().catch(console.error);
-            }
-          };
-          this._materialsBroadcastChannel = bcM;
-        } catch (e) {
-          // fallback a storage event
-        }
-
-        // Storage event fallback (funciona entre pestañas)
-        window.addEventListener('storage', (e) => {
-          if (e.key === 'byt_providers_updated_at') {
-            console.log('Storage event: providers updated -> recargando');
-            this.loadProviders().catch(console.error);
-          }
-          if (e.key === 'byt_materials_updated_at') {
-            console.log('Storage event: materials updated -> recargando');
-            this.loadMaterials().catch(console.error);
-          }
-        });
-        // --- fin notificaciones ---
     }
-
-    // Cargar proveedores: intenta window.supabase -> REST anon -> seed local
-    async loadProviders() {
-        try {
-            // Si ya cargados devolver cache
-            if (Array.isArray(this.proveedores) && this.proveedores.length) return this.proveedores;
-
-            let providers = [];
-
-            // 1) Intentar con window.supabase (respeta sesión / RLS)
-            if (window.supabase && typeof window.supabase.from === 'function') {
-                try {
-                    const { data, error } = await window.supabase
-                        .from('providers')
-                        .select('id,name,website,phone,notes,active,created_at')
-                        .order('name', { ascending: true });
-                    if (!error && Array.isArray(data)) {
-                        providers = data;
-                        console.log('Proveedores cargados desde window.supabase:', providers.length);
-                    } else if (error) {
-                        console.warn('Supabase client error al listar providers:', error);
-                    }
-                } catch (e) {
-                    console.warn('Error usando window.supabase:', e);
-                }
-            } else {
-                console.warn('window.supabase no disponible en esta página.');
-            }
-
-            // 2) Fallback REST público con ANON KEY (si CORS/policies lo permiten)
-            if ((!providers || providers.length === 0)) {
-                try {
-                    const url = 'https://qwbeectinjasekkjzxls.supabase.co/rest/v1/providers?select=id,name,active&order=name.asc';
-                    const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
-                    const r = await fetch(url, {
-                        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, Accept: 'application/json' }
-                    });
-                    if (r.ok) {
-                        const body = await r.json();
-                        if (Array.isArray(body)) {
-                            providers = body.map(p => ({ id: p.id, name: p.name, active: p.active }));
-                            console.log('Proveedores cargados por REST fallback:', providers.length);
-                        }
-                    } else {
-                        console.warn('REST fallback providers status:', r.status);
-                    }
-                } catch (e) {
-                    console.warn('Error fetch REST fallback providers:', e);
-                }
-            }
-
-            // 3) Si no hay proveedores desde Supabase/REST, usar seed local
-            if (!providers || providers.length === 0) {
-                providers = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
-                console.log('Usando providerSeed local:', providers.length);
-            }
-
-            this.proveedores = providers;
-            this.fillProviderSelects();
-            return this.proveedores;
-        } catch (err) {
-            console.error('loadProviders error:', err);
-            this.proveedores = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
-            this.fillProviderSelects();
-            return this.proveedores;
-        }
-    }
-
-    // Cargar materiales desde materialsApi (Supabase) — cached
-    async loadMaterials({ onlyActive = true } = {}) {
-        try {
-            // si ya cargados devolver cache
-            if (Array.isArray(this.materiales) && this.materiales.length) return this.materiales;
-
-            // import dinámico para evitar romper builds donde no existe
-            const mod = await import('../lib/materialsApi.js');
-            const res = await mod.listMaterials({ onlyActive });
-            if (res?.error) {
-                console.error('materialsApi.listMaterials error', res.error);
-                this.materiales = [];
-            } else {
-                this.materiales = res.data || [];
-            }
-            // exponer globalmente para depuración y uso por otras partes
-            window.wizardMaterials = this.materiales;
-            // notificar/llenar posibles selects u otros elementos que dependan de materiales
-            this.onMaterialsLoaded();
-            return this.materiales;
-        } catch (err) {
-            console.error('Error al cargar materials:', err);
-            this.materiales = [];
-            this.onMaterialsLoaded();
-            return this.materiales;
-        }
-    }
-
-    // Hook que se llama cuando materiales fueron cargados — actualizar UI si corresponde
-    onMaterialsLoaded() {
-        // Por ahora solo log y exponer en window; si el wizard usa selects/material lists los podríamos rellenar aquí.
-        console.log('Materials cargados en wizard:', (this.materiales || []).length);
-        // ejemplo: rellenar selects con clase 'material-select' si existen
-        try {
-            const selects = document.querySelectorAll('select.material-select');
-            if (selects && selects.length && Array.isArray(this.materiales)) {
-                selects.forEach(select => {
-                    const current = select.getAttribute('data-current') || select.value || '';
-                    select.innerHTML = '<option value="">-- Selecciona material --</option>';
-                    this.materiales.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id;
-                        opt.textContent = m.name + (m.price ? ` ($${m.price})` : '');
-                        select.appendChild(opt);
-                    });
-                    if (current) select.value = current;
-                });
-            }
-        } catch(e){ /* no bloquear */ }
-    }
-
-    // Rellenar todos los <select class="lugar-select"> con los proveedores cargados o seed
-    fillProviderSelects() {
-        const list = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
-        const selects = document.querySelectorAll('select.lugar-select');
-        selects.forEach(select => {
-            const currentVal = select.getAttribute('data-current') || select.value || '';
-            // Limpiar opciones
-            select.innerHTML = '';
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = '-- Selecciona proveedor --';
-            select.appendChild(placeholder);
-            list.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id || p.name || '';
-                opt.textContent = p.name || p.id || '';
-                select.appendChild(opt);
-            });
-            // restaurar valor si corresponde (puede ser id o nombre guardado previamente)
-            if (currentVal) select.value = currentVal;
-        });
-    }
-
+    
     actualizarProgreso() {
         const progreso = (this.pasoActual / this.totalPasos) * 100;
         const barraProgreso = document.getElementById('progreso-barra');
@@ -555,7 +348,7 @@ class WizardCotizacion {
         if (!tbody) return;
         
         let html = '';
-        const materiales = this.datos.materiales[categoria] || {};
+        const materiales = this.datos.materiales[categoria];
         
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
@@ -621,7 +414,7 @@ class WizardCotizacion {
     
     actualizarSubtotalCategoria(categoria) {
         let subtotal = 0;
-        const materiales = this.datos.materiales[categoria] || {};
+        const materiales = this.datos.materiales[categoria];
         
         Object.values(materiales).forEach(material => {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
@@ -638,7 +431,7 @@ class WizardCotizacion {
             <div class="card">
                 <h3 class="card-title">💰 Valores Traspasados</h3>
                 <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
+                    <strong>� Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
                     <code>Total = Suma Materiales + (Suma Materiales × Factor 0.1)</code>
                 </p>
         `;
@@ -676,23 +469,23 @@ class WizardCotizacion {
             
             Object.keys(categoria.materiales).forEach(materialKey => {
                 const material = categoria.materiales[materialKey];
-                const total = (material.cantidad || 0) * (material.precio || 0);
+                const total = material.cantidad * material.precio;
                 html += `
                     <tr>
                         <td>${material.nombre}</td>
-                        <td>${material.descripcion || ''}</td>
+                        <td>${material.nombre}</td>
                         <td>
                             <input type="text" class="form-control" value="${material.lugar || ''}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'lugar', this.value)" 
                                    style="width: 120px; font-size: 12px;">
                         </td>
                         <td>
-                            <input type="number" class="form-control" value="${material.cantidad || 0}" 
+                            <input type="number" class="form-control" value="${material.cantidad}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'cantidad', this.value)" 
                                    style="width: 80px;">
                         </td>
                         <td>
-                            <input type="number" class="form-control" value="${material.precio || 0}" 
+                            <input type="number" class="form-control" value="${material.precio}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'precio', this.value)" 
                                    style="width: 100px;">
                         </td>
@@ -704,9 +497,9 @@ class WizardCotizacion {
             // Calcular total traspaso
             let totalTraspaso = 0;
             Object.values(categoria.materiales).forEach(material => {
-                totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
+                totalTraspaso += material.cantidad * material.precio;
             });
-            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
+            const cobroPorTraspaso = totalTraspaso * categoria.factor;
             
             html += `
                             </tbody>
@@ -718,7 +511,7 @@ class WizardCotizacion {
                             <strong>Total Traspaso: <span id="total_traspaso_${key}">$${totalTraspaso.toLocaleString()}</span></strong>
                         </div>
                         <div>
-                            <strong>Cobro por traspaso (${((categoria.factor||0) * 100)}%): 
+                            <strong>Cobro por traspaso (${(categoria.factor * 100)}%): 
                                 <span id="cobro_traspaso_${key}" style="color: #2e7d32;">$${cobroPorTraspaso.toLocaleString()}</span>
                             </strong>
                         </div>
@@ -747,7 +540,7 @@ class WizardCotizacion {
         // Recalcular totales
         let totalTraspaso = 0;
         Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
-            totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
+            totalTraspaso += material.cantidad * material.precio;
         });
         
         const cobroPorTraspaso = totalTraspaso * parseFloat(nuevoFactor);
@@ -769,7 +562,7 @@ class WizardCotizacion {
         // Recalcular totales
         let totalTraspaso = 0;
         Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
-            totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
+            totalTraspaso += material.cantidad * material.precio;
         });
         
         const factor = this.datos.valoresTraspasados[categoria].factor;
@@ -782,7 +575,7 @@ class WizardCotizacion {
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
         
-        // Actualizar paso traspasados visualmente
+        // Actualizar fila específica
         this.generarPasoTraspasados(document.getElementById(`paso-8`));
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
@@ -800,7 +593,7 @@ class WizardCotizacion {
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <input type="number" class="form-control" id="factor_general" 
                                value="${this.datos.factorGeneral}" step="0.1" min="1" max="3"
-                               onchange="wizard.actualzarFactor(this.value)" style="width: 120px;">
+                               onchange="wizard.actualizarFactor(this.value)" style="width: 120px;">
                         <span style="color: #666;">(Ejemplo: 1.3 = 30% de ganancia)</span>
                     </div>
                 </div>
@@ -928,97 +721,157 @@ class WizardCotizacion {
     generarPasoResumen(container) {
         // Usar la función central de cálculos BYT
         const totales = this.calcularTotalesBYT();
-
-        // Construyo tablas por categoría (visual limpio, subtotales por categoría)
-        let categoriasHtml = '';
-        Object.keys(this.datos.materiales).forEach(cat => {
-            const materiales = this.datos.materiales[cat] || {};
-            const filas = Object.values(materiales).map(m => {
-                const sub = ((m.cantidad || 0) * (m.precio || 0));
-                return `<tr>
-                    <td style="padding:8px;border-bottom:1px solid #eee">${m.nombre}</td>
-                    <td style="padding:8px;border-bottom:1px solid #eee">${m.lugar || '-'}</td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${m.cantidad || 0}</td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
-                    <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">$${sub.toLocaleString()}</td>
-                </tr>`;
-            }).join('');
-            const subtotalCat = Object.values(materiales).reduce((s,m) => s + ((m.cantidad || 0) * (m.precio || 0)), 0);
-            categoriasHtml += `
-                <div style="margin-bottom:16px;">
-                  <h4 style="margin:6px 0 10px;color:#2e6b57;text-transform:capitalize">${cat.replace(/_/g,' ')}</h4>
-                  <table style="width:100%;border-collapse:collapse;border:1px solid #e6eee9">
-                    <thead>
-                      <tr style="background:#f2fbf6">
-                        <th style="padding:10px;text-align:left">Material</th>
-                        <th style="padding:10px;text-align:left">Lugar</th>
-                        <th style="padding:10px;text-align:center">Cant.</th>
-                        <th style="padding:10px;text-align:right">V. Unit.</th>
-                        <th style="padding:10px;text-align:right">Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${filas || `<tr><td colspan="5" style="padding:12px;text-align:center;color:#777">No hay materiales</td></tr>`}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colspan="4" style="padding:10px;border-top:1px solid #e6eee9;text-align:right;font-weight:700">Subtotal ${cat.replace(/_/g,' ')}:</td>
-                        <td style="padding:10px;border-top:1px solid #e6eee9;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>`;
-        });
-
+        
         container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">Resumen Final del Proyecto</h3>
                 
-                <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
-                  <div style="flex:1;min-width:180px;padding:12px;background:#ffffff;border-radius:8px;border:1px solid #e9f3ec">
-                    <div style="font-size:12px;color:#666">Total Materiales Base</div>
-                    <div style="font-size:18px;color:#2e7d32;font-weight:700">$${totales.totalMateriales.toLocaleString()}</div>
-                  </div>
-                  <div style="flex:1;min-width:180px;padding:12px;background:#fff8f0;border-radius:8px;border:1px solid #f7efe6">
-                    <div style="font-size:12px;color:#666">Factor General BYT</div>
-                    <div style="font-size:18px;color:#e67e22;font-weight:700">${totales.factorGeneral}x</div>
-                  </div>
-                  <div style="flex:1;min-width:180px;padding:12px;background:#f6fbff;border-radius:8px;border:1px solid #e9f4fb">
-                    <div style="font-size:12px;color:#666">Materiales con Factor</div>
-                    <div style="font-size:18px;color:#333;font-weight:700">$${totales.materialesConFactor.toLocaleString()}</div>
-                  </div>
-                  <div style="flex:1;min-width:180px;padding:12px;background:#fffef6;border-radius:8px;border:1px solid #f9f7ea">
-                    <div style="font-size:12px;color:#666">Ganancia</div>
-                    <div style="font-size:18px;color:#2e7d32;font-weight:700">$${totales.ganancia.toLocaleString()}</div>
-                  </div>
+                <div style="margin: 20px 0;">
+                    <h4 style="color: var(--color-primary);">📦 Materiales</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Materiales Base</span>
+                            <span class="summary-value">$${totales.totalMateriales.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Factor General BYT</span>
+                            <span class="summary-value" style="color: #ff9800;">${totales.factorGeneral}x</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Materiales con Factor</span>
+                            <span class="summary-value">$${totales.materialesConFactor.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Ganancia del Proyecto</span>
+                            <span class="summary-value" style="color: #4caf50;">$${totales.ganancia.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
-
-                <div style="margin-bottom:12px;">
-                  <h4 style="color:#2e6b57;margin-bottom:8px;">Detalle por Categoría</h4>
-                  ${categoriasHtml}
+                
+                <div style="margin: 20px 0;">
+                    <h4 style="color: var(--color-primary);">🏢 Valores Traspasados</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Traspasados Base</span>
+                            <span class="summary-value">$${totales.totalTraspasos.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Factores Individuales</span>
+                            <span class="summary-value">$${totales.totalTraspasosFactor.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label"><strong>Total Traspasados</strong></span>
+                            <span class="summary-value">$${totales.totalTraspasados.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
-
-                <div style="display:flex;gap:12px;justify-content:flex-end;align-items:flex-end;margin-top:8px;">
-                  <div style="text-align:right;">
-                    <div style="font-size:12px;color:#666">Subtotal (sin IVA)</div>
-                    <div style="font-size:18px;font-weight:700;color:#333">$${totales.subtotalSinIVA.toLocaleString()}</div>
-                  </div>
-                  <div style="text-align:right;margin-left:18px;">
-                    <div style="font-size:12px;color:#666">IVA (19%)</div>
-                    <div style="font-size:18px;font-weight:700;color:#333">$${totales.iva.toLocaleString()}</div>
-                  </div>
-                  <div style="text-align:right;margin-left:18px;">
-                    <div style="font-size:12px;color:#666">TOTAL PROYECTO</div>
-                    <div style="font-size:22px;font-weight:900;color:#2e7d32">$${totales.totalConIVA.toLocaleString()}</div>
-                  </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: #f0f8f0; border-left: 4px solid #4caf50; border-radius: 8px;">
+                    <h4 style="color: #2e7d32; margin-bottom: 10px;">💵 Cálculo de Ganancia BYT</h4>
+                    <div style="font-family: monospace; background: white; padding: 10px; border-radius: 4px; font-size: 14px;">
+                        Ganancia = TOTAL DEL PROYECTO - Materiales - Traspasados<br>
+                        Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()}
+                    </div>
+                    <div style="text-align: center; font-size: 18px; color: #2e7d32; font-weight: bold; margin-top: 10px;">
+                        = $${totales.ganancia.toLocaleString()}
+                    </div>
                 </div>
-
-                <div style="margin-top:18px;display:flex;gap:12px;justify-content:center">
-                  <button class="btn" onclick="wizard.guardarCotizacion()" style="background:#2e7d32;color:#fff;padding:10px 18px;border-radius:6px;border:0">💾 Guardar Cotización Completa</button>
-                  <button class="btn" onclick="wizard.imprimirCotizacion()" style="background:#1976D2;color:#fff;padding:10px 18px;border-radius:6px;border:0">🖨️ Imprimir Cotización</button>
+                
+                <!-- Fórmula BYT Completa -->
+                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-left: 4px solid var(--color-primary); border-radius: 8px;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 10px;">🧮 Fórmula BYT Completa Aplicada</h4>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">
+                            (Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)
+                        </div>
+                        <div style="font-family: monospace; font-size: 14px; line-height: 1.6;">
+                            <div>• Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}</div>
+                            <div>• Traspasados Base: $${totales.totalTraspasos.toLocaleString()}</div>
+                            <div>• Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}</div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold;">
+                                SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-size: 20px; color: #2e5e4e; font-weight: bold; background: #f0f8f0; padding: 10px; border-radius: 6px;">
+                        NETO = $${totales.subtotalSinIVA.toLocaleString()}
+                    </div>
+                </div>
+                
+                <div style="margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px;">
+                    <h4 style="color: var(--color-primary); text-align: center; margin-bottom: 20px;">💰 Totales Finales</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Subtotal (sin IVA)</span>
+                            <span class="summary-value">$${totales.subtotalSinIVA.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">IVA (19%)</span>
+                            <span class="summary-value">$${totales.iva.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label"><strong>TOTAL PROYECTO</strong></span>
+                            <span class="summary-value" style="font-size: 24px; color: #2e5e4e; font-weight: bold;">
+                                $${totales.totalConIVA.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0; padding: 15px; background: #fff; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    <h4 style="color: var(--color-primary);">👤 Información del Proyecto</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px;">
+                        <div><strong>Proyecto:</strong> ${this.datos.cliente.nombre_proyecto || 'Sin nombre'}</div>
+                        <div><strong>Cliente:</strong> ${this.datos.cliente.nombre || 'Sin especificar'}</div>
+                        <div><strong>Dirección:</strong> ${this.datos.cliente.direccion || 'No especificada'}</div>
+                        <div><strong>Encargado:</strong> ${this.datos.cliente.encargado || 'No especificado'}</div>
+                    </div>
+                    ${this.datos.cliente.notas ? `<div style="margin-top: 10px;"><strong>Notas:</strong> ${this.datos.cliente.notas}</div>` : ''}
+                </div>
+                
+                <div style="margin-top: 30px; text-align: center; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                    <button type="button" class="btn" onclick="wizard.guardarCotizacion()" 
+                            style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, var(--color-primary), #245847);">
+                        💾 Guardar Cotización Completa
+                    </button>
+                    <button type="button" class="btn" onclick="wizard.imprimirCotizacion()" 
+                            style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, #2196F3, #1976D2); color: white;">
+                        🖨️ Imprimir Cotización
+                    </button>
                 </div>
             </div>
         `;
+    }
+    
+    actualizarBotonesNavegacion() {
+        const btnAnterior = document.getElementById('btn-anterior');
+        const btnSiguiente = document.getElementById('btn-siguiente');
+        
+        if (btnAnterior) {
+            btnAnterior.style.display = this.pasoActual > 1 ? 'inline-block' : 'none';
+        }
+        
+        if (btnSiguiente) {
+            btnSiguiente.textContent = this.pasoActual < this.totalPasos ? 'Siguiente →' : 'Finalizar';
+        }
+    }
+    
+    anteriorPaso() {
+        if (this.pasoActual > 1) {
+            this.pasoActual--;
+            this.actualizarProgreso();
+            this.mostrarPaso(this.pasoActual);
+        }
+    }
+    
+    siguientePaso() {
+        if (this.pasoActual < this.totalPasos) {
+            this.pasoActual++;
+            this.actualizarProgreso();
+            this.mostrarPaso(this.pasoActual);
+        } else {
+            this.guardarCotizacion();
+        }
     }
     
     validarPasoActual() {
@@ -1045,13 +898,12 @@ class WizardCotizacion {
                 numero: 'COT-' + Date.now()
             };
             
-            // Aquí puedes integrar el guardado en Supabase usando tu módulo supabaseClient/providersApi/materialsApi
-            console.log('Guardando cotización (local):', cotizacion);
+            console.log('Guardando cotización:', cotizacion);
             alert('¡Cotización guardada exitosamente!');
             
         } catch (error) {
             console.error('Error al guardar cotización:', error);
-            alert('Error al guardar la cotización: ' + (error.message || error));
+            alert('Error al guardar la cotización: ' + error.message);
         }
     }
     
@@ -1091,163 +943,350 @@ class WizardCotizacion {
     }
     
     obtenerEstilosImpresion() {
-        // Estilos pensados para A4 y para impresión en blanco y negro/ color suave
         return `
             @media print {
                 * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { font-family: Arial, sans-serif; font-size: 11px; line-height: 1.3; color: #222; }
+                body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
                 .no-print { display: none !important; }
-                .page-break { page-break-after: always; }
             }
+            
             body {
                 font-family: Arial, sans-serif;
                 max-width: 210mm;
                 margin: 0 auto;
-                padding: 18mm;
+                padding: 15mm;
                 background: white;
-                color: #222;
+                color: #333;
             }
-            .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #2e5e4e; padding-bottom:12px; margin-bottom:16px; }
-            .company { color:#2e5e4e; font-size:16px; font-weight:700; }
-            .meta { text-align:right; font-size:12px; color:#444; }
-            h3.section-title { color:#225e47; margin:12px 0; }
-            table { width:100%; border-collapse:collapse; margin-bottom:10px; }
-            th, td { border:1px solid #e0e0e0; padding:8px; vertical-align:middle; }
-            th { background:#f7f9f7; text-align:left; font-weight:700; }
-            .category-header { background:#f2fbf6; padding:6px 10px; font-weight:700; color:#2e6b57; margin-top:8px; }
-            .totals { margin-top:10px; display:flex; gap:12px; justify-content:flex-end; }
-            .totals .box { padding:10px 12px; background:#f7f7f7; border-radius:6px; min-width:150px; text-align:right; }
-            .big-total { font-size:18px; color:#2e7d32; font-weight:900; }
+            
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 3px solid #2e5e4e;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .logo-section {
+                flex: 1;
+            }
+            
+            .company-name {
+                font-size: 28px;
+                font-weight: bold;
+                color: #2e5e4e;
+                margin-bottom: 5px;
+            }
+            
+            .company-subtitle {
+                font-size: 14px;
+                color: #666;
+            }
+            
+            .cotizacion-info {
+                text-align: right;
+                flex: 1;
+            }
+            
+            .cotizacion-numero {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2e5e4e;
+            }
+            
+            .section {
+                margin: 25px 0;
+            }
+            
+            .section-title {
+                background: #2e5e4e;
+                color: white;
+                padding: 8px 15px;
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 15px;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .info-item {
+                padding: 8px;
+                border-left: 4px solid #2e5e4e;
+                background: #f8f9fa;
+            }
+            
+            .info-label {
+                font-weight: bold;
+                color: #2e5e4e;
+            }
+            
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+            }
+            
+            .table th,
+            .table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            
+            .table th {
+                background: #f5f5f5;
+                font-weight: bold;
+                color: #333;
+            }
+            
+            .table tr:nth-child(even) {
+                background: #fafafa;
+            }
+            
+            .formula-box {
+                background: #e3f2fd;
+                border: 2px solid #2196F3;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 20px 0;
+            }
+            
+            .formula-title {
+                font-size: 16px;
+                font-weight: bold;
+                color: #1976D2;
+                margin-bottom: 10px;
+            }
+            
+            .formula-content {
+                font-family: monospace;
+                background: white;
+                padding: 10px;
+                border-radius: 4px;
+                font-size: 11px;
+                line-height: 1.6;
+            }
+            
+            .totales-finales {
+                background: #f0f8f0;
+                border: 3px solid #4CAF50;
+                padding: 20px;
+                border-radius: 8px;
+                margin: 25px 0;
+            }
+            
+            .total-final {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2e7d32;
+                text-align: center;
+                margin-top: 15px;
+            }
+            
+            .footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 2px solid #2e5e4e;
+                text-align: center;
+                color: #666;
+                font-size: 11px;
+            }
         `;
     }
     
     generarHTMLImpresion(totales, fecha, numero) {
-        // Construyo tablas por categoría como en el resumen visual
-        let categoriasHtml = '';
-        Object.keys(this.datos.materiales).forEach(cat => {
-            const materiales = this.datos.materiales[cat] || {};
-            const filas = Object.values(materiales).map(m => {
-                const subtotal = ((m.cantidad || 0) * (m.precio || 0));
-                return `<tr>
-                    <td style="padding:6px;border:1px solid #ddd">${m.nombre}</td>
-                    <td style="padding:6px;border:1px solid #ddd">${m.descripcion || '-'}</td>
-                    <td style="padding:6px;border:1px solid #ddd">${m.lugar || '-'}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:center">${m.cantidad || 0}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${subtotal.toLocaleString()}</td>
-                </tr>`;
-            }).join('');
-            const subtotalCat = Object.values(materiales).reduce((s,m) => s + ((m.cantidad || 0)*(m.precio || 0)), 0);
-            categoriasHtml += `
-                <div class="category-header">${cat.replace(/_/g,' ').toUpperCase()}</div>
-                <table>
+        // Generar detalle de materiales
+        let detalleMateriales = '';
+        Object.keys(this.datos.materiales).forEach(categoria => {
+            const materiales = this.datos.materiales[categoria];
+            let hayMateriales = false;
+            let filasCategoria = '';
+            
+            Object.values(materiales).forEach(material => {
+                if ((material.cantidad || 0) > 0) {
+                    hayMateriales = true;
+                    const subtotal = (material.cantidad || 0) * (material.precio || 0);
+                    filasCategoria += `
+                        <tr>
+                            <td>${material.nombre}</td>
+                            <td>${material.descripcion || '-'}</td>
+                            <td>${material.lugar || '-'}</td>
+                            <td style="text-align: center;">${material.cantidad}</td>
+                            <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
+                            <td style="text-align: right; font-weight: bold;">$${subtotal.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (hayMateriales) {
+                detalleMateriales += `
+                    <tr style="background: #e8f5e8;">
+                        <td colspan="6" style="font-weight: bold; color: #2e7d32; text-transform: uppercase;">
+                            ${categoria.replace(/_/g, ' ')}
+                        </td>
+                    </tr>
+                    ${filasCategoria}
+                `;
+            }
+        });
+        
+        // Generar detalle de traspasados
+        let detalleTraspasados = '';
+        Object.keys(this.datos.valoresTraspasados).forEach(categoriaKey => {
+            const categoria = this.datos.valoresTraspasados[categoriaKey];
+            let hayTraspasados = false;
+            let filasCategoria = '';
+            
+            Object.values(categoria.materiales).forEach(material => {
+                if ((material.cantidad || 0) > 0) {
+                    hayTraspasados = true;
+                    const subtotal = (material.cantidad || 0) * (material.precio || 0);
+                    filasCategoria += `
+                        <tr>
+                            <td>${material.nombre}</td>
+                            <td>${material.descripcion || '-'}</td>
+                            <td style="text-align: center;">${material.cantidad}</td>
+                            <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
+                            <td style="text-align: right;">$${subtotal.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (hayTraspasados) {
+                detalleTraspasados += `
+                    <tr style="background: #fff3e0;">
+                        <td colspan="5" style="font-weight: bold; color: #f57c00; text-transform: uppercase;">
+                            ${categoriaKey} (Factor: ${categoria.factor})
+                        </td>
+                    </tr>
+                    ${filasCategoria}
+                `;
+            }
+        });
+        
+        return `
+            <div class="header">
+                <div class="logo-section">
+                    <div class="company-name">BYT SOFTWARE</div>
+                    <div class="company-subtitle">Sistemas de Cotización y Gestión</div>
+                </div>
+                <div class="cotizacion-info">
+                    <div class="cotizacion-numero">${numero}</div>
+                    <div>Fecha: ${fecha}</div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">📋 INFORMACIÓN DEL PROYECTO</div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Proyecto:</div>
+                        <div>${this.datos.cliente.nombre_proyecto || 'Sin especificar'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Cliente:</div>
+                        <div>${this.datos.cliente.nombre || 'Sin especificar'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Dirección:</div>
+                        <div>${this.datos.cliente.direccion || 'No especificada'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Encargado:</div>
+                        <div>${this.datos.cliente.encargado || 'No especificado'}</div>
+                    </div>
+                </div>
+                ${this.datos.cliente.notas ? `
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <div class="info-label">Notas:</div>
+                    <div>${this.datos.cliente.notas}</div>
+                </div>` : ''}
+            </div>
+            
+            ${detalleMateriales ? `
+            <div class="section">
+                <div class="section-title">🔧 DETALLE DE MATERIALES</div>
+                <table class="table">
                     <thead>
                         <tr>
-                            <th style="width:35%">Material</th>
-                            <th style="width:20%">Descripción</th>
-                            <th style="width:15%">Lugar</th>
-                            <th style="width:8%;text-align:center">Cant.</th>
-                            <th style="width:11%;text-align:right">V.Unit.</th>
-                            <th style="width:11%;text-align:right">Subtotal</th>
+                            <th>Material</th>
+                            <th>Descripción</th>
+                            <th>Lugar de Compra</th>
+                            <th>Cant.</th>
+                            <th>Valor Unit.</th>
+                            <th>Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${filas || `<tr><td colspan="6" style="padding:10px;text-align:center;color:#666">Sin materiales</td></tr>`}
+                        ${detalleMateriales}
                     </tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="5" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Subtotal ${cat.replace(/_/g,' ')}:</td>
-                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
-                        </tr>
-                    </tfoot>
                 </table>
-            `;
-        });
-
-        // Traspasados (servicios)
-        let traspasadosHtml = '';
-        Object.keys(this.datos.valoresTraspasados).forEach(key => {
-            const cat = this.datos.valoresTraspasados[key];
-            const filas = Object.values(cat.materiales).map(m => {
-                const subtotal = ((m.cantidad || 0) * (m.precio || 0));
-                return `<tr>
-                    <td style="padding:6px;border:1px solid #ddd">${m.nombre}</td>
-                    <td style="padding:6px;border:1px solid #ddd">${m.descripcion || '-'}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:center">${m.cantidad || 0}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${(m.precio || 0).toLocaleString()}</td>
-                    <td style="padding:6px;border:1px solid #ddd;text-align:right">$${subtotal.toLocaleString()}</td>
-                </tr>`;
-            }).join('');
-            const subtotalCat = Object.values(cat.materiales).reduce((s,m) => s + ((m.cantidad || 0)*(m.precio || 0)), 0);
-            const cobro = subtotalCat * (cat.factor || 0);
-            traspasadosHtml += `
-                <div class="category-header">${cat.nombre} (Factor: ${cat.factor || 0})</div>
-                <table>
-                    <thead><tr><th>Servicio</th><th>Descripción</th><th style="text-align:center">Cant.</th><th style="text-align:right">V.Unit.</th><th style="text-align:right">Subtotal</th></tr></thead>
-                    <tbody>${filas || `<tr><td colspan="5" style="padding:10px;text-align:center;color:#666">Sin servicios</td></tr>`}</tbody>
-                    <tfoot>
+            </div>` : ''}
+            
+            ${detalleTraspasados ? `
+            <div class="section">
+                <div class="section-title">🏢 SERVICIOS TRASPASADOS</div>
+                <table class="table">
+                    <thead>
                         <tr>
-                            <td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Subtotal ${cat.nombre}:</td>
-                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${subtotalCat.toLocaleString()}</td>
+                            <th>Servicio</th>
+                            <th>Descripción</th>
+                            <th>Cant.</th>
+                            <th>Valor Unit.</th>
+                            <th>Subtotal</th>
                         </tr>
-                        <tr>
-                            <td colspan="4" style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">Cobro por factor (${(cat.factor||0)*100}%):</td>
-                            <td style="padding:8px;border:1px solid #ddd;text-align:right;font-weight:700">$${cobro.toLocaleString()}</td>
-                        </tr>
-                    </tfoot>
+                    </thead>
+                    <tbody>
+                        ${detalleTraspasados}
+                    </tbody>
                 </table>
-            `;
-        });
-
-        return `
-            <!doctype html>
-            <html lang="es">
-            <head>
-                <meta charset="utf-8">
-                <title>Cotización ${numero}</title>
-                <meta name="viewport" content="width=device-width,initial-scale=1">
-                <style>
-                  ${this.obtenerEstilosImpresion()}
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                  <div>
-                    <div class="company">BYT SOFTWARE</div>
-                    <div style="font-size:12px;color:#555">Sistemas de Cotización y Gestión</div>
-                  </div>
-                  <div class="meta">
-                    <div>Cotización: ${numero}</div>
-                    <div>Fecha: ${fecha}</div>
-                  </div>
+            </div>` : ''}
+            
+            <div class="formula-box">
+                <div class="formula-title">🧮 FÓRMULA BYT APLICADA</div>
+                <div class="formula-content">
+                    <strong>(Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)</strong><br><br>
+                    • Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}<br>
+                    • Traspasados Base: $${totales.totalTraspasos.toLocaleString()}<br>
+                    • Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}<br><br>
+                    <strong>SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()} = $${totales.subtotalSinIVA.toLocaleString()}</strong><br><br>
+                    <strong>Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()} = $${totales.ganancia.toLocaleString()}</strong>
                 </div>
-
-                <div style="margin-bottom:12px">
-                  <h3 class="section-title">📋 INFORMACIÓN DEL PROYECTO</h3>
-                  <div style="font-size:13px;color:#222">
-                    <div>Proyecto: ${this.datos.cliente.nombre_proyecto || '-'}</div>
-                    <div>Cliente: ${this.datos.cliente.nombre || '-'}</div>
-                    <div>Dirección: ${this.datos.cliente.direccion || '-'}</div>
-                    <div>Encargado: ${this.datos.cliente.encargado || '-'}</div>
-                  </div>
-                </div>
-
-                ${categoriasHtml}
-
-                ${traspasadosHtml ? `<div style="margin-top:12px"><h3 class="section-title">🏢 SERVICIOS TRASPASADOS</h3>${traspasadosHtml}</div>` : ''}
-
-                <div style="margin-top:18px;">
-                  <h3 style="color:#2e5e4e;margin-bottom:8px">Totales</h3>
-                  <div class="totals">
-                    <div class="box"><div style="font-size:12px;color:#666">Subtotal (sin IVA)</div><strong>$${totales.subtotalSinIVA.toLocaleString()}</strong></div>
-                    <div class="box"><div style="font-size:12px;color:#666">IVA (19%)</div><strong>$${totales.iva.toLocaleString()}</strong></div>
-                    <div class="box"><div style="font-size:12px;color:#666">TOTAL</div><div class="big-total">$${totales.totalConIVA.toLocaleString()}</div></div>
-                  </div>
-                </div>
-
-                <div style="margin-top:20px;font-size:11px;color:#666">Documento generado por BYT SOFTWARE - Válido como referencia.</div>
-            </body>
-            </html>
+            </div>
+            
+            <div class="totales-finales">
+                <table class="table" style="margin: 0;">
+                    <tr>
+                        <td><strong>Subtotal (sin IVA):</strong></td>
+                        <td style="text-align: right; font-weight: bold;">$${totales.subtotalSinIVA.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IVA (19%):</strong></td>
+                        <td style="text-align: right; font-weight: bold;">$${totales.iva.toLocaleString()}</td>
+                    </tr>
+                    <tr style="background: #e8f5e8; font-size: 16px;">
+                        <td><strong>TOTAL FINAL:</strong></td>
+                        <td style="text-align: right; font-weight: bold; color: #2e7d32;">$${totales.totalConIVA.toLocaleString()}</td>
+                    </tr>
+                    <tr style="background: #f0f8f0;">
+                        <td><strong>Ganancia del Proyecto:</strong></td>
+                        <td style="text-align: right; font-weight: bold; color: #4caf50;">$${totales.ganancia.toLocaleString()}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="footer">
+                <p>Cotización generada por BYT SOFTWARE - Sistema de Gestión de Proyectos</p>
+                <p>Esta cotización es válida por 30 días a partir de la fecha de emisión</p>
+            </div>
         `;
     }
 }
