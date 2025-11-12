@@ -146,6 +146,11 @@
             font-size: 0.8em;
             min-width: auto;
         }
+
+        /* Buttons */
+        .btn { background:#2e7d32;color:white;padding:10px 14px;border-radius:6px;border:0;cursor:pointer }
+        .btn-secondary { background:#6c757d;color:white;padding:10px 14px;border-radius:6px;border:0;cursor:pointer }
+        .btn-danger { background:#c62828;color:white;padding:10px 14px;border-radius:6px;border:0;cursor:pointer }
     </style>
 </head>
 <body>
@@ -155,7 +160,7 @@
         <header class="header">
             <div class="header-content">
                 <div class="logo-section">
-                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo">
+                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo" style="width:48px;height:48px;margin-right:12px;">
                     <div>
                         <h1 class="header-title">Gestión de Materiales</h1>
                         <p class="header-subtitle">Administración de Materiales y Categorías</p>
@@ -166,16 +171,16 @@
 
         <main>
             <!-- Pestañas -->
-            <div class="tabs">
-                <button class="tab active" onclick="showTab('categorias')">📁 Categorías</button>
-                <button class="tab" onclick="showTab('consultar')">🔍 Consultar Materiales</button>
-                <button class="tab" onclick="showTab('crear')">➕ Crear Material</button>
-                <button class="tab" onclick="showTab('editar')">✏️ Editar Material</button>
-                <button class="tab" onclick="showTab('eliminar')">🗑️ Eliminar Material</button>
+            <div class="tabs" role="tablist" aria-label="Gestión de materiales">
+                <button class="tab active" onclick="showTab('categorias')" role="tab" aria-selected="true">📁 Categorías</button>
+                <button class="tab" onclick="showTab('consultar')" role="tab">🔍 Consultar Materiales</button>
+                <button class="tab" onclick="showTab('crear')" role="tab">➕ Crear Material</button>
+                <button class="tab" onclick="showTab('editar')" role="tab">✏️ Editar Material</button>
+                <button class="tab" onclick="showTab('eliminar')" role="tab">🗑️ Eliminar Material</button>
             </div>
 
             <!-- Pestaña Categorías -->
-            <div id="categorias" class="tab-content active">
+            <div id="categorias" class="tab-content active" role="tabpanel">
                 <div class="card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 class="card-title">📁 Gestión de Categorías</h2>
@@ -187,7 +192,7 @@
                     </div>
                     
                     <div class="simple-table-container">
-                        <table class="simple-table">
+                        <table class="simple-table" aria-describedby="tablaCategorias">
                             <thead>
                                 <tr>
                                     <th>Categoría</th>
@@ -204,7 +209,7 @@
             </div>
 
             <!-- Pestaña Consultar -->
-            <div id="consultar" class="tab-content">
+            <div id="consultar" class="tab-content" role="tabpanel">
                 <div class="search-section">
                     <h3>🔍 Consultar Materiales (Solo Lectura)</h3>
                     <div class="search-row">
@@ -241,7 +246,7 @@
             </div>
 
             <!-- Pestaña Crear -->
-            <div id="crear" class="tab-content">
+            <div id="crear" class="tab-content" role="tabpanel">
                 <div class="card">
                     <h2 class="card-title">➕ Crear Nuevo Material</h2>
                     
@@ -287,7 +292,7 @@
             </div>
 
             <!-- Pestaña Editar -->
-            <div id="editar" class="tab-content">
+            <div id="editar" class="tab-content" role="tabpanel">
                 <div class="search-section">
                     <h3>✏️ Buscar Material a Editar</h3>
                     <div class="search-row">
@@ -311,6 +316,7 @@
                     <h2 class="card-title">✏️ Editar Material</h2>
                     
                     <form id="editarMaterialForm">
+                        <input type="hidden" id="editarSelectedId" value="">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div class="form-group">
                                 <label>Categoría Original</label>
@@ -337,7 +343,7 @@
             </div>
 
             <!-- Pestaña Eliminar -->
-            <div id="eliminar" class="tab-content">
+            <div id="eliminar" class="tab-content" role="tabpanel">
                 <div class="search-section">
                     <h3>🗑️ Buscar Material a Eliminar</h3>
                     <div class="search-row">
@@ -377,465 +383,614 @@
         </main>
     </div>
 
+    <!-- Keep local categories fallback script -->
     <script src="../../js/categorias_reales.js"></script>
-    <script>
-        // Verificar autenticación
-        if (!localStorage.getItem('byt_logged_in')) {
-            window.location.href = '../login/login.html';
-        }
 
-        // Gestión de pestañas
-        function showTab(tabName) {
-            // Ocultar todas las pestañas
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Mostrar pestaña seleccionada
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-            
-            // Cargar contenido específico de la pestaña
-            if (tabName === 'categorias') {
-                loadCategories();
-            } else if (tabName === 'consultar') {
-                loadConsultarCategories();
-            } else if (tabName === 'crear') {
-                loadCrearCategories();
-            } else if (tabName === 'editar') {
-                loadEditarCategories();
-            } else if (tabName === 'eliminar') {
-                loadEliminarCategories();
-            }
-        }
+    <!-- Main logic: module to allow dynamic import of materialsApi -->
+    <script type="module">
+    // Module-scoped state
+    let materialsApi = null;
+    let remoteAvailable = false; // Supabase-backed materials API available
+    let categoriesData = {};      // { category: [ {id?, name, price?, unit?, active?}, ... ] } OR fallback where values are strings
+    const LOCAL_FALLBACK_KEY = 'byt_local_materials_used';
 
-        // ===== PESTAÑA CATEGORÍAS =====
-        function loadCategories() {
-            const tbody = document.getElementById('tablaCategorias');
-            tbody.innerHTML = '';
-            
-            Object.keys(categoriasMateriales).forEach(categoria => {
-                const materiales = categoriasMateriales[categoria];
-                const cantidadMateriales = materiales.length;
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${categoria}</strong></td>
-                    <td>${cantidadMateriales} material(es)</td>
-                    <td>
-                        <button class="btn-secondary btn-small" onclick="editarCategoria('${categoria}')" title="Editar categoría">✏️</button>
-                        <button class="btn-danger btn-small" onclick="eliminarCategoria('${categoria}')" title="Eliminar categoría">🗑️</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+    // Try to import the materialsApi (Supabase). If fails, we'll use local categoriasMateriales (from categorias_reales.js).
+    async function initDataLayer() {
+      try {
+        const mod = await import('../../lib/materialsApi.js');
+        materialsApi = mod;
+        // quick check: try to list materials, but don't fail the whole init if query errors
+        try {
+          const res = await materialsApi.listMaterials({ onlyActive: false });
+          if (!res?.error) {
+            remoteAvailable = true;
+            // build categoriesData from DB results
+            buildCategoriesFromMaterialsArray(res.data || []);
+            console.log('Materials API connected - using Supabase materials');
+            return;
+          } else {
+            console.warn('materialsApi.listMaterials returned error, falling back to local categories:', res.error);
+          }
+        } catch (err) {
+          console.warn('materialsApi.listMaterials threw, fallback to local:', err);
         }
+      } catch (err) {
+        console.warn('No materialsApi available, using local categories fallback.', err);
+      }
 
-        function mostrarModalAgregarCategoria() {
-            const nombreCategoria = prompt('Ingrese el nombre de la nueva categoría:');
-            if (nombreCategoria && nombreCategoria.trim()) {
-                const nombre = nombreCategoria.trim();
-                if (categoriasMateriales[nombre]) {
-                    alert('Ya existe una categoría con ese nombre');
-                    return;
-                }
-                categoriasMateriales[nombre] = [];
-                loadCategories();
-                actualizarTodosLosSelects();
-                alert('✅ Categoría creada correctamente');
-            }
-        }
+      // Fallback: use global categoriasMateriales (from categorias_reales.js)
+      buildCategoriesFromLocal();
+    }
 
-        function editarCategoria(categoriaActual) {
-            const nuevoNombre = prompt(`Editar nombre de categoría:\nNombre actual: ${categoriaActual}`, categoriaActual);
-            if (nuevoNombre && nuevoNombre.trim() && nuevoNombre.trim() !== categoriaActual) {
-                const nombre = nuevoNombre.trim();
-                if (categoriasMateriales[nombre]) {
-                    alert('Ya existe una categoría con ese nombre');
-                    return;
-                }
-                // Mover materiales a la nueva categoría
-                categoriasMateriales[nombre] = categoriasMateriales[categoriaActual];
-                delete categoriasMateriales[categoriaActual];
-                loadCategories();
-                actualizarTodosLosSelects();
-                alert('✅ Categoría actualizada correctamente');
-            }
-        }
-
-        function eliminarCategoria(categoria) {
-            const cantidadMateriales = categoriasMateriales[categoria].length;
-            const mensaje = cantidadMateriales > 0 
-                ? `⚠️ ¿Está seguro de eliminar la categoría "${categoria}"?\n\nEsta categoría contiene ${cantidadMateriales} material(es) que también se eliminarán.\n\n❌ Esta acción NO se puede deshacer.`
-                : `¿Está seguro de eliminar la categoría "${categoria}"?`;
-                
-            if (confirm(mensaje)) {
-                delete categoriasMateriales[categoria];
-                loadCategories();
-                actualizarTodosLosSelects();
-                alert('✅ Categoría eliminada correctamente');
-            }
-        }
-
-        // ===== CARGAR CATEGORÍAS EN SELECTS =====
-        function loadConsultarCategories() {
-            const select = document.getElementById('consultarCategoria');
-            select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
-            
-            Object.keys(categoriasMateriales).forEach(categoria => {
-                const option = document.createElement('option');
-                option.value = categoria;
-                option.textContent = categoria;
-                select.appendChild(option);
-            });
-        }
-
-        function loadCrearCategories() {
-            const select = document.getElementById('crearCategoria');
-            select.innerHTML = '<option value="">Seleccione una categoría</option>';
-            
-            Object.keys(categoriasMateriales).forEach(categoria => {
-                const option = document.createElement('option');
-                option.value = categoria;
-                option.textContent = categoria;
-                select.appendChild(option);
-            });
-        }
-
-        function loadEditarCategories() {
-            const select = document.getElementById('editarBuscarCategoria');
-            select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
-            
-            Object.keys(categoriasMateriales).forEach(categoria => {
-                const option = document.createElement('option');
-                option.value = categoria;
-                option.textContent = categoria;
-                select.appendChild(option);
-            });
-        }
-
-        function loadEliminarCategories() {
-            const select = document.getElementById('eliminarBuscarCategoria');
-            select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
-            
-            Object.keys(categoriasMateriales).forEach(categoria => {
-                const option = document.createElement('option');
-                option.value = categoria;
-                option.textContent = categoria;
-                select.appendChild(option);
-            });
-        }
-
-        function actualizarTodosLosSelects() {
-            loadConsultarCategories();
-            loadCrearCategories();
-            loadEditarCategories();
-            loadEliminarCategories();
-        }
-
-        // ===== FUNCIONES DE CONSULTAR =====
-        function consultarMaterialesPorCategoria() {
-            const categoria = document.getElementById('consultarCategoria').value;
-            const resultsDiv = document.getElementById('consultarResultados');
-            const tituloDiv = document.getElementById('tituloResultados');
-            const contadorDiv = document.getElementById('contadorMateriales');
-            
-            if (!categoria) {
-                resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📦 Seleccione una categoría para ver sus materiales</p>';
-                tituloDiv.textContent = 'Materiales por Categoría';
-                contadorDiv.textContent = '';
-                return;
-            }
-            
-            const materiales = categoriasMateriales[categoria];
-            
-            tituloDiv.textContent = `Categoría: ${categoria}`;
-            contadorDiv.textContent = `${materiales.length} material(es)`;
-            
-            if (materiales.length === 0) {
-                resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📭 Esta categoría no tiene materiales</p>';
-                return;
-            }
-            
-            mostrarMateriales(materiales.map(material => ({
-                categoria: categoria,
-                material: material
-            })));
-        }
-        
-        function consultarTodosMateriales() {
-            const resultsDiv = document.getElementById('consultarResultados');
-            const tituloDiv = document.getElementById('tituloResultados');
-            const contadorDiv = document.getElementById('contadorMateriales');
-            
-            let todosMateriales = [];
-            
-            Object.keys(categoriasMateriales).forEach(categoria => {
-                categoriasMateriales[categoria].forEach(material => {
-                    todosMateriales.push({
-                        categoria: categoria,
-                        material: material
-                    });
-                });
-            });
-            
-            tituloDiv.textContent = 'Todos los Materiales';
-            contadorDiv.textContent = `${todosMateriales.length} material(es) total`;
-            
-            if (todosMateriales.length === 0) {
-                resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📭 No hay materiales en el sistema</p>';
-                return;
-            }
-            
-            // Ordenar por categoría y luego por nombre
-            todosMateriales.sort((a, b) => {
-                if (a.categoria !== b.categoria) {
-                    return a.categoria.localeCompare(b.categoria);
-                }
-                return a.material.localeCompare(b.material);
-            });
-            
-            mostrarMateriales(todosMateriales);
-        }
-        
-        function filtrarMateriales() {
-            const filtro = document.getElementById('filtroNombre').value.toLowerCase();
-            const categoria = document.getElementById('consultarCategoria').value;
-            
-            if (!categoria && !filtro) {
-                return;
-            }
-            
-            let materiales = [];
-            
-            if (categoria) {
-                // Filtrar dentro de la categoría seleccionada
-                categoriasMateriales[categoria].forEach(material => {
-                    if (material.toLowerCase().includes(filtro)) {
-                        materiales.push({
-                            categoria: categoria,
-                            material: material
-                        });
-                    }
-                });
-            } else {
-                // Filtrar en todas las categorías
-                Object.keys(categoriasMateriales).forEach(cat => {
-                    categoriasMateriales[cat].forEach(material => {
-                        if (material.toLowerCase().includes(filtro)) {
-                            materiales.push({
-                                categoria: cat,
-                                material: material
-                            });
-                        }
-                    });
-                });
-            }
-            
-            const tituloDiv = document.getElementById('tituloResultados');
-            const contadorDiv = document.getElementById('contadorMateriales');
-            
-            if (filtro) {
-                tituloDiv.textContent = `Búsqueda: "${filtro}"${categoria ? ` en ${categoria}` : ''}`;
-                contadorDiv.textContent = `${materiales.length} resultado(s)`;
-            } else if (categoria) {
-                consultarMaterialesPorCategoria();
-                return;
-            }
-            
-            if (materiales.length === 0) {
-                document.getElementById('consultarResultados').innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">🔍 No se encontraron materiales</p>';
-                return;
-            }
-            
-            mostrarMateriales(materiales);
-        }
-        
-        function mostrarMateriales(materiales) {
-            const resultsDiv = document.getElementById('consultarResultados');
-            
-            resultsDiv.innerHTML = materiales.map(item => `
-                <div class="material-item">
-                    <div class="material-info">
-                        <div class="material-name">${item.material}</div>
-                        <div class="material-category">Categoría: <strong>${item.categoria}</strong></div>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        function limpiarConsulta() {
-            document.getElementById('consultarCategoria').value = '';
-            document.getElementById('filtroNombre').value = '';
-            document.getElementById('consultarResultados').innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📦 Seleccione una categoría para ver sus materiales<br><small>o haga clic en "Ver Todos" para consultar todos los materiales</small></p>';
-            document.getElementById('tituloResultados').textContent = 'Materiales por Categoría';
-            document.getElementById('contadorMateriales').textContent = '';
-        }
-
-        // ===== FUNCIONES DE CREAR =====
-        function limpiarFormularioCrear() {
-            document.getElementById('crearMaterialForm').reset();
-        }
-
-        // Manejar envío del formulario de CREAR
-        document.getElementById('crearMaterialForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const categoria = document.getElementById('crearCategoria').value;
-            const nombre = document.getElementById('crearNombre').value.trim();
-            
-            if (!categoria || !nombre) {
-                alert('Por favor complete todos los campos requeridos');
-                return;
-            }
-            
-            if (categoriasMateriales[categoria].includes(nombre)) {
-                if (!confirm(`Ya existe un material "${nombre}" en "${categoria}". ¿Desea continuar?`)) {
-                    return;
-                }
-            } else {
-                agregarMaterial(categoria, nombre);
-                alert('✅ Material creado correctamente');
-            }
-            
-            limpiarFormularioCrear();
-            
-            // Si estamos viendo la pestaña de categorías, recargarla
-            if (document.getElementById('categorias').classList.contains('active')) {
-                loadCategories();
-            }
+    function buildCategoriesFromMaterialsArray(arr) {
+      categoriesData = {};
+      arr.forEach(m => {
+        const cat = m.category || 'Sin categoría';
+        if (!categoriesData[cat]) categoriesData[cat] = [];
+        categoriesData[cat].push({
+          id: m.id,
+          name: m.name,
+          price: m.price,
+          unit: m.unit,
+          active: m.active
         });
+      });
+    }
 
-        // ===== FUNCIONES DE EDITAR =====
-        function cargarMaterialesParaEditar() {
-            const categoria = document.getElementById('editarBuscarCategoria').value;
-            const selectMaterial = document.getElementById('editarBuscarMaterial');
-            
-            selectMaterial.innerHTML = '<option value="">-- Seleccione un material --</option>';
-            
-            if (!categoria) {
-                selectMaterial.innerHTML = '<option value="">-- Primero seleccione una categoría --</option>';
-                return;
-            }
-            
-            const materiales = categoriasMateriales[categoria];
-            materiales.forEach(material => {
-                const option = document.createElement('option');
-                option.value = material;
-                option.textContent = material;
-                selectMaterial.appendChild(option);
-            });
-        }
-        
-        function cargarDatosMaterialEditar() {
-            const categoria = document.getElementById('editarBuscarCategoria').value;
-            const material = document.getElementById('editarBuscarMaterial').value;
-            
-            if (!categoria || !material) {
-                alert('Por favor seleccione una categoría y un material');
-                return;
-            }
-            
-            document.getElementById('editarCategoriaOriginal').value = categoria;
-            document.getElementById('editarNombreOriginal').value = material;
-            document.getElementById('editarNuevoNombre').value = material;
-        }
-        
-        function limpiarFormularioEditar() {
-            document.getElementById('editarMaterialForm').reset();
-            document.getElementById('editarBuscarCategoria').value = '';
-            document.getElementById('editarBuscarMaterial').innerHTML = '<option value="">-- Primero seleccione una categoría --</option>';
-        }
-
-        // Manejar envío del formulario de EDITAR
-        document.getElementById('editarMaterialForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const categoriaOriginal = document.getElementById('editarCategoriaOriginal').value;
-            const nombreOriginal = document.getElementById('editarNombreOriginal').value;
-            const nuevoNombre = document.getElementById('editarNuevoNombre').value.trim();
-            
-            if (!nuevoNombre) {
-                alert('Por favor complete el nuevo nombre');
-                return;
-            }
-            
-            // Si cambió el nombre, verificar que no exista
-            if (nuevoNombre !== nombreOriginal && categoriasMateriales[categoriaOriginal].includes(nuevoNombre)) {
-                alert(`Ya existe un material "${nuevoNombre}" en "${categoriaOriginal}"`);
-                return;
-            }
-            
-            editarMaterial(categoriaOriginal, nombreOriginal, nuevoNombre);
-            alert('✅ Material actualizado correctamente');
-            limpiarFormularioEditar();
-            
-            // Actualizar vistas
-            if (document.getElementById('categorias').classList.contains('active')) {
-                loadCategories();
-            }
+    function buildCategoriesFromLocal() {
+      // categoriasMateriales is assumed to be defined by categorias_reales.js
+      categoriesData = {};
+      if (window.categoriasMateriales && typeof window.categoriasMateriales === 'object') {
+        Object.keys(window.categoriasMateriales).forEach(cat => {
+          const arr = window.categoriasMateriales[cat] || [];
+          categoriesData[cat] = arr.map(name => ({ name }));
         });
+      } else {
+        categoriesData = {};
+      }
+    }
 
-        // ===== FUNCIONES DE ELIMINAR =====
-        function cargarMaterialesParaEliminar() {
-            const categoria = document.getElementById('eliminarBuscarCategoria').value;
-            const selectMaterial = document.getElementById('eliminarBuscarMaterial');
-            
-            selectMaterial.innerHTML = '<option value="">-- Seleccione un material --</option>';
-            
-            if (!categoria) {
-                selectMaterial.innerHTML = '<option value="">-- Primero seleccione una categoría --</option>';
-                document.getElementById('materialAEliminar').style.display = 'none';
-                return;
-            }
-            
-            const materiales = categoriasMateriales[categoria];
-            materiales.forEach(material => {
-                const option = document.createElement('option');
-                option.value = material;
-                option.textContent = material;
-                selectMaterial.appendChild(option);
-            });
-        }
-        
-        function eliminarMaterialSeleccionado() {
-            const categoria = document.getElementById('eliminarBuscarCategoria').value;
-            const material = document.getElementById('eliminarBuscarMaterial').value;
-            
-            if (!categoria || !material) {
-                alert('Por favor seleccione una categoría y un material para eliminar');
-                return;
-            }
-            
-            // Mostrar información del material
-            document.getElementById('materialAEliminar').style.display = 'block';
-            document.getElementById('datosMaterialEliminar').innerHTML = `
-                <p><strong>Categoría:</strong> ${categoria}</p>
-                <p><strong>Material:</strong> ${material}</p>
-            `;
-            
-            if (confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de eliminar este material?\n\nCategoría: ${categoria}\nMaterial: ${material}\n\n❌ Esta acción NO se puede deshacer.`)) {
-                eliminarMaterial(categoria, material);
-                alert('✅ Material eliminado correctamente');
-                
-                // Limpiar formulario
-                document.getElementById('eliminarBuscarMaterial').value = '';
-                cargarMaterialesParaEliminar();
-                document.getElementById('materialAEliminar').style.display = 'none';
-                
-                // Actualizar vista de categorías si está activa
-                if (document.getElementById('categorias').classList.contains('active')) {
-                    loadCategories();
-                }
-            }
-        }
+    // Utility: return flattened array of materials { category, name, id?, price?, unit?, active? }
+    function getAllMaterialsArray() {
+      const out = [];
+      Object.keys(categoriesData).forEach(cat => {
+        categoriesData[cat].forEach(item => {
+          out.push({
+            category: cat,
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            unit: item.unit,
+            active: item.active === undefined ? true : item.active
+          });
+        });
+      });
+      return out;
+    }
 
-        // Cargar todo al inicio
-        loadCategories();
-        actualizarTodosLosSelects();
+    // Notify other tabs & wizard about changes
+    function notifyUpdate() {
+      try {
+        const bc = new BroadcastChannel('byt-materials');
+        bc.postMessage({ type: 'materials-updated', ts: Date.now() });
+        bc.close();
+      } catch (e) {}
+      try { localStorage.setItem('byt_materials_updated_at', Date.now()); } catch(e){}
+    }
+
+    // UI helpers (adapted from original code but using categoriesData)
+    function loadCategories() {
+      const tbody = document.getElementById('tablaCategorias');
+      tbody.innerHTML = '';
+      Object.keys(categoriesData).forEach(categoria => {
+        const materiales = categoriesData[categoria] || [];
+        const cantidadMateriales = materiales.length;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${categoria}</strong></td>
+            <td>${cantidadMateriales} material(es)</td>
+            <td>
+                <button class="btn-secondary btn-small" onclick="editarCategoria('${escapeJs(categoria)}')" title="Editar categoría">✏️</button>
+                <button class="btn-danger btn-small" onclick="eliminarCategoria('${escapeJs(categoria)}')" title="Eliminar categoría">🗑️</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Keep the original category-edit/delete flows but sync to remote when possible.
+    async function mostrarModalAgregarCategoria() {
+      const nombreCategoria = prompt('Ingrese el nombre de la nueva categoría:');
+      if (!nombreCategoria || !nombreCategoria.trim()) return;
+      const nombre = nombreCategoria.trim();
+      if (categoriesData[nombre]) {
+        alert('Ya existe una categoría con ese nombre');
+        return;
+      }
+      // Local creation: create empty array
+      categoriesData[nombre] = [];
+      // If fallback local source exists, also update it
+      if (window.categoriasMateriales) {
+        window.categoriasMateriales[nombre] = [];
+      }
+      loadCategories();
+      actualizarTodosLosSelects();
+      alert('✅ Categoría creada correctamente');
+    }
+
+    async function editarCategoria(categoriaActual) {
+      const nuevoNombre = prompt(`Editar nombre de categoría:\nNombre actual: ${categoriaActual}`, categoriaActual);
+      if (!nuevoNombre || !nuevoNombre.trim() || nuevoNombre.trim() === categoriaActual) return;
+      const nombre = nuevoNombre.trim();
+      if (categoriesData[nombre]) {
+        alert('Ya existe una categoría con ese nombre');
+        return;
+      }
+      // Move data
+      categoriesData[nombre] = categoriesData[categoriaActual] || [];
+      delete categoriesData[categoriaActual];
+      // If using local fallback, move there too
+      if (window.categoriasMateriales) {
+        window.categoriasMateriales[nombre] = window.categoriasMateriales[categoriaActual] || [];
+        delete window.categoriasMateriales[categoriaActual];
+      }
+      // If remoteAvailable we don't need to update DB schema (categories are just strings on materials).
+      // We'll update materials to set category field for all affected materials (if any).
+      if (remoteAvailable) {
+        // update each material's category
+        const list = categoriesData[nombre];
+        for (const item of list) {
+          if (item.id) {
+            try {
+              await materialsApi.updateMaterial(item.id, { category: nombre });
+            } catch(e){ console.warn('Failed to update material category on remote for id', item.id, e); }
+          }
+        }
+        // reload to ensure correctness
+        await refreshFromRemote();
+      }
+      loadCategories();
+      actualizarTodosLosSelects();
+      alert('✅ Categoría actualizada correctamente');
+    }
+
+    async function eliminarCategoria(categoria) {
+      const materiales = categoriesData[categoria] || [];
+      const cantidadMateriales = materiales.length;
+      const mensaje = cantidadMateriales > 0 
+        ? `⚠️ ¿Está seguro de eliminar la categoría "${categoria}"?\n\nEsta categoría contiene ${cantidadMateriales} material(es) que también se eliminarán.\n\n❌ Esta acción NO se puede deshacer.`
+        : `¿Está seguro de eliminar la categoría "${categoria}"?`;
+      if (!confirm(mensaje)) return;
+      // If remote: delete (soft disable) each material or set category null; here we soft-disable
+      if (remoteAvailable) {
+        for (const m of materiales) {
+          if (m.id) {
+            try {
+              await materialsApi.deleteMaterial(m.id, { soft: true });
+            } catch(e){ console.warn('Failed deleting material remotely', m.id, e); }
+          }
+        }
+        await refreshFromRemote();
+      } else {
+        // local fallback
+        if (window.categoriasMateriales) {
+          delete window.categoriasMateriales[categoria];
+        }
+        delete categoriesData[categoria];
+      }
+      loadCategories();
+      actualizarTodosLosSelects();
+      notifyUpdate();
+      alert('✅ Categoría eliminada correctamente');
+    }
+
+    // Load categories into selects (consultar/crear/editar/eliminar)
+    function loadConsultarCategories() {
+      const select = document.getElementById('consultarCategoria');
+      select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
+      Object.keys(categoriesData).forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        select.appendChild(option);
+      });
+    }
+    function loadCrearCategories() {
+      const select = document.getElementById('crearCategoria');
+      select.innerHTML = '<option value="">Seleccione una categoría</option>';
+      Object.keys(categoriesData).forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        select.appendChild(option);
+      });
+    }
+    function loadEditarCategories() {
+      const select = document.getElementById('editarBuscarCategoria');
+      select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
+      Object.keys(categoriesData).forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        select.appendChild(option);
+      });
+    }
+    function loadEliminarCategories() {
+      const select = document.getElementById('eliminarBuscarCategoria');
+      select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
+      Object.keys(categoriesData).forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        select.appendChild(option);
+      });
+    }
+    function actualizarTodosLosSelects(){
+      loadConsultarCategories();
+      loadCrearCategories();
+      loadEditarCategories();
+      loadEliminarCategories();
+    }
+
+    // ===== CONSULTAS / FILTRADO =====
+    function consultarMaterialesPorCategoria() {
+      const categoria = document.getElementById('consultarCategoria').value;
+      const resultsDiv = document.getElementById('consultarResultados');
+      const tituloDiv = document.getElementById('tituloResultados');
+      const contadorDiv = document.getElementById('contadorMateriales');
+      if (!categoria) {
+        resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📦 Seleccione una categoría para ver sus materiales</p>';
+        tituloDiv.textContent = 'Materiales por Categoría';
+        contadorDiv.textContent = '';
+        return;
+      }
+      const materiales = (categoriesData[categoria] || []).map(item => ({ categoria, material: item.name || item }));
+      tituloDiv.textContent = `Categoría: ${categoria}`;
+      contadorDiv.textContent = `${materiales.length} material(es)`;
+      if (materiales.length === 0) {
+        resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📭 Esta categoría no tiene materiales</p>';
+        return;
+      }
+      mostrarMateriales(materiales);
+    }
+
+    function consultarTodosMateriales() {
+      const resultsDiv = document.getElementById('consultarResultados');
+      const tituloDiv = document.getElementById('tituloResultados');
+      const contadorDiv = document.getElementById('contadorMateriales');
+      const todosMateriales = getAllMaterialsArray().map(m => ({ categoria: m.category, material: m.name }));
+      tituloDiv.textContent = 'Todos los Materiales';
+      contadorDiv.textContent = `${todosMateriales.length} material(es) total`;
+      if (todosMateriales.length === 0) {
+        resultsDiv.innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📭 No hay materiales en el sistema</p>';
+        return;
+      }
+      todosMateriales.sort((a,b) => a.categoria !== b.categoria ? a.categoria.localeCompare(b.categoria) : a.material.localeCompare(b.material));
+      mostrarMateriales(todosMateriales);
+    }
+
+    function filtrarMateriales() {
+      const filtro = document.getElementById('filtroNombre').value.toLowerCase();
+      const categoria = document.getElementById('consultarCategoria').value;
+      if (!categoria && !filtro) return;
+      let materiales = [];
+      const all = getAllMaterialsArray();
+      all.forEach(m => {
+        if (categoria && m.category !== categoria) return;
+        if (!filtro || (m.name || '').toLowerCase().includes(filtro)) {
+          materiales.push({ categoria: m.category, material: m.name });
+        }
+      });
+      const tituloDiv = document.getElementById('tituloResultados');
+      const contadorDiv = document.getElementById('contadorMateriales');
+      if (filtro) {
+        tituloDiv.textContent = `Búsqueda: "${filtro}"${categoria ? ` en ${categoria}` : ''}`;
+        contadorDiv.textContent = `${materiales.length} resultado(s)`;
+      } else if (categoria) {
+        consultarMaterialesPorCategoria(); return;
+      }
+      if (materiales.length === 0) {
+        document.getElementById('consultarResultados').innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">🔍 No se encontraron materiales</p>';
+        return;
+      }
+      mostrarMateriales(materiales);
+    }
+
+    function mostrarMateriales(materiales) {
+      const resultsDiv = document.getElementById('consultarResultados');
+      resultsDiv.innerHTML = materiales.map(item => `
+          <div class="material-item">
+              <div class="material-info">
+                  <div class="material-name">${escapeHtml(item.material)}</div>
+                  <div class="material-category">Categoría: <strong>${escapeHtml(item.categoria)}</strong></div>
+              </div>
+          </div>
+      `).join('');
+    }
+
+    function limpiarConsulta() {
+      document.getElementById('consultarCategoria').value = '';
+      document.getElementById('filtroNombre').value = '';
+      document.getElementById('consultarResultados').innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📦 Seleccione una categoría para ver sus materiales<br><small>o haga clic en "Ver Todos" para consultar todos los materiales</small></p>';
+      document.getElementById('tituloResultados').textContent = 'Materiales por Categoría';
+      document.getElementById('contadorMateriales').textContent = '';
+    }
+
+    // ===== CREAR =====
+    function limpiarFormularioCrear() {
+      document.getElementById('crearMaterialForm').reset();
+    }
+
+    document.getElementById('crearMaterialForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const categoria = document.getElementById('crearCategoria').value;
+      const nombre = document.getElementById('crearNombre').value.trim();
+      const unidad = document.getElementById('crearUnidad').value || '';
+      const descripcion = document.getElementById('crearDescripcion').value || '';
+      if (!categoria || !nombre) { alert('Por favor complete todos los campos requeridos'); return; }
+      // Check exists (both remote and local)
+      const exists = (categoriesData[categoria] || []).some(item => (item.name || item).toLowerCase() === nombre.toLowerCase());
+      if (exists && !confirm(`Ya existe un material "${nombre}" en "${categoria}". ¿Desea continuar?`)) return;
+
+      // Create remote if possible
+      if (remoteAvailable) {
+        try {
+          await materialsApi.createMaterial({ name: nombre, category: categoria, price: 0, unit: unidad, notes: descripcion });
+          // reload remote data
+          await refreshFromRemote();
+          notifyUpdate();
+          alert('✅ Material creado correctamente (remote)');
+        } catch (err) {
+          console.error('Error creando material remote', err);
+          alert('Error creando material en servidor. Revisar consola.');
+        }
+      } else {
+        // local fallback
+        if (!categoriesData[categoria]) categoriesData[categoria] = [];
+        categoriesData[categoria].push({ name: nombre, unit: unidad });
+        if (window.categoriasMateriales) {
+          if (!window.categoriasMateriales[categoria]) window.categoriasMateriales[categoria] = [];
+          window.categoriasMateriales[categoria].push(nombre);
+        }
+        notifyUpdate();
+        alert('✅ Material creado (local)');
+      }
+
+      limpiarFormularioCrear();
+      loadCategories();
+      actualizarTodosLosSelects();
+    });
+
+    // ===== EDITAR =====
+    function cargarMaterialesParaEditar() {
+      const categoria = document.getElementById('editarBuscarCategoria').value;
+      const selectMaterial = document.getElementById('editarBuscarMaterial');
+      selectMaterial.innerHTML = '<option value="">-- Seleccione un material --</option>';
+      if (!categoria) { selectMaterial.innerHTML = '<option value="">-- Primero seleccione una categoría --</option>'; return; }
+      const materiales = categoriesData[categoria] || [];
+      materiales.forEach(item => {
+        const option = document.createElement('option');
+        if (remoteAvailable) {
+          option.value = item.id || item.name;
+          option.dataset.id = item.id || '';
+          option.textContent = item.name || '';
+        } else {
+          option.value = item.name || item;
+          option.textContent = item.name || item;
+        }
+        selectMaterial.appendChild(option);
+      });
+    }
+
+    function cargarDatosMaterialEditar() {
+      const categoria = document.getElementById('editarBuscarCategoria').value;
+      const select = document.getElementById('editarBuscarMaterial');
+      const selectedVal = select.value;
+      if (!categoria || !selectedVal) { alert('Por favor seleccione una categoría y un material'); return; }
+      const option = select.selectedOptions[0];
+      const remoteId = option?.dataset?.id || null;
+      let name = selectedVal;
+      let item = null;
+      if (remoteAvailable && remoteId) {
+        // find in categoriesData
+        item = (categoriesData[categoria] || []).find(x => x.id === remoteId);
+        name = item?.name || name;
+        document.getElementById('editarSelectedId').value = remoteId;
+      } else {
+        item = (categoriesData[categoria] || []).find(x => (x.name || x) === selectedVal);
+        document.getElementById('editarSelectedId').value = '';
+      }
+      document.getElementById('editarCategoriaOriginal').value = categoria;
+      document.getElementById('editarNombreOriginal').value = name;
+      document.getElementById('editarNuevoNombre').value = name;
+    }
+
+    document.getElementById('editarMaterialForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const categoriaOriginal = document.getElementById('editarCategoriaOriginal').value;
+      const nombreOriginal = document.getElementById('editarNombreOriginal').value;
+      const nuevoNombre = document.getElementById('editarNuevoNombre').value.trim();
+      const selectedId = document.getElementById('editarSelectedId').value || null;
+      if (!nuevoNombre) { alert('Por favor complete el nuevo nombre'); return; }
+      if (nuevoNombre !== nombreOriginal && (categoriesData[categoriaOriginal] || []).some(it => (it.name || it).toLowerCase() === nuevoNombre.toLowerCase())) {
+        alert(`Ya existe un material "${nuevoNombre}" en "${categoriaOriginal}"`); return;
+      }
+
+      if (remoteAvailable && selectedId) {
+        try {
+          await materialsApi.updateMaterial(selectedId, { name: nuevoNombre });
+          await refreshFromRemote();
+          notifyUpdate();
+          alert('✅ Material actualizado correctamente (remote)');
+        } catch (e) {
+          console.error('Error updating remote', e);
+          alert('Error al actualizar en servidor');
+        }
+      } else {
+        // local edit
+        const arr = categoriesData[categoriaOriginal] || [];
+        for (let i=0;i<arr.length;i++){
+          const itm = arr[i];
+          if ((itm.name || itm) === nombreOriginal) {
+            if (typeof itm === 'string') arr[i] = nuevoNombre;
+            else itm.name = nuevoNombre;
+            break;
+          }
+        }
+        if (window.categoriasMateriales && Array.isArray(window.categoriasMateriales[categoriaOriginal])) {
+          const idx = window.categoriasMateriales[categoriaOriginal].indexOf(nombreOriginal);
+          if (idx >= 0) window.categoriasMateriales[categoriaOriginal][idx] = nuevoNombre;
+        }
+        notifyUpdate();
+        alert('✅ Material actualizado (local)');
+      }
+
+      limpiarFormularioEditar();
+      loadCategories();
+      actualizarTodosLosSelects();
+    });
+
+    function limpiarFormularioEditar() {
+      document.getElementById('editarMaterialForm').reset();
+      document.getElementById('editarBuscarCategoria').value = '';
+      document.getElementById('editarBuscarMaterial').innerHTML = '<option value="">-- Primero seleccione una categoría --</option>';
+      document.getElementById('editarSelectedId').value = '';
+    }
+
+    // ===== ELIMINAR =====
+    function cargarMaterialesParaEliminar() {
+      const categoria = document.getElementById('eliminarBuscarCategoria').value;
+      const selectMaterial = document.getElementById('eliminarBuscarMaterial');
+      selectMaterial.innerHTML = '<option value="">-- Seleccione un material --</option>';
+      if (!categoria) {
+        selectMaterial.innerHTML = '<option value="">-- Primero seleccione una categoría --</option>';
+        document.getElementById('materialAEliminar').style.display = 'none';
+        return;
+      }
+      const materiales = categoriesData[categoria] || [];
+      materiales.forEach(item => {
+        const option = document.createElement('option');
+        if (remoteAvailable) {
+          option.value = item.id || item.name;
+          option.dataset.id = item.id || '';
+          option.textContent = item.name || '';
+        } else {
+          option.value = item.name || item;
+          option.textContent = item.name || item;
+        }
+        selectMaterial.appendChild(option);
+      });
+    }
+
+    async function eliminarMaterialSeleccionado() {
+      const categoria = document.getElementById('eliminarBuscarCategoria').value;
+      const select = document.getElementById('eliminarBuscarMaterial');
+      const selectedVal = select.value;
+      if (!categoria || !selectedVal) { alert('Por favor seleccione una categoría y un material para eliminar'); return; }
+      const option = select.selectedOptions[0];
+      const remoteId = option?.dataset?.id || null;
+      let name = selectedVal;
+      if (remoteAvailable && remoteId) {
+        // remote delete (soft)
+        if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de desactivar este material?\n\nCategoría: ${categoria}\nMaterial ID: ${remoteId}\n\nPuede restaurarlo marcando "activo" en la lista.`)) return;
+        try {
+          await materialsApi.deleteMaterial(remoteId, { soft: true });
+          await refreshFromRemote();
+          notifyUpdate();
+          alert('✅ Material eliminado (remote, soft) correctamente');
+        } catch (e) {
+          console.error('Error deleting remote', e);
+          alert('Error al eliminar en servidor');
+        }
+      } else {
+        name = selectedVal;
+        if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de eliminar este material?\n\nCategoría: ${categoria}\nMaterial: ${name}\n\n❌ Esta acción NO se puede deshacer.`)) return;
+        // local delete
+        const arr = categoriesData[categoria] || [];
+        const idx = arr.findIndex(it => (it.name || it) === name);
+        if (idx >= 0) arr.splice(idx, 1);
+        if (window.categoriasMateriales && Array.isArray(window.categoriasMateriales[categoria])) {
+          const idx2 = window.categoriasMateriales[categoria].indexOf(name);
+          if (idx2 >= 0) window.categoriasMateriales[categoria].splice(idx2,1);
+        }
+        notifyUpdate();
+        alert('✅ Material eliminado (local) correctamente');
+      }
+      document.getElementById('eliminarBuscarMaterial').value = '';
+      cargarMaterialesParaEliminar();
+      document.getElementById('materialAEliminar').style.display = 'none';
+      loadCategories();
+      actualizarTodosLosSelects();
+    }
+
+    // ===== Remote refresh helper =====
+    async function refreshFromRemote() {
+      if (!remoteAvailable || !materialsApi) return;
+      try {
+        const res = await materialsApi.listMaterials({ onlyActive: false });
+        if (!res?.error) {
+          buildCategoriesFromMaterialsArray(res.data || []);
+        } else {
+          console.warn('refreshFromRemote: error', res.error);
+          buildCategoriesFromLocal();
+        }
+      } catch (e) {
+        console.warn('refreshFromRemote exception', e);
+        buildCategoriesFromLocal();
+      }
+    }
+
+    // Tabs logic (keep original event behavior)
+    function showTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.getElementById(tabName).classList.add('active');
+        // event.target might not exist when called programmatically; handle safely
+        try { event.target.classList.add('active'); } catch(e){}
+        if (tabName === 'categorias') loadCategories();
+        else if (tabName === 'consultar') loadConsultarCategories();
+        else if (tabName === 'crear') loadCrearCategories();
+        else if (tabName === 'editar') loadEditarCategories();
+        else if (tabName === 'eliminar') loadEliminarCategories();
+    }
+
+    // Small helpers
+    function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>"']/g, s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
+    function escapeJs(s){ return (s+'').replace(/'/g,"\\'"); }
+
+    // Initialize: detect remote and populate UI
+    (async function init(){
+      await initDataLayer();
+      loadCategories();
+      actualizarTodosLosSelects();
+
+      // Listen external updates
+      try {
+        const bc = new BroadcastChannel('byt-materials');
+        bc.onmessage = (ev) => { if (ev.data?.type === 'materials-updated') refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); }); };
+      } catch(e){}
+      window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); }); } });
+
+    })();
+
+    // Expose some functions globally used in inline onclicks (for compatibility)
+    window.showTab = showTab;
+    window.mostrarModalAgregarCategoria = mostrarModalAgregarCategoria;
+    window.loadCategories = loadCategories;
+    window.actualizarTodosLosSelects = actualizarTodosLosSelects;
+    window.consultarTodosMateriales = consultarTodosMateriales;
+    window.limpiarConsulta = limpiarConsulta;
+    window.consultarMaterialesPorCategoria = consultarMaterialesPorCategoria;
+    window.filtrarMateriales = filtrarMateriales;
+    window.limpiarFormularioCrear = limpiarFormularioCrear;
+    window.cargarMaterialesParaEditar = cargarMaterialesParaEditar;
+    window.cargarDatosMaterialEditar = cargarDatosMaterialEditar;
+    window.limpiarFormularioEditar = limpiarFormularioEditar;
+    window.cargarMaterialesParaEliminar = cargarMaterialesParaEliminar;
+    window.eliminarMaterialSeleccionado = eliminarMaterialSeleccionado;
+    window.editarCategoria = editarCategoria;
+    window.eliminarCategoria = eliminarCategoria;
+
     </script>
 </body>
 </html>
