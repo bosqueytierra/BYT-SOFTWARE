@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Datos — Configuración</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f5f6f5;margin:0;padding:20px}
+    .container{max-width:1100px;margin:0 auto}
+    .header{background:white;padding:18px;border-radius:8px;display:flex;align-items:center;gap:16px;margin-bottom:20px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+    .header h1{margin:0;font-size:20px;color:#2e7d32}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+    .card{background:white;padding:18px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.04);min-height:120px;display:flex;flex-direction:column;justify-content:space-between}
+    .card h3{margin:0 0 8px 0;color:#2e7d32}
+    .card p{margin:0 0 12px 0;color:#666;font-size:14px}
+    .btn{background:#2e7d32;color:white;padding:8px 14px;border-radius:6px;text-decoration:none;display:inline-block}
+    a.back{display:inline-block;margin-bottom:12px;color:#2e7d32;text-decoration:none}
+    @media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr)} }
+    @media (max-width:600px){ .grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back" href="./index.html">← Volver</a>
+    <div class="header">
+      <div style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:#e8f5e8;border-radius:6px">
+        <strong style="color:#2e7d32">DATOS</strong>
+      </div>
+      <div>
+        <h1>Datos — Gestión</h1>
+        <div style="color:#777;font-size:13px">Administra materiales, proveedores y otros datos maestros</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div>
+          <h3>Gestión de Materiales</h3>
+          <p>Crear, editar y eliminar materiales, precios y categorías del sistema.</p>
+        </div>
+        <div>
+          <a class="btn" href="./materiales.html">Gestionar Materiales</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div>
+          <h3>Gestión de Proveedores</h3>
+          <p>Crear, editar y desactivar proveedores (usa Supabase).</p>
+        </div>
+        <div>
+          <a class="btn" href="./proveedores.html">Gestionar Proveedores</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div>
+          <h3>Unidades / Tipos</h3>
+          <p>Administrar unidades de medida, tipos y tablas maestras relacionadas.</p>
+        </div>
+        <div>
+          <a class="btn" href="./tablas.html">Configurar Tablas</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div>
+          <h3>Import / Export</h3>
+          <p>Importar o exportar listas de materiales y proveedores (CSV/JSON).</p>
+        </div>
+        <div>
+          <a class="btn" href="./import_export.html">Importar / Exportar</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div>
+          <h3>Historial / Auditoría</h3>
+          <p>Ver cambios históricos en materiales y proveedores (próximamente).</p>
+        </div>
+        <div>
+          <a class="btn" href="./historial.html">Ver Historial</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div>
+          <h3>Otras Gestiones</h3>
+          <p>Espacio para futuras gestiones relacionadas a datos maestros.</p>
+        </div>
+        <div>
+          <a class="btn" href="./otras.html">Ir</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
