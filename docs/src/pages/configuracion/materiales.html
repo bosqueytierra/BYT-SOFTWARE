@@ -534,10 +534,7 @@
         window.categoriasMateriales[nombre] = window.categoriasMateriales[categoriaActual] || [];
         delete window.categoriasMateriales[categoriaActual];
       }
-      // If remoteAvailable we don't need to update DB schema (categories are just strings on materials).
-      // We'll update materials to set category field for all affected materials (if any).
       if (remoteAvailable) {
-        // update each material's category
         const list = categoriesData[nombre];
         for (const item of list) {
           if (item.id) {
@@ -546,7 +543,6 @@
             } catch(e){ console.warn('Failed to update material category on remote for id', item.id, e); }
           }
         }
-        // reload to ensure correctness
         await refreshFromRemote();
       }
       loadCategories();
@@ -561,7 +557,6 @@
         ? `⚠️ ¿Está seguro de eliminar la categoría "${categoria}"?\n\nEsta categoría contiene ${cantidadMateriales} material(es) que también se eliminarán.\n\n❌ Esta acción NO se puede deshacer.`
         : `¿Está seguro de eliminar la categoría "${categoria}"?`;
       if (!confirm(mensaje)) return;
-      // If remote: delete (soft disable) each material or set category null; here we soft-disable
       if (remoteAvailable) {
         for (const m of materiales) {
           if (m.id) {
@@ -572,7 +567,6 @@
         }
         await refreshFromRemote();
       } else {
-        // local fallback
         if (window.categoriasMateriales) {
           delete window.categoriasMateriales[categoria];
         }
@@ -728,15 +722,13 @@
       const unidad = document.getElementById('crearUnidad').value || '';
       const descripcion = document.getElementById('crearDescripcion').value || '';
       if (!categoria || !nombre) { alert('Por favor complete todos los campos requeridos'); return; }
-      // Check exists (both remote and local)
       const exists = (categoriesData[categoria] || []).some(item => (item.name || item).toLowerCase() === nombre.toLowerCase());
       if (exists && !confirm(`Ya existe un material "${nombre}" en "${categoria}". ¿Desea continuar?`)) return;
 
-      // Create remote if possible
       if (remoteAvailable) {
         try {
-          await materialsApi.createMaterial({ name: nombre, category: categoria, price: 0, unit: unidad, notes: descripcion });
-          // reload remote data
+          const res = await materialsApi.createMaterial({ name: nombre, category: categoria, price: 0, unit: unidad, notes: descripcion });
+          if (res?.error) throw res.error;
           await refreshFromRemote();
           notifyUpdate();
           alert('✅ Material creado correctamente (remote)');
@@ -745,7 +737,6 @@
           alert('Error creando material en servidor. Revisar consola.');
         }
       } else {
-        // local fallback
         if (!categoriesData[categoria]) categoriesData[categoria] = [];
         categoriesData[categoria].push({ name: nombre, unit: unidad });
         if (window.categoriasMateriales) {
@@ -792,7 +783,6 @@
       let name = selectedVal;
       let item = null;
       if (remoteAvailable && remoteId) {
-        // find in categoriesData
         item = (categoriesData[categoria] || []).find(x => x.id === remoteId);
         name = item?.name || name;
         document.getElementById('editarSelectedId').value = remoteId;
@@ -818,7 +808,8 @@
 
       if (remoteAvailable && selectedId) {
         try {
-          await materialsApi.updateMaterial(selectedId, { name: nuevoNombre });
+          const res = await materialsApi.updateMaterial(selectedId, { name: nuevoNombre });
+          if (res?.error) throw res.error;
           await refreshFromRemote();
           notifyUpdate();
           alert('✅ Material actualizado correctamente (remote)');
@@ -827,7 +818,6 @@
           alert('Error al actualizar en servidor');
         }
       } else {
-        // local edit
         const arr = categoriesData[categoriaOriginal] || [];
         for (let i=0;i<arr.length;i++){
           const itm = arr[i];
@@ -882,6 +872,7 @@
       });
     }
 
+    // Aquí se fuerza DELETE permanente en Supabase cuando hay remoteAvailable.
     async function eliminarMaterialSeleccionado() {
       const categoria = document.getElementById('eliminarBuscarCategoria').value;
       const select = document.getElementById('eliminarBuscarMaterial');
@@ -891,21 +882,22 @@
       const remoteId = option?.dataset?.id || null;
       let name = selectedVal;
       if (remoteAvailable && remoteId) {
-        // remote delete (soft)
-        if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de desactivar este material?\n\nCategoría: ${categoria}\nMaterial ID: ${remoteId}\n\nPuede restaurarlo marcando "activo" en la lista.`)) return;
+        // confirmar borrado permanente
+        if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de ELIMINAR PERMANENTEMENTE este material?\n\nCategoría: ${categoria}\nMaterial ID: ${remoteId}\n\n❌ Esta acción BORRARÁ el registro en la base de datos y NO se podrá recuperar.`)) return;
         try {
-          await materialsApi.deleteMaterial(remoteId, { soft: true });
+          // hard delete (soft:false) — cambialo si preferís soft delete en este flujo
+          const res = await materialsApi.deleteMaterial(remoteId, { soft: false });
+          if (res?.error) throw res.error;
           await refreshFromRemote();
           notifyUpdate();
-          alert('✅ Material eliminado (remote, soft) correctamente');
+          alert('✅ Material eliminado permanentemente en Supabase');
         } catch (e) {
           console.error('Error deleting remote', e);
-          alert('Error al eliminar en servidor');
+          alert('Error al eliminar en servidor. Revisa la consola y las policies RLS.');
         }
       } else {
         name = selectedVal;
-        if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de eliminar este material?\n\nCategoría: ${categoria}\nMaterial: ${name}\n\n❌ Esta acción NO se puede deshacer.`)) return;
-        // local delete
+        if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de eliminar este material localmente?\n\nCategoría: ${categoria}\nMaterial: ${name}\n\n❌ Esta acción NO se puede deshacer.`)) return;
         const arr = categoriesData[categoria] || [];
         const idx = arr.findIndex(it => (it.name || it) === name);
         if (idx >= 0) arr.splice(idx, 1);
@@ -945,7 +937,6 @@
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
         document.getElementById(tabName).classList.add('active');
-        // event.target might not exist when called programmatically; handle safely
         try { event.target.classList.add('active'); } catch(e){}
         if (tabName === 'categorias') loadCategories();
         else if (tabName === 'consultar') loadConsultarCategories();
