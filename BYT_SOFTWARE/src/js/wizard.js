@@ -1,25 +1,9 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
-// Ruta: BYT_SOFTWARE/src/js/wizard.js
-// Parche: versión completa y estable que mantiene la UI original,
-// carga proveedores desde Supabase y materiales desde src/lib/materialsApi.js,
-// y no intenta guardar cotizaciones en Supabase (todavía).
 
 class WizardCotizacion {
     constructor() {
         this.pasoActual = 1;
         this.totalPasos = 10;
-        this.proveedores = null; // cache de proveedores cargados desde Supabase
-        this.materiales = null;  // cache de materiales cargados desde Supabase
-
-        // Fallback local (seed) en caso de que Supabase no responda inmediatamente
-        this.providerSeed = [
-          'Otro Proveedor','Imperial','Homecenter','WantingChile','Demasled','Dph','Eplum',
-          'Ferreteria Santa Rosa','Masisa','CasaChic','MercadoLibre','LedStudio','Marco Cuarzo',
-          'Quincalleria Rey','Eli Cortes','OV Estructuras Metalicas','HBT','Doer','Ikea',
-          'Emilio Pohl','CasaMusa','Provelcar','Enko','Ferreteria San Martin','Arteformas',
-          'Ferretek','Sergio Astorga Pinturas','Bertrand','MyR','Placacentro','Bookstore','RyR','Pernos Kim'
-        ];
-
         this.datos = {
             cliente: {},
             materiales: {
@@ -95,199 +79,10 @@ class WizardCotizacion {
     
     init() {
         this.actualizarProgreso();
-        // envolver mostrarPaso por seguridad
-        try {
-          this.mostrarPaso(1);
-        } catch (e) {
-          console.error('Error mostrando paso inicial:', e);
-        }
+        this.mostrarPaso(1);
         this.actualizarBarraSuperior(); // ⚡ Inicializar barra superior
-
-        // Cargar proveedores y materiales en background para rellenar selects de "Lugar de compra" y listas
-        this.loadProviders().catch(err => console.warn('No se pudieron cargar proveedores:', err));
-        this.loadMaterials().catch(err => console.warn('No se pudieron cargar materiales:', err));
-
-        // --- NOTIFICACIONES ENTRE PESTAÑAS: BroadcastChannel + storage fallback ---
-        try {
-          const bcP = new BroadcastChannel('byt-providers');
-          bcP.onmessage = (ev) => {
-            if (ev.data?.type === 'providers-updated') {
-              console.log('Notificación: providers updated -> recargando');
-              this.loadProviders().catch(console.error);
-            }
-          };
-          this._providersBroadcastChannel = bcP;
-        } catch (e) { /* no support */ }
-
-        try {
-          const bcM = new BroadcastChannel('byt-materials');
-          bcM.onmessage = (ev) => {
-            if (ev.data?.type === 'materials-updated') {
-              console.log('Notificación: materials updated -> recargando');
-              this.loadMaterials().catch(console.error);
-            }
-          };
-          this._materialsBroadcastChannel = bcM;
-        } catch (e) { /* no support */ }
-
-        window.addEventListener('storage', (e) => {
-          if (e.key === 'byt_providers_updated_at') {
-            console.log('Storage event: providers updated -> recargando');
-            this.loadProviders().catch(console.error);
-          }
-          if (e.key === 'byt_materials_updated_at') {
-            console.log('Storage event: materials updated -> recargando');
-            this.loadMaterials().catch(console.error);
-          }
-        });
     }
-
-    // Cargar proveedores: intenta window.supabase -> REST anon -> seed local
-    async loadProviders() {
-        try {
-            if (Array.isArray(this.proveedores) && this.proveedores.length) return this.proveedores;
-
-            let providers = [];
-
-            // 1) Intentar con window.supabase (respeta sesión / RLS)
-            if (window.supabase && typeof window.supabase.from === 'function') {
-                try {
-                    const { data, error } = await window.supabase
-                        .from('providers')
-                        .select('id,name,website,phone,notes,active,created_at')
-                        .order('name', { ascending: true });
-                    if (!error && Array.isArray(data)) {
-                        providers = data;
-                        console.log('Proveedores cargados desde window.supabase:', providers.length);
-                    } else if (error) {
-                        console.warn('Supabase client error al listar providers:', error);
-                    }
-                } catch (e) {
-                    console.warn('Error usando window.supabase:', e);
-                }
-            } else {
-                console.warn('window.supabase no disponible en esta página.');
-            }
-
-            // 2) Fallback REST público con ANON KEY (si CORS/policies lo permiten)
-            if ((!providers || providers.length === 0)) {
-                try {
-                    const url = 'https://qwbeectinjasekkjzxls.supabase.co/rest/v1/providers?select=id,name,active&order=name.asc';
-                    // ANON truncated for security; in your repo the key is present in global config
-                    const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
-                    const r = await fetch(url, {
-                        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, Accept: 'application/json' }
-                    });
-                    if (r.ok) {
-                        const body = await r.json();
-                        if (Array.isArray(body)) {
-                            providers = body.map(p => ({ id: p.id, name: p.name, active: p.active }));
-                            console.log('Proveedores cargados por REST fallback:', providers.length);
-                        }
-                    } else {
-                        console.warn('REST fallback providers status:', r.status);
-                    }
-                } catch (e) {
-                    console.warn('Error fetch REST fallback providers:', e);
-                }
-            }
-
-            // 3) Si no hay proveedores desde Supabase/REST, usar seed local
-            if (!providers || providers.length === 0) {
-                providers = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
-                console.log('Usando providerSeed local:', providers.length);
-            }
-
-            this.proveedores = providers;
-            this.fillProviderSelects();
-            return this.proveedores;
-        } catch (err) {
-            console.error('loadProviders error:', err);
-            this.proveedores = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
-            this.fillProviderSelects();
-            return this.proveedores;
-        }
-    }
-
-    // Cargar materiales desde materialsApi (Supabase) — cached
-    async loadMaterials({ onlyActive = true } = {}) {
-        try {
-            if (Array.isArray(this.materiales) && this.materiales.length) return this.materiales;
-
-            // import dinámico para evitar romper builds donde no existe
-            let mod;
-            try {
-              mod = await import('../lib/materialsApi.js');
-            } catch(e) {
-              console.warn('materialsApi import failed:', e);
-              this.materiales = [];
-              this.onMaterialsLoaded();
-              return this.materiales;
-            }
-            const res = await mod.listMaterials({ onlyActive });
-            if (res?.error) {
-                console.error('materialsApi.listMaterials error', res.error);
-                this.materiales = [];
-            } else {
-                this.materiales = res.data || [];
-            }
-            // exponer globalmente para depuración y uso por otras partes
-            window.wizardMaterials = this.materiales;
-            // notificar/llenar posibles selects u otros elementos que dependan de materiales
-            this.onMaterialsLoaded();
-            return this.materiales;
-        } catch (err) {
-            console.error('Error al cargar materials:', err);
-            this.materiales = [];
-            this.onMaterialsLoaded();
-            return this.materiales;
-        }
-    }
-
-    // Hook que se llama cuando materiales fueron cargados — actualizar UI si corresponde
-    onMaterialsLoaded() {
-        console.log('Materials cargados en wizard:', (this.materiales || []).length);
-        try {
-            const selects = document.querySelectorAll('select.material-select');
-            if (selects && selects.length && Array.isArray(this.materiales)) {
-                selects.forEach(select => {
-                    const current = select.getAttribute('data-current') || select.value || '';
-                    select.innerHTML = '<option value="">-- Selecciona material --</option>';
-                    this.materiales.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id;
-                        opt.textContent = m.name + (m.price ? ` ($${m.price})` : '');
-                        select.appendChild(opt);
-                    });
-                    if (current) select.value = current;
-                });
-            }
-        } catch(e){ /* no bloquear */ }
-    }
-
-    // Rellenar todos los <select class="lugar-select"> con los proveedores cargados o seed
-    fillProviderSelects() {
-        const list = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
-        const selects = document.querySelectorAll('select.lugar-select');
-        selects.forEach(select => {
-            const currentVal = select.getAttribute('data-current') || select.value || '';
-            // Limpiar opciones
-            select.innerHTML = '';
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = '-- Selecciona proveedor --';
-            select.appendChild(placeholder);
-            list.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id || p.name || '';
-                opt.textContent = p.name || p.id || '';
-                select.appendChild(opt);
-            });
-            // restaurar valor si corresponde (puede ser id o nombre guardado previamente)
-            if (currentVal) select.value = currentVal;
-        });
-    }
-
+    
     actualizarProgreso() {
         const progreso = (this.pasoActual / this.totalPasos) * 100;
         const barraProgreso = document.getElementById('progreso-barra');
@@ -321,8 +116,8 @@ class WizardCotizacion {
         // Generar contenido del paso
         this.generarContenidoPaso(numeroPaso);
         
-        // Actualizar botones de navegación (asegurar que la función existe)
-        try { this.actualizarBotonesNavegacion(); } catch(e) { console.warn('actualizarBotonesNavegacion missing or failed', e); }
+        // Actualizar botones de navegación
+        this.actualizarBotonesNavegacion();
     }
     
     generarContenidoPaso(paso) {
@@ -398,10 +193,8 @@ class WizardCotizacion {
         });
     }
     
-    // generarPasoMaterial usa la misma implementación robusta que tenías originalmente
     generarPasoMaterial(container, categoria) {
-        // Si quieres que traiga y mapee materiales persistidos del DB en this.datos.materiales
-        // se puede añadir una función adicional; por ahora usamos la estructura local tal como antes.
+        // ESTRUCTURA EXACTA DE TU PLANILLA EXCEL DE BYT
         const estructurasBYT = {
             quincalleria: {
                 nombre: 'Quincallería',
@@ -503,8 +296,7 @@ class WizardCotizacion {
                 this.datos.materiales[categoria][id] = {
                     nombre: material.nombre,
                     cantidad: material.cantidad,
-                    precio: material.precio,
-                    lugar: material.lugar || ''
+                    precio: material.precio
                 };
             });
         }
@@ -560,16 +352,6 @@ class WizardCotizacion {
         
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
-
-            // construir opciones para el select: preferimos this.proveedores (id + name), si no usamos providerSeed (name as id)
-            let opcionesHtml = '';
-            const listaProv = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n }));
-            opcionesHtml += `<option value="">-- Selecciona proveedor --</option>`;
-            listaProv.forEach(p => {
-                const selected = ( (material.lugar_id && p.id === material.lugar_id) || (!material.lugar_id && p.name === material.lugar) ) ? 'selected' : '';
-                opcionesHtml += `<option value="${(p.id||p.name).toString().replace(/"/g,'&quot;')}" ${selected}>${(p.name||p.id)}</option>`;
-            });
-
             html += `
                 <tr>
                     <td>${material.nombre}</td>
@@ -579,10 +361,9 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <!-- Select de proveedores: value = provider.id (o seed name), llama a onProveedorChange -->
-                        <select class="form-control lugar-select" data-current="${(material.lugar_id||material.lugar||'')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
-                            ${opcionesHtml}
-                        </select>
+                        <input type="text" class="form-control" value="${material.lugar || ''}" 
+                               placeholder="Lugar de compra..."
+                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'lugar', this.value)">
                     </td>
                     <td>
                         <input type="number" class="form-control" value="${material.cantidad || 0}" 
@@ -598,29 +379,7 @@ class WizardCotizacion {
         });
         
         tbody.innerHTML = html;
-        // Después de insertar el HTML, rellenamos selects si ya tenemos proveedores cargados
-        this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
-    }
-
-    // Maneja selección de proveedor en select (value = provider id o seed name)
-    onProveedorChange(categoria, materialId, value) {
-        // resolver nombre si value es un id conocido
-        let nombre = value;
-        if (Array.isArray(this.proveedores) && this.proveedores.length) {
-            const p = this.proveedores.find(x => (x.id === value || x.name === value));
-            if (p) nombre = p.name;
-        } else if (this.providerSeed && this.providerSeed.includes(value)) {
-            nombre = value;
-        }
-
-        // actualizar datos del wizard (guardamos lugar_id y lugar)
-        if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
-        this.datos.materiales[categoria][materialId].lugar_id = value || '';
-        this.datos.materiales[categoria][materialId].lugar = nombre || '';
-        // re-render de la categoría para reflejar cambios y recalcular subtotales
-        this.cargarMaterialesCategoria(categoria);
-        this.actualizarBarraSuperior();
     }
     
     agregarMaterial(categoria) {
@@ -630,15 +389,13 @@ class WizardCotizacion {
             this.datos.materiales[categoria][materialId] = {
                 nombre: nombre,
                 cantidad: 0,
-                precio: 0,
-                lugar: ''
+                precio: 0
             };
             this.cargarMaterialesCategoria(categoria);
         }
     }
     
     actualizarMaterial(categoria, materialId, campo, valor) {
-        if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
         if (campo === 'cantidad' || campo === 'precio') {
             this.datos.materiales[categoria][materialId][campo] = parseFloat(valor) || 0;
         } else {
@@ -652,7 +409,6 @@ class WizardCotizacion {
         if (confirm('¿Eliminar este material?')) {
             delete this.datos.materiales[categoria][materialId];
             this.cargarMaterialesCategoria(categoria);
-            this.actualizarBarraSuperior();
         }
     }
     
@@ -675,7 +431,7 @@ class WizardCotizacion {
             <div class="card">
                 <h3 class="card-title">💰 Valores Traspasados</h3>
                 <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
+                    <strong>� Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
                     <code>Total = Suma Materiales + (Suma Materiales × Factor 0.1)</code>
                 </p>
         `;
@@ -1021,6 +777,7 @@ class WizardCotizacion {
                     </div>
                 </div>
                 
+                <!-- Fórmula BYT Completa -->
                 <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-left: 4px solid var(--color-primary); border-radius: 8px;">
                     <h4 style="color: var(--color-primary); margin-bottom: 10px;">🧮 Fórmula BYT Completa Aplicada</h4>
                     <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
@@ -1108,7 +865,6 @@ class WizardCotizacion {
     }
     
     siguientePaso() {
-        if (!this.validarPasoActual()) return;
         if (this.pasoActual < this.totalPasos) {
             this.pasoActual++;
             this.actualizarProgreso();
@@ -1142,13 +898,12 @@ class WizardCotizacion {
                 numero: 'COT-' + Date.now()
             };
             
-            // Guardado local por ahora; no se persiste en Supabase aún.
-            console.log('Guardando cotización (local):', cotizacion);
+            console.log('Guardando cotización:', cotizacion);
             alert('¡Cotización guardada exitosamente!');
             
         } catch (error) {
             console.error('Error al guardar cotización:', error);
-            alert('Error al guardar la cotización: ' + (error.message || error));
+            alert('Error al guardar la cotización: ' + error.message);
         }
     }
     
@@ -1194,6 +949,7 @@ class WizardCotizacion {
                 body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
                 .no-print { display: none !important; }
             }
+            
             body {
                 font-family: Arial, sans-serif;
                 max-width: 210mm;
@@ -1202,17 +958,156 @@ class WizardCotizacion {
                 background: white;
                 color: #333;
             }
-            .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #2e5e4e; padding-bottom:20px; margin-bottom:30px; }
+            
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 3px solid #2e5e4e;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+            }
+            
+            .logo-section {
+                flex: 1;
+            }
+            
+            .company-name {
+                font-size: 28px;
+                font-weight: bold;
+                color: #2e5e4e;
+                margin-bottom: 5px;
+            }
+            
+            .company-subtitle {
+                font-size: 14px;
+                color: #666;
+            }
+            
+            .cotizacion-info {
+                text-align: right;
+                flex: 1;
+            }
+            
+            .cotizacion-numero {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2e5e4e;
+            }
+            
+            .section {
+                margin: 25px 0;
+            }
+            
+            .section-title {
+                background: #2e5e4e;
+                color: white;
+                padding: 8px 15px;
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 15px;
+            }
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+            }
+            
+            .info-item {
+                padding: 8px;
+                border-left: 4px solid #2e5e4e;
+                background: #f8f9fa;
+            }
+            
+            .info-label {
+                font-weight: bold;
+                color: #2e5e4e;
+            }
+            
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+            }
+            
+            .table th,
+            .table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            
+            .table th {
+                background: #f5f5f5;
+                font-weight: bold;
+                color: #333;
+            }
+            
+            .table tr:nth-child(even) {
+                background: #fafafa;
+            }
+            
+            .formula-box {
+                background: #e3f2fd;
+                border: 2px solid #2196F3;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 20px 0;
+            }
+            
+            .formula-title {
+                font-size: 16px;
+                font-weight: bold;
+                color: #1976D2;
+                margin-bottom: 10px;
+            }
+            
+            .formula-content {
+                font-family: monospace;
+                background: white;
+                padding: 10px;
+                border-radius: 4px;
+                font-size: 11px;
+                line-height: 1.6;
+            }
+            
+            .totales-finales {
+                background: #f0f8f0;
+                border: 3px solid #4CAF50;
+                padding: 20px;
+                border-radius: 8px;
+                margin: 25px 0;
+            }
+            
+            .total-final {
+                font-size: 24px;
+                font-weight: bold;
+                color: #2e7d32;
+                text-align: center;
+                margin-top: 15px;
+            }
+            
+            .footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                border-top: 2px solid #2e5e4e;
+                text-align: center;
+                color: #666;
+                font-size: 11px;
+            }
         `;
     }
     
     generarHTMLImpresion(totales, fecha, numero) {
-        // Generar detalle de materiales y traspasados (simplificado para impresión)
+        // Generar detalle de materiales
         let detalleMateriales = '';
         Object.keys(this.datos.materiales).forEach(categoria => {
             const materiales = this.datos.materiales[categoria];
             let hayMateriales = false;
             let filasCategoria = '';
+            
             Object.values(materiales).forEach(material => {
                 if ((material.cantidad || 0) > 0) {
                     hayMateriales = true;
@@ -1229,6 +1124,7 @@ class WizardCotizacion {
                     `;
                 }
             });
+            
             if (hayMateriales) {
                 detalleMateriales += `
                     <tr style="background: #e8f5e8;">
@@ -1241,11 +1137,13 @@ class WizardCotizacion {
             }
         });
         
+        // Generar detalle de traspasados
         let detalleTraspasados = '';
         Object.keys(this.datos.valoresTraspasados).forEach(categoriaKey => {
             const categoria = this.datos.valoresTraspasados[categoriaKey];
             let hayTraspasados = false;
             let filasCategoria = '';
+            
             Object.values(categoria.materiales).forEach(material => {
                 if ((material.cantidad || 0) > 0) {
                     hayTraspasados = true;
@@ -1261,6 +1159,7 @@ class WizardCotizacion {
                     `;
                 }
             });
+            
             if (hayTraspasados) {
                 detalleTraspasados += `
                     <tr style="background: #fff3e0;">
@@ -1284,18 +1183,110 @@ class WizardCotizacion {
                     <div>Fecha: ${fecha}</div>
                 </div>
             </div>
+            
             <div class="section">
                 <div class="section-title">📋 INFORMACIÓN DEL PROYECTO</div>
                 <div class="info-grid">
-                    <div class="info-item"><div class="info-label">Proyecto:</div><div>${this.datos.cliente.nombre_proyecto || 'Sin especificar'}</div></div>
-                    <div class="info-item"><div class="info-label">Cliente:</div><div>${this.datos.cliente.nombre || 'Sin especificar'}</div></div>
-                    <div class="info-item"><div class="info-label">Dirección:</div><div>${this.datos.cliente.direccion || 'No especificada'}</div></div>
-                    <div class="info-item"><div class="info-label">Encargado:</div><div>${this.datos.cliente.encargado || 'No especificado'}</div></div>
+                    <div class="info-item">
+                        <div class="info-label">Proyecto:</div>
+                        <div>${this.datos.cliente.nombre_proyecto || 'Sin especificar'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Cliente:</div>
+                        <div>${this.datos.cliente.nombre || 'Sin especificar'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Dirección:</div>
+                        <div>${this.datos.cliente.direccion || 'No especificada'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Encargado:</div>
+                        <div>${this.datos.cliente.encargado || 'No especificado'}</div>
+                    </div>
+                </div>
+                ${this.datos.cliente.notas ? `
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <div class="info-label">Notas:</div>
+                    <div>${this.datos.cliente.notas}</div>
+                </div>` : ''}
+            </div>
+            
+            ${detalleMateriales ? `
+            <div class="section">
+                <div class="section-title">🔧 DETALLE DE MATERIALES</div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Descripción</th>
+                            <th>Lugar de Compra</th>
+                            <th>Cant.</th>
+                            <th>Valor Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${detalleMateriales}
+                    </tbody>
+                </table>
+            </div>` : ''}
+            
+            ${detalleTraspasados ? `
+            <div class="section">
+                <div class="section-title">🏢 SERVICIOS TRASPASADOS</div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Servicio</th>
+                            <th>Descripción</th>
+                            <th>Cant.</th>
+                            <th>Valor Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${detalleTraspasados}
+                    </tbody>
+                </table>
+            </div>` : ''}
+            
+            <div class="formula-box">
+                <div class="formula-title">🧮 FÓRMULA BYT APLICADA</div>
+                <div class="formula-content">
+                    <strong>(Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)</strong><br><br>
+                    • Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}<br>
+                    • Traspasados Base: $${totales.totalTraspasos.toLocaleString()}<br>
+                    • Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}<br><br>
+                    <strong>SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()} = $${totales.subtotalSinIVA.toLocaleString()}</strong><br><br>
+                    <strong>Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()} = $${totales.ganancia.toLocaleString()}</strong>
                 </div>
             </div>
-            ${detalleMateriales ? `<div class="section"><div class="section-title">🔧 DETALLE DE MATERIALES</div><table class="table"><thead><tr><th>Material</th><th>Descripción</th><th>Lugar</th><th>Cant</th><th>Valor Unit</th><th>Subtotal</th></tr></thead><tbody>${detalleMateriales}</tbody></table></div>` : ''}
-            ${detalleTraspasados ? `<div class="section"><div class="section-title">🏢 SERVICIOS TRASPASADOS</div><table class="table"><thead><tr><th>Servicio</th><th>Descripción</th><th>Cant</th><th>Valor Unit</th><th>Subtotal</th></tr></thead><tbody>${detalleTraspasados}</tbody></table></div>` : ''}
-            <div class="footer"><p>Cotización generada por BYT SOFTWARE - Sistema de Gestión de Proyectos</p></div>
+            
+            <div class="totales-finales">
+                <table class="table" style="margin: 0;">
+                    <tr>
+                        <td><strong>Subtotal (sin IVA):</strong></td>
+                        <td style="text-align: right; font-weight: bold;">$${totales.subtotalSinIVA.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IVA (19%):</strong></td>
+                        <td style="text-align: right; font-weight: bold;">$${totales.iva.toLocaleString()}</td>
+                    </tr>
+                    <tr style="background: #e8f5e8; font-size: 16px;">
+                        <td><strong>TOTAL FINAL:</strong></td>
+                        <td style="text-align: right; font-weight: bold; color: #2e7d32;">$${totales.totalConIVA.toLocaleString()}</td>
+                    </tr>
+                    <tr style="background: #f0f8f0;">
+                        <td><strong>Ganancia del Proyecto:</strong></td>
+                        <td style="text-align: right; font-weight: bold; color: #4caf50;">$${totales.ganancia.toLocaleString()}</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="footer">
+                <p>Cotización generada por BYT SOFTWARE - Sistema de Gestión de Proyectos</p>
+                <p>Esta cotización es válida por 30 días a partir de la fecha de emisión</p>
+            </div>
         `;
     }
 }
@@ -1315,12 +1306,6 @@ function siguientePaso() {
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
     if (document.querySelector('.wizard-container')) {
-        try {
-            wizard = new WizardCotizacion();
-        } catch (e) {
-            console.error('Error inicializando WizardCotizacion:', e);
-            // Exponer para debugging
-            window.WizardInitError = e;
-        }
+        wizard = new WizardCotizacion();
     }
 });
