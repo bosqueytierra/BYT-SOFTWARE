@@ -1,17 +1,15 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
 // Ruta: BYT_SOFTWARE/src/js/wizard.js
-// Nota: parche adicional para:
-// - cargar proveedores desde Supabase (window.supabase) (ya implementado)
-// - cargar materiales desde Supabase (materialsApi.js) con cache en this.materiales
-// - suscribir BroadcastChannel + storage fallback para recargar materiales y proveedores
-//   cuando se actualicen desde los paneles de configuración (admin).
+// Nota: este archivo está parcheado para cargar proveedores desde Supabase (window.supabase),
+// usar un fallback local mientras carga, y almacenar provider_id + provider name en cada material.
+// También suscribe un BroadcastChannel y un listener de localStorage para refrescar providers
+// cuando se actualicen desde el panel de configuración.
 
 class WizardCotizacion {
     constructor() {
         this.pasoActual = 1;
         this.totalPasos = 10;
         this.proveedores = null; // cache de proveedores cargados desde Supabase
-        this.materiales = null;  // cache de materiales cargados desde Supabase
 
         // Fallback local (seed) en caso de que Supabase no responda inmediatamente
         this.providerSeed = [
@@ -100,37 +98,25 @@ class WizardCotizacion {
         this.mostrarPaso(1);
         this.actualizarBarraSuperior(); // ⚡ Inicializar barra superior
 
-        // Cargar proveedores y materiales en background para rellenar selects de "Lugar de compra" y listas
-        this.loadProviders().catch(err => console.warn('No se pudieron cargar proveedores:', err));
-        this.loadMaterials().catch(err => console.warn('No se pudieron cargar materiales:', err));
+        // Cargar proveedores en background para rellenar selects de "Lugar de compra"
+        // (no await para no bloquear render; loadProviders actualiza la UI cuando termine)
+        this.loadProviders().catch(err => {
+            // No bloquear la interfaz si falla; solo log
+            console.warn('No se pudieron cargar proveedores:', err);
+        });
 
         // --- NOTIFICACIONES ENTRE PESTAÑAS: BroadcastChannel + storage fallback ---
-        // Proveedores
         try {
-          const bcP = new BroadcastChannel('byt-providers');
-          bcP.onmessage = (ev) => {
+          const bc = new BroadcastChannel('byt-providers');
+          bc.onmessage = (ev) => {
             if (ev.data?.type === 'providers-updated') {
               console.log('Notificación: providers updated -> recargando');
               this.loadProviders().catch(console.error);
             }
           };
-          this._providersBroadcastChannel = bcP;
+          this._providersBroadcastChannel = bc;
         } catch (e) {
-          // fallback a storage event
-        }
-
-        // Materiales
-        try {
-          const bcM = new BroadcastChannel('byt-materials');
-          bcM.onmessage = (ev) => {
-            if (ev.data?.type === 'materials-updated') {
-              console.log('Notificación: materials updated -> recargando');
-              this.loadMaterials().catch(console.error);
-            }
-          };
-          this._materialsBroadcastChannel = bcM;
-        } catch (e) {
-          // fallback a storage event
+          // BroadcastChannel no soportado -> fallback a storage event
         }
 
         // Storage event fallback (funciona entre pestañas)
@@ -138,10 +124,6 @@ class WizardCotizacion {
           if (e.key === 'byt_providers_updated_at') {
             console.log('Storage event: providers updated -> recargando');
             this.loadProviders().catch(console.error);
-          }
-          if (e.key === 'byt_materials_updated_at') {
-            console.log('Storage event: materials updated -> recargando');
-            this.loadMaterials().catch(console.error);
           }
         });
         // --- fin notificaciones ---
@@ -214,57 +196,6 @@ class WizardCotizacion {
         }
     }
 
-    // Cargar materiales desde materialsApi (Supabase) — cached
-    async loadMaterials({ onlyActive = true } = {}) {
-        try {
-            // si ya cargados devolver cache
-            if (Array.isArray(this.materiales) && this.materiales.length) return this.materiales;
-
-            // import dinámico para evitar romper builds donde no existe
-            const mod = await import('../lib/materialsApi.js');
-            const res = await mod.listMaterials({ onlyActive });
-            if (res?.error) {
-                console.error('materialsApi.listMaterials error', res.error);
-                this.materiales = [];
-            } else {
-                this.materiales = res.data || [];
-            }
-            // exponer globalmente para depuración y uso por otras partes
-            window.wizardMaterials = this.materiales;
-            // notificar/llenar posibles selects u otros elementos que dependan de materiales
-            this.onMaterialsLoaded();
-            return this.materiales;
-        } catch (err) {
-            console.error('Error al cargar materials:', err);
-            this.materiales = [];
-            this.onMaterialsLoaded();
-            return this.materiales;
-        }
-    }
-
-    // Hook que se llama cuando materiales fueron cargados — actualizar UI si corresponde
-    onMaterialsLoaded() {
-        // Por ahora solo log y exponer en window; si el wizard usa selects/material lists los podríamos rellenar aquí.
-        console.log('Materials cargados en wizard:', (this.materiales || []).length);
-        // ejemplo: rellenar selects con clase 'material-select' si existen
-        try {
-            const selects = document.querySelectorAll('select.material-select');
-            if (selects && selects.length && Array.isArray(this.materiales)) {
-                selects.forEach(select => {
-                    const current = select.getAttribute('data-current') || select.value || '';
-                    select.innerHTML = '<option value="">-- Selecciona material --</option>';
-                    this.materiales.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id;
-                        opt.textContent = m.name + (m.price ? ` ($${m.price})` : '');
-                        select.appendChild(opt);
-                    });
-                    if (current) select.value = current;
-                });
-            }
-        } catch(e){ /* no bloquear */ }
-    }
-
     // Rellenar todos los <select class="lugar-select"> con los proveedores cargados o seed
     fillProviderSelects() {
         const list = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
@@ -299,21 +230,21 @@ class WizardCotizacion {
         
         if (textoProgreso) {
             const pasoInfo = this.pasosPlan[this.pasoActual - 1];
-            textoProgreso.textContent = Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'};
+            textoProgreso.textContent = `Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'}`;
         }
     }
     
     mostrarPaso(numeroPaso) {
         // Ocultar todos los pasos
         for (let i = 1; i <= this.totalPasos; i++) {
-            const paso = document.getElementById(paso-${i});
+            const paso = document.getElementById(`paso-${i}`);
             if (paso) {
                 paso.style.display = 'none';
             }
         }
         
         // Mostrar paso actual
-        const pasoActivo = document.getElementById(paso-${numeroPaso});
+        const pasoActivo = document.getElementById(`paso-${numeroPaso}`);
         if (pasoActivo) {
             pasoActivo.style.display = 'block';
         }
@@ -327,7 +258,7 @@ class WizardCotizacion {
     
     generarContenidoPaso(paso) {
         const pasoInfo = this.pasosPlan[paso - 1];
-        const container = document.getElementById(paso-${paso});
+        const container = document.getElementById(`paso-${paso}`);
         
         if (!container) return;
         
@@ -497,11 +428,13 @@ class WizardCotizacion {
         // Inicializar materiales si no existen
         if (!this.datos.materiales[categoria] || Object.keys(this.datos.materiales[categoria]).length === 0) {
             estructura.materiales.forEach((material, index) => {
-                const id = ${categoria}_${index};
+                const id = `${categoria}_${index}`;
                 this.datos.materiales[categoria][id] = {
                     nombre: material.nombre,
                     cantidad: material.cantidad,
-                    precio: material.precio
+                    precio: material.precio,
+                    // mantenemos campo lugar para compatibilidad -> valor por defecto vacío
+                    lugar: material.lugar || ''
                 };
             });
         }
@@ -546,10 +479,12 @@ class WizardCotizacion {
         `;
         
         this.cargarMaterialesCategoria(categoria);
+        // Si ya cargamos proveedores anteriormente, rellenar selects que se generen.
+        // Si no, loadProviders() ya fue invocado en init(); cuando termine llamará fillProviderSelects.
     }
     
     cargarMaterialesCategoria(categoria) {
-        const tbody = document.getElementById(tabla-${categoria});
+        const tbody = document.getElementById(`tabla-${categoria}`);
         if (!tbody) return;
         
         let html = '';
@@ -557,6 +492,16 @@ class WizardCotizacion {
         
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
+
+            // construir opciones para el select: preferimos this.proveedores (id + name), si no usamos providerSeed (name as id)
+            let opcionesHtml = '';
+            const listaProv = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n }));
+            opcionesHtml += `<option value="">-- Selecciona proveedor --</option>`;
+            listaProv.forEach(p => {
+                const selected = ( (material.lugar_id && p.id === material.lugar_id) || (!material.lugar_id && p.name === material.lugar) ) ? 'selected' : '';
+                opcionesHtml += `<option value="${(p.id||p.name).toString().replace(/"/g,'&quot;')}" ${selected}>${(p.name||p.id)}</option>`;
+            });
+
             html += `
                 <tr>
                     <td>${material.nombre}</td>
@@ -566,9 +511,10 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <input type="text" class="form-control" value="${material.lugar || ''}" 
-                               placeholder="Lugar de compra..."
-                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'lugar', this.value)">
+                        <!-- Select de proveedores: value = provider.id (o seed name), llama a onProveedorChange -->
+                        <select class="form-control lugar-select" data-current="${(material.lugar_id||material.lugar||'')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
+                            ${opcionesHtml}
+                        </select>
                     </td>
                     <td>
                         <input type="number" class="form-control" value="${material.cantidad || 0}" 
@@ -584,7 +530,29 @@ class WizardCotizacion {
         });
         
         tbody.innerHTML = html;
+        // Después de insertar el HTML, rellenamos selects si ya tenemos proveedores cargados
+        this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
+    }
+
+    // Maneja selección de proveedor en select (value = provider id o seed name)
+    onProveedorChange(categoria, materialId, value) {
+        // resolver nombre si value es un id conocido
+        let nombre = value;
+        if (Array.isArray(this.proveedores) && this.proveedores.length) {
+            const p = this.proveedores.find(x => (x.id === value || x.name === value));
+            if (p) nombre = p.name;
+        } else if (this.providerSeed && this.providerSeed.includes(value)) {
+            nombre = value;
+        }
+
+        // actualizar datos del wizard (guardamos lugar_id y lugar)
+        if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
+        this.datos.materiales[categoria][materialId].lugar_id = value || '';
+        this.datos.materiales[categoria][materialId].lugar = nombre || '';
+        // re-render de la categoría para reflejar cambios y recalcular subtotales
+        this.cargarMaterialesCategoria(categoria);
+        this.actualizarBarraSuperior();
     }
     
     agregarMaterial(categoria) {
@@ -594,13 +562,15 @@ class WizardCotizacion {
             this.datos.materiales[categoria][materialId] = {
                 nombre: nombre,
                 cantidad: 0,
-                precio: 0
+                precio: 0,
+                lugar: ''
             };
             this.cargarMaterialesCategoria(categoria);
         }
     }
     
     actualizarMaterial(categoria, materialId, campo, valor) {
+        if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
         if (campo === 'cantidad' || campo === 'precio') {
             this.datos.materiales[categoria][materialId][campo] = parseFloat(valor) || 0;
         } else {
@@ -625,7 +595,7 @@ class WizardCotizacion {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
         });
         
-        const elemento = document.getElementById(subtotal_${categoria});
+        const elemento = document.getElementById(`subtotal_${categoria}`);
         if (elemento) {
             elemento.textContent = '$' + subtotal.toLocaleString();
         }
@@ -725,7 +695,7 @@ class WizardCotizacion {
             `;
         });
         
-        html += </div>;
+        html += `</div>`;
         container.innerHTML = html;
     }
     
@@ -734,7 +704,7 @@ class WizardCotizacion {
         for (let i = 0; i <= 40; i++) {
             const valor = i * 0.1;
             const selected = Math.abs(valor - factorActual) < 0.01 ? 'selected' : '';
-            opciones += <option value="${valor}" ${selected}>${valor.toFixed(1)}</option>;
+            opciones += `<option value="${valor}" ${selected}>${valor.toFixed(1)}</option>`;
         }
         return opciones;
     }
@@ -751,8 +721,8 @@ class WizardCotizacion {
         const cobroPorTraspaso = totalTraspaso * parseFloat(nuevoFactor);
         
         // Actualizar UI
-        const totalElement = document.getElementById(total_traspaso_${categoria});
-        const cobroElement = document.getElementById(cobro_traspaso_${categoria});
+        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
+        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
         
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
@@ -774,14 +744,14 @@ class WizardCotizacion {
         const cobroPorTraspaso = totalTraspaso * factor;
         
         // Actualizar UI
-        const totalElement = document.getElementById(total_traspaso_${categoria});
-        const cobroElement = document.getElementById(cobro_traspaso_${categoria});
+        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
+        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
         
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
         
         // Actualizar fila específica
-        this.generarPasoTraspasados(document.getElementById(paso-8));
+        this.generarPasoTraspasados(document.getElementById(`paso-8`));
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
     
@@ -991,7 +961,7 @@ class WizardCotizacion {
                 numero: 'COT-' + Date.now()
             };
             
-            // Aquí puedes integrar el guardado en Supabase usando tu módulo supabaseClient/providersApi/materialsApi
+            // Aquí puedes integrar el guardado en Supabase usando tu módulo supabaseClient/providersApi
             console.log('Guardando cotización (local):', cotizacion);
             alert('¡Cotización guardada exitosamente!');
             
