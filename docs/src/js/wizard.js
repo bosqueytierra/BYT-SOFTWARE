@@ -61,9 +61,9 @@ class WizardCotizacion {
             factorGeneral: 1.3
         };
         
-        // cache de proveedores (se completará leyendo supabase o con seed)
+        // cache de proveedores
         this.proveedores = null;
-        // seed local (por si no hay supabase o REST)
+        // seed en caso de no tener supabase / REST
         this.providerSeed = [
             'Otro Proveedor','Imperial','Homecenter','WantingChile','Demasled','Dph','Eplum',
             'Ferreteria Santa Rosa','Masisa','CasaChic','MercadoLibre','LedStudio','Marco Cuarzo',
@@ -600,7 +600,7 @@ class WizardCotizacion {
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
-    // ----------------- NUEVAS FUNCIONES: Proveedores / selects Lugar de compra -----------------
+    // ----------------- Proveedores / selects Lugar de compra -----------------
     // Carga proveedores desde Supabase (tabla "providers") si está disponible en window.supabase.
     // Si no, usa providerSeed local. Rellena todos los selects .lugar-select en la UI.
     async loadProviders() {
@@ -608,7 +608,7 @@ class WizardCotizacion {
             if (Array.isArray(this.proveedores) && this.proveedores.length) return this.proveedores;
             let providers = [];
 
-            // Si existe cliente supabase en la página, usarlo (preferible)
+            // 1) intentar usar window.supabase si está presente
             if (window.supabase && typeof window.supabase.from === 'function') {
                 try {
                     const { data, error } = await window.supabase
@@ -625,7 +625,10 @@ class WizardCotizacion {
                 }
             }
 
-            // Fallback: seed local si no hay providers
+            // 2) fallback REST (opcional): si quieres que pruebe la REST pública con ANON, puedo añadirla.
+            // Por ahora dejamos solo supabase + seed.
+
+            // 3) seed local
             if (!providers || providers.length === 0) {
                 providers = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
             }
