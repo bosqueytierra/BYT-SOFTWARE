@@ -61,6 +61,17 @@ class WizardCotizacion {
             factorGeneral: 1.3
         };
         
+        // cache de proveedores (se completará leyendo supabase o con seed)
+        this.proveedores = null;
+        // seed local (por si no hay supabase o REST)
+        this.providerSeed = [
+            'Otro Proveedor','Imperial','Homecenter','WantingChile','Demasled','Dph','Eplum',
+            'Ferreteria Santa Rosa','Masisa','CasaChic','MercadoLibre','LedStudio','Marco Cuarzo',
+            'Quincalleria Rey','Eli Cortes','OV Estructuras Metalicas','HBT','Doer','Ikea',
+            'Emilio Pohl','CasaMusa','Provelcar','Enko','Ferreteria San Martin','Arteformas',
+            'Ferretek','Sergio Astorga Pinturas','Bertrand','MyR','Placacentro','Bookstore','RyR','Pernos Kim'
+        ];
+        
         this.pasosPlan = [
             { numero: 1, titulo: 'Datos del Cliente', categoria: 'cliente', tipo: 'cliente' },
             { numero: 2, titulo: 'Quincallería', categoria: 'quincalleria', tipo: 'material' },
@@ -81,6 +92,10 @@ class WizardCotizacion {
         this.actualizarProgreso();
         this.mostrarPaso(1);
         this.actualizarBarraSuperior(); // ⚡ Inicializar barra superior
+
+        // Cargar proveedores al iniciar (leer tabla providers en supabase si está disponible)
+        // No bloqueará la UI: la función rellenará los selects .lugar-select cuando termine.
+        this.loadProviders().catch(() => {});
     }
     
     actualizarProgreso() {
@@ -361,9 +376,9 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <input type="text" class="form-control" value="${material.lugar || ''}" 
-                               placeholder="Lugar de compra..."
-                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'lugar', this.value)">
+                        <select class="form-control lugar-select" data-current="${material.lugar || ''}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
+                            <option value="">-- Selecciona proveedor --</option>
+                        </select>
                     </td>
                     <td>
                         <input type="number" class="form-control" value="${material.cantidad || 0}" 
@@ -379,6 +394,8 @@ class WizardCotizacion {
         });
         
         tbody.innerHTML = html;
+        // rellenar selects de lugar de compra con proveedores cargados (si ya están)
+        this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
     }
     
@@ -475,9 +492,9 @@ class WizardCotizacion {
                         <td>${material.nombre}</td>
                         <td>${material.nombre}</td>
                         <td>
-                            <input type="text" class="form-control" value="${material.lugar || ''}" 
-                                   onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'lugar', this.value)" 
-                                   style="width: 120px; font-size: 12px;">
+                            <select class="form-control lugar-select" data-current="${material.lugar || ''}" onchange="wizard.onProveedorChangeTraspasado('${key}', '${materialKey}', this.value)" style="width: 120px; font-size: 12px;">
+                                <option value="">-- Selecciona proveedor --</option>
+                            </select>
                         </td>
                         <td>
                             <input type="number" class="form-control" value="${material.cantidad}" 
@@ -522,8 +539,176 @@ class WizardCotizacion {
         
         html += `</div>`;
         container.innerHTML = html;
+
+        // rellenar selects de lugar de compra dentro de traspasados si proveedores ya cargados
+        this.fillProviderSelects();
     }
     
+    generarOpcionesFactor(factorActual) {
+        let opciones = '';
+        for (let i = 0; i <= 40; i++) {
+            const valor = i * 0.1;
+            const selected = Math.abs(valor - factorActual) < 0.01 ? 'selected' : '';
+            opciones += `<option value="${valor}" ${selected}>${valor.toFixed(1)}</option>`;
+        }
+        return opciones;
+    }
+    
+    actualizarFactorTraspasado(categoria, nuevoFactor) {
+        this.datos.valoresTraspasados[categoria].factor = parseFloat(nuevoFactor);
+        
+        // Recalcular totales
+        let totalTraspaso = 0;
+        Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
+            totalTraspaso += material.cantidad * material.precio;
+        });
+        
+        const cobroPorTraspaso = totalTraspaso * parseFloat(nuevoFactor);
+        
+        // Actualizar UI
+        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
+        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
+        
+        if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
+        if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
+        
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
+    }
+    
+    actualizarMaterialTraspasado(categoria, materialKey, campo, valor) {
+        this.datos.valoresTraspasados[categoria].materiales[materialKey][campo] = 
+            (campo === 'cantidad' || campo === 'precio') ? (parseFloat(valor) || 0) : valor;
+        
+        // Recalcular totales
+        let totalTraspaso = 0;
+        Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
+            totalTraspaso += material.cantidad * material.precio;
+        });
+        
+        const factor = this.datos.valoresTraspasados[categoria].factor;
+        const cobroPorTraspaso = totalTraspaso * factor;
+        
+        // Actualizar UI
+        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
+        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
+        
+        if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
+        if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
+        
+        // Actualizar fila específica
+        this.generarPasoTraspasados(document.getElementById(`paso-8`));
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
+    }
+
+    // ----------------- NUEVAS FUNCIONES: Proveedores / selects Lugar de compra -----------------
+    // Carga proveedores desde Supabase (tabla "providers") si está disponible en window.supabase.
+    // Si no, usa providerSeed local. Rellena todos los selects .lugar-select en la UI.
+    async loadProviders() {
+        try {
+            if (Array.isArray(this.proveedores) && this.proveedores.length) return this.proveedores;
+            let providers = [];
+
+            // Si existe cliente supabase en la página, usarlo (preferible)
+            if (window.supabase && typeof window.supabase.from === 'function') {
+                try {
+                    const { data, error } = await window.supabase
+                        .from('providers')
+                        .select('id,name,active')
+                        .order('name', { ascending: true });
+                    if (!error && Array.isArray(data)) {
+                        providers = data.map(p => ({ id: p.id, name: p.name, active: p.active }));
+                    } else {
+                        console.warn('Supabase providers returned error', error);
+                    }
+                } catch (e) {
+                    console.warn('Error querying supabase providers', e);
+                }
+            }
+
+            // Fallback: seed local si no hay providers
+            if (!providers || providers.length === 0) {
+                providers = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
+            }
+
+            this.proveedores = providers;
+            // rellenar selects existentes
+            this.fillProviderSelects();
+            return this.proveedores;
+        } catch (err) {
+            console.error('loadProviders error', err);
+            this.proveedores = (this.providerSeed || []).map(n => ({ id: n, name: n, active: true }));
+            this.fillProviderSelects();
+            return this.proveedores;
+        }
+    }
+
+    // Rellena todos los <select class="lugar-select"> con la lista de proveedores cargada
+    fillProviderSelects() {
+        try {
+            const list = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n }));
+            const selects = document.querySelectorAll('select.lugar-select');
+            selects.forEach(select => {
+                const currentVal = select.getAttribute('data-current') || select.value || '';
+                // limpiar opciones
+                select.innerHTML = '';
+                // placeholder
+                const ph = document.createElement('option'); ph.value = ''; ph.textContent = '-- Selecciona proveedor --'; select.appendChild(ph);
+                list.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = (p.id !== undefined && p.id !== null) ? p.id : p.name;
+                    opt.textContent = p.name ?? String(p.id);
+                    select.appendChild(opt);
+                });
+                // restaurar valor actual si existe
+                if (currentVal) {
+                    try { select.value = currentVal; } catch (e) { /* noop */ }
+                }
+            });
+        } catch (e) {
+            console.error('fillProviderSelects error', e);
+        }
+    }
+
+    // Maneja cambio de proveedor en materiales normales (this.datos.materiales)
+    onProveedorChange(categoria, materialId, providerValue) {
+        try {
+            let providerName = providerValue;
+            if (Array.isArray(this.proveedores) && this.proveedores.length) {
+                const p = this.proveedores.find(x => String(x.id) === String(providerValue) || x.name === providerValue);
+                if (p) providerName = p.name;
+            }
+            if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
+            this.datos.materiales[categoria][materialId].lugar_id = providerValue || '';
+            this.datos.materiales[categoria][materialId].lugar = providerName || '';
+            // actualizar fila y subtotales
+            this.cargarMaterialesCategoria(categoria);
+            this.actualizarBarraSuperior();
+        } catch (e) {
+            console.error('onProveedorChange error', e);
+        }
+    }
+
+    // Maneja cambio de proveedor en traspasados (this.datos.valoresTraspasados)
+    onProveedorChangeTraspasado(categoriaKey, materialKey, providerValue) {
+        try {
+            let providerName = providerValue;
+            if (Array.isArray(this.proveedores) && this.proveedores.length) {
+                const p = this.proveedores.find(x => String(x.id) === String(providerValue) || x.name === providerValue);
+                if (p) providerName = p.name;
+            }
+            if (!this.datos.valoresTraspasados[categoriaKey] || !this.datos.valoresTraspasados[categoriaKey].materiales[materialKey]) return;
+            this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar_id = providerValue || '';
+            this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar = providerName || '';
+            // refrescar UI del paso 8
+            const paso8 = document.getElementById('paso-8');
+            if (paso8) this.generarPasoTraspasados(paso8);
+            this.actualizarBarraSuperior();
+        } catch (e) {
+            console.error('onProveedorChangeTraspasado error', e);
+        }
+    }
+    // -----------------------------------------------------------------------------------------------
+
     generarOpcionesFactor(factorActual) {
         let opciones = '';
         for (let i = 0; i <= 40; i++) {
