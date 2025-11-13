@@ -1,4 +1,4 @@
-// ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
+// ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL    =====
 
 class WizardCotizacion {
     constructor() {
@@ -1309,3 +1309,4 @@ document.addEventListener('DOMContentLoaded', function() {
         wizard = new WizardCotizacion();
     }
 });
+
