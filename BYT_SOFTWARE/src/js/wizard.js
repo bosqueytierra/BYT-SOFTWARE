@@ -1,12 +1,10 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL =====
 // Ruta: BYT_SOFTWARE/src/js/wizard.js
 // Nota: parche adicional para:
-// - cargar proveedores desde Supabase (window.supabase)
-// - cargar materiales desde materialsApi.js con cache en this.materiales
+// - cargar proveedores desde Supabase (window.supabase) (ya implementado)
+// - cargar materiales desde Supabase (materialsApi.js) con cache en this.materiales
 // - suscribir BroadcastChannel + storage fallback para recargar materiales y proveedores
 //   cuando se actualicen desde los paneles de configuración (admin).
-// - implementación de selects <select class="lugar-select"> para "Lugar de compra"
-// - versiones seguras de llamadas DOM y template literals para evitar SyntaxError
 
 class WizardCotizacion {
     constructor() {
@@ -223,20 +221,14 @@ class WizardCotizacion {
             if (Array.isArray(this.materiales) && this.materiales.length) return this.materiales;
 
             // import dinámico para evitar romper builds donde no existe
-            const mod = await import('../lib/materialsApi.js').catch(e => null);
-            if (mod && typeof mod.listMaterials === 'function') {
-                const res = await mod.listMaterials({ onlyActive });
-                if (res?.error) {
-                    console.error('materialsApi.listMaterials error', res.error);
-                    this.materiales = [];
-                } else {
-                    this.materiales = res.data || [];
-                }
-            } else {
-                // materialsApi no disponible; fallback a array vacío
+            const mod = await import('../lib/materialsApi.js');
+            const res = await mod.listMaterials({ onlyActive });
+            if (res?.error) {
+                console.error('materialsApi.listMaterials error', res.error);
                 this.materiales = [];
+            } else {
+                this.materiales = res.data || [];
             }
-
             // exponer globalmente para depuración y uso por otras partes
             window.wizardMaterials = this.materiales;
             // notificar/llenar posibles selects u otros elementos que dependan de materiales
@@ -252,7 +244,9 @@ class WizardCotizacion {
 
     // Hook que se llama cuando materiales fueron cargados — actualizar UI si corresponde
     onMaterialsLoaded() {
+        // Por ahora solo log y exponer en window; si el wizard usa selects/material lists los podríamos rellenar aquí.
         console.log('Materials cargados en wizard:', (this.materiales || []).length);
+        // ejemplo: rellenar selects con clase 'material-select' si existen
         try {
             const selects = document.querySelectorAll('select.material-select');
             if (selects && selects.length && Array.isArray(this.materiales)) {
@@ -305,51 +299,35 @@ class WizardCotizacion {
         
         if (textoProgreso) {
             const pasoInfo = this.pasosPlan[this.pasoActual - 1];
-            textoProgreso.textContent = `Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'}`;
+            textoProgreso.textContent = Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'};
         }
     }
     
     mostrarPaso(numeroPaso) {
-        // Actualizar paso actual
-        this.pasoActual = numeroPaso;
-
         // Ocultar todos los pasos
         for (let i = 1; i <= this.totalPasos; i++) {
-            const paso = document.getElementById(`paso-${i}`);
+            const paso = document.getElementById(paso-${i});
             if (paso) {
                 paso.style.display = 'none';
             }
         }
         
         // Mostrar paso actual
-        const pasoActivo = document.getElementById(`paso-${numeroPaso}`);
+        const pasoActivo = document.getElementById(paso-${numeroPaso});
         if (pasoActivo) {
             pasoActivo.style.display = 'block';
         }
         
-        // Generar contenido del paso (seguro)
-        try {
-            this.generarContenidoPaso(numeroPaso);
-        } catch (e) {
-            console.error('Error en generarContenidoPaso:', e);
-        }
+        // Generar contenido del paso
+        this.generarContenidoPaso(numeroPaso);
         
-        // Llamada segura a actualizarBotonesNavegacion
-        if (typeof this.actualizarBotonesNavegacion === 'function') {
-            try {
-                this.actualizarBotonesNavegacion();
-            } catch (e) {
-                console.error('Error en actualizarBotonesNavegacion:', e);
-            }
-        } else {
-            // no interrumpir flujo si no existe
-            console.warn('actualizarBotonesNavegacion no está definida; omitiendo su ejecución.');
-        }
+        // Actualizar botones de navegación
+        this.actualizarBotonesNavegacion();
     }
     
     generarContenidoPaso(paso) {
         const pasoInfo = this.pasosPlan[paso - 1];
-        const container = document.getElementById(`paso-${paso}`);
+        const container = document.getElementById(paso-${paso});
         
         if (!container) return;
         
@@ -369,8 +347,6 @@ class WizardCotizacion {
             case 'resumen':
                 this.generarPasoResumen(container);
                 break;
-            default:
-                container.innerHTML = '<div class="card"><p>Paso no implementado</p></div>';
         }
     }
     
@@ -521,13 +497,11 @@ class WizardCotizacion {
         // Inicializar materiales si no existen
         if (!this.datos.materiales[categoria] || Object.keys(this.datos.materiales[categoria]).length === 0) {
             estructura.materiales.forEach((material, index) => {
-                const id = `${categoria}_${index}`;
+                const id = ${categoria}_${index};
                 this.datos.materiales[categoria][id] = {
                     nombre: material.nombre,
                     cantidad: material.cantidad,
-                    precio: material.precio,
-                    descripcion: '',
-                    lugar: ''
+                    precio: material.precio
                 };
             });
         }
@@ -575,15 +549,14 @@ class WizardCotizacion {
     }
     
     cargarMaterialesCategoria(categoria) {
-        const tbody = document.getElementById(`tabla-${categoria}`);
+        const tbody = document.getElementById(tabla-${categoria});
         if (!tbody) return;
         
         let html = '';
-        const materiales = this.datos.materiales[categoria] || {};
+        const materiales = this.datos.materiales[categoria];
         
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
-            const lugarCurrent = (material.lugar_id || material.lugar || '');
             html += `
                 <tr>
                     <td>${material.nombre}</td>
@@ -593,9 +566,9 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <select class="form-control lugar-select" data-current="${lugarCurrent}" onchange="wizard.onProveedorChange('${categoria}','${materialId}', this.value)">
-                            <option value="">-- Selecciona proveedor --</option>
-                        </select>
+                        <input type="text" class="form-control" value="${material.lugar || ''}" 
+                               placeholder="Lugar de compra..."
+                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'lugar', this.value)">
                     </td>
                     <td>
                         <input type="number" class="form-control" value="${material.cantidad || 0}" 
@@ -611,8 +584,6 @@ class WizardCotizacion {
         });
         
         tbody.innerHTML = html;
-        // rellenar selects con proveedores (si están cargados)
-        this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
     }
     
@@ -623,9 +594,7 @@ class WizardCotizacion {
             this.datos.materiales[categoria][materialId] = {
                 nombre: nombre,
                 cantidad: 0,
-                precio: 0,
-                descripcion: '',
-                lugar: ''
+                precio: 0
             };
             this.cargarMaterialesCategoria(categoria);
         }
@@ -650,13 +619,13 @@ class WizardCotizacion {
     
     actualizarSubtotalCategoria(categoria) {
         let subtotal = 0;
-        const materiales = this.datos.materiales[categoria] || {};
+        const materiales = this.datos.materiales[categoria];
         
         Object.values(materiales).forEach(material => {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
         });
         
-        const elemento = document.getElementById(`subtotal_${categoria}`);
+        const elemento = document.getElementById(subtotal_${categoria});
         if (elemento) {
             elemento.textContent = '$' + subtotal.toLocaleString();
         }
@@ -667,7 +636,7 @@ class WizardCotizacion {
             <div class="card">
                 <h3 class="card-title">💰 Valores Traspasados</h3>
                 <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
+                    <strong>� Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
                     <code>Total = Suma Materiales + (Suma Materiales × Factor 0.1)</code>
                 </p>
         `;
@@ -705,23 +674,23 @@ class WizardCotizacion {
             
             Object.keys(categoria.materiales).forEach(materialKey => {
                 const material = categoria.materiales[materialKey];
-                const total = (material.cantidad || 0) * (material.precio || 0);
+                const total = material.cantidad * material.precio;
                 html += `
                     <tr>
                         <td>${material.nombre}</td>
-                        <td>${material.descripcion || ''}</td>
+                        <td>${material.nombre}</td>
                         <td>
                             <input type="text" class="form-control" value="${material.lugar || ''}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'lugar', this.value)" 
                                    style="width: 120px; font-size: 12px;">
                         </td>
                         <td>
-                            <input type="number" class="form-control" value="${material.cantidad || 0}" 
+                            <input type="number" class="form-control" value="${material.cantidad}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'cantidad', this.value)" 
                                    style="width: 80px;">
                         </td>
                         <td>
-                            <input type="number" class="form-control" value="${material.precio || 0}" 
+                            <input type="number" class="form-control" value="${material.precio}" 
                                    onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'precio', this.value)" 
                                    style="width: 100px;">
                         </td>
@@ -733,9 +702,9 @@ class WizardCotizacion {
             // Calcular total traspaso
             let totalTraspaso = 0;
             Object.values(categoria.materiales).forEach(material => {
-                totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
+                totalTraspaso += material.cantidad * material.precio;
             });
-            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
+            const cobroPorTraspaso = totalTraspaso * categoria.factor;
             
             html += `
                             </tbody>
@@ -747,7 +716,7 @@ class WizardCotizacion {
                             <strong>Total Traspaso: <span id="total_traspaso_${key}">$${totalTraspaso.toLocaleString()}</span></strong>
                         </div>
                         <div>
-                            <strong>Cobro por traspaso (${((categoria.factor||0) * 100)}%): 
+                            <strong>Cobro por traspaso (${(categoria.factor * 100)}%): 
                                 <span id="cobro_traspaso_${key}" style="color: #2e7d32;">$${cobroPorTraspaso.toLocaleString()}</span>
                             </strong>
                         </div>
@@ -756,7 +725,7 @@ class WizardCotizacion {
             `;
         });
         
-        html += `</div>`;
+        html += </div>;
         container.innerHTML = html;
     }
     
@@ -765,7 +734,7 @@ class WizardCotizacion {
         for (let i = 0; i <= 40; i++) {
             const valor = i * 0.1;
             const selected = Math.abs(valor - factorActual) < 0.01 ? 'selected' : '';
-            opciones += `<option value="${valor}" ${selected}>${valor.toFixed(1)}</option>`;
+            opciones += <option value="${valor}" ${selected}>${valor.toFixed(1)}</option>;
         }
         return opciones;
     }
@@ -776,14 +745,14 @@ class WizardCotizacion {
         // Recalcular totales
         let totalTraspaso = 0;
         Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
-            totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
+            totalTraspaso += material.cantidad * material.precio;
         });
         
         const cobroPorTraspaso = totalTraspaso * parseFloat(nuevoFactor);
         
         // Actualizar UI
-        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
-        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
+        const totalElement = document.getElementById(total_traspaso_${categoria});
+        const cobroElement = document.getElementById(cobro_traspaso_${categoria});
         
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
@@ -798,22 +767,21 @@ class WizardCotizacion {
         // Recalcular totales
         let totalTraspaso = 0;
         Object.values(this.datos.valoresTraspasados[categoria].materiales).forEach(material => {
-            totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
+            totalTraspaso += material.cantidad * material.precio;
         });
         
         const factor = this.datos.valoresTraspasados[categoria].factor;
         const cobroPorTraspaso = totalTraspaso * factor;
         
         // Actualizar UI
-        const totalElement = document.getElementById(`total_traspaso_${categoria}`);
-        const cobroElement = document.getElementById(`cobro_traspaso_${categoria}`);
+        const totalElement = document.getElementById(total_traspaso_${categoria});
+        const cobroElement = document.getElementById(cobro_traspaso_${categoria});
         
         if (totalElement) totalElement.textContent = '$' + totalTraspaso.toLocaleString();
         if (cobroElement) cobroElement.textContent = '$' + cobroPorTraspaso.toLocaleString();
         
         // Actualizar fila específica
-        const paso8 = document.getElementById(`paso-8`);
-        if (paso8) this.generarPasoTraspasados(paso8);
+        this.generarPasoTraspasados(document.getElementById(paso-8));
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
     
@@ -1085,6 +1053,7 @@ class WizardCotizacion {
                 color: #333;
             }
             .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #2e5e4e; padding-bottom:20px; margin-bottom:30px; }
+            /* ... */
         `;
     }
     
@@ -1092,7 +1061,7 @@ class WizardCotizacion {
         // Generar detalle de materiales (idéntico a la lógica previa)
         let detalleMateriales = '';
         Object.keys(this.datos.materiales).forEach(categoria => {
-            const materiales = this.datos.materiales[categoria] || {};
+            const materiales = this.datos.materiales[categoria];
             let hayMateriales = false;
             let filasCategoria = '';
             
@@ -1239,7 +1208,7 @@ class WizardCotizacion {
 }
 
 // Instancia global del wizard
-let wizard = null;
+let wizard;
 
 // Funciones globales para navegación
 function anteriorPaso() {
@@ -1247,23 +1216,12 @@ function anteriorPaso() {
 }
 
 function siguientePaso() {
-    // Seguridad: comprobar que wizard y método existen
-    if (!wizard || typeof wizard.siguientePaso !== 'function') {
-        console.error('siguientePaso no disponible en wizard');
-        return;
-    }
-    wizard.siguientePaso();
+    wizard?.siguientePaso();
 }
 
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
     if (document.querySelector('.wizard-container')) {
-        try {
-            wizard = new WizardCotizacion();
-            console.log('WizardCotizacion inicializado');
-        } catch (e) {
-            console.error('Error inicializando wizard:', e);
-            window.WizardInitError = e;
-        }
+        wizard = new WizardCotizacion();
     }
 });
