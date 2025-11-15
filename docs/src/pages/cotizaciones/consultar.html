@@ -75,9 +75,9 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="../../js/globalSupabase.js"></script>
-    <script src="../../js/categorias.js"></script>
+    <!-- Scripts: globalSupabase primero -->
+    <script src="../../js/globalSupabase.js" defer></script>
+    <script src="../../js/categorias.js" defer></script>
 
     <script>
         let cotizacionesData = [];
@@ -115,7 +115,7 @@
                 
             } catch (error) {
                 console.error('Error al cargar cotizaciones:', error);
-                window.utils.mostrarNotificacion('Error al cargar cotizaciones: ' + error.message, 'error');
+                window.utils.mostrarNotificacion('Error al cargar cotizaciones: ' + (error.message || String(error)), 'error');
                 mostrarEstado('empty');
             }
         }
@@ -150,7 +150,7 @@
             
             cotizacionesFiltradas.forEach(cotizacion => {
                 const fecha = new Date(cotizacion.created_at).toLocaleDateString('es-CL');
-                const total = window.categorias.formatearPrecio(cotizacion.total_proyecto || 0);
+                const total = window.categorias ? window.categorias.formatearPrecio(cotizacion.total_proyecto || 0) : (cotizacion.total_proyecto || 0);
                 
                 html += `
                     <div class="card cotizacion-item" style="margin-bottom: 15px;">
@@ -168,17 +168,17 @@
                                 </p>
                             </div>
                             <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-secondary" onclick="verDetalle(${cotizacion.id})">
+                                <button class="btn btn-secondary" onclick="verDetalle('${cotizacion.id || cotizacion.id}')">
                                     👁️ Ver
                                 </button>
-                                <button class="btn btn-secondary" onclick="editarCotizacion(${cotizacion.id})">
+                                <button class="btn btn-secondary" onclick="editarCotizacion('${cotizacion.id || cotizacion.id}')">
                                     ✏️ Editar
                                 </button>
-                                <button class="btn" onclick="duplicarCotizacion(${cotizacion.id})" 
+                                <button class="btn" onclick="duplicarCotizacion('${cotizacion.id || cotizacion.id}')" 
                                         style="background: var(--color-warning);">
                                     📋 Duplicar
                                 </button>
-                                <button class="btn" onclick="eliminarCotizacion(${cotizacion.id})" 
+                                <button class="btn" onclick="eliminarCotizacion('${cotizacion.id || cotizacion.id}')" 
                                         style="background: var(--color-error);">
                                     🗑️ Eliminar
                                 </button>
@@ -273,7 +273,7 @@
                 
             } catch (error) {
                 console.error('Error al eliminar cotización:', error);
-                window.utils.mostrarNotificacion('Error al eliminar cotización: ' + error.message, 'error');
+                window.utils.mostrarNotificacion('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
             }
         }
     </script>
