@@ -1221,7 +1221,7 @@ class WizardCotizacion {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { cliente: {}, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: this.datos.valoresTraspasados, factorGeneral:1.3 };
+                this.datos = { cliente: {}, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: { doer:{}, eplum:{}, cuarzo:{}, almuerzo:{}, transporte:{} }, factorGeneral: 1.3 };
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
