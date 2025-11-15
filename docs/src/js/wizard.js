@@ -1,11 +1,11 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL + Persistencia Robusta =====
 //
-// Este archivo es la versión del wizard.js actualizada para:
-// - Manejar correctamente la inicialización de Supabase (espera robusta si el cliente se carga async).
-// - Usar window.supabase o window.globalSupabase.client si está disponible.
-// - Autosave silencioso (20s) que espera al cliente Supabase antes de intentar guardar.
-// - CRUD básico: save (insert/update), load, list, delete, duplicate.
-// - No se cambió la lógica de cálculo BYT; se añadió persistencia de forma no intrusiva.
+// Versión completa y actualizada del wizard.js
+// - Espera robusta por la inicialización de Supabase (evento + polling).
+// - Uso de window.supabase o window.globalSupabase.client.
+// - Autosave silencioso cada 20s con notificación "AutoSave aplicado".
+// - CRUD completo: save (insert/update), load, list, delete, duplicate.
+// - Mantiene toda la lógica BYT original (pasos, cálculo, impresión).
 //
 // Reemplaza BYT_SOFTWARE/src/js/wizard.js por este contenido. Haz backup antes.
 
@@ -118,7 +118,7 @@ class WizardCotizacion {
         // Intentar inicializar supabase en background (no bloqueante)
         this.initSupabase();
 
-        // Cargar proveedores
+        // Cargar proveedores (no bloquear UI)
         this.loadProviders().catch(() => {});
 
         // Iniciar autosave silencioso cada 20s
@@ -145,8 +145,7 @@ class WizardCotizacion {
                 return this._supabase;
             }
 
-            // No está listo aún
-            console.warn('[Wizard] window.supabase no está definido. Asegurate que supabaseBrowserClient.js se haya cargado.');
+            // No está listo aún (no advertimos fuertemente aquí; lo maneja _ensureSupabase)
             return null;
         } catch (e) {
             console.error('initSupabase error', e);
@@ -154,7 +153,7 @@ class WizardCotizacion {
         }
     }
 
-    // _ensureSupabase: espera (polling) hasta waitMs por un cliente válido.
+    // _ensureSupabase: espera (polling + evento) hasta waitMs por un cliente válido.
     async _ensureSupabase(waitMs = 5000) {
         try {
             if (this._supabase && typeof this._supabase.from === 'function') return this._supabase;
@@ -348,7 +347,7 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- PASOS -------------
+    // ------------- PASOS (completos) -------------
     generarPasoCliente(container) {
         container.innerHTML = `
             <div class="card">
@@ -392,39 +391,147 @@ class WizardCotizacion {
 
     generarPasoMaterial(container, categoria) {
         const estructurasBYT = {
-            quincalleria: { nombre: 'Quincallería', materiales: [{ nombre:'Bisagras paquete Recta',cantidad:0,precio:0},{ nombre:'Bisagras paquete Curva',cantidad:0,precio:0},{ nombre:'Bisagras paquete SemiCurva',cantidad:0,precio:0},{ nombre:'Corredera Telescópica',cantidad:0,precio:0},{ nombre:'Manillas tipo 1',cantidad:0,precio:0},{ nombre:'Manillas tipo 2',cantidad:0,precio:0},{ nombre:'Tip On',cantidad:0,precio:0},{ nombre:'Zócalo PVC',cantidad:0,precio:0},{ nombre:'Juego Zócalo Patas',cantidad:0,precio:0},{ nombre:'Barra Closet',cantidad:0,precio:0},{ nombre:'Perfil tubular redondo',cantidad:0,precio:0}]},
-            tableros: { nombre: 'Tableros', materiales: [{ nombre:'Melamina 18mm TIPO 1',cantidad:0,precio:0},{ nombre:'Melamina 18mm TIPO 2',cantidad:0,precio:0},{ nombre:'Melamina 18mm TIPO 3',cantidad:0,precio:0},{ nombre:'Melamina 15mm TIPO 1',cantidad:0,precio:0},{ nombre:'Melamina 15mm TIPO 2',cantidad:0,precio:0},{ nombre:'Melamina 15mm TIPO 3',cantidad:0,precio:0},{ nombre:'Durolac',cantidad:0,precio:0},{ nombre:'MDF',cantidad:0,precio:0}]},
-            tapacantos: { nombre: 'Tapacantos', materiales: [{ nombre:'Metros de tapacanto delgado TIPO 1',cantidad:0,precio:400},{ nombre:'Metros de tapacanto delgado TIPO 2',cantidad:0,precio:400},{ nombre:'Metros de tapacanto delgado TIPO 3',cantidad:0,precio:400},{ nombre:'Metros de tapacanto grueso tipo 1',cantidad:0,precio:800},{ nombre:'Metros de tapacanto grueso tipo 2',cantidad:0,precio:800},{ nombre:'Metros de tapacanto grueso tipo 3',cantidad:0,precio:800}]},
-            servicios_externos: { nombre:'Servicios Externo de corte', materiales: [{ nombre:'Servicio Corte tablero EXTERNO',cantidad:0,precio:7000},{ nombre:'Servicio Pegado tapacanto Delgado',cantidad:0,precio:450},{ nombre:'Servicio Corte Durolac EXTERNO',cantidad:0,precio:3400},{ nombre:'Servicio Pegado tapacanto Grueso',cantidad:0,precio:700}]},
-            tableros_madera: { nombre:'Tableros de Madera', materiales: [{ nombre:'Panel de Pino 30 mm',cantidad:0,precio:0},{ nombre:'Panel de Pino 18 mm',cantidad:0,precio:0},{ nombre:'Panel de Pino 16 mm',cantidad:0,precio:0},{ nombre:'Terciado 18 mm',cantidad:0,precio:0},{ nombre:'Terciado 12 mm',cantidad:0,precio:0}]},
-            led_electricidad: { nombre:'Led y electricidad', materiales: [{ nombre:'Canaleta Led TIPO 1',cantidad:0,precio:0},{ nombre:'Canaleta Led TIPO 2',cantidad:0,precio:0},{ nombre:'Cinta Led TIPO 1',cantidad:0,precio:0},{ nombre:'Cinta Led TIPO 2',cantidad:0,precio:0},{ nombre:'Fuente de Poder TIPO 1',cantidad:0,precio:0},{ nombre:'Fuente de Poder TIPO 2',cantidad:0,precio:0},{ nombre:'Interruptor Led',cantidad:0,precio:0},{ nombre:'Cables Led',cantidad:0,precio:0},{ nombre:'Cables Cordón',cantidad:0,precio:0}]},
-            otras_compras: { nombre:'Otras compras', materiales: [{ nombre:'Extras a Considerar',cantidad:0,precio:0},{ nombre:'Vidrios',cantidad:0,precio:0},{ nombre:'Ripado',cantidad:0,precio:0}]}
+            quincalleria: {
+                nombre: 'Quincallería',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
+                materiales: [
+                    { nombre: 'Bisagras paquete Recta', cantidad: 0, precio: 0 },
+                    { nombre: 'Bisagras paquete Curva', cantidad: 0, precio: 0 },
+                    { nombre: 'Bisagras paquete SemiCurva', cantidad: 0, precio: 0 },
+                    { nombre: 'Corredera Telescópica', cantidad: 0, precio: 0 },
+                    { nombre: 'Manillas tipo 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Manillas tipo 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Tip On', cantidad: 0, precio: 0 },
+                    { nombre: 'Zócalo PVC', cantidad: 0, precio: 0 },
+                    { nombre: 'Juego Zócalo Patas', cantidad: 0, precio: 0 },
+                    { nombre: 'Barra Closet', cantidad: 0, precio: 0 },
+                    { nombre: 'Perfil tubular redondo', cantidad: 0, precio: 0 }
+                ]
+            },
+            tableros: {
+                nombre: 'Tableros',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor total',
+                materiales: [
+                    { nombre: 'Melamina 18mm TIPO 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 18mm TIPO 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 18mm TIPO 3', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm TIPO 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm TIPO 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm TIPO 3', cantidad: 0, precio: 0 },
+                    { nombre: 'Durolac', cantidad: 0, precio: 0 },
+                    { nombre: 'MDF', cantidad: 0, precio: 0 }
+                ]
+            },
+            tapacantos: {
+                nombre: 'Tapacantos',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
+                materiales: [
+                    { nombre: 'Metros de tapacanto delgado TIPO 1', cantidad: 0, precio: 400 },
+                    { nombre: 'Metros de tapacanto delgado TIPO 2', cantidad: 0, precio: 400 },
+                    { nombre: 'Metros de tapacanto delgado TIPO 3', cantidad: 0, precio: 400 },
+                    { nombre: 'Metros de tapacanto grueso tipo 1', cantidad: 0, precio: 800 },
+                    { nombre: 'Metros de tapacanto grueso tipo 2', cantidad: 0, precio: 800 },
+                    { nombre: 'Metros de tapacanto grueso tipo 3', cantidad: 0, precio: 800 }
+                ]
+            },
+            servicios_externos: {
+                nombre: 'Servicios Externo de corte',
+                descripcion: 'Esta conversa con tableros y tapacantos ya que depende de eso los metros y la cantidad de tableros',
+                materiales: [
+                    { nombre: 'Servicio Corte tablero EXTERNO', cantidad: 0, precio: 7000 },
+                    { nombre: 'Servicio Pegado tapacanto Delgado', cantidad: 0, precio: 450 },
+                    { nombre: 'Servicio Corte Durolac EXTERNO', cantidad: 0, precio: 3400 },
+                    { nombre: 'Servicio Pegado tapacanto Grueso', cantidad: 0, precio: 700 }
+                ]
+            },
+            tableros_madera: {
+                nombre: 'Tableros de Madera',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
+                materiales: [
+                    { nombre: 'Panel de Pino 30 mm', cantidad: 0, precio: 0 },
+                    { nombre: 'Panel de Pino 18 mm', cantidad: 0, precio: 0 },
+                    { nombre: 'Panel de Pino 16 mm', cantidad: 0, precio: 0 },
+                    { nombre: 'Terciado 18 mm', cantidad: 0, precio: 0 },
+                    { nombre: 'Terciado 12 mm', cantidad: 0, precio: 0 }
+                ]
+            },
+            led_electricidad: {
+                nombre: 'Led y electricidad',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
+                materiales: [
+                    { nombre: 'Canaleta Led TIPO 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Canaleta Led TIPO 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Cinta Led TIPO 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Cinta Led TIPO 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Fuente de Poder TIPO 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Fuente de Poder TIPO 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Interruptor Led', cantidad: 0, precio: 0 },
+                    { nombre: 'Cables Led', cantidad: 0, precio: 0 },
+                    { nombre: 'Cables Cordón', cantidad: 0, precio: 0 }
+                ]
+            },
+            otras_compras: {
+                nombre: 'Otras compras',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
+                materiales: [
+                    { nombre: 'Extras a Considerar', cantidad: 0, precio: 0 },
+                    { nombre: 'Vidrios', cantidad: 0, precio: 0 },
+                    { nombre: 'Ripado', cantidad: 0, precio: 0 }
+                ]
+            }
         };
 
         const estructura = estructurasBYT[categoria];
         if (!estructura) return;
 
+        // Inicializar materiales si no existen
         if (!this.datos.materiales[categoria] || Object.keys(this.datos.materiales[categoria]).length === 0) {
-            estructura.materiales.forEach((m, idx) => {
-                const id = `${categoria}_${idx}`;
-                this.datos.materiales[categoria][id] = { nombre: m.nombre, cantidad: m.cantidad, precio: m.precio, descripcion: '', lugar: '' };
+            estructura.materiales.forEach((material, index) => {
+                const id = `${categoria}_${index}`;
+                this.datos.materiales[categoria][id] = {
+                    nombre: material.nombre,
+                    cantidad: material.cantidad,
+                    precio: material.precio,
+                    descripcion: '',
+                    lugar: ''
+                };
             });
         }
 
         container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">${estructura.nombre}</h3>
+
                 <div class="table-container">
-                  <table class="table">
-                    <thead>
-                      <tr><th style="width:25%">Material</th><th style="width:25%">Descripción</th><th style="width:20%">Lugar de compra</th><th style="width:10%">Cantidad</th><th style="width:10%">Valor Unitario</th><th style="width:10%">Valor Total</th></tr>
-                    </thead>
-                    <tbody id="tabla-${categoria}"></tbody>
-                  </table>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th style="width: 25%;">Material</th>
+                                <th style="width: 25%;">Descripción</th>
+                                <th style="width: 20%;">Lugar de compra</th>
+                                <th style="width: 10%;">Cantidad</th>
+                                <th style="width: 15%;">Valor Unitario</th>
+                                <th style="width: 15%;">Valor Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-${categoria}">
+                        </tbody>
+                    </table>
                 </div>
-                ${categoria === 'otras_compras' ? `<div style="margin-top:20px"><button class="btn btn-secondary" onclick="wizard.agregarMaterial('${categoria}')">+ Agregar Material Extra</button></div>` : ''}
-                <div style="text-align:right;margin-top:15px;padding:15px;background:#e8f5e8;border-radius:8px;border:2px solid #4CAF50;">
-                  <strong style="font-size:18px">SUBTOTAL ${estructura.nombre.toUpperCase()}: <span id="subtotal_${categoria}" style="color:#2e7d32;font-size:20px;font-weight:bold">$0</span></strong>
+
+                ${categoria === 'otras_compras' ? `
+                <div style="margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="wizard.agregarMaterial('${categoria}')">
+                        + Agregar Material Extra
+                    </button>
+                </div>` : ''}
+
+                <div style="text-align: right; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 2px solid #4CAF50;">
+                    <strong style="font-size: 18px;">SUBTOTAL ${estructura.nombre.toUpperCase()}: 
+                        <span id="subtotal_${categoria}" style="color: #2e7d32; font-size: 20px; font-weight: bold;">
+                            $0
+                        </span>
+                    </strong>
                 </div>
             </div>
         `;
@@ -435,80 +542,189 @@ class WizardCotizacion {
     cargarMaterialesCategoria(categoria) {
         const tbody = document.getElementById(`tabla-${categoria}`);
         if (!tbody) return;
+
         let html = '';
         const materiales = this.datos.materiales[categoria] || {};
+
         Object.keys(materiales).forEach(materialId => {
             const material = materiales[materialId];
             html += `
-              <tr>
-                <td>${this.escapeHtml(material.nombre)}</td>
-                <td><input type="text" class="form-control" value="${this.escapeAttr(material.descripcion || '')}" placeholder="Descripción opcional..." onchange="wizard.actualizarMaterial('${categoria}','${materialId}','descripcion',this.value)"></td>
-                <td><select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || '')}" onchange="wizard.onProveedorChange('${categoria}','${materialId}',this.value)"><option value="">-- Selecciona proveedor --</option></select></td>
-                <td><input type="number" class="form-control" value="${Number(material.cantidad || 0)}" onchange="wizard.actualizarMaterial('${categoria}','${materialId}','cantidad',this.value)"></td>
-                <td><input type="number" class="form-control" value="${Number(material.precio || 0)}" onchange="wizard.actualizarMaterial('${categoria}','${materialId}','precio',this.value)"></td>
-                <td style="font-weight:bold;">$${(((material.cantidad||0)*(material.precio||0))||0).toLocaleString()}</td>
-              </tr>
+                <tr>
+                    <td>${this.escapeHtml(material.nombre)}</td>
+                    <td>
+                        <input type="text" class="form-control" value="${this.escapeAttr(material.descripcion || '')}" 
+                               placeholder="Descripción opcional..."
+                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
+                    </td>
+                    <td>
+                        <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || '')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
+                            <option value="">-- Selecciona proveedor --</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control" value="${Number(material.cantidad || 0)}" 
+                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'cantidad', this.value)">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control" value="${Number(material.precio || 0)}" 
+                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'precio', this.value)">
+                    </td>
+                    <td style="font-weight: bold;">$${(((material.cantidad || 0) * (material.precio || 0)) || 0).toLocaleString()}</td>
+                </tr>
             `;
         });
+
         tbody.innerHTML = html;
+        // rellenar selects de lugar de compra con proveedores cargados (si ya están)
         this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
     }
 
     agregarMaterial(categoria) {
         const nombre = prompt('Nombre del material:');
-        if (!nombre) return;
-        const materialId = 'material_' + Date.now();
-        this.datos.materiales[categoria][materialId] = { nombre: nombre.trim(), cantidad: 0, precio: 0, descripcion: '', lugar: '' };
-        this.cargarMaterialesCategoria(categoria);
+        if (nombre) {
+            const materialId = 'material_' + Date.now();
+            this.datos.materiales[categoria][materialId] = {
+                nombre: nombre,
+                cantidad: 0,
+                precio: 0,
+                descripcion: '',
+                lugar: ''
+            };
+            this.cargarMaterialesCategoria(categoria);
+        }
     }
 
     actualizarMaterial(categoria, materialId, campo, valor) {
         if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
-        if (campo === 'cantidad' || campo === 'precio') this.datos.materiales[categoria][materialId][campo] = parseFloat(valor) || 0;
-        else this.datos.materiales[categoria][materialId][campo] = valor;
+        if (campo === 'cantidad' || campo === 'precio') {
+            this.datos.materiales[categoria][materialId][campo] = parseFloat(valor) || 0;
+        } else {
+            this.datos.materiales[categoria][materialId][campo] = valor;
+        }
         this.cargarMaterialesCategoria(categoria);
-        this.actualizarBarraSuperior();
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
     eliminarMaterial(categoria, materialId) {
-        if (!confirm('¿Eliminar este material?')) return;
-        delete this.datos.materiales[categoria][materialId];
-        this.cargarMaterialesCategoria(categoria);
+        if (confirm('¿Eliminar este material?')) {
+            delete this.datos.materiales[categoria][materialId];
+            this.cargarMaterialesCategoria(categoria);
+        }
     }
 
     actualizarSubtotalCategoria(categoria) {
         let subtotal = 0;
-        const materiales = this.datos.materiales[categoria] || {};
-        Object.values(materiales).forEach(m => subtotal += ((m.cantidad||0)*(m.precio||0)));
-        const el = document.getElementById(`subtotal_${categoria}`);
-        if (el) el.textContent = '$' + subtotal.toLocaleString();
+        const materiales = this.datos.materiales[categoria];
+
+        Object.values(materiales).forEach(material => {
+            subtotal += (material.cantidad || 0) * (material.precio || 0);
+        });
+
+        const elemento = document.getElementById(`subtotal_${categoria}`);
+        if (elemento) {
+            elemento.textContent = '$' + subtotal.toLocaleString();
+        }
     }
 
-    // ------------- Traspasados -------------
     generarPasoTraspasados(container) {
-        let html = `<div class="card"><h3 class="card-title">💰 Valores Traspasados</h3><p style="background:#fff3cd;padding:15px;border-radius:8px;margin-bottom:20px"><strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br><code>Total = Suma Materiales + (Suma Materiales × Factor 0.1)</code></p>`;
+        let html = `
+            <div class="card">
+                <h3 class="card-title">💰 Valores Traspasados</h3>
+                <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
+                    <code>Total = Suma Materiales + (Suma Materiales × Factor 0.1)</code>
+                </p>
+        `;
+
         Object.keys(this.datos.valoresTraspasados).forEach(key => {
-            const cat = this.datos.valoresTraspasados[key];
-            html += `<div style="border:2px solid #e0e0e0;border-radius:12px;padding:20px;background:#f9f9f9;margin-bottom:20px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px"><h4 style="margin:0">${this.escapeHtml(cat.nombre)}</h4>
-              <div style="display:flex;align-items:center;gap:10px"><label>Factor:</label><select class="form-control" style="width:80px" onchange="wizard.actualizarFactorTraspasado('${key}',this.value)">${this.generarOpcionesFactor(cat.factor)}</select></div></div>
-              <div class="table-container"><table class="table" style="font-size:14px"><thead><tr><th>Materiales</th><th>Descripción</th><th>Lugar de compra</th><th>Cantidad</th><th>Valor unitario</th><th>Valor total</th></tr></thead><tbody>`;
-            Object.keys(cat.materiales).forEach(mk => {
-                const m = cat.materiales[mk];
-                const total = (m.cantidad||0)*(m.precio||0);
-                html += `<tr><td>${this.escapeHtml(m.nombre)}</td><td>${this.escapeHtml(m.descripcion||'')}</td>
-                  <td><select class="form-control lugar-select" data-current="${this.escapeAttr(m.lugar||'')}" onchange="wizard.onProveedorChangeTraspasado('${key}','${mk}',this.value)"><option value="">-- Selecciona proveedor --</option></select></td>
-                  <td><input type="number" class="form-control" value="${Number(m.cantidad||0)}" onchange="wizard.actualizarMaterialTraspasado('${key}','${mk}','cantidad',this.value)" style="width:80px"></td>
-                  <td><input type="number" class="form-control" value="${Number(m.precio||0)}" onchange="wizard.actualizarMaterialTraspasado('${key}','${mk}','precio',this.value)" style="width:100px"></td>
-                  <td style="font-weight:bold;">$${total.toLocaleString()}</td></tr>`;
+            const categoria = this.datos.valoresTraspasados[key];
+            html += `
+                <div style="border: 2px solid #e0e0e0; border-radius: 12px; padding: 20px; background: #f9f9f9; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0; color: var(--color-primary);">
+                            Valores Traspasados ${this.escapeHtml(categoria.nombre)}
+                        </h4>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <label>Factor:</label>
+                            <select class="form-control" style="width: 80px;" onchange="wizard.actualizarFactorTraspasado('${key}', this.value)">
+                                ${this.generarOpcionesFactor(categoria.factor)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="table" style="font-size: 14px;">
+                            <thead>
+                                <tr>
+                                    <th>Materiales</th>
+                                    <th>Descripción</th>
+                                    <th>Lugar de compra</th>
+                                    <th>Cantidad</th>
+                                    <th>Valor unitario</th>
+                                    <th>Valor total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            Object.keys(categoria.materiales).forEach(materialKey => {
+                const material = categoria.materiales[materialKey];
+                const total = (material.cantidad || 0) * (material.precio || 0);
+                html += `
+                    <tr>
+                        <td>${this.escapeHtml(material.nombre)}</td>
+                        <td>${this.escapeHtml(material.descripcion || '')}</td>
+                        <td>
+                            <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || '')}" onchange="wizard.onProveedorChangeTraspasado('${key}', '${materialKey}', this.value)" style="width: 120px; font-size: 12px;">
+                                <option value="">-- Selecciona proveedor --</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control" value="${Number(material.cantidad || 0)}" 
+                                   onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'cantidad', this.value)" 
+                                   style="width: 80px;">
+                        </td>
+                        <td>
+                            <input type="number" class="form-control" value="${Number(material.precio || 0)}" 
+                                   onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'precio', this.value)" 
+                                   style="width: 100px;">
+                        </td>
+                        <td style="font-weight: bold;">$${total.toLocaleString()}</td>
+                    </tr>
+                `;
             });
-            let totalTr = 0; Object.values(cat.materiales).forEach(m => totalTr += (m.cantidad||0)*(m.precio||0));
-            const cobro = totalTr * (cat.factor || 0);
-            html += `</tbody></table></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:15px;padding:15px;background:#e8f5e8;border-radius:8px;"><div><strong>Total Traspaso: <span id="total_traspaso_${key}">$${totalTr.toLocaleString()}</span></strong></div><div><strong>Cobro por traspaso (${((cat.factor||0)*100)}%): <span id="cobro_traspaso_${key}" style="color:#2e7d32">$${cobro.toLocaleString()}</span></strong></div></div></div>`;
+
+            // Calcular total traspaso
+            let totalTraspaso = 0;
+            Object.values(categoria.materiales).forEach(material => {
+                totalTraspaso += material.cantidad * material.precio;
+            });
+            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px;">
+                        <div>
+                            <strong>Total Traspaso: <span id="total_traspaso_${key}">$${totalTraspaso.toLocaleString()}</span></strong>
+                        </div>
+                        <div>
+                            <strong>Cobro por traspaso (${((categoria.factor || 0) * 100)}%): 
+                                <span id="cobro_traspaso_${key}" style="color: #2e7d32;">$${cobroPorTraspaso.toLocaleString()}</span>
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            `;
         });
+
         html += `</div>`;
         container.innerHTML = html;
+
+        // rellenar selects de lugar de compra dentro de traspasados si proveedores ya cargados
         this.fillProviderSelects();
     }
 
@@ -516,7 +732,7 @@ class WizardCotizacion {
         let opciones = '';
         for (let i = 0; i <= 40; i++) {
             const valor = i * 0.1;
-            const selected = Math.abs(valor - (factorActual||0)) < 0.005 ? 'selected' : '';
+            const selected = Math.abs(valor - (factorActual || 0)) < 0.01 ? 'selected' : '';
             opciones += `<option value="${valor}" ${selected}>${valor.toFixed(1)}</option>`;
         }
         return opciones;
@@ -527,7 +743,7 @@ class WizardCotizacion {
         this.datos.valoresTraspasados[categoria].factor = parseFloat(nuevoFactor) || 0;
         const paso8 = document.getElementById('paso-8');
         if (paso8) this.generarPasoTraspasados(paso8);
-        this.actualizarBarraSuperior();
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
     actualizarMaterialTraspasado(categoria, materialKey, campo, valor) {
@@ -536,56 +752,135 @@ class WizardCotizacion {
         else this.datos.valoresTraspasados[categoria].materiales[materialKey][campo] = valor;
         const paso8 = document.getElementById('paso-8');
         if (paso8) this.generarPasoTraspasados(paso8);
-        this.actualizarBarraSuperior();
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
     generarPasoFactor(container) {
         container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">⚙️ Factor General BYT</h3>
-                <p style="background:#fff3cd;padding:15px;border-radius:8px;margin-bottom:20px;"><strong>📋 Información:</strong> El factor general se aplica a todos los materiales para calcular la ganancia base de BYT.</p>
-                <div class="form-group"><label class="form-label">Factor General</label><div style="display:flex;align-items:center;gap:10px;"><input type="number" class="form-control" id="factor_general" value="${this.datos.factorGeneral}" step="0.1" min="1" max="5" onchange="wizard.actualizarFactor(this.value)" style="width:120px"><span style="color:#666;">(Ej:1.3)</span></div></div>
-                <div style="margin-top:12px;display:flex;gap:8px;"><button class="btn" onclick="wizard.establecerFactor(1.3)">1.3x</button><button class="btn" onclick="wizard.establecerFactor(2)">2.0x</button><button class="btn" onclick="wizard.establecerFactor(2.5)">2.5x</button></div>
+                <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>📋 Información:</strong> El factor general se aplica a todos los materiales para calcular la ganancia base de BYT.
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">Factor General</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="number" class="form-control" id="factor_general" 
+                               value="${this.datos.factorGeneral}" step="0.1" min="1" max="3"
+                               onchange="wizard.actualizarFactor(this.value)" style="width: 120px;">
+                        <span style="color: #666;">(Ejemplo: 1.3 = 30% de ganancia)</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <h5>💡 Factores Sugeridos:</h5>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(2)">
+                            2.0x (100%)
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(2.5)">
+                            2.5x (150%)
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(3)">
+                            3.0x (200%)
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     }
 
-    actualizarFactor(valor) { this.datos.factorGeneral = parseFloat(valor) || 1.3; this.actualizarBarraSuperior(); }
-    establecerFactor(f) { this.datos.factorGeneral = f; const el = document.getElementById('factor_general'); if (el) el.value = f; this.actualizarBarraSuperior(); }
+    actualizarFactor(valor) {
+        this.datos.factorGeneral = parseFloat(valor) || 1.3;
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
+    }
+
+    establecerFactor(factor) {
+        this.datos.factorGeneral = factor;
+        const input = document.getElementById('factor_general');
+        if (input) {
+            input.value = factor;
+        }
+        this.actualizarBarraSuperior();
+    }
 
     // ------------- Cálculos BYT -------------
     calcularTotalesBYT() {
         let totalMateriales = 0;
-        Object.keys(this.datos.materiales).forEach(cat => Object.values(this.datos.materiales[cat]).forEach(m => totalMateriales += ((m.cantidad||0)*(m.precio||0))));
-        let totalTraspasos = 0, totalTraspasosFactor = 0;
-        const detalleTraspasados = {};
-        Object.keys(this.datos.valoresTraspasados).forEach(k => {
-            const c = this.datos.valoresTraspasados[k];
-            let subtotal = 0;
-            Object.values(c.materiales).forEach(m => subtotal += ((m.cantidad||0)*(m.precio||0)));
-            const cobro = subtotal * (c.factor || 0);
-            detalleTraspasados[k] = { subtotal, factor: c.factor, cobro, total: subtotal + cobro };
-            totalTraspasos += subtotal; totalTraspasosFactor += cobro;
+        Object.keys(this.datos.materiales).forEach(categoria => {
+            Object.values(this.datos.materiales[categoria]).forEach(material => {
+                totalMateriales += (material.cantidad || 0) * (material.precio || 0);
+            });
         });
+
+        let totalTraspasos = 0;
+        let totalTraspasosFactor = 0;
+        let detalleTraspasados = {};
+
+        Object.keys(this.datos.valoresTraspasados).forEach(categoriaKey => {
+            const categoria = this.datos.valoresTraspasados[categoriaKey];
+            let subtotalCategoria = 0;
+            Object.values(categoria.materiales).forEach(material => {
+                subtotalCategoria += (material.cantidad || 0) * (material.precio || 0);
+            });
+            const cobroFactor = subtotalCategoria * (categoria.factor || 0);
+
+            detalleTraspasados[categoriaKey] = {
+                subtotal: subtotalCategoria,
+                factor: categoria.factor,
+                cobroFactor,
+                total: subtotalCategoria + cobroFactor
+            };
+
+            totalTraspasos += subtotalCategoria;
+            totalTraspasosFactor += cobroFactor;
+        });
+
         const materialesConFactor = totalMateriales * this.datos.factorGeneral;
         const subtotalSinIVA = materialesConFactor + totalTraspasos + totalTraspasosFactor;
         const iva = subtotalSinIVA * 0.19;
         const totalConIVA = subtotalSinIVA + iva;
         const ganancia = subtotalSinIVA - totalMateriales - totalTraspasos;
-        return { totalMateriales, factorGeneral: this.datos.factorGeneral, materialesConFactor, totalTraspasos, totalTraspasosFactor, totalTraspasados: totalTraspasos + totalTraspasosFactor, detalleTraspasados, subtotalSinIVA, iva, totalConIVA, ganancia };
+
+        return {
+            totalMateriales,
+            factorGeneral: this.datos.factorGeneral,
+            materialesConFactor,
+            totalTraspasos,
+            totalTraspasosFactor,
+            totalTraspasados: totalTraspasos + totalTraspasosFactor,
+            detalleTraspasados,
+            subtotalSinIVA,
+            iva,
+            totalConIVA,
+            ganancia
+        };
     }
 
     // ------------- Barra superior -------------
     actualizarBarraSuperior() {
         try {
-            const tot = this.calcularTotalesBYT();
-            const map = { 'total-materiales': tot.totalMateriales, 'factor-valor': tot.factorGeneral + 'x', 'neto-valor': tot.subtotalSinIVA, 'iva-valor': tot.iva, 'total-proyecto': tot.totalConIVA, 'ganancia-valor': tot.ganancia };
-            Object.keys(map).forEach(id => {
+            const totales = this.calcularTotalesBYT();
+
+            const elementos = {
+                'total-materiales': totales.totalMateriales,
+                'factor-valor': totales.factorGeneral + 'x',
+                'neto-valor': totales.subtotalSinIVA,
+                'iva-valor': totales.iva,
+                'total-proyecto': totales.totalConIVA,
+                'ganancia-valor': totales.ganancia
+            };
+
+            Object.keys(elementos).forEach(id => {
                 const el = document.getElementById(id);
                 if (!el) return;
-                const v = map[id];
-                if (id === 'factor-valor') el.textContent = v;
-                else el.textContent = '$' + (typeof v === 'number' ? v.toLocaleString() : '0');
+                const valor = elementos[id];
+                if (id === 'factor-valor') {
+                    el.textContent = valor;
+                } else {
+                    el.textContent = '$' + (typeof valor === 'number' ? valor.toLocaleString() : '0');
+                }
             });
         } catch (e) {
             console.error('actualizarBarraSuperior error', e);
@@ -596,51 +891,172 @@ class WizardCotizacion {
         const totales = this.calcularTotalesBYT();
         const fecha = new Date().toLocaleDateString('es-CL');
         const numero = this.datos.numero || ('COT-' + Date.now());
-        let html = `
+
+        container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">Resumen Final del Proyecto</h3>
-                <div style="margin:20px 0;">
-                    <strong>Proyecto:</strong> ${this.escapeHtml(this.datos.cliente.nombre_proyecto || 'Sin nombre')}<br>
-                    <strong>Cliente:</strong> ${this.escapeHtml(this.datos.cliente.nombre || 'Sin especificar')}<br>
-                    <strong>Fecha:</strong> ${fecha}<br>
-                    <strong>Nº Cotización:</strong> ${numero}
+
+                <div style="margin: 20px 0;">
+                    <h4 style="color: var(--color-primary);">📦 Materiales</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Materiales Base</span>
+                            <span class="summary-value">$${totales.totalMateriales.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Factor General BYT</span>
+                            <span class="summary-value" style="color: #ff9800;">${totales.factorGeneral}x</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Materiales con Factor</span>
+                            <span class="summary-value">$${totales.materialesConFactor.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Ganancia del Proyecto</span>
+                            <span class="summary-value" style="color: #4caf50;">$${totales.ganancia.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
-                <div style="margin:10px 0;">
-                    <strong>Subtotal (sin IVA):</strong> $${totales.subtotalSinIVA.toLocaleString()}<br>
-                    <strong>IVA (19%):</strong> $${totales.iva.toLocaleString()}<br>
-                    <strong>TOTAL:</strong> $${totales.totalConIVA.toLocaleString()}
+
+                <div style="margin: 20px 0;">
+                    <h4 style="color: var(--color-primary);">🏢 Valores Traspasados</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Traspasados Base</span>
+                            <span class="summary-value">$${totales.totalTraspasos.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Factores Individuales</span>
+                            <span class="summary-value">$${totales.totalTraspasosFactor.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label"><strong>Total Traspasados</strong></span>
+                            <span class="summary-value">$${totales.totalTraspasados.toLocaleString()}</span>
+                        </div>
+                    </div>
                 </div>
-                <div style="margin-top:20px;text-align:center">
-                    <button class="btn" onclick="wizard.saveCotizacionSupabase()">💾 Guardar</button>
-                    <button class="btn" onclick="wizard.saveCotizacionSupabase({forceNew:true})" style="margin-left:8px">💾 Guardar como nuevo</button>
-                    <button class="btn" onclick="wizard.previsualizarImpresion()" style="margin-left:8px">🔎 Previsualizar</button>
-                    <button class="btn" onclick="wizard.imprimirCotizacion()" style="margin-left:8px">🖨️ Imprimir</button>
+
+                <div style="margin: 20px 0; padding: 15px; background: #f0f8f0; border-left: 4px solid #4caf50; border-radius: 8px;">
+                    <h4 style="color: #2e7d32; margin-bottom: 10px;">💵 Cálculo de Ganancia BYT</h4>
+                    <div style="font-family: monospace; background: white; padding: 10px; border-radius: 4px; font-size: 14px;">
+                        Ganancia = TOTAL DEL PROYECTO - Materiales - Traspasados<br>
+                        Ganancia = $${totales.subtotalSinIVA.toLocaleString()} - $${totales.totalMateriales.toLocaleString()} - $${totales.totalTraspasos.toLocaleString()}
+                    </div>
+                    <div style="text-align: center; font-size: 18px; color: #2e7d32; font-weight: bold; margin-top: 10px;">
+                        = $${totales.ganancia.toLocaleString()}
+                    </div>
+                </div>
+
+                <div style="margin: 20px 0; padding: 15px; background: #e3f2fd; border-left: 4px solid var(--color-primary); border-radius: 8px;">
+                    <h4 style="color: var(--color-primary); margin-bottom: 10px;">🧮 Fórmula BYT Completa Aplicada</h4>
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <div style="font-weight: bold; margin-bottom: 10px; color: #333;">
+                            (Materiales × Factor General) + (Traspasados) + (Traspasados × Factor Individual)
+                        </div>
+                        <div style="font-family: monospace; font-size: 14px; line-height: 1.6;">
+                            <div>• Materiales con Factor: $${totales.totalMateriales.toLocaleString()} × ${totales.factorGeneral} = $${totales.materialesConFactor.toLocaleString()}</div>
+                            <div>• Traspasados Base: $${totales.totalTraspasos.toLocaleString()}</div>
+                            <div>• Traspasados × Factor: $${totales.totalTraspasosFactor.toLocaleString()}</div>
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-weight: bold;">
+                                SUBTOTAL = $${totales.materialesConFactor.toLocaleString()} + $${totales.totalTraspasos.toLocaleString()} + $${totales.totalTraspasosFactor.toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; font-size: 20px; color: #2e5e4e; font-weight: bold; background: #f0f8f0; padding: 10px; border-radius: 6px;">
+                        NETO = $${totales.subtotalSinIVA.toLocaleString()}
+                    </div>
+                </div>
+
+                <div style="margin: 30px 0; padding: 20px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px;">
+                    <h4 style="color: var(--color-primary); text-align: center; margin-bottom: 20px;">💰 Totales Finales</h4>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">Subtotal (sin IVA)</span>
+                            <span class="summary-value">$${totales.subtotalSinIVA.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">IVA (19%)</span>
+                            <span class="summary-value">$${totales.iva.toLocaleString()}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label"><strong>TOTAL PROYECTO</strong></span>
+                            <span class="summary-value" style="font-size: 24px; color: #2e5e4e; font-weight: bold;">
+                                $${totales.totalConIVA.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin: 20px 0; padding: 15px; background: #fff; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    <h4 style="color: var(--color-primary);">👤 Información del Proyecto</h4>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 10px;">
+                        <div><strong>Proyecto:</strong> ${this.escapeHtml(this.datos.cliente.nombre_proyecto || 'Sin nombre')}</div>
+                        <div><strong>Cliente:</strong> ${this.escapeHtml(this.datos.cliente.nombre || 'Sin especificar')}</div>
+                        <div><strong>Dirección:</strong> ${this.escapeHtml(this.datos.cliente.direccion || 'No especificada')}</div>
+                        <div><strong>Encargado:</strong> ${this.escapeHtml(this.datos.cliente.encargado || 'No especificado')}</div>
+                    </div>
+                    ${this.datos.cliente.notas ? `<div style="margin-top: 10px;"><strong>Notas:</strong> ${this.datos.cliente.notas}</div>` : ''}
+                </div>
+
+                <div style="margin-top: 30px; text-align: center; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+                    <button type="button" class="btn" onclick="wizard.saveCotizacionSupabase()" 
+                            style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, var(--color-primary), #245847);">
+                        💾 Guardar Cotización Completa
+                    </button>
+                    <button type="button" class="btn" onclick="wizard.imprimirCotizacion()" 
+                            style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, #2196F3, #1976D2); color: white;">
+                        🖨️ Imprimir Cotización
+                    </button>
                 </div>
             </div>
         `;
-        container.innerHTML = html;
     }
 
     // ------------- Navegación -------------
     actualizarBotonesNavegacion() {
         const btnAnterior = document.getElementById('btn-anterior');
         const btnSiguiente = document.getElementById('btn-siguiente');
-        if (btnAnterior) btnAnterior.style.display = this.pasoActual > 1 ? 'inline-block' : 'none';
-        if (btnSiguiente) btnSiguiente.textContent = this.pasoActual < this.totalPasos ? 'Siguiente →' : 'Finalizar';
+
+        if (btnAnterior) {
+            btnAnterior.style.display = this.pasoActual > 1 ? 'inline-block' : 'none';
+        }
+
+        if (btnSiguiente) {
+            btnSiguiente.textContent = this.pasoActual < this.totalPasos ? 'Siguiente →' : 'Finalizar';
+        }
     }
 
-    anteriorPaso() { if (this.pasoActual > 1) { this.pasoActual--; this.actualizarProgreso(); this.mostrarPaso(this.pasoActual); } }
-    siguientePaso() { if (this.pasoActual < this.totalPasos) { this.pasoActual++; this.actualizarProgreso(); this.mostrarPaso(this.pasoActual); } else { this.saveCotizacionSupabase(); } }
+    anteriorPaso() {
+        if (this.pasoActual > 1) {
+            this.pasoActual--;
+            this.actualizarProgreso();
+            this.mostrarPaso(this.pasoActual);
+        }
+    }
+
+    siguientePaso() {
+        if (this.pasoActual < this.totalPasos) {
+            this.pasoActual++;
+            this.actualizarProgreso();
+            this.mostrarPaso(this.pasoActual);
+        } else {
+            this.saveCotizacionSupabase();
+        }
+    }
 
     validarPasoActual() {
-        try {
-            const pasoInfo = this.pasosPlan[this.pasoActual - 1];
-            if (pasoInfo?.tipo === 'cliente') {
-                const nombre = document.getElementById('nombre_proyecto');
-                const cliente = document.getElementById('nombre_cliente');
-                if (!nombre?.value || !cliente?.value) { alert('Por favor complete los campos obligatorios'); return false; }
+        const pasoInfo = this.pasosPlan[this.pasoActual - 1];
+
+        if (pasoInfo.tipo === 'cliente') {
+            const nombre = document.getElementById('nombre_proyecto');
+            const cliente = document.getElementById('nombre_cliente');
+
+            if (!nombre?.value || !cliente?.value) {
+                alert('Por favor complete los campos obligatorios');
+                return false;
             }
-        } catch (e) { console.warn('validarPasoActual error', e); }
+        }
+
         return true;
     }
 
@@ -889,7 +1305,11 @@ class WizardCotizacion {
             t.style.fontSize = '13px';
             t.textContent = message;
             container.appendChild(t);
-            setTimeout(()=> { t.style.transition = 'opacity 300ms'; t.style.opacity = 0; setTimeout(()=> t.remove(), 350); }, duration);
+            setTimeout(()=> {
+                t.style.transition = 'opacity 300ms';
+                t.style.opacity = 0;
+                setTimeout(()=> t.remove(), 350);
+            }, duration);
         } catch (e) { console.warn('_showToast error', e); }
     }
 
@@ -901,13 +1321,23 @@ class WizardCotizacion {
             const totales = this.calcularTotalesBYT();
             const fecha = new Date().toLocaleDateString('es-CL');
             const numero = this.datos.numero || ('COT-' + Date.now());
+
+            // Generar HTML completo (incluye estilos)
             const html = this.generarHTMLImpresion(totales, fecha, numero);
-            const popup = window.open('', '_blank');
-            if (!popup) { alert('No se pudo abrir ventana de impresión (popup bloqueado)'); return; }
-            popup.document.write(html);
-            popup.document.close();
-            popup.onload = () => setTimeout(() => popup.print(), 400);
-        } catch (e) { console.error('imprimirCotizacion error', e); alert('Error al imprimir: ' + (e?.message || e)); }
+            const ventanaImpresion = window.open('', '_blank');
+            if (!ventanaImpresion) { alert('No se pudo abrir ventana de impresión (popup bloqueado)'); return; }
+            ventanaImpresion.document.write(html);
+            ventanaImpresion.document.close();
+
+            ventanaImpresion.onload = function() {
+                setTimeout(() => {
+                    ventanaImpresion.print();
+                }, 500);
+            };
+        } catch (e) {
+            console.error('imprimirCotizacion error', e);
+            alert('Error al imprimir: ' + (e?.message || e));
+        }
     }
 
     previsualizarImpresion() {
@@ -920,68 +1350,252 @@ class WizardCotizacion {
             if (!w) { alert('No se pudo abrir la previsualización (popup bloqueado).'); return; }
             w.document.write(html);
             w.document.close();
-        } catch (e) { console.error('previsualizarImpresion error', e); alert('Error al generar previsualización: ' + (e?.message || e)); }
+        } catch (e) {
+            console.error('previsualizarImpresion error', e);
+            alert('Error al generar previsualización: ' + (e?.message || e));
+        }
     }
 
     obtenerEstilosImpresion() {
         return `
-          @page { size: A4; margin: 15mm; }
-          body { font-family: Arial, Helvetica, sans-serif; color: #222; margin: 0; padding: 0; }
-          .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #2e5e4e; padding-bottom:10px; margin-bottom:12px; }
-          .company-name { color:#2e5e4e; font-weight:800; font-size:20px; }
-          table { width:100%; border-collapse:collapse; margin-bottom:12px; }
-          th, td { border:1px solid #e6efe9; padding:8px; vertical-align:middle; }
-          th { background:#f2fbf6; color:#2e6b57; font-weight:700; }
-          tfoot td { font-weight:800; background:#f7fff7; }
+            @media print {
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4; }
+                .no-print { display: none !important; }
+            }
+
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 210mm;
+                margin: 0 auto;
+                padding: 15mm;
+                background: white;
+                color: #333;
+            }
+
+            .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 3px solid #2e5e4e;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+            }
+
+            .company-name {
+                font-size: 28px;
+                font-weight: bold;
+                color: #2e5e4e;
+                margin-bottom: 5px;
+            }
+
+            .cotizacion-info {
+                text-align: right;
+                flex: 1;
+            }
+
+            .section {
+                margin: 25px 0;
+            }
+
+            .section-title {
+                background: #2e5e4e;
+                color: white;
+                padding: 8px 15px;
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 15px;
+            }
+
+            .table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 15px 0;
+            }
+
+            .table th,
+            .table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+
+            .table th {
+                background: #f5f5f5;
+                font-weight: bold;
+                color: #333;
+            }
+
+            .formula-box {
+                background: #e3f2fd;
+                border: 2px solid #2196F3;
+                padding: 15px;
+                border-radius: 8px;
+                margin: 20px 0;
+            }
+
+            .totales-finales {
+                background: #f0f8f0;
+                border: 3px solid #4CAF50;
+                padding: 20px;
+                border-radius: 8px;
+                margin: 25px 0;
+            }
         `;
     }
 
     generarHTMLImpresion(totales, fecha, numero) {
-        const proyecto = this.escapeHtml(this.datos.cliente.nombre_proyecto || 'Sin nombre');
-        const cliente = this.escapeHtml(this.datos.cliente.nombre || 'Sin especificar');
-        const direccion = this.escapeHtml(this.datos.cliente.direccion || '-');
-        const encargado = this.escapeHtml(this.datos.cliente.encargado || '-');
-
+        // Generar detalle de materiales
         let detalleMateriales = '';
         Object.keys(this.datos.materiales).forEach(categoria => {
-            const materiales = this.datos.materiales[categoria];
-            let hayMateriales = false;
+            const materiales = this.datos.materiales[categoria] || {};
             let filasCategoria = '';
             Object.values(materiales).forEach(material => {
                 if ((material.cantidad || 0) > 0) {
-                    hayMateriales = true;
                     const subtotal = (material.cantidad || 0) * (material.precio || 0);
-                    filasCategoria += `<tr><td>${material.nombre}</td><td>${material.descripcion || '-'}</td><td>${material.lugar || '-'}</td><td style="text-align:center">${material.cantidad}</td><td style="text-align:right">$${(material.precio||0).toLocaleString()}</td><td style="text-align:right;font-weight:bold">$${subtotal.toLocaleString()}</td></tr>`;
+                    filasCategoria += `
+                        <tr>
+                            <td>${this.escapeHtml(material.nombre)}</td>
+                            <td>${this.escapeHtml(material.descripcion || '-')}</td>
+                            <td>${this.escapeHtml(material.lugar || '-')}</td>
+                            <td style="text-align: center;">${material.cantidad}</td>
+                            <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
+                            <td style="text-align: right; font-weight: bold;">$${subtotal.toLocaleString()}</td>
+                        </tr>
+                    `;
                 }
             });
-            if (hayMateriales) detalleMateriales += `<tr style="background:#e8f5e8"><td colspan="6" style="font-weight:bold;color:#2e7d32;text-transform:uppercase">${categoria.replace(/_/g,' ')}</td></tr>${filasCategoria}`;
+
+            if (filasCategoria) {
+                detalleMateriales += `
+                    <tr style="background: #e8f5e8;">
+                        <td colspan="6" style="font-weight: bold; color: #2e7d32; text-transform: uppercase;">
+                            ${this.escapeHtml(categoria.replace(/_/g, ' '))}
+                        </td>
+                    </tr>
+                    ${filasCategoria}
+                `;
+            }
         });
 
+        // Generar detalle de traspasados
         let detalleTraspasados = '';
         Object.keys(this.datos.valoresTraspasados).forEach(categoriaKey => {
             const categoria = this.datos.valoresTraspasados[categoriaKey];
-            let hay = false; let filas = '';
-            Object.values(categoria.materiales).forEach(m => {
-                if ((m.cantidad||0) > 0) { hay = true; const subtotal = (m.cantidad||0)*(m.precio||0); filas += `<tr><td>${m.nombre}</td><td>${m.descripcion||'-'}</td><td style="text-align:center">${m.cantidad}</td><td style="text-align:right">$${(m.precio||0).toLocaleString()}</td><td style="text-align:right">$${subtotal.toLocaleString()}</td></tr>`; }
+            let filasCategoria = '';
+            Object.values(categoria.materiales).forEach(material => {
+                if ((material.cantidad || 0) > 0) {
+                    const subtotal = (material.cantidad || 0) * (material.precio || 0);
+                    filasCategoria += `
+                        <tr>
+                            <td>${this.escapeHtml(material.nombre)}</td>
+                            <td>${this.escapeHtml(material.descripcion || '-')}</td>
+                            <td style="text-align: center;">${material.cantidad}</td>
+                            <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
+                            <td style="text-align: right;">$${subtotal.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
             });
-            if (hay) detalleTraspasados += `<tr style="background:#fff3e0"><td colspan="5" style="font-weight:bold;color:#f57c00;text-transform:uppercase">${categoriaKey} (Factor: ${categoria.factor})</td></tr>${filas}`;
+
+            if (filasCategoria) {
+                detalleTraspasados += `
+                    <tr style="background: #fff3e0;">
+                        <td colspan="5" style="font-weight: bold; color: #f57c00; text-transform: uppercase;">
+                            ${this.escapeHtml(categoriaKey)} (Factor: ${categoria.factor})
+                        </td>
+                    </tr>
+                    ${filasCategoria}
+                `;
+            }
         });
 
-        return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Cotización ${numero}</title><style>${this.obtenerEstilosImpresion()}</style></head><body>
-          <div class="header"><div class="company-name">BYT SOFTWARE</div><div>Fecha: ${fecha}<br>Cotización: ${numero}</div></div>
-          <div><strong>Proyecto:</strong> ${proyecto} | <strong>Cliente:</strong> ${cliente} | <strong>Dirección:</strong> ${direccion} | <strong>Encargado:</strong> ${encargado}</div>
-          ${detalleMateriales ? `<h4>Detalle materiales</h4><table class="table"><thead><tr><th>Material</th><th>Descripción</th><th>Lugar</th><th>Cant.</th><th>V.Unit.</th><th>Subtotal</th></tr></thead><tbody>${detalleMateriales}</tbody></table>` : ''}
-          ${detalleTraspasados ? `<h4>Servicios traspasados</h4><table class="table"><thead><tr><th>Servicio</th><th>Descripción</th><th>Cant.</th><th>V.Unit.</th><th>Subtotal</th></tr></thead><tbody>${detalleTraspasados}</tbody></table>` : ''}
-          <div style="margin-top:20px"><strong>Subtotal:</strong> $${totales.subtotalSinIVA.toLocaleString()}<br><strong>IVA:</strong> $${totales.iva.toLocaleString()}<br><strong>Total:</strong> $${totales.totalConIVA.toLocaleString()}</div>
-        </body></html>`;
+        return `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Cotización ${numero} - BYT SOFTWARE</title>
+                <style>${this.obtenerEstilosImpresion()}</style>
+            </head>
+            <body>
+                <div class="header">
+                    <div class="company-name">BYT SOFTWARE</div>
+                    <div class="cotizacion-info">
+                        <div><strong>Cotización:</strong> ${numero}</div>
+                        <div><strong>Fecha:</strong> ${fecha}</div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">📋 INFORMACIÓN DEL PROYECTO</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                        <div style="padding:8px;background:#f8f9fa;border-left:4px solid #2e5e4e;"><strong>Proyecto:</strong> ${this.escapeHtml(this.datos.cliente.nombre_proyecto || 'Sin especificar')}</div>
+                        <div style="padding:8px;background:#f8f9fa;border-left:4px solid #2e5e4e;"><strong>Cliente:</strong> ${this.escapeHtml(this.datos.cliente.nombre || 'Sin especificar')}</div>
+                        <div style="padding:8px;background:#f8f9fa;border-left:4px solid #2e5e4e;"><strong>Dirección:</strong> ${this.escapeHtml(this.datos.cliente.direccion || 'No especificada')}</div>
+                        <div style="padding:8px;background:#f8f9fa;border-left:4px solid #2e5e4e;"><strong>Encargado:</strong> ${this.escapeHtml(this.datos.cliente.encargado || 'No especificado')}</div>
+                    </div>
+                    ${this.datos.cliente.notas ? `<div style="padding:8px;background:#fff;border:1px solid #e6efe9;border-radius:6px;"><strong>Notas:</strong><div>${this.escapeHtml(this.datos.cliente.notas)}</div></div>` : ''}
+                </div>
+
+                ${detalleMateriales ? `
+                <div class="section">
+                    <div class="section-title">🔧 DETALLE DE MATERIALES</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>Descripción</th>
+                                <th>Lugar de Compra</th>
+                                <th>Cant.</th>
+                                <th>Valor Unit.</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${detalleMateriales}
+                        </tbody>
+                    </table>
+                </div>` : ''}
+
+                ${detalleTraspasados ? `
+                <div class="section">
+                    <div class="section-title">🏢 SERVICIOS TRASPASADOS</div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Servicio</th>
+                                <th>Descripción</th>
+                                <th>Cant.</th>
+                                <th>Valor Unit.</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${detalleTraspasados}
+                        </tbody>
+                    </table>
+                </div>` : ''}
+
+                <div class="totales-finales">
+                    <table class="table" style="margin:0">
+                        <tr><td><strong>Subtotal (sin IVA):</strong></td><td style="text-align:right">$${totales.subtotalSinIVA.toLocaleString()}</td></tr>
+                        <tr><td><strong>IVA (19%):</strong></td><td style="text-align:right">$${totales.iva.toLocaleString()}</td></tr>
+                        <tr style="background:#e8f5e8;"><td><strong>TOTAL FINAL:</strong></td><td style="text-align:right;font-weight:bold;color:#2e7d32">$${totales.totalConIVA.toLocaleString()}</td></tr>
+                    </table>
+                </div>
+
+                <div style="margin-top:18px;font-size:11px;color:#666">Cotización generada por BYT SOFTWARE - Válida por 30 días</div>
+            </body>
+            </html>
+        `;
     }
 
     // ------------- Utilities -------------
     escapeHtml(str) {
         if (str === undefined || str === null) return '';
-        return String(str).replace(/[&<>"']/g, function (m) {
-            return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m];
-        });
+        return String(str).replace(/[&<>"']/g, (s) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]);
     }
     escapeAttr(str) { return this.escapeHtml(String(str || '')).replace(/"/g,'&#34;'); }
 }
@@ -989,8 +1603,13 @@ class WizardCotizacion {
 // ------------- Globals & init -------------
 let wizard = null;
 
-function anteriorPaso() { wizard?.anteriorPaso(); }
-function siguientePaso() { wizard?.siguientePaso(); }
+function anteriorPaso() {
+    wizard?.anteriorPaso();
+}
+
+function siguientePaso() {
+    wizard?.siguientePaso();
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
