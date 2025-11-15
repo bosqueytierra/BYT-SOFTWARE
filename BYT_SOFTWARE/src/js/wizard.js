@@ -240,22 +240,63 @@ class WizardCotizacion {
         }
     }
 
+    // ------------- fillProviderSelects (robusta) -------------
     fillProviderSelects() {
         try {
-            const list = Array.isArray(this.proveedores) && this.proveedores.length ? this.proveedores : (this.providerSeed || []).map(n => ({ id: n, name: n }));
+            const list = Array.isArray(this.proveedores) && this.proveedores.length
+                ? this.proveedores
+                : (this.providerSeed || []).map(n => ({ id: n, name: n }));
+
             const selects = document.querySelectorAll('select.lugar-select');
             selects.forEach(select => {
-                const currentVal = select.getAttribute('data-current') || select.value || '';
+                // valor guardado (puede venir como id o como nombre)
+                const rawCurrent = select.getAttribute('data-current') ?? select.value ?? '';
+                const currentVal = rawCurrent !== null && rawCurrent !== undefined ? String(rawCurrent).trim() : '';
+
+                // reconstruir opciones
                 select.innerHTML = '';
-                const ph = document.createElement('option'); ph.value = ''; ph.textContent = '-- Selecciona proveedor --'; select.appendChild(ph);
+                const ph = document.createElement('option');
+                ph.value = '';
+                ph.textContent = '-- Selecciona proveedor --';
+                select.appendChild(ph);
+
                 list.forEach(p => {
                     const opt = document.createElement('option');
-                    opt.value = (p.id !== undefined && p.id !== null) ? p.id : p.name;
-                    opt.textContent = p.name ?? String(p.id);
+                    // siempre usar strings para value
+                    const val = (p.id !== undefined && p.id !== null) ? String(p.id) : String(p.name);
+                    opt.value = val;
+                    opt.textContent = String(p.name ?? val);
+                    // dejar el nombre también en dataset para comparar por nombre si fuera necesario
+                    opt.dataset.name = String(p.name ?? '');
                     select.appendChild(opt);
                 });
+
+                // seleccionar la opción correspondiente (comparar por value, texto o data-name)
                 if (currentVal) {
-                    try { select.value = currentVal; } catch (e) {}
+                    let matched = false;
+                    for (let i = 0; i < select.options.length; i++) {
+                        const o = select.options[i];
+                        const oVal = o.value !== undefined && o.value !== null ? String(o.value).trim() : '';
+                        const oText = o.textContent !== undefined && o.textContent !== null ? String(o.textContent).trim() : '';
+                        const oName = (o.dataset && o.dataset.name) ? String(o.dataset.name).trim() : '';
+                        if (oVal === currentVal || oText === currentVal || oName === currentVal) {
+                            select.selectedIndex = i;
+                            matched = true;
+                            break;
+                        }
+                    }
+                    // si no matchea con ninguna opción, agregamos una opción con ese valor (para no perder la info)
+                    if (!matched) {
+                        const extra = document.createElement('option');
+                        extra.value = currentVal;
+                        extra.textContent = currentVal;
+                        extra.dataset.name = currentVal;
+                        extra.selected = true;
+                        select.appendChild(extra);
+                    }
+                } else {
+                    // asegurar que quede en la opción placeholder
+                    select.value = '';
                 }
             });
         } catch (e) {
@@ -265,15 +306,22 @@ class WizardCotizacion {
 
     onProveedorChange(categoria, materialId, providerValue) {
         try {
-            let providerName = providerValue;
+            const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
+            // Buscar nombre en la lista de proveedores (puede venir id o nombre)
+            let providerName = valueStr;
             if (Array.isArray(this.proveedores) && this.proveedores.length) {
-                const p = this.proveedores.find(x => String(x.id) === String(providerValue) || x.name === providerValue);
-                if (p) providerName = p.name;
+                const p = this.proveedores.find(x => {
+                    const idStr = (x.id !== undefined && x.id !== null) ? String(x.id) : '';
+                    const nameStr = (x.name !== undefined && x.name !== null) ? String(x.name) : '';
+                    return idStr === valueStr || nameStr === valueStr;
+                });
+                if (p) providerName = p.name ?? String(p.id);
             }
+
             if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
-            this.datos.materiales[categoria][materialId].lugar_id = providerValue || '';
+            this.datos.materiales[categoria][materialId].lugar_id = valueStr; // guardamos el id/valor tal cual (string)
             this.datos.materiales[categoria][materialId].lugar = providerName || '';
-            this.cargarMaterialesCategoria(categoria);
+            this.cargarMaterialesCategoria(categoria); // refresca la fila y vuelve a aplicar selects
             this.actualizarBarraSuperior();
         } catch (e) {
             console.error('onProveedorChange error', e);
@@ -282,13 +330,19 @@ class WizardCotizacion {
 
     onProveedorChangeTraspasado(categoriaKey, materialKey, providerValue) {
         try {
-            let providerName = providerValue;
+            const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
+            let providerName = valueStr;
             if (Array.isArray(this.proveedores) && this.proveedores.length) {
-                const p = this.proveedores.find(x => String(x.id) === String(providerValue) || x.name === providerValue);
-                if (p) providerName = p.name;
+                const p = this.proveedores.find(x => {
+                    const idStr = (x.id !== undefined && x.id !== null) ? String(x.id) : '';
+                    const nameStr = (x.name !== undefined && x.name !== null) ? String(x.name) : '';
+                    return idStr === valueStr || nameStr === valueStr;
+                });
+                if (p) providerName = p.name ?? String(p.id);
             }
+
             if (!this.datos.valoresTraspasados[categoriaKey] || !this.datos.valoresTraspasados[categoriaKey].materiales[materialKey]) return;
-            this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar_id = providerValue || '';
+            this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar_id = valueStr;
             this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar = providerName || '';
             const paso8 = document.getElementById('paso-8');
             if (paso8) this.generarPasoTraspasados(paso8);
@@ -557,7 +611,7 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || '')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
+                        <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || material.lugar_id || '')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
                             <option value="">-- Selecciona proveedor --</option>
                         </select>
                     </td>
@@ -676,7 +730,7 @@ class WizardCotizacion {
                         <td>${this.escapeHtml(material.nombre)}</td>
                         <td>${this.escapeHtml(material.descripcion || '')}</td>
                         <td>
-                            <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || '')}" onchange="wizard.onProveedorChangeTraspasado('${key}', '${materialKey}', this.value)" style="width: 120px; font-size: 12px;">
+                            <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || material.lugar_id || '')}" onchange="wizard.onProveedorChangeTraspasado('${key}', '${materialKey}', this.value)" style="width: 120px; font-size: 12px;">
                                 <option value="">-- Selecciona proveedor --</option>
                             </select>
                         </td>
@@ -1012,54 +1066,6 @@ class WizardCotizacion {
         `;
     }
 
-    // ------------- Navegación -------------
-    actualizarBotonesNavegacion() {
-        const btnAnterior = document.getElementById('btn-anterior');
-        const btnSiguiente = document.getElementById('btn-siguiente');
-
-        if (btnAnterior) {
-            btnAnterior.style.display = this.pasoActual > 1 ? 'inline-block' : 'none';
-        }
-
-        if (btnSiguiente) {
-            btnSiguiente.textContent = this.pasoActual < this.totalPasos ? 'Siguiente →' : 'Finalizar';
-        }
-    }
-
-    anteriorPaso() {
-        if (this.pasoActual > 1) {
-            this.pasoActual--;
-            this.actualizarProgreso();
-            this.mostrarPaso(this.pasoActual);
-        }
-    }
-
-    siguientePaso() {
-        if (this.pasoActual < this.totalPasos) {
-            this.pasoActual++;
-            this.actualizarProgreso();
-            this.mostrarPaso(this.pasoActual);
-        } else {
-            this.saveCotizacionSupabase();
-        }
-    }
-
-    validarPasoActual() {
-        const pasoInfo = this.pasosPlan[this.pasoActual - 1];
-
-        if (pasoInfo.tipo === 'cliente') {
-            const nombre = document.getElementById('nombre_proyecto');
-            const cliente = document.getElementById('nombre_cliente');
-
-            if (!nombre?.value || !cliente?.value) {
-                alert('Por favor complete los campos obligatorios');
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     // ------------- Guardado/CRUD en Supabase -------------
     _buildRowFromDatos() {
         const tot = this.calcularTotalesBYT();
@@ -1199,7 +1205,11 @@ class WizardCotizacion {
             const userResp = await supa.auth.getUser();
             const user_id = userResp?.data?.user?.id || null;
 
-            let query = supa.from('cotizaciones').select('id,numero,cliente,subtotal,total,created_at,updated_at,project_key').order('created_at', { ascending: false }).range(offset, offset + limit - 1);
+            // Supabase range uses start,end inclusive
+            const start = offset;
+            const end = Math.max(offset, offset + limit - 1);
+
+            let query = supa.from('cotizaciones').select('id,numero,cliente,subtotal,total,created_at,updated_at,project_key').order('created_at', { ascending: false }).range(start, end);
             if (user_id) query = query.eq('user_id', user_id);
 
             if (filtro?.numero) query = query.ilike('numero', `%${filtro.numero}%`);
@@ -1221,7 +1231,7 @@ class WizardCotizacion {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { cliente: {}, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: { doer:{}, eplum:{}, cuarzo:{}, almuerzo:{}, transporte:{} }, factorGeneral: 1.3 };
+                this.datos = { cliente: {}, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 1.3 };
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
