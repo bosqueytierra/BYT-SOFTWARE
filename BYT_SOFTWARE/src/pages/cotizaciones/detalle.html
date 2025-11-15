@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Detalle Cotización - BYT SOFTWARE</title>
-    <link rel="stylesheet" href="../../styles/global.css">
+    <link rel="stylesheet" href="../../styles/global.css" />
     <style>
         .detalle-section {
             margin-bottom: 30px;
@@ -37,7 +37,14 @@
             color: var(--color-text);
             font-weight: 500;
         }
-        
+
+        .table-container { overflow-x:auto; }
+        .table { width:100%; border-collapse: collapse; margin-top:10px; }
+        .table th, .table td { padding:10px; border:1px solid #e6efe9; }
+        .table th { background:#f5f7f6; color:#2e6b57; font-weight:700; text-align:left; }
+
+        .no-data { color:#666; text-align:center; padding:18px; }
+
         @media print {
             .btn-back, .no-print { display: none !important; }
             body { background: white !important; }
@@ -46,13 +53,13 @@
     </style>
 </head>
 <body>
-    <a href="consultar.html" class="btn-back no-print">← Atrás</a>
+    <a href="consultar.html" class="btn-back no-print">← Volver</a>
 
     <div class="container">
         <header class="header no-print">
             <div class="header-content">
                 <div class="logo-section">
-                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo">
+                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo" />
                     <div>
                         <h1 class="header-title">Detalle de Cotización</h1>
                         <p class="header-subtitle">Información Completa del Proyecto</p>
@@ -132,297 +139,461 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="../../js/globalSupabase.js"></script>
-    <script src="../../js/categorias.js"></script>
+    <!-- Scripts: globalSupabase debe cargarse antes y con defer para mantener orden -->
+    <script src="../../js/globalSupabase.js" defer></script>
+    <script src="../../js/categorias.js" defer></script>
 
     <script>
-        let cotizacionActual = null;
-        let cotizacionId = null;
+        (function () {
+            // Variables locales
+            let cotizacionActual = null;
+            let cotizacionId = null;
 
-        // Verificar autenticación
-        if (!localStorage.getItem('byt_logged_in')) {
-            window.location.href = '../login/login.html';
-        }
+            // Verificar autenticación
+            if (!localStorage.getItem('byt_logged_in')) {
+                window.location.href = '../login/login.html';
+                return;
+            }
 
-        // Obtener ID de la URL
-        const urlParams = new URLSearchParams(window.location.search);
-        cotizacionId = urlParams.get('id');
+            // Obtener ID de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            cotizacionId = urlParams.get('id');
 
-        if (!cotizacionId) {
-            mostrarError('ID de cotización no proporcionado');
-        } else {
-            cargarCotizacion();
-        }
-
-        // Cargar cotización desde Supabase
-        async function cargarCotizacion() {
-            mostrarEstado('loading');
-            
-            try {
-                const resultado = await window.supabaseClient.obtenerCotizacionPorId(cotizacionId);
-                
-                if (resultado.success && resultado.data) {
-                    cotizacionActual = resultado.data;
-                    mostrarDetalle();
-                } else {
-                    throw new Error(resultado.error || 'Cotización no encontrada');
+            // Manejo seguro: esperar a que supabaseClient esté disponible (init) antes de cargar
+            async function start() {
+                if (!cotizacionId) {
+                    mostrarError('ID de cotización no proporcionado');
+                    return;
                 }
-                
-            } catch (error) {
-                console.error('Error al cargar cotización:', error);
-                mostrarError('Error al cargar cotización: ' + error.message);
-            }
-        }
 
-        // Mostrar diferentes estados
-        function mostrarEstado(estado) {
-            const loading = document.getElementById('loading-state');
-            const content = document.getElementById('detalle-content');
-            const error = document.getElementById('error-state');
-            
-            loading.style.display = estado === 'loading' ? 'block' : 'none';
-            content.style.display = estado === 'content' ? 'block' : 'none';
-            error.style.display = estado === 'error' ? 'block' : 'none';
-        }
-
-        // Mostrar error
-        function mostrarError(mensaje) {
-            mostrarEstado('error');
-            document.getElementById('error-message').textContent = mensaje;
-        }
-
-        // Mostrar detalle de la cotización
-        function mostrarDetalle() {
-            mostrarEstado('content');
-            
-            // Información del proyecto
-            mostrarInfoProyecto();
-            
-            // Resumen financiero
-            mostrarResumenFinanciero();
-            
-            // Materiales
-            mostrarMateriales();
-            
-            // Valores traspasados
-            mostrarValoresTraspasados();
-            
-            // Fecha
-            const fecha = new Date(cotizacionActual.created_at).toLocaleDateString('es-CL', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            document.getElementById('fecha-cotizacion').textContent = fecha;
-        }
-
-        // Mostrar información del proyecto
-        function mostrarInfoProyecto() {
-            const container = document.getElementById('info-proyecto');
-            
-            const items = [
-                { label: 'Nombre del Proyecto', value: cotizacionActual.nombre_proyecto || 'N/A' },
-                { label: 'Cliente', value: cotizacionActual.cliente || 'N/A' },
-                { label: 'Dirección', value: cotizacionActual.direccion || 'N/A' },
-                { label: 'Encargado', value: cotizacionActual.encargado || 'N/A' },
-                { label: 'ID Cotización', value: `#${cotizacionActual.id}` },
-                { label: 'Fecha de Creación', value: new Date(cotizacionActual.created_at).toLocaleDateString('es-CL') }
-            ];
-            
-            let html = '';
-            items.forEach(item => {
-                html += `
-                    <div class="detalle-item">
-                        <div class="detalle-label">${item.label}</div>
-                        <div class="detalle-value">${item.value}</div>
-                    </div>
-                `;
-            });
-            
-            if (cotizacionActual.notas) {
-                html += `
-                    <div class="detalle-item" style="grid-column: 1 / -1;">
-                        <div class="detalle-label">Notas del Proyecto</div>
-                        <div class="detalle-value">${cotizacionActual.notas}</div>
-                    </div>
-                `;
-            }
-            
-            container.innerHTML = html;
-        }
-
-        // Mostrar resumen financiero
-        function mostrarResumenFinanciero() {
-            const container = document.getElementById('resumen-financiero');
-            
-            const items = [
-                { label: 'Total Materiales', value: window.categorias.formatearPrecio(cotizacionActual.total_materiales || 0) },
-                { label: 'Factor Aplicado', value: `${cotizacionActual.factor || 1.3}x` },
-                { label: 'Subtotal con Factor', value: window.categorias.formatearPrecio(cotizacionActual.total_neto || 0) },
-                { label: 'IVA (19%)', value: window.categorias.formatearPrecio(cotizacionActual.iva || 0) },
-                { label: 'Total del Proyecto', value: window.categorias.formatearPrecio(cotizacionActual.total_proyecto || 0), destacado: true },
-                { label: 'Ganancia Estimada', value: window.categorias.formatearPrecio(cotizacionActual.ganancia || 0) }
-            ];
-            
-            let html = '';
-            items.forEach(item => {
-                const estilo = item.destacado ? 'background: var(--color-primary); color: white; font-weight: 600;' : '';
-                html += `
-                    <div class="detalle-item" style="${estilo}">
-                        <div class="detalle-label" style="${item.destacado ? 'color: rgba(255,255,255,0.8);' : ''}">${item.label}</div>
-                        <div class="detalle-value" style="${item.destacado ? 'color: white; font-size: 18px;' : ''}">${item.value}</div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-
-        // Mostrar materiales
-        function mostrarMateriales() {
-            const container = document.getElementById('materiales-detalle');
-            let html = '';
-            
-            const categoriasMateriales = ['quincalleria', 'tableros', 'tapacantos', 'corte', 'madera', 'led'];
-            
-            categoriasMateriales.forEach(categoria => {
-                const datosCategoria = JSON.parse(cotizacionActual[categoria] || '{}');
-                const categoriaInfo = window.categorias.materiales[categoria];
-                
-                if (!categoriaInfo || Object.keys(datosCategoria).length === 0) return;
-                
-                let tieneDatos = false;
-                let tablaItems = '';
-                let subtotal = 0;
-                
-                categoriaInfo.items.forEach(item => {
-                    const cantidad = parseFloat(datosCategoria[item.id]) || 0;
-                    if (cantidad > 0) {
-                        tieneDatos = true;
-                        const total = cantidad * item.precio;
-                        subtotal += total;
-                        
-                        tablaItems += `
-                            <tr>
-                                <td>${item.nombre}</td>
-                                <td style="text-align: center;">${cantidad} ${item.unidad}</td>
-                                <td style="text-align: right;">${window.categorias.formatearPrecio(item.precio)}</td>
-                                <td style="text-align: right; font-weight: 600;">${window.categorias.formatearPrecio(total)}</td>
-                            </tr>
-                        `;
+                // Si existe el objeto supabaseClient, intentar inicializarlo (no forzamos doble init)
+                try {
+                    if (window.supabaseClient && typeof window.supabaseClient.init === 'function') {
+                        // init expondrá window.supabase y window.globalSupabase.client si no están
+                        await window.supabaseClient.init();
+                    } else if (window.supabase && typeof window.supabase.from === 'function') {
+                        // ya está la librería/cliente
+                    } else {
+                        // si no existe aún, esperar un corto período por el dispatcher 'supabase:ready'
+                        await new Promise(res => {
+                            let resolved = false;
+                            const onReady = () => { if (!resolved) { resolved = true; window.removeEventListener('supabase:ready', onReady); res(); } };
+                            window.addEventListener('supabase:ready', onReady);
+                            // timeout fallback 3s
+                            setTimeout(() => { if (!resolved) { resolved = true; window.removeEventListener('supabase:ready', onReady); res(); } }, 3000);
+                        });
                     }
+                } catch (e) {
+                    console.warn('Error inicializando supabaseClient desde detalle:', e);
+                }
+
+                // Finalmente cargar la cotización
+                cargarCotizacion();
+            }
+
+            // Cargar cotización desde Supabase
+            async function cargarCotizacion() {
+                mostrarEstado('loading');
+                
+                try {
+                    if (!window.supabaseClient || typeof window.supabaseClient.obtenerCotizacionPorId !== 'function') {
+                        throw new Error('supabaseClient no disponible');
+                    }
+
+                    const resultado = await window.supabaseClient.obtenerCotizacionPorId(cotizacionId);
+                    
+                    if (resultado.success && resultado.data) {
+                        cotizacionActual = resultado.data;
+                        mostrarDetalle();
+                    } else {
+                        throw new Error(resultado.error || 'Cotización no encontrada');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error al cargar cotización:', error);
+                    mostrarError('Error al cargar cotización: ' + (error.message || String(error)));
+                }
+            }
+
+            // Mostrar diferentes estados
+            function mostrarEstado(estado) {
+                const loading = document.getElementById('loading-state');
+                const content = document.getElementById('detalle-content');
+                const error = document.getElementById('error-state');
+                
+                loading.style.display = estado === 'loading' ? 'block' : 'none';
+                content.style.display = estado === 'content' ? 'block' : 'none';
+                error.style.display = estado === 'error' ? 'block' : 'none';
+            }
+
+            // Mostrar error
+            function mostrarError(mensaje) {
+                mostrarEstado('error');
+                const msgEl = document.getElementById('error-message');
+                msgEl.textContent = mensaje;
+            }
+
+            // Mostrar detalle de la cotización
+            function mostrarDetalle() {
+                mostrarEstado('content');
+                
+                // Información del proyecto
+                mostrarInfoProyecto();
+                
+                // Resumen financiero
+                mostrarResumenFinanciero();
+                
+                // Materiales
+                mostrarMateriales();
+                
+                // Valores traspasados
+                mostrarValoresTraspasados();
+                
+                // Fecha
+                const fecha = new Date(cotizacionActual.created_at || Date.now()).toLocaleDateString('es-CL', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                document.getElementById('fecha-cotizacion').textContent = fecha;
+            }
+
+            // Mostrar información del proyecto
+            function mostrarInfoProyecto() {
+                const container = document.getElementById('info-proyecto');
+                
+                // Algunos registros pueden tener formato antiguo: manejamos ambos
+                const proyecto = cotizacionActual.nombre_proyecto || cotizacionActual.data?.cliente?.nombre_proyecto || '';
+                const cliente = cotizacionActual.cliente || cotizacionActual.data?.cliente?.nombre || '';
+                const direccion = cotizacionActual.direccion || cotizacionActual.data?.cliente?.direccion || '';
+                const encargado = cotizacionActual.encargado || cotizacionActual.data?.cliente?.encargado || '';
+                const notas = cotizacionActual.notas || cotizacionActual.data?.cliente?.notas || '';
+
+                const items = [
+                    { label: 'Nombre del Proyecto', value: proyecto || 'N/A' },
+                    { label: 'Cliente', value: cliente || 'N/A' },
+                    { label: 'Dirección', value: direccion || 'N/A' },
+                    { label: 'Encargado', value: encargado || 'N/A' },
+                    { label: 'ID Cotización', value: `#${cotizacionActual.id || (cotizacionActual._id || '')}` },
+                    { label: 'Fecha de Creación', value: new Date(cotizacionActual.created_at || cotizacionActual._created_at || Date.now()).toLocaleDateString('es-CL') }
+                ];
+                
+                let html = '';
+                items.forEach(item => {
+                    html += `
+                        <div class="detalle-item">
+                            <div class="detalle-label">${item.label}</div>
+                            <div class="detalle-value">${item.value}</div>
+                        </div>
+                    `;
                 });
                 
-                if (tieneDatos) {
+                if (notas) {
                     html += `
-                        <div style="margin-bottom: 25px;">
-                            <h4 style="color: var(--color-primary); margin-bottom: 15px;">${categoriaInfo.nombre}</h4>
-                            <div class="table-container">
-                                <table class="table">
-                                    <thead>
-                                        <tr>
-                                            <th>Material</th>
-                                            <th style="text-align: center;">Cantidad</th>
-                                            <th style="text-align: right;">Precio Unit.</th>
-                                            <th style="text-align: right;">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${tablaItems}
-                                        <tr style="background: rgba(46, 94, 78, 0.1); font-weight: 600;">
-                                            <td colspan="3" style="text-align: right;">Subtotal ${categoriaInfo.nombre}:</td>
-                                            <td style="text-align: right; color: var(--color-primary);">${window.categorias.formatearPrecio(subtotal)}</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div class="detalle-item" style="grid-column: 1 / -1;">
+                            <div class="detalle-label">Notas del Proyecto</div>
+                            <div class="detalle-value">${escapeHtml(notas)}</div>
                         </div>
                     `;
                 }
-            });
-            
-            if (!html) {
-                html = '<p style="color: #666; text-align: center; padding: 20px;">No se registraron materiales para este proyecto.</p>';
+                
+                container.innerHTML = html;
             }
-            
-            container.innerHTML = html;
-        }
 
-        // Mostrar valores traspasados
-        function mostrarValoresTraspasados() {
-            const container = document.getElementById('valores-detalle');
-            let html = '';
-            let totalTraspasados = 0;
-            
-            const conceptos = ['fierro', 'cuarzo', 'ventanas', 'transporte', 'almuerzo'];
-            let tablaItems = '';
-            
-            conceptos.forEach(concepto => {
-                const valor = parseFloat(cotizacionActual[concepto]) || 0;
-                if (valor > 0) {
-                    const conceptoInfo = window.categorias.valoresTraspasados[concepto];
-                    totalTraspasados += valor;
-                    
-                    tablaItems += `
-                        <tr>
-                            <td>${conceptoInfo.nombre}</td>
-                            <td>${conceptoInfo.descripcion}</td>
-                            <td style="text-align: right; font-weight: 600;">${window.categorias.formatearPrecio(valor)}</td>
-                        </tr>
+            // Mostrar resumen financiero
+            function mostrarResumenFinanciero() {
+                const container = document.getElementById('resumen-financiero');
+
+                // Soporte para estructura antigua y la nueva
+                const total_materiales = cotizacionActual.total_materiales ?? cotizacionActual.data?.subtotal ?? cotizacionActual.subtotal ?? 0;
+                const factor = cotizacionActual.factor ?? cotizacionActual.data?.factor ?? cotizacionActual.data?.factorGeneral ?? 1.3;
+                const total_neto = cotizacionActual.total_neto ?? cotizacionActual.data?.neto ?? cotizacionActual.total ?? 0;
+                const iva = cotizacionActual.iva ?? cotizacionActual.data?.iva ?? 0;
+                const total_proyecto = cotizacionActual.total_proyecto ?? cotizacionActual.data?.total ?? 0;
+                const ganancia = cotizacionActual.ganancia ?? cotizacionActual.data?.ganancia ?? 0;
+
+                const items = [
+                    { label: 'Total Materiales', value: formatPrecio(total_materiales) },
+                    { label: 'Factor Aplicado', value: `${factor}x` },
+                    { label: 'Subtotal con Factor', value: formatPrecio(total_neto) },
+                    { label: 'IVA (19%)', value: formatPrecio(iva) },
+                    { label: 'Total del Proyecto', value: formatPrecio(total_proyecto), destacado: true },
+                    { label: 'Ganancia Estimada', value: formatPrecio(ganancia) }
+                ];
+                
+                let html = '';
+                items.forEach(item => {
+                    const estilo = item.destacado ? 'background: var(--color-primary); color: white; font-weight: 600;' : '';
+                    html += `
+                        <div class="detalle-item" style="${estilo}">
+                            <div class="detalle-label" style="${item.destacado ? 'color: rgba(255,255,255,0.85);' : ''}">${item.label}</div>
+                            <div class="detalle-value" style="${item.destacado ? 'color: white; font-size: 18px;' : ''}">${item.value}</div>
+                        </div>
                     `;
-                }
-            });
-            
-            // Extras
-            const extras = JSON.parse(cotizacionActual.extras || '{}');
-            Object.keys(extras).forEach(key => {
-                const valor = parseFloat(extras[key]) || 0;
-                if (valor > 0) {
-                    totalTraspasados += valor;
-                    tablaItems += `
-                        <tr>
-                            <td>Extra</td>
-                            <td>${key.replace('extra_', '').replace(/\d+/, '') || 'Gasto adicional'}</td>
-                            <td style="text-align: right; font-weight: 600;">${window.categorias.formatearPrecio(valor)}</td>
-                        </tr>
-                    `;
-                }
-            });
-            
-            if (tablaItems) {
-                html = `
-                    <div class="table-container">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Concepto</th>
-                                    <th>Descripción</th>
-                                    <th style="text-align: right;">Monto</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${tablaItems}
-                                <tr style="background: rgba(46, 94, 78, 0.1); font-weight: 600;">
-                                    <td colspan="2" style="text-align: right;">Total Valores Traspasados:</td>
-                                    <td style="text-align: right; color: var(--color-primary);">${window.categorias.formatearPrecio(totalTraspasados)}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            } else {
-                html = '<p style="color: #666; text-align: center; padding: 20px;">No se registraron valores traspasados para este proyecto.</p>';
+                });
+                
+                container.innerHTML = html;
             }
-            
-            container.innerHTML = html;
-        }
 
-        // Exportar a PDF (función placeholder)
-        function exportarPDF() {
-            window.utils.mostrarNotificacion('Función de exportación PDF en desarrollo', 'info');
-            // TODO: Implementar exportación a PDF con jsPDF o similar
-        }
+            // Mostrar materiales
+            function mostrarMateriales() {
+                const container = document.getElementById('materiales-detalle');
+                let html = '';
+
+                // La cotizacion puede venir con materiales serializados en campos separados (quincalleria/tableros/...)
+                // o en data.materiales cuando se ha guardado con la versión nueva del wizard.
+                const datosMateriales = cotizacionActual.data?.materiales || {};
+                const categoriasMaterialesExplicit = ['quincalleria','tableros','tapacantos','corte','madera','led','otras_compras'];
+
+                // Si el formato es antiguo (campos JSON en la fila), parsearlos
+                const camposPosibles = ['quincalleria','tableros','tapacantos','corte','madera','led','otras_compras','otras_compras'];
+                let foundAny = false;
+
+                // Intentar utilizar window.categorias (mapa de metadatos) si existe
+                const categoriasMeta = window.categorias && window.categorias.materiales ? window.categorias.materiales : null;
+
+                // Preferir datos estructurados: datosMateriales
+                if (datosMateriales && Object.keys(datosMateriales).length > 0) {
+                    // Recorremos las keys
+                    Object.keys(datosMateriales).forEach(catKey => {
+                        const materiales = datosMateriales[catKey] || {};
+                        const nombreCat = (categoriasMeta && categoriasMeta[catKey] && categoriasMeta[catKey].nombre) ? categoriasMeta[catKey].nombre : catKey;
+                        const filas = [];
+                        let subtotal = 0;
+                        Object.values(materiales).forEach(mat => {
+                            const cantidad = Number(mat.cantidad || 0);
+                            const precio = Number(mat.precio || mat.valor || 0);
+                            if (cantidad > 0 || precio > 0) {
+                                const total = cantidad * precio;
+                                subtotal += total;
+                                filas.push(`<tr>
+                                    <td>${escapeHtml(mat.nombre || mat.descripcion || 'Ítem')}</td>
+                                    <td style="text-align:center;">${cantidad}</td>
+                                    <td style="text-align:right;">${formatPrecio(precio)}</td>
+                                    <td style="text-align:right;font-weight:600;">${formatPrecio(total)}</td>
+                                </tr>`);
+                            }
+                        });
+                        if (filas.length > 0) {
+                            foundAny = true;
+                            html += `
+                                <div style="margin-bottom:20px;">
+                                    <h4 style="color:var(--color-primary); margin-bottom:12px;">${escapeHtml(nombreCat)}</h4>
+                                    <div class="table-container">
+                                        <table class="table">
+                                            <thead>
+                                                <tr><th>Material</th><th style="width:100px;text-align:center;">Cant.</th><th style="width:140px;text-align:right;">V.Unit.</th><th style="width:160px;text-align:right;">Subtotal</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                ${filas.join('')}
+                                                <tr style="background: rgba(46,94,78,0.06); font-weight:600;">
+                                                    <td colspan="3" style="text-align:right;">Subtotal ${escapeHtml(nombreCat)}:</td>
+                                                    <td style="text-align:right; color:var(--color-primary);">${formatPrecio(subtotal)}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    });
+                } else {
+                    // Intentar leer campos individuales (json string) en la fila
+                    camposPosibles.forEach(catKey => {
+                        try {
+                            const raw = cotizacionActual[catKey];
+                            if (!raw) return;
+                            const datos = (typeof raw === 'string') ? JSON.parse(raw) : raw;
+                            // datos puede ser { id: cantidad } o { materialName: {...} }
+                            let filas = '';
+                            let subtotal = 0;
+                            const meta = categoriasMeta && categoriasMeta[catKey] ? categoriasMeta[catKey] : null;
+                            if (typeof datos === 'object') {
+                                // Si meta.items existe, usarlo para mostrar nombres y precios
+                                if (meta && Array.isArray(meta.items)) {
+                                    meta.items.forEach(itemMeta => {
+                                        const cantidad = Number(datos[itemMeta.id] || 0);
+                                        if (cantidad > 0) {
+                                            const precio = Number(itemMeta.precio || 0);
+                                            const total = cantidad * precio;
+                                            subtotal += total;
+                                            filas += `<tr>
+                                                <td>${escapeHtml(itemMeta.nombre)}</td>
+                                                <td style="text-align:center;">${cantidad} ${itemMeta.unidad ? itemMeta.unidad : ''}</td>
+                                                <td style="text-align:right;">${formatPrecio(precio)}</td>
+                                                <td style="text-align:right;font-weight:600;">${formatPrecio(total)}</td>
+                                            </tr>`;
+                                        }
+                                    });
+                                } else {
+                                    // Si no hay metadata, mostrar claves y valores
+                                    Object.keys(datos).forEach(k => {
+                                        const cantidad = Number(datos[k] || 0);
+                                        if (cantidad > 0) {
+                                            const total = cantidad;
+                                            subtotal += total;
+                                            filas += `<tr>
+                                                <td>${escapeHtml(k)}</td>
+                                                <td style="text-align:center;">${cantidad}</td>
+                                                <td style="text-align:right;">-</td>
+                                                <td style="text-align:right;font-weight:600;">${formatPrecio(total)}</td>
+                                            </tr>`;
+                                        }
+                                    });
+                                }
+                            }
+                            if (filas) {
+                                foundAny = true;
+                                const titulo = (meta && meta.nombre) ? meta.nombre : catKey;
+                                html += `
+                                    <div style="margin-bottom:20px;">
+                                        <h4 style="color:var(--color-primary); margin-bottom:12px;">${escapeHtml(titulo)}</h4>
+                                        <div class="table-container">
+                                            <table class="table">
+                                                <thead><tr><th>Material</th><th style="width:100px;text-align:center;">Cant.</th><th style="width:140px;text-align:right;">V.Unit.</th><th style="width:160px;text-align:right;">Subtotal</th></tr></thead>
+                                                <tbody>
+                                                    ${filas}
+                                                    <tr style="background: rgba(46,94,78,0.06); font-weight:600;">
+                                                        <td colspan="3" style="text-align:right;">Subtotal ${escapeHtml(titulo)}:</td>
+                                                        <td style="text-align:right; color:var(--color-primary);">${formatPrecio(subtotal)}</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        } catch (e) {
+                            // ignore parse errors for this category
+                        }
+                    });
+                }
+
+                if (!foundAny) {
+                    html = '<p class="no-data">No se registraron materiales para este proyecto.</p>';
+                }
+
+                container.innerHTML = html;
+            }
+
+            // Mostrar valores traspasados
+            function mostrarValoresTraspasados() {
+                const container = document.getElementById('valores-detalle');
+                let html = '';
+                let totalTraspasados = 0;
+                
+                // Soporte a estructura directa en fila o en data.valoresTraspasados
+                const datos = cotizacionActual.data?.valoresTraspasados || {};
+                const conceptosExplicit = ['fierro','cuarzo','ventanas','transporte','almuerzo'];
+
+                let filas = '';
+                // Si datos tiene entradas estructuradas
+                if (datos && Object.keys(datos).length > 0) {
+                    Object.keys(datos).forEach(k => {
+                        const m = datos[k];
+                        const nombre = m.nombre || k;
+                        const subtotal = Number(m.subtotal || ( (m.cantidad||0) * (m.precio||0) ) || 0);
+                        if (subtotal > 0) {
+                            totalTraspasados += subtotal;
+                            filas += `<tr>
+                                <td>${escapeHtml(nombre)}</td>
+                                <td>${escapeHtml(m.descripcion || '')}</td>
+                                <td style="text-align:right; font-weight:600;">${formatPrecio(subtotal)}</td>
+                            </tr>`;
+                        }
+                    });
+                } else {
+                    // intentar campos sueltos en la fila (antiguo)
+                    conceptosExplicit.forEach(concepto => {
+                        const valor = Number(cotizacionActual[concepto] || 0);
+                        if (valor > 0) {
+                            totalTraspasados += valor;
+                            filas += `<tr>
+                                <td>${escapeHtml(concepto)}</td>
+                                <td>-</td>
+                                <td style="text-align:right; font-weight:600;">${formatPrecio(valor)}</td>
+                            </tr>`;
+                        }
+                    });
+
+                    // extras (si existen)
+                    try {
+                        const extras = JSON.parse(cotizacionActual.extras || cotizacionActual.data?.extras || '{}');
+                        Object.keys(extras).forEach(key => {
+                            const valor = Number(extras[key] || 0);
+                            if (valor > 0) {
+                                totalTraspasados += valor;
+                                filas += `<tr>
+                                    <td>Extra</td>
+                                    <td>${escapeHtml(key)}</td>
+                                    <td style="text-align:right; font-weight:600;">${formatPrecio(valor)}</td>
+                                </tr>`;
+                            }
+                        });
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+
+                if (filas) {
+                    html = `
+                        <div class="table-container">
+                            <table class="table">
+                                <thead>
+                                    <tr><th>Concepto</th><th>Descripción</th><th style="text-align:right;">Monto</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${filas}
+                                    <tr style="background: rgba(46,94,78,0.06); font-weight:600;">
+                                        <td colspan="2" style="text-align:right;">Total Valores Traspasados:</td>
+                                        <td style="text-align:right; color:var(--color-primary);">${formatPrecio(totalTraspasados)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    html = '<p class="no-data">No se registraron valores traspasados para este proyecto.</p>';
+                }
+
+                container.innerHTML = html;
+            }
+
+            // Utilities: formateo de precios y escape
+            function formatPrecio(n) {
+                if (window.categorias && typeof window.categorias.formatearPrecio === 'function') {
+                    try { return window.categorias.formatearPrecio(n); } catch (e) {}
+                }
+                const num = Number(n || 0);
+                return '$' + num.toLocaleString('es-CL');
+            }
+
+            function escapeHtml(str) {
+                if (str === undefined || str === null) return '';
+                return String(str).replace(/[&<>"']/g, (s) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]);
+            }
+
+            // Exportar a PDF (función placeholder)
+            function exportarPDF() {
+                if (window.utils && typeof window.utils.mostrarNotificacion === 'function') {
+                    window.utils.mostrarNotificacion('Función de exportación PDF en desarrollo', 'info');
+                } else {
+                    alert('Función de exportación PDF en desarrollo');
+                }
+                // TODO: Implementar exportación a PDF con jsPDF o similar
+            }
+
+            // Exponer algunas funciones globales para botones inline (si alguien las necesita)
+            window.cargarCotizacion = cargarCotizacion;
+            window.exportarPDF = exportarPDF;
+            window.mostrarError = mostrarError;
+
+            // Iniciar al DOMContentLoaded (esperar a que scripts defer hayan ejecutado)
+            document.addEventListener('DOMContentLoaded', function() {
+                // start() maneja inicialización de supabaseClient si existe
+                start();
+            });
+        })();
     </script>
 </body>
 </html>
