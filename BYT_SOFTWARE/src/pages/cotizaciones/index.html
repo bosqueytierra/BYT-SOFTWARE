@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotizaciones - BYT SOFTWARE</title>
-    <link rel="stylesheet" href="../../styles/global.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Módulo Cotizaciones - BYT SOFTWARE</title>
+    <link rel="stylesheet" href="../../styles/global.css"/>
 </head>
 <body>
     <a href="../menu_principal.html" class="btn-back">← Atrás</a>
@@ -13,57 +13,52 @@
         <header class="header">
             <div class="header-content">
                 <div class="logo-section">
-                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo">
+                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo"/>
                     <div>
                         <h1 class="header-title">Cotizaciones</h1>
-                        <p class="header-subtitle">Gestión Completa de Cotizaciones - Bosque y Tierra</p>
+                        <p class="header-subtitle">Gestión completa de cotizaciones - Bosque y Tierra</p>
                     </div>
                 </div>
             </div>
         </header>
 
-        <main>
-            <div class="card">
-                <h2 class="card-title">Módulo de Cotizaciones</h2>
-                <p>Gestione todas las cotizaciones de sus proyectos de muebles personalizados</p>
+        <div class="cards-grid" style="margin-top: 20px;">
+            <div class="card card-action">
+                <h3>Crear Cotización</h3>
+                <p>Crear nueva cotización con wizard paso a paso</p>
+                <a class="btn" href="nueva.html">Crear Cotización</a>
             </div>
 
-            <div class="menu-grid">
-                <a href="nueva.html" class="menu-item">
-                    <div class="menu-icon">📝</div>
-                    <h3 class="menu-title">Crear Cotización</h3>
-                    <p class="menu-description">Crear nueva cotización con wizard paso a paso</p>
-                </a>
-
-                <a href="consultar.html" class="menu-item">
-                    <div class="menu-icon">📊</div>
-                    <h3 class="menu-title">Consultar Cotizaciones</h3>
-                    <p class="menu-description">Ver listado y buscar cotizaciones existentes</p>
-                </a>
-
-                <a href="editar.html" class="menu-item">
-                    <div class="menu-icon">✏️</div>
-                    <h3 class="menu-title">Editar Cotización</h3>
-                    <p class="menu-description">Modificar cotizaciones existentes</p>
-                </a>
-
-                <a href="imprimir.html" class="menu-item">
-                    <div class="menu-icon">🖨️</div>
-                    <h3 class="menu-title">Imprimir Cotización</h3>
-                    <p class="menu-description">Generar e imprimir cotizaciones en PDF</p>
-                </a>
-
-                <a href="eliminar.html" class="menu-item">
-                    <div class="menu-icon">🗑️</div>
-                    <h3 class="menu-title">Eliminar Cotización</h3>
-                    <p class="menu-description">Eliminar cotizaciones del sistema</p>
-                </a>
+            <div class="card card-action">
+                <h3>Consultar Cotizaciones</h3>
+                <p>Ver listado y buscar cotizaciones existentes</p>
+                <a class="btn" href="consultar.html">Consultar</a>
             </div>
-        </main>
+
+            <div class="card card-action">
+                <h3>Editar Cotización</h3>
+                <p>Modificar cotizaciones existentes</p>
+                <a class="btn" href="consultar.html">Editar</a>
+            </div>
+
+            <div class="card card-action">
+                <h3>Imprimir Cotización</h3>
+                <p>Generar PDF o imprimir cotización</p>
+                <a class="btn" href="consultar.html">Imprimir</a>
+            </div>
+
+            <div class="card card-action">
+                <h3>Eliminar Cotización</h3>
+                <p>Eliminar cotizaciones del sistema</p>
+                <a class="btn" href="consultar.html">Eliminar</a>
+            </div>
+        </div>
     </div>
 
+    <!-- Scripts -->
+    <script src="../../js/globalSupabase.js" defer></script>
     <script>
-        // Verificar autenticación
+        // Comprobación de sesión
         if (!localStorage.getItem('byt_logged_in')) {
             window.location.href = '../login/login.html';
         }
