@@ -253,7 +253,16 @@ class WizardCotizacion {
                 const rawCurrent = select.getAttribute('data-current') ?? select.value ?? '';
                 const currentVal = rawCurrent !== null && rawCurrent !== undefined ? String(rawCurrent).trim() : '';
 
-                // reconstruir opciones
+                // reconstruir opciones pero sin tocar atributos externos del select
+                // guardamos el tabindex, name, id y data-* existentes
+                const preserved = {
+                    id: select.id || '',
+                    name: select.name || '',
+                    className: select.className || '',
+                    dataset: { ...select.dataset }
+                };
+
+                // Limpiamos las opciones y re-poblamos
                 select.innerHTML = '';
                 const ph = document.createElement('option');
                 ph.value = '';
@@ -269,6 +278,11 @@ class WizardCotizacion {
                     // dejar el nombre también en dataset para comparar por nombre si fuera necesario
                     opt.dataset.name = String(p.name ?? '');
                     select.appendChild(opt);
+                });
+
+                // Restaurar dataset si existía (para no perder identificadores)
+                Object.keys(preserved.dataset || {}).forEach(k => {
+                    try { select.dataset[k] = preserved.dataset[k]; } catch (e) {}
                 });
 
                 // seleccionar la opción correspondiente (comparar por value, texto o data-name)
@@ -304,6 +318,7 @@ class WizardCotizacion {
         }
     }
 
+    // ------------- onProveedorChange (sin re-render) -------------
     onProveedorChange(categoria, materialId, providerValue) {
         try {
             const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
@@ -319,15 +334,38 @@ class WizardCotizacion {
             }
 
             if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
+
+            // Actualizar datos en memoria (no re-renderizar toda la tabla)
             this.datos.materiales[categoria][materialId].lugar_id = valueStr; // guardamos el id/valor tal cual (string)
             this.datos.materiales[categoria][materialId].lugar = providerName || '';
-            this.cargarMaterialesCategoria(categoria); // refresca la fila y vuelve a aplicar selects
+
+            // Aseguramos que el select tenga la opción correcta y actualizar subtotales/barra superior
+            // Preferimos dejar el DOM del select intacto; solo re-poblamos options si providers cambian
+            this.actualizarSubtotalCategoria(categoria);
             this.actualizarBarraSuperior();
+
+            // Si la opción seleccionada no está en la lista actual, forzamos fillProviderSelects para agregarla
+            // Esto no reconstruye filas, solo repuebla opciones dentro de cada select existente.
+            const currentSelect = document.querySelector(`select.lugar-select[data-current="${this.escapeAttr(valueStr)}"]`);
+            if (!currentSelect) {
+                // actualizamos data-current del select que disparó el cambio (si se puede identificar)
+                // try to find the select by materialId stored in dataset (if present)
+                const byMaterial = document.querySelector(`select.lugar-select[data-material-id="${this.escapeAttr(materialId)}"]`);
+                if (byMaterial) {
+                    byMaterial.setAttribute('data-current', valueStr);
+                }
+                this.fillProviderSelects();
+            } else {
+                // asegurar que el select correspondiente tenga el value seleccionado
+                try { currentSelect.value = valueStr; } catch (e) {}
+            }
+
         } catch (e) {
             console.error('onProveedorChange error', e);
         }
     }
 
+    // ------------- onProveedorChangeTraspasado (sin re-render) -------------
     onProveedorChangeTraspasado(categoriaKey, materialKey, providerValue) {
         try {
             const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
@@ -342,10 +380,31 @@ class WizardCotizacion {
             }
 
             if (!this.datos.valoresTraspasados[categoriaKey] || !this.datos.valoresTraspasados[categoriaKey].materiales[materialKey]) return;
+
+            // Actualizar datos en memoria
             this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar_id = valueStr;
             this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar = providerName || '';
-            const paso8 = document.getElementById('paso-8');
-            if (paso8) this.generarPasoTraspasados(paso8);
+
+            // Refrescar solo lo necesario: repoblar opciones si hace falta y recalcular totales visibles
+            this.fillProviderSelects();
+
+            // Actualizar totales visibles del paso 8 (si están renderizados)
+            const totalEl = document.getElementById(`total_traspaso_${categoriaKey}`);
+            const cobroEl = document.getElementById(`cobro_traspaso_${categoriaKey}`);
+            if (totalEl && cobroEl) {
+                let totalTraspaso = 0;
+                Object.values(this.datos.valoresTraspasados[categoriaKey].materiales).forEach(m => {
+                    totalTraspaso += (m.cantidad || 0) * (m.precio || 0);
+                });
+                const cobro = totalTraspaso * (this.datos.valoresTraspasados[categoriaKey].factor || 0);
+                totalEl.textContent = `$${totalTraspaso.toLocaleString()}`;
+                cobroEl.textContent = `$${cobro.toLocaleString()}`;
+            } else {
+                // fallback: si no están los elementos, regeneramos el paso (caso extremo)
+                const paso8 = document.getElementById('paso-8');
+                if (paso8) this.generarPasoTraspasados(paso8);
+            }
+
             this.actualizarBarraSuperior();
         } catch (e) {
             console.error('onProveedorChangeTraspasado error', e);
@@ -611,7 +670,7 @@ class WizardCotizacion {
                                onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || material.lugar_id || '')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
+                        <select class="form-control lugar-select" data-material-id="${this.escapeAttr(materialId)}" data-current="${this.escapeAttr(material.lugar_id ?? material.lugar ?? '')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
                             <option value="">-- Selecciona proveedor --</option>
                         </select>
                     </td>
@@ -730,7 +789,7 @@ class WizardCotizacion {
                         <td>${this.escapeHtml(material.nombre)}</td>
                         <td>${this.escapeHtml(material.descripcion || '')}</td>
                         <td>
-                            <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar || material.lugar_id || '')}" onchange="wizard.onProveedorChangeTraspasado('${key}', '${materialKey}', this.value)" style="width: 120px; font-size: 12px;">
+                            <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar_id ?? material.lugar ?? '')}" data-material-id="${this.escapeAttr(materialKey)}" onchange="wizard.onProveedorChangeTraspasado('${key}', '${materialKey}', this.value)" style="width: 120px; font-size: 12px;">
                                 <option value="">-- Selecciona proveedor --</option>
                             </select>
                         </td>
