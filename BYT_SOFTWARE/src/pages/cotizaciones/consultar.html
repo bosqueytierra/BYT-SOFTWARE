@@ -149,18 +149,27 @@
             let html = '';
             
             cotizacionesFiltradas.forEach(cotizacion => {
+                // Determinar nombre del proyecto con soporte multi-formato
+                const nombreProyecto = cotizacion.nombre_proyecto
+                    || cotizacion.project_key
+                    || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente.nombre_proyecto)
+                    || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente.nombre)
+                    || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente?.nombre_proyecto)
+                    || 'Sin nombre';
+
+                const clienteNombre = cotizacion.cliente || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente.nombre) || 'N/A';
                 const fecha = new Date(cotizacion.created_at).toLocaleDateString('es-CL');
-                const total = window.categorias ? window.categorias.formatearPrecio(cotizacion.total_proyecto || 0) : (cotizacion.total_proyecto || 0);
+                const total = window.categorias ? window.categorias.formatearPrecio(cotizacion.total_proyecto || cotizacion.total || 0) : (cotizacion.total_proyecto || 0);
                 
                 html += `
-                    <div class="card cotizacion-item" style="margin-bottom: 15px;">
+                    <div class="card cotizacion-item" style="margin-bottom: 15px;" data-id="${cotizacion.id}">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="flex: 1;">
                                 <h4 style="color: var(--color-primary); margin-bottom: 5px;">
-                                    ${cotizacion.nombre_proyecto || 'Sin nombre'}
+                                    <a href="detalle.html?id=${cotizacion.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
                                 </h4>
                                 <p style="margin: 5px 0; color: #666;">
-                                    <strong>Cliente:</strong> ${cotizacion.cliente || 'N/A'} | 
+                                    <strong>Cliente:</strong> ${escapeHtml(clienteNombre)} | 
                                     <strong>Fecha:</strong> ${fecha}
                                 </p>
                                 <p style="margin: 5px 0; color: #666;">
@@ -168,17 +177,17 @@
                                 </p>
                             </div>
                             <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-secondary" onclick="verDetalle('${cotizacion.id || cotizacion.id}')">
+                                <button class="btn btn-secondary" onclick="verDetalle('${cotizacion.id}')">
                                     👁️ Ver
                                 </button>
-                                <button class="btn btn-secondary" onclick="editarCotizacion('${cotizacion.id || cotizacion.id}')">
+                                <button class="btn btn-secondary" onclick="editarCotizacion('${cotizacion.id}')">
                                     ✏️ Editar
                                 </button>
-                                <button class="btn" onclick="duplicarCotizacion('${cotizacion.id || cotizacion.id}')" 
+                                <button class="btn" onclick="duplicarCotizacion('${cotizacion.id}')" 
                                         style="background: var(--color-warning);">
                                     📋 Duplicar
                                 </button>
-                                <button class="btn" onclick="eliminarCotizacion('${cotizacion.id || cotizacion.id}')" 
+                                <button class="btn" onclick="eliminarCotizacion('${cotizacion.id}', this)" 
                                         style="background: var(--color-error);">
                                     🗑️ Eliminar
                                 </button>
@@ -199,8 +208,8 @@
                 cotizacionesFiltradas = [...cotizacionesData];
             } else {
                 cotizacionesFiltradas = cotizacionesData.filter(cotizacion => {
-                    const proyecto = (cotizacion.nombre_proyecto || '').toLowerCase();
-                    const cliente = (cotizacion.cliente || '').toLowerCase();
+                    const proyecto = ((cotizacion.nombre_proyecto || cotizacion.project_key) || (cotizacion.data && cotizacion.data.cliente && (cotizacion.data.cliente.nombre_proyecto || cotizacion.data.cliente.nombre)) || '').toLowerCase();
+                    const cliente = (cotizacion.cliente || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente.nombre) || '').toLowerCase();
                     const notas = (cotizacion.notas || '').toLowerCase();
                     
                     return proyecto.includes(filtro) || 
@@ -223,13 +232,13 @@
                     case 'fecha_desc':
                         return new Date(b.created_at) - new Date(a.created_at);
                     case 'cliente_asc':
-                        return (a.cliente || '').localeCompare(b.cliente || '');
+                        return ((a.cliente || (a.data && a.data.cliente && a.data.cliente.nombre) || '')).localeCompare((b.cliente || (b.data && b.data.cliente && b.data.cliente.nombre) || ''));
                     case 'cliente_desc':
-                        return (b.cliente || '').localeCompare(a.cliente || '');
+                        return ((b.cliente || (b.data && b.data.cliente && b.data.cliente.nombre) || '')).localeCompare((a.cliente || (a.data && a.data.cliente && a.data.cliente.nombre) || ''));
                     case 'total_asc':
-                        return (a.total_proyecto || 0) - (b.total_proyecto || 0);
+                        return (a.total_proyecto || a.total || 0) - (b.total_proyecto || b.total || 0);
                     case 'total_desc':
-                        return (b.total_proyecto || 0) - (a.total_proyecto || 0);
+                        return (b.total_proyecto || b.total || 0) - (a.total_proyecto || a.total || 0);
                     default:
                         return new Date(b.created_at) - new Date(a.created_at);
                 }
@@ -255,8 +264,8 @@
             // TODO: Implementar duplicación
         }
 
-        // Eliminar cotización
-        async function eliminarCotizacion(id) {
+        // Eliminar cotización (el segundo parámetro es el botón para poder eliminar DOM sin recargar)
+        async function eliminarCotizacion(id, btnEl) {
             if (!confirm('¿Está seguro de que desea eliminar esta cotización? Esta acción no se puede deshacer.')) {
                 return;
             }
@@ -266,7 +275,13 @@
                 
                 if (resultado.success) {
                     window.utils.mostrarNotificacion('Cotización eliminada exitosamente', 'success');
-                    cargarCotizaciones(); // Recargar lista
+                    // Opción 1: recargar la lista completa
+                    cargarCotizaciones();
+                    // Opción 2 (opcional): eliminar nodo DOM directamente para respuesta instantánea
+                    try {
+                        const card = btnEl.closest('.cotizacion-item');
+                        if (card) card.remove();
+                    } catch (e) { /* ignore */ }
                 } else {
                     throw new Error(resultado.error);
                 }
@@ -275,6 +290,14 @@
                 console.error('Error al eliminar cotización:', error);
                 window.utils.mostrarNotificacion('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
             }
+        }
+
+        // escapeHtml para proteger la inyección de HTML
+        function escapeHtml(str) {
+            if (str === undefined || str === null) return '';
+            return String(str).replace(/[&<>"']/g, function (m) {
+                return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m];
+            });
         }
     </script>
 </body>
