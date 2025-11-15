@@ -1,28 +1,50 @@
-// ===== CONFIGURACIÓN SUPABASE =====
+// ===== CONFIGURACIÓN SUPABASE (modificado para exponer cliente global y despachar evento) =====
+
 // Configuración del cliente Supabase
 const SUPABASE_URL = 'https://qwbeectinjasekkjzxls.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
 
-// Cliente Supabase (se cargará dinámicamente)
 let supabase = null;
 
-// Función para inicializar Supabase
+// Inicializa la librería y crea el client; expone window.supabase y window.globalSupabase.client
 async function initSupabase() {
     try {
-        // Cargar la librería de Supabase desde CDN
-        if (!window.supabase) {
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-            document.head.appendChild(script);
-            
-            await new Promise((resolve) => {
-                script.onload = resolve;
+        // Si ya inicializó y es cliente, retornarlo
+        if (supabase && typeof supabase.from === 'function') {
+            // también aseguramos que esté en globals
+            window.supabase = supabase;
+            window.globalSupabase = window.globalSupabase || {};
+            window.globalSupabase.client = supabase;
+            return true;
+        }
+
+        // Si la librería no está cargada en window.supabase (manager de CDN), cargarla
+        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+            // cargamos la versión UMD de supabase-js que crea window.supabase
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+                s.async = false; // mantener ejecución ordenada
+                s.onload = () => resolve();
+                s.onerror = (e) => reject(new Error('No se pudo cargar supabase-js: ' + e));
+                document.head.appendChild(s);
             });
         }
 
-        // Inicializar el cliente
+        // Aquí window.supabase es la librería; creamos el cliente real
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        console.log('Supabase inicializado correctamente');
+
+        // Exponer el cliente en globals para compatibilidad con wizard y otros scripts
+        window.supabase = supabase; // cliente en window.supabase (método .from disponible)
+        window.globalSupabase = window.globalSupabase || {};
+        window.globalSupabase.client = supabase;
+
+        // Opcional: despachar evento para quien lo escuche
+        try {
+            window.dispatchEvent(new Event('supabase:ready'));
+        } catch (e) { /* no crítico */ }
+
+        console.log('Supabase inicializado correctamente y expuesto en window.supabase');
         return true;
     } catch (error) {
         console.error('Error al inicializar Supabase:', error);
@@ -31,12 +53,12 @@ async function initSupabase() {
 }
 
 // ===== FUNCIONES DE COTIZACIONES =====
-
-// Guardar cotización en Supabase
+// (Mantengo tus funciones expuestas, pero usan la variable supabase que ahora se inicializa)
 async function guardarCotizacion(datosCompletos) {
     try {
-        if (!supabase) {
-            await initSupabase();
+        if (!supabase || typeof supabase.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
         }
 
         const { data, error } = await supabase
@@ -47,52 +69,41 @@ async function guardarCotizacion(datosCompletos) {
                 direccion: datosCompletos.cliente.direccion,
                 encargado: datosCompletos.cliente.encargado,
                 notas: datosCompletos.cliente.notas,
-                
-                // Materiales (almacenar como JSON)
                 quincalleria: JSON.stringify(datosCompletos.materiales.quincalleria || {}),
                 tableros: JSON.stringify(datosCompletos.materiales.tableros || {}),
                 tapacantos: JSON.stringify(datosCompletos.materiales.tapacantos || {}),
                 corte: JSON.stringify(datosCompletos.materiales.corte || {}),
                 madera: JSON.stringify(datosCompletos.materiales.madera || {}),
                 led: JSON.stringify(datosCompletos.materiales.led || {}),
-                
-                // Valores traspasados
                 fierro: datosCompletos.valoresTraspasados.fierro || 0,
                 cuarzo: datosCompletos.valoresTraspasados.cuarzo || 0,
                 ventanas: datosCompletos.valoresTraspasados.ventanas || 0,
                 transporte: datosCompletos.valoresTraspasados.transporte || 0,
                 almuerzo: datosCompletos.valoresTraspasados.almuerzo || 0,
                 extras: JSON.stringify(datosCompletos.valoresTraspasados.extras || {}),
-                
-                // Totales
                 total_materiales: datosCompletos.totales.totalMateriales,
                 factor: datosCompletos.totales.factor,
                 total_neto: datosCompletos.totales.totalNeto,
                 iva: datosCompletos.totales.iva,
                 total_proyecto: datosCompletos.totales.totalProyecto,
                 ganancia: datosCompletos.totales.ganancia,
-                
                 created_at: new Date().toISOString()
             }]);
 
-        if (error) {
-            throw error;
-        }
-
+        if (error) throw error;
         console.log('Cotización guardada exitosamente:', data);
         return { success: true, data };
-        
     } catch (error) {
         console.error('Error al guardar cotización:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || String(error) };
     }
 }
 
-// Obtener todas las cotizaciones
 async function obtenerCotizaciones() {
     try {
-        if (!supabase) {
-            await initSupabase();
+        if (!supabase || typeof supabase.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
         }
 
         const { data, error } = await supabase
@@ -100,23 +111,19 @@ async function obtenerCotizaciones() {
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (error) {
-            throw error;
-        }
-
+        if (error) throw error;
         return { success: true, data };
-        
     } catch (error) {
         console.error('Error al obtener cotizaciones:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || String(error) };
     }
 }
 
-// Obtener cotización por ID
 async function obtenerCotizacionPorId(id) {
     try {
-        if (!supabase) {
-            await initSupabase();
+        if (!supabase || typeof supabase.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
         }
 
         const { data, error } = await supabase
@@ -125,23 +132,19 @@ async function obtenerCotizacionPorId(id) {
             .eq('id', id)
             .single();
 
-        if (error) {
-            throw error;
-        }
-
+        if (error) throw error;
         return { success: true, data };
-        
     } catch (error) {
         console.error('Error al obtener cotización:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || String(error) };
     }
 }
 
-// Actualizar cotización
 async function actualizarCotizacion(id, datosActualizados) {
     try {
-        if (!supabase) {
-            await initSupabase();
+        if (!supabase || typeof supabase.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
         }
 
         const { data, error } = await supabase
@@ -149,23 +152,19 @@ async function actualizarCotizacion(id, datosActualizados) {
             .update(datosActualizados)
             .eq('id', id);
 
-        if (error) {
-            throw error;
-        }
-
+        if (error) throw error;
         return { success: true, data };
-        
     } catch (error) {
         console.error('Error al actualizar cotización:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || String(error) };
     }
 }
 
-// Eliminar cotización
 async function eliminarCotizacion(id) {
     try {
-        if (!supabase) {
-            await initSupabase();
+        if (!supabase || typeof supabase.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
         }
 
         const { data, error } = await supabase
@@ -173,26 +172,19 @@ async function eliminarCotizacion(id) {
             .delete()
             .eq('id', id);
 
-        if (error) {
-            throw error;
-        }
-
+        if (error) throw error;
         return { success: true, data };
-        
     } catch (error) {
         console.error('Error al eliminar cotización:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error.message || String(error) };
     }
 }
 
-// ===== FUNCIONES DE UTILIDAD =====
-
-// Mostrar notificación
+// ===== UTILIDADES =====
 function mostrarNotificacion(mensaje, tipo = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification notification-${tipo}`;
     notification.textContent = mensaje;
-    
     notification.style.cssText = `
         position: fixed;
         top: 20px;
@@ -205,52 +197,29 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
         transition: all 0.3s ease;
         transform: translateX(100%);
     `;
-    
     switch(tipo) {
-        case 'success':
-            notification.style.background = '#4caf50';
-            break;
-        case 'error':
-            notification.style.background = '#f44336';
-            break;
-        case 'warning':
-            notification.style.background = '#ff9800';
-            break;
-        default:
-            notification.style.background = '#2196f3';
+        case 'success': notification.style.background = '#4caf50'; break;
+        case 'error': notification.style.background = '#f44336'; break;
+        case 'warning': notification.style.background = '#ff9800'; break;
+        default: notification.style.background = '#2196f3';
     }
-    
     document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.transform = 'translateX(0)';
-    }, 100);
-    
+    setTimeout(() => { notification.style.transform = 'translateX(0)'; }, 100);
     setTimeout(() => {
         notification.style.transform = 'translateX(100%)';
-        setTimeout(() => {
-            document.body.removeChild(notification);
-        }, 300);
+        setTimeout(() => { try { document.body.removeChild(notification); } catch(e){} }, 300);
     }, 3000);
 }
 
-// Validar conexión a Supabase
 async function validarConexionSupabase() {
     try {
-        if (!supabase) {
-            await initSupabase();
+        if (!supabase || typeof supabase.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) return false;
         }
-        
-        // Hacer una consulta simple para validar la conexión
-        const { data, error } = await supabase
-            .from('cotizaciones')
-            .select('count', { count: 'exact' })
-            .limit(1);
-            
-        if (error && error.code !== 'PGRST116') { // PGRST116 es "tabla no encontrada"
-            throw error;
-        }
-        
+        // simple ping: listar 1 row (no crítico si tabla no existe)
+        const { error } = await supabase.from('cotizaciones').select('id').limit(1);
+        if (error && error.code !== 'PGRST116') throw error;
         return true;
     } catch (error) {
         console.error('Error de conexión con Supabase:', error);
@@ -258,7 +227,7 @@ async function validarConexionSupabase() {
     }
 }
 
-// Exportar funciones para uso global
+// Exponer funciones globalmente
 window.supabaseClient = {
     init: initSupabase,
     guardarCotizacion,
@@ -272,5 +241,3 @@ window.supabaseClient = {
 window.utils = {
     mostrarNotificacion
 };
-
-
