@@ -1706,29 +1706,55 @@ class WizardCotizacion {
 let bytWizard = null;
 
 function anteriorPaso() {
-    // Intentar varias fuentes seguras de instancia
-    const candidates = [
-        window.bytWizard,
-        window.wizard,
-        window.__bytWizardProxy
-    ];
+    // Candidates in preferred order
+    const candidates = [window.bytWizard, window.wizard, window.__bytWizardProxy];
     for (const inst of candidates) {
-        if (inst && typeof inst.anteriorPaso === 'function') {
-            try { return inst.anteriorPaso(); } catch (e) { console.error('Error calling anteriorPaso on instance', e); }
+        if (!inst) continue;
+        // If method exists use it
+        if (typeof inst.anteriorPaso === 'function') {
+            try { return inst.anteriorPaso(); } catch (e) { console.error('Error calling anteriorPaso on instance', e); return; }
+        }
+        // Fallback: if mostrarPaso exists and pasoActual is numeric, decrement and call mostrarPaso
+        if (typeof inst.mostrarPaso === 'function' && typeof inst.pasoActual !== 'undefined') {
+            try {
+                inst.pasoActual = Math.max(1, Number(inst.pasoActual || 1) - 1);
+                if (typeof inst.actualizarProgreso === 'function') try { inst.actualizarProgreso(); } catch (_) {}
+                return inst.mostrarPaso(inst.pasoActual);
+            } catch (e) {
+                console.error('Fallback anteriorPaso error', e);
+                return;
+            }
+        }
+        // Last resort: mutate pasoActual if available
+        if (typeof inst.pasoActual !== 'undefined') {
+            try { inst.pasoActual = Math.max(1, Number(inst.pasoActual || 1) - 1); return; } catch (e) {}
         }
     }
     console.error('Wizard instance not available for anteriorPaso. bytWizard:', window.bytWizard, 'wizard:', window.wizard);
 }
 
 function siguientePaso() {
-    const candidates = [
-        window.bytWizard,
-        window.wizard,
-        window.__bytWizardProxy
-    ];
+    const candidates = [window.bytWizard, window.wizard, window.__bytWizardProxy];
     for (const inst of candidates) {
-        if (inst && typeof inst.siguientePaso === 'function') {
-            try { return inst.siguientePaso(); } catch (e) { console.error('Error calling siguientePaso on instance', e); }
+        if (!inst) continue;
+        if (typeof inst.siguientePaso === 'function') {
+            try { return inst.siguientePaso(); } catch (e) { console.error('Error calling siguientePaso on instance', e); return; }
+        }
+        // Fallback: if mostrarPaso exists and pasoActual is numeric, increment and call mostrarPaso
+        if (typeof inst.mostrarPaso === 'function' && typeof inst.pasoActual !== 'undefined') {
+            try {
+                const max = (typeof inst.totalPasos === 'number' && inst.totalPasos > 0) ? inst.totalPasos : 999;
+                inst.pasoActual = Math.min(max, Number(inst.pasoActual || 1) + 1);
+                if (typeof inst.actualizarProgreso === 'function') try { inst.actualizarProgreso(); } catch (_) {}
+                return inst.mostrarPaso(inst.pasoActual);
+            } catch (e) {
+                console.error('Fallback siguientePaso error', e);
+                return;
+            }
+        }
+        // Last resort: mutate pasoActual if available
+        if (typeof inst.pasoActual !== 'undefined') {
+            try { inst.pasoActual = Number(inst.pasoActual || 1) + 1; return; } catch (e) {}
         }
     }
     console.error('Wizard instance not available for siguientePaso. bytWizard:', window.bytWizard, 'wizard:', window.wizard);
