@@ -13,7 +13,7 @@ const LS_KEY_URL = 'byt_supabase_url';
 const LS_KEY_KEY = 'byt_supabase_anon_key';
 
 // IMPORTANT: GitHub Pages path to the JSON in your repo root
-const SERVER_CONFIG_URL = '/BYT_SOFTWARE/supabase-config.json';
+const SERVER_CONFIG_URL = 'https://raw.githubusercontent.com/bosqueytierra/BYT-SOFTWARE/main/BYT_SOFTWARE/supabase-config.json';
 
 // Poll interval ms to check for remote config changes (set to 0 to disable)
 const CONFIG_POLL_INTERVAL_MS = 30 * 1000; // 30s
