@@ -12,14 +12,24 @@
     input[type=text]{width:100%;box-sizing:border-box;padding:6px}
     button{padding:6px 10px;margin-right:6px}
     .actions{display:flex;gap:6px}
+    .banner{padding:12px;border-radius:6px;margin:10px 0}
+    .banner.warning{background:#fff3cd;border:1px solid #ffeeba;color:#856404}
+    .banner.error{background:#f8d7da;border:1px solid #f5c6cb;color:#721c24}
+    .muted{color:#777;font-size:13px}
+    .small{font-size:13px}
   </style>
 </head>
 <body>
   <h2>Configuración — Proveedores</h2>
+
+  <div id="banner-container" aria-live="polite"></div>
+
   <div>
     <button id="btnNew">+ Nuevo Proveedor</button>
     <button id="btnReload">Recargar</button>
+    <button id="btnDemo" title="Cargar modo demo/local" style="display:none">Activar Modo Demo</button>
   </div>
+
   <table id="providersTable" aria-label="Proveedores">
     <thead>
       <tr>
@@ -35,103 +45,265 @@
   </table>
 
   <script type="module">
-    import { listProviders, createProvider, updateProvider, deleteProvider } from '../../lib/providersApi.js';
+    // providers page with graceful handling when supabase is not initialized.
+    import * as apiModule from '../../lib/providersApi.js';
 
     const tbody = document.querySelector('#providersTable tbody');
     const btnNew = document.getElementById('btnNew');
     const btnReload = document.getElementById('btnReload');
+    const btnDemo = document.getElementById('btnDemo');
+    const bannerContainer = document.getElementById('banner-container');
 
-    async function loadAdminProviders() {
+    // Demo/local mode (uses localStorage)
+    const DEMO_KEY = 'byt_demo_providers_v1';
+
+    function escapeHtml(s) {
+      if (s === undefined || s === null) return '';
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+    }
+
+    function showBanner(message, kind = 'warning') {
+      bannerContainer.innerHTML = `<div class="banner ${kind}">${escapeHtml(message)}</div>`;
+    }
+
+    function clearBanner() {
+      bannerContainer.innerHTML = '';
+    }
+
+    async function loadAdminProviders({ forceDemo = false } = {}) {
       tbody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
-      const { data, error } = await listProviders({ onlyActive: false });
-      if (error) {
-        tbody.innerHTML = `<tr><td colspan="6">Error: ${error.message || JSON.stringify(error)}</td></tr>`;
-        return;
-      }
-      if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6">No hay proveedores</td></tr>';
+
+      if (forceDemo || isDemoMode()) {
+        loadDemoDataToTable();
         return;
       }
 
+      try {
+        const { listProviders } = apiModule;
+        const { data, error } = await listProviders({ onlyActive: false });
+        if (error) {
+          // handle no-supabase specifically
+          if (error && (error.message === 'no-supabase' || error === 'no-supabase')) {
+            showBanner('No hay cliente de persistencia disponible (Supabase). Puedes activar el <strong>Modo Demo</strong> para operar localmente o configurar el cliente Supabase en la app.', 'error');
+            btnDemo.style.display = 'inline-block';
+            tbody.innerHTML = `<tr><td colspan="6" class="muted">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
+            return;
+          }
+          tbody.innerHTML = `<tr><td colspan="6" style="color:darkred">Error: ${escapeHtml(error.message || JSON.stringify(error))}</td></tr>`;
+          console.error('listProviders error', error);
+          return;
+        }
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6">No hay proveedores</td></tr>';
+          return;
+        }
+        clearBanner();
+        btnDemo.style.display = 'none';
+        renderProviders(data);
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color:darkred">Error inesperado: ${escapeHtml(e.message || String(e))}</td></tr>`;
+        console.error('loadAdminProviders unexpected', e);
+      }
+    }
+
+    function renderProviders(list) {
       tbody.innerHTML = '';
-      data.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.dataset.id = p.id || '';
-        tr.innerHTML = `
-          <td><input class="prov-name" data-id="${p.id||''}" value="${(p.name||'')}" /></td>
-          <td><input class="prov-web"  data-id="${p.id||''}" value="${(p.website||'')}" /></td>
-          <td><input class="prov-phone" data-id="${p.id||''}" value="${(p.phone||'')}" /></td>
-          <td style="text-align:center;">
-            <input type="checkbox" class="prov-active" data-id="${p.id||''}" ${p.active ? 'checked' : ''} />
-          </td>
-          <td>${p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
-          <td class="actions">
-            <button class="saveProv" data-id="${p.id||''}">Guardar</button>
-            <button class="toggleProv" data-id="${p.id||''}">${p.active ? 'Desactivar' : 'Activar'}</button>
-            <button class="hardDeleteProv" data-id="${p.id||''}">Eliminar</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
+      list.forEach(p => {
+        appendRowForProvider(p);
       });
+      attachRowEvents();
+    }
 
-      // attach events
+    function appendRowForProvider(p) {
+      const tr = document.createElement('tr');
+      tr.dataset.id = p.id || '';
+      tr.innerHTML = `
+        <td><input class="prov-name" data-id="${escapeHtml(p.id||'')}" value="${escapeHtml(p.name||'')}" /></td>
+        <td><input class="prov-web" data-id="${escapeHtml(p.id||'')}" value="${escapeHtml(p.website||'')}" /></td>
+        <td><input class="prov-phone" data-id="${escapeHtml(p.id||'')}" value="${escapeHtml(p.phone||'')}" /></td>
+        <td style="text-align:center;"><input type="checkbox" class="prov-active" data-id="${escapeHtml(p.id||'')}" ${p.active ? 'checked' : ''} /></td>
+        <td>${p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
+        <td class="actions">
+          <button class="saveProv" data-id="${escapeHtml(p.id||'')}">Guardar</button>
+          <button class="toggleProv" data-id="${escapeHtml(p.id||'')}">${p.active ? 'Desactivar' : 'Activar'}</button>
+          <button class="hardDeleteProv" data-id="${escapeHtml(p.id||'')}">Eliminar</button>
+        </td>`;
+      tbody.appendChild(tr);
+    }
+
+    function attachRowEvents() {
       document.querySelectorAll('.saveProv').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.onclick = async (ev) => {
           const id = btn.dataset.id;
           const row = btn.closest('tr');
-          const payload = {
-            name: row.querySelector('.prov-name').value.trim(),
-            website: row.querySelector('.prov-web').value.trim(),
-            phone: row.querySelector('.prov-phone').value.trim(),
-            active: !!row.querySelector('.prov-active').checked
-          };
-          const res = await updateProvider(id, payload);
-          if (res.error) return alert('Error guardando: ' + (res.error.message||JSON.stringify(res.error)));
-          alert('Guardado');
-          await reloadAll();
-        });
+          const name = row.querySelector('.prov-name').value.trim();
+          const website = row.querySelector('.prov-web').value.trim();
+          const phone = row.querySelector('.prov-phone').value.trim();
+          if (isDemoMode()) {
+            updateDemoProvider(id, { name, website, phone, active: row.querySelector('.prov-active').checked });
+            await loadAdminProviders({ forceDemo: true });
+            return;
+          }
+          try {
+            const res = await apiModule.updateProvider(id, { name, website, phone });
+            if (res.error) {
+              alert('Error actualizando proveedor: ' + (res.error.message || JSON.stringify(res.error)));
+              return;
+            }
+            await loadAdminProviders();
+          } catch (err) {
+            console.error('updateProvider error', err);
+            alert('Error actualizando proveedor: ' + (err.message || err));
+          }
+        };
       });
 
       document.querySelectorAll('.toggleProv').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.onclick = async () => {
           const id = btn.dataset.id;
           const row = btn.closest('tr');
-          const current = !!row.querySelector('.prov-active').checked;
-          const res = await updateProvider(id, { active: !current });
-          if (res.error) return alert('Error: ' + (res.error.message||JSON.stringify(res.error)));
-          await reloadAll();
-        });
+          const activeCheckbox = row.querySelector('.prov-active');
+          const newActive = !activeCheckbox.checked;
+          if (isDemoMode()) {
+            updateDemoProvider(id, { active: newActive });
+            await loadAdminProviders({ forceDemo: true });
+            return;
+          }
+          try {
+            await apiModule.updateProvider(id, { active: newActive });
+            await loadAdminProviders();
+          } catch (err) {
+            console.error('toggleProvider error', err);
+            alert('Error activando/desactivando proveedor: ' + (err.message || err));
+          }
+        };
       });
 
       document.querySelectorAll('.hardDeleteProv').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          if (!confirm('Eliminar proveedor permanentemente?')) return;
+        btn.onclick = async () => {
+          if (!confirm('¿Eliminar este proveedor?')) return;
           const id = btn.dataset.id;
-          const res = await deleteProvider(id, { soft: false });
-          if (res.error) return alert('Error al eliminar: ' + (res.error.message||JSON.stringify(res.error)));
-          await reloadAll();
-        });
+          if (isDemoMode()) {
+            deleteDemoProvider(id);
+            await loadAdminProviders({ forceDemo: true });
+            return;
+          }
+          try {
+            await apiModule.deleteProvider(id, { soft: true });
+            await loadAdminProviders();
+          } catch (err) {
+            console.error('deleteProvider error', err);
+            alert('Error eliminando proveedor: ' + (err.message || err));
+          }
+        };
       });
     }
 
-    async function reloadAll() {
-      await loadAdminProviders();
-      // avisar al wizard (si está abierto en otra pestaña o en la misma)
-      try { if (window.wizard && typeof window.wizard.loadProviders === 'function') await window.wizard.loadProviders(); } catch(e){ console.warn(e); }
-    }
-
+    // New provider handler (works in demo or real)
     btnNew.addEventListener('click', async () => {
-      const name = prompt('Nombre del nuevo proveedor:');
+      const name = prompt('Nombre proveedor:');
       if (!name) return;
-      const res = await createProvider({ name });
-      if (res.error) return alert('Error creando: ' + (res.error.message||JSON.stringify(res.error)));
-      await reloadAll();
+      if (isDemoMode()) {
+        createDemoProvider({ name, active: true });
+        await loadAdminProviders({ forceDemo: true });
+        return;
+      }
+      try {
+        const res = await apiModule.createProvider({ name, active: true });
+        if (res.error) {
+          alert('Error creando proveedor: ' + (res.error.message || JSON.stringify(res.error)));
+          return;
+        }
+        await loadAdminProviders();
+      } catch (err) {
+        console.error('createProvider error', err);
+        alert('Error creando proveedor: ' + (err.message || err));
+      }
     });
 
-    btnReload.addEventListener('click', reloadAll);
+    // Reload
+    btnReload.addEventListener('click', () => loadAdminProviders());
 
-    // inicial
-    loadAdminProviders();
+    // Demo mode helpers
+    function isDemoMode() {
+      return localStorage.getItem(DEMO_KEY + ':mode') === '1';
+    }
+
+    function activateDemoMode() {
+      localStorage.setItem(DEMO_KEY + ':mode', '1');
+      if (!localStorage.getItem(DEMO_KEY)) {
+        const seed = [
+          { id: 'demo-1', name: 'Demo Proveedor A', website: 'https://demo.a', phone: '1234', active: true, created_at: new Date().toISOString() },
+          { id: 'demo-2', name: 'Demo Proveedor B', website: '', phone: '', active: false, created_at: new Date().toISOString() }
+        ];
+        localStorage.setItem(DEMO_KEY, JSON.stringify(seed));
+      }
+    }
+
+    function deactivateDemoMode() {
+      localStorage.removeItem(DEMO_KEY + ':mode');
+    }
+
+    function loadDemoDataToTable() {
+      const raw = localStorage.getItem(DEMO_KEY);
+      let data = [];
+      try { data = raw ? JSON.parse(raw) : []; } catch (e) { data = []; }
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">Modo Demo activo: no hay proveedores</td></tr>';
+        return;
+      }
+      renderProviders(data);
+      showBanner('Modo Demo activo — los cambios se guardan en localStorage (no se sincronizan con Supabase).', 'warning');
+      btnDemo.style.display = 'inline-block';
+      btnDemo.textContent = 'Desactivar Modo Demo';
+      attachRowEvents();
+    }
+
+    function createDemoProvider(payload) {
+      const raw = localStorage.getItem(DEMO_KEY);
+      let data = raw ? JSON.parse(raw) : [];
+      const id = 'demo-' + Date.now();
+      const item = { id, name: payload.name || '', website: payload.website || '', phone: payload.phone || '', active: payload.active ?? true, created_at: new Date().toISOString() };
+      data.unshift(item);
+      localStorage.setItem(DEMO_KEY, JSON.stringify(data));
+    }
+
+    function updateDemoProvider(id, payload) {
+      const raw = localStorage.getItem(DEMO_KEY);
+      let data = raw ? JSON.parse(raw) : [];
+      data = data.map(d => d.id === id ? { ...d, ...payload } : d);
+      localStorage.setItem(DEMO_KEY, JSON.stringify(data));
+    }
+
+    function deleteDemoProvider(id) {
+      const raw = localStorage.getItem(DEMO_KEY);
+      let data = raw ? JSON.parse(raw) : [];
+      data = data.filter(d => d.id !== id);
+      localStorage.setItem(DEMO_KEY, JSON.stringify(data));
+    }
+
+    // Demo button toggles demo mode
+    btnDemo.addEventListener('click', async () => {
+      if (isDemoMode()) {
+        deactivateDemoMode();
+        btnDemo.style.display = 'none';
+        clearBanner();
+        await loadAdminProviders();
+      } else {
+        activateDemoMode();
+        await loadAdminProviders({ forceDemo: true });
+      }
+    });
+
+    // Initial load: attempt to show providers; if no supabase, provide Demo button
+    (async () => {
+      // If module provides a helpful flag, show it. We try to call listProviders and handle no-supabase.
+      await loadAdminProviders();
+
+      // If after load we have 'no-supabase' banner, show Demo button prominently
+      // (btnDemo display handled by loadAdminProviders)
+    })();
+
   </script>
 </body>
 </html>
