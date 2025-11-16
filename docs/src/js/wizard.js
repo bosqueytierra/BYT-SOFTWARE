@@ -349,10 +349,10 @@ class WizardCotizacion {
             const currentSelect = document.querySelector(`select.lugar-select[data-current="${this.escapeAttr(valueStr)}"]`);
             if (!currentSelect) {
                 // actualizamos data-current del select que disparó el cambio (si se puede identificar)
-                // try to find the select by materialId stored in dataset (if present)
                 const byMaterial = document.querySelector(`select.lugar-select[data-material-id="${this.escapeAttr(materialId)}"]`);
                 if (byMaterial) {
                     byMaterial.setAttribute('data-current', valueStr);
+                    try { byMaterial.value = valueStr; } catch (e) {}
                 }
                 this.fillProviderSelects();
             } else {
@@ -634,7 +634,7 @@ class WizardCotizacion {
 
                 ${categoria === 'otras_compras' ? `
                 <div style="margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary" onclick="wizard.agregarMaterial('${categoria}')">
+                    <button type="button" class="btn btn-secondary" onclick="window.bytWizard.agregarMaterial('${categoria}')">
                         + Agregar Material Extra
                     </button>
                 </div>` : ''}
@@ -667,20 +667,20 @@ class WizardCotizacion {
                     <td>
                         <input type="text" class="form-control" value="${this.escapeAttr(material.descripcion || '')}" 
                                placeholder="Descripción opcional..."
-                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
+                               onchange="window.bytWizard.actualizarMaterial('${categoria}', '${materialId}', 'descripcion', this.value)">
                     </td>
                     <td>
-                        <select class="form-control lugar-select" data-material-id="${this.escapeAttr(materialId)}" data-current="${this.escapeAttr(material.lugar_id ?? material.lugar ?? '')}" onchange="wizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
+                        <select class="form-control lugar-select" data-material-id="${this.escapeAttr(materialId)}" data-current="${this.escapeAttr(material.lugar_id ?? material.lugar ?? '')}" onchange="window.bytWizard.onProveedorChange('${categoria}', '${materialId}', this.value)">
                             <option value="">-- Selecciona proveedor --</option>
                         </select>
                     </td>
                     <td>
                         <input type="number" class="form-control" value="${Number(material.cantidad || 0)}" 
-                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'cantidad', this.value)">
+                               onchange="window.bytWizard.actualizarMaterial('${categoria}', '${materialId}', 'cantidad', this.value)">
                     </td>
                     <td>
                         <input type="number" class="form-control" value="${Number(material.precio || 0)}" 
-                               onchange="wizard.actualizarMaterial('${categoria}', '${materialId}', 'precio', this.value)">
+                               onchange="window.bytWizard.actualizarMaterial('${categoria}', '${materialId}', 'precio', this.value)">
                     </td>
                     <td style="font-weight: bold;">$${(((material.cantidad || 0) * (material.precio || 0)) || 0).toLocaleString()}</td>
                 </tr>
@@ -760,7 +760,7 @@ class WizardCotizacion {
                         </h4>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <label>Factor:</label>
-                            <select class="form-control" style="width: 80px;" onchange="wizard.actualizarFactorTraspasado('${key}', this.value)">
+                            <select class="form-control" style="width: 80px;" onchange="window.bytWizard.actualizarFactorTraspasado('${key}', this.value)">
                                 ${this.generarOpcionesFactor(categoria.factor)}
                             </select>
                         </div>
@@ -789,18 +789,18 @@ class WizardCotizacion {
                         <td>${this.escapeHtml(material.nombre)}</td>
                         <td>${this.escapeHtml(material.descripcion || '')}</td>
                         <td>
-                            <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar_id ?? material.lugar ?? '')}" data-material-id="${this.escapeAttr(materialKey)}" onchange="wizard.onProveedorChangeTraspasado('${key}', '${materialKey}', this.value)" style="width: 120px; font-size: 12px;">
+                            <select class="form-control lugar-select" data-current="${this.escapeAttr(material.lugar_id ?? material.lugar ?? '')}" data-material-id="${this.escapeAttr(materialKey)}" onchange="window.bytWizard.onProveedorChangeTraspasado('${key}', '${materialKey}', this.value)" style="width: 120px; font-size: 12px;">
                                 <option value="">-- Selecciona proveedor --</option>
                             </select>
                         </td>
                         <td>
                             <input type="number" class="form-control" value="${Number(material.cantidad || 0)}" 
-                                   onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'cantidad', this.value)" 
+                                   onchange="window.bytWizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'cantidad', this.value)" 
                                    style="width: 80px;">
                         </td>
                         <td>
                             <input type="number" class="form-control" value="${Number(material.precio || 0)}" 
-                                   onchange="wizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'precio', this.value)" 
+                                   onchange="window.bytWizard.actualizarMaterialTraspasado('${key}', '${materialKey}', 'precio', this.value)" 
                                    style="width: 100px;">
                         </td>
                         <td style="font-weight: bold;">$${total.toLocaleString()}</td>
@@ -881,7 +881,7 @@ class WizardCotizacion {
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <input type="number" class="form-control" id="factor_general" 
                                value="${this.datos.factorGeneral}" step="0.1" min="1" max="3"
-                               onchange="wizard.actualizarFactor(this.value)" style="width: 120px;">
+                               onchange="window.bytWizard.actualizarFactor(this.value)" style="width: 120px;">
                         <span style="color: #666;">(Ejemplo: 1.3 = 30% de ganancia)</span>
                     </div>
                 </div>
@@ -889,13 +889,13 @@ class WizardCotizacion {
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                     <h5>💡 Factores Sugeridos:</h5>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
-                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(2)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(2)">
                             2.0x (100%)
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(2.5)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(2.5)">
                             2.5x (150%)
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="wizard.establecerFactor(3)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(3)">
                             3.0x (200%)
                         </button>
                     </div>
@@ -1112,11 +1112,11 @@ class WizardCotizacion {
                 </div>
 
                 <div style="margin-top: 30px; text-align: center; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
-                    <button type="button" class="btn" onclick="wizard.saveCotizacionSupabase()" 
+                    <button type="button" class="btn" onclick="window.bytWizard.saveCotizacionSupabase()" 
                             style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, var(--color-primary), #245847);">
                         💾 Guardar Cotización Completa
                     </button>
-                    <button type="button" class="btn" onclick="wizard.imprimirCotizacion()" 
+                    <button type="button" class="btn" onclick="window.bytWizard.imprimirCotizacion()" 
                             style="padding: 15px 40px; font-size: 18px; background: linear-gradient(135deg, #2196F3, #1976D2); color: white;">
                         🖨️ Imprimir Cotización
                     </button>
@@ -1670,21 +1670,44 @@ class WizardCotizacion {
 }
 
 // ------------- Globals & init -------------
-let wizard = null;
+let bytWizard = null;
 
 function anteriorPaso() {
-    wizard?.anteriorPaso();
+    const inst = (window.bytWizard && typeof window.bytWizard.anteriorPaso === 'function') ? window.bytWizard
+               : (window.wizard && typeof window.wizard.anteriorPaso === 'function') ? window.wizard
+               : null;
+    if (inst) return inst.anteriorPaso();
+    console.error('Wizard instance not available for anteriorPaso. bytWizard:', window.bytWizard, 'wizard:', window.wizard);
 }
 
 function siguientePaso() {
-    wizard?.siguientePaso();
+    const inst = (window.bytWizard && typeof window.bytWizard.siguientePaso === 'function') ? window.bytWizard
+               : (window.wizard && typeof window.wizard.siguientePaso === 'function') ? window.wizard
+               : null;
+    if (inst) return inst.siguientePaso();
+    console.error('Wizard instance not available for siguientePaso. bytWizard:', window.bytWizard, 'wizard:', window.wizard);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     try {
-        wizard = new WizardCotizacion();
-        window.wizard = wizard;
-        console.log('WizardCotizacion inicializado');
+        bytWizard = new WizardCotizacion();
+        // Exponer explicitamente la instancia en window.bytWizard
+        window.bytWizard = bytWizard;
+        // Intentar también exponer en window.wizard SOLO si no hay un elemento DOM conflictivo
+        try {
+            const existing = Object.prototype.hasOwnProperty.call(window, 'wizard') ? window.wizard : undefined;
+            const isDOM = (existing && (existing instanceof HTMLElement || existing instanceof Node));
+            if (!isDOM) {
+                window.wizard = bytWizard;
+            } else {
+                // no sobreescribimos el elemento DOM; mantenemos window.bytWizard como la referencia segura
+                console.warn('No sobrescribiendo window.wizard porque existe un elemento DOM con ese nombre/id.');
+            }
+        } catch (e) {
+            // fallback: siempre aseguremos window.bytWizard
+            console.warn('No se pudo evaluar window.wizard, exponiendo solamente window.bytWizard');
+        }
+        console.log('WizardCotizacion inicializado (window.bytWizard)');
     } catch (e) {
         console.error('Error inicializando WizardCotizacion:', e);
     }
