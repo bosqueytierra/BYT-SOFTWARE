@@ -1,18 +1,19 @@
 // Supabase browser client initializer (módulo ESM)
-// - Exporta una binding nombrada `supabase` (live proxy) y también por defecto.
+// - Exporta una binding nombrada `supabase` (proxy inmediato) y también por defecto.
 // - Proporciona ensureSupabase() para inicialización asincrónica y getClient() para obtener el cliente actual.
 // - Reutiliza window.supabase / window.globalSupabase.client si ya existen.
 // - Si hay variables window.SUPABASE_URL y window.SUPABASE_ANON_KEY, intenta crear el cliente automáticamente
 //   mediante import dinámico de @supabase/supabase-js desde CDN (útil para entornos estáticos).
 //
-// Objetivo: evitar que imports como `import { supabase } from './supabaseBrowserClient.js'` devuelvan null,
-// y evitar el error "Cannot read properties of null (reading 'from')". Para conseguirlo exportamos un Proxy
-// con comportamiento "deferred": si el real client no existe, `supabase.from(...)` devolverá un QueryShim
-// thenable que acumula operaciones y las ejecuta cuando el cliente real esté listo. Cuando el cliente real
-// esté disponible, las operaciones se ejecutan contra él.
+// IMPORTANT: Este archivo EXPLÍCITAMENTE exporta un `supabase` Proxy *inmediatamente* al inicio para
+// evitar que otros módulos reciban `null`. Ese proxy implementa .from(...) devolviendo un QueryShim
+// thenable que espera la inicialización real del cliente (si hace falta) antes de ejecutar la consulta.
+//
+// Reemplaza este archivo en BYT_SOFTWARE/src/js/supabaseBrowserClient.js por completo.
 
-let _realClient = null; // cuando esté disponible, el cliente real
-let _initializing = false;
+let _realClient = null;       // el cliente real cuando esté disponible
+let _initializing = false;    // bandera para prevent race
+let _autoInitTried = false;
 
 function isValidClient(c) {
   return !!c && typeof c.from === 'function';
@@ -54,22 +55,22 @@ function _notifyReady() {
   } catch (e) {}
 }
 
-// Ensure supabase client is available. Returns the real client or null.
+/** Ensure supabase: intenta garantizar que exista un cliente supabase funcional. */
 export async function ensureSupabase() {
   if (isValidClient(_realClient)) return _realClient;
 
   if (_initializing) {
-    // If another ensureSupabase is running, wait until it completes
+    // esperar a que acabe la inicialización que otro caller está haciendo
     let attempts = 0;
-    while (_initializing && attempts++ < 50) {
-      await new Promise(r => setTimeout(r, 100));
+    while (_initializing && attempts++ < 100) {
+      await new Promise(r => setTimeout(r, 50));
     }
     return _realClient;
   }
 
   _initializing = true;
   try {
-    // 1) Check global
+    // 1) Verificar si ya existe globalmente
     try {
       if (typeof window !== 'undefined') {
         if (isValidClient(window.supabase)) _realClient = window.supabase;
@@ -83,7 +84,7 @@ export async function ensureSupabase() {
       return _realClient;
     }
 
-    // 2) Try create from env
+    // 2) Intentar crear desde variables de entorno/browser
     const created = await createClientFromEnv();
     if (isValidClient(created)) {
       _realClient = created;
@@ -93,7 +94,7 @@ export async function ensureSupabase() {
       return _realClient;
     }
 
-    // 3) Not available yet
+    // 3) Si no hay cliente, devolver null - el QueryShim esperará cuando se use
     return null;
   } finally {
     _initializing = false;
@@ -104,12 +105,12 @@ export function getClient() {
   return _realClient;
 }
 
-// QueryShim: acumula operaciones y se ejecuta cuando existe el cliente real.
+// QueryShim: acumula operaciones y las ejecuta cuando el cliente real esté listo.
 class QueryShim {
   constructor(table) {
     this._table = table;
-    this._ops = []; // [{ method, args }]
-    this._thenPromise = null;
+    this._ops = []; // { method, args }
+    this._promise = null;
   }
 
   _push(method, args) {
@@ -117,6 +118,7 @@ class QueryShim {
     return this;
   }
 
+  // Métodos comunes usados en el repo (añadir si necesitas otros)
   select(...args) { return this._push('select', args); }
   eq(...args) { return this._push('eq', args); }
   ilike(...args) { return this._push('ilike', args); }
@@ -128,10 +130,9 @@ class QueryShim {
   single(...args) { return this._push('single', args); }
   limit(...args) { return this._push('limit', args); }
 
-  // Execute the accumulated ops against the real client when ready
-  _executeAgainstReal() {
-    if (!this._thenPromise) {
-      this._thenPromise = (async () => {
+  async _exec() {
+    if (!this._promise) {
+      this._promise = (async () => {
         const client = await ensureSupabase();
         if (!isValidClient(client)) {
           throw new Error('Supabase client not initialized');
@@ -144,22 +145,21 @@ class QueryShim {
           }
           q = fn.apply(q, op.args);
         }
-        // q is expected to be a PostgrestQueryBuilder or Promise-like
+        // Ejecutar la query y devolver el resultado
         return await q;
       })();
     }
-    return this._thenPromise;
+    return this._promise;
   }
 
   then(onFulfilled, onRejected) {
-    return this._executeAgainstReal().then(onFulfilled, onRejected);
+    return this._exec().then(onFulfilled, onRejected);
   }
-
-  catch(onRejected) { return this._executeAgainstReal().catch(onRejected); }
-  finally(onFinally) { return this._executeAgainstReal().finally(onFinally); }
+  catch(onRejected) { return this._exec().catch(onRejected); }
+  finally(onFinally) { return this._exec().finally(onFinally); }
 }
 
-// auth shim to support supabase.auth.getSession() used in code
+// Auth shim: soporta getSession() usado en createProvider
 const authShim = {
   async getSession() {
     const client = await ensureSupabase();
@@ -168,22 +168,25 @@ const authShim = {
     }
     return client.auth.getSession();
   },
-  // Provide a fallback signIn/signOut stub if needed later
-  async signIn() { throw new Error('Auth signIn not available'); },
-  async signOut() { throw new Error('Auth signOut not available'); }
+  // stubs: lanzan error si se usan antes de inicializar real client
+  async signIn() { const c = await ensureSupabase(); if (!isValidClient(c)) throw new Error('Auth not available'); return c.auth.signIn(); },
+  async signOut() { const c = await ensureSupabase(); if (!isValidClient(c)) throw new Error('Auth not available'); return c.auth.signOut(); }
 };
 
-// Build the exported proxy object
+// Export named `supabase` IMMEDIATELY como Proxy para evitar que otros módulos obtengan null.
+// Este proxy soporta:
+// - supabase.from(table).select(...).eq(...).then(...)  -> QueryShim thenable
+// - supabase.auth.getSession() -> deferred authShim
+// - supabase.ensureSupabase -> exported ensureSupabase
 export const supabase = new Proxy({}, {
   get(_, prop) {
-    // If real client exists, forward directly
+    // Si existe cliente real, devolver directamente su miembro
     if (isValidClient(_realClient)) {
       const val = _realClient[prop];
       if (typeof val === 'function') return val.bind(_realClient);
       return val;
     }
-
-    // Provide core behaviors before real client exists
+    // Antes de que exista el cliente, exponer behaviors mínimos
     if (prop === 'from') {
       return (table) => new QueryShim(table);
     }
@@ -196,28 +199,29 @@ export const supabase = new Proxy({}, {
     if (prop === 'getClient' || prop === 'get') {
       return getClient;
     }
-
-    // Return undefined for other props (consumer should call ensureSupabase in that case)
+    // Otros miembros devuelven undefined; consumers deben usar ensureSupabase
     return undefined;
   },
-
   set(_, prop, value) {
-    // If real client exists, set it there; otherwise no-op
+    // si ya hay real client, setear en él; si no, no-op
     if (isValidClient(_realClient)) {
       try { _realClient[prop] = value; } catch (e) {}
     }
     return true;
   },
-
   has(_, prop) {
     if (prop === 'from' || prop === 'auth' || prop === 'ensureSupabase' || prop === 'getClient') return true;
     return isValidClient(_realClient) ? prop in _realClient : false;
   }
 });
 
-// autoInit (non-blocking)
+// AutoInit (no bloqueante) — intentamos detectar o crear cliente si las credenciales están disponibles.
 (async function autoInit() {
   try {
+    if (_autoInitTried) return;
+    _autoInitTried = true;
+
+    // Reusar si otro script ya expuso window.supabase
     if (typeof window !== 'undefined' && isValidClient(window.supabase)) {
       _realClient = window.supabase;
       _exposeRealClient(_realClient);
@@ -225,6 +229,8 @@ export const supabase = new Proxy({}, {
       console.log('[supabaseBrowserClient] window.supabase ya inicializado (reuse).');
       return;
     }
+
+    // Intentar crear si hay credenciales en window
     const created = await createClientFromEnv();
     if (isValidClient(created)) {
       _realClient = created;
@@ -233,11 +239,12 @@ export const supabase = new Proxy({}, {
       console.log('[supabaseBrowserClient] supabase inicializado con credenciales encontradas en window.');
       return;
     }
+
     console.log('[supabaseBrowserClient] supabase no inicializado automáticamente (no detectado en window y no hay credenciales).');
   } catch (err) {
     console.error('[supabaseBrowserClient] autoInit error:', err);
   }
 })();
 
-// default export for backward compat
+// Mantener compatibilidad: export default también disponible
 export default supabase;
