@@ -16,6 +16,11 @@
     // por eso definimos aquí temporalmente para pruebas.
     window.__SUPABASE_URL = window.__SUPABASE_URL || 'https://qwbeectinjasekkjzxls.supabase.co';
     window.__SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
+
+    // Propagar a variables estándar que usan otros módulos (no eliminar, sólo asignar si no están definidas).
+    // Esto facilita que supabaseBrowserClient._createClientFromWindowEnv() encuentre credenciales en window.
+    window.SUPABASE_URL = window.SUPABASE_URL || window.__SUPABASE_URL;
+    window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || window.__SUPABASE_ANON_KEY;
   </script>
 </head>
 <body>
@@ -53,4 +58,3 @@
   <script type="module" src="./login.js"></script>
 </body>
 </html>
-
