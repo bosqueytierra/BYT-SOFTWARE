@@ -2,7 +2,7 @@
 // Login que utiliza el cliente centralizado (supabaseBrowserClient.js).
 // Si el cliente central no está disponible se usa un fallback local creado dinámicamente.
 
-import { initializeSupabase, ensureSupabase, getClient } from '/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
+import { initializeSupabase, ensureSupabase, getClient } from '/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
 
 const SUPABASE_URL = window.__SUPABASE_URL || window.SUPABASE_URL || localStorage.getItem('byt_supabase_url') || null;
 const ANON_KEY = window.__SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY || localStorage.getItem('byt_supabase_anon_key') || null;
