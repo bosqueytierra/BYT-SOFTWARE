@@ -22,6 +22,10 @@ if (!ANON_KEY || !SUPABASE_URL) {
 // Cliente local usado para autenticar (se mantiene para la llamada a signIn)
 const sup = createClient(SUPABASE_URL, ANON_KEY);
 
+// Keys de localStorage que usamos para persistir credenciales entre páginas
+const LS_KEY_URL = 'byt_supabase_url';
+const LS_KEY_KEY = 'byt_supabase_anon_key';
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!ANON_KEY) {
@@ -56,9 +60,10 @@ form.addEventListener('submit', async (e) => {
 
         const client = await initializeSupabase({ url, key });
         if (client && typeof client.from === 'function') {
-          console.log('[login] initializeSupabase: Supabase inicializado y expuesto globalmente');
+          console.log('[login] initializeSupabase: Supabase inicializado y expuesto globalmente (y persistido en localStorage)');
+          // initializeSupabase already persists creds in localStorage
         } else {
-          // Fallback: si initializeSupabase por alguna razón devolvió null, exponemos el cliente local `sup`
+          // Fallback: si initializeSupabase por alguna razón devolvió null, exponemos el cliente local `sup` y persistimos las credenciales usadas
           console.warn('[login] initializeSupabase no devolvió cliente válido, exponiendo cliente local `sup` como fallback');
           try {
             if (typeof window !== 'undefined') {
@@ -66,7 +71,12 @@ form.addEventListener('submit', async (e) => {
               window.globalSupabase = window.globalSupabase || {};
               window.globalSupabase.client = sup;
               try { window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
-              console.log('[login] fallback: window.supabase establecido desde cliente local `sup`');
+              // persistir las credenciales que usamos localmente (para futuras cargas)
+              try {
+                if (url) localStorage.setItem(LS_KEY_URL, url);
+                if (key) localStorage.setItem(LS_KEY_KEY, key);
+              } catch (e) { /* ignore */ }
+              console.log('[login] fallback: window.supabase establecido desde cliente local `sup` y credenciales persistidas en localStorage');
             }
           } catch (e) {
             console.warn('[login] no se pudo exponer fallback sup en window', e);
@@ -74,14 +84,18 @@ form.addEventListener('submit', async (e) => {
         }
       } catch (initErr) {
         console.error('[login] Error inicializando Supabase tras login:', initErr);
-        // Intentamos exponer igualmente el cliente local `sup` como fallback
+        // Intentamos exponer igualmente el cliente local `sup` como fallback y persistir credenciales
         try {
           if (typeof window !== 'undefined') {
             window.supabase = sup;
             window.globalSupabase = window.globalSupabase || {};
             window.globalSupabase.client = sup;
             try { window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
-            console.log('[login] fallback tras error: window.supabase establecido desde cliente local `sup`');
+            try {
+              if (SUPABASE_URL) localStorage.setItem(LS_KEY_URL, SUPABASE_URL);
+              if (ANON_KEY) localStorage.setItem(LS_KEY_KEY, ANON_KEY);
+            } catch (e) { /* ignore */ }
+            console.log('[login] fallback tras error: window.supabase establecido desde cliente local `sup` y credenciales persistidas');
           }
         } catch (e) {
           console.warn('[login] no se pudo exponer fallback sup en window después de error', e);
