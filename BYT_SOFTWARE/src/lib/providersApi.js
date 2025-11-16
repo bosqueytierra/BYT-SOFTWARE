@@ -5,8 +5,8 @@
 // Además: NOTIFICA globalmente (window.dispatchEvent) cuando una mutación termina OK,
 // despachando 'providers:changed' con detalle { action, id, row } para que consumidores (wizard) se actualicen.
 
-// IMPORT: usar ruta pública correcta (repo en GitHub Pages es /BYT-SOFTWARE/...)
-import { supabase, ensureSupabase, getClient } from '/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
+// Reemplazar la import existente por esta línea (línea única a cambiar)
+import { supabase, ensureSupabase, getClient } from 'https://raw.githack.com/bosqueytierra/BYT-SOFTWARE/main/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
 
 /**
  * Obtiene el cliente real (no el proxy) o devuelve error si no está inicializado.
