@@ -5,8 +5,8 @@
 // Además: NOTIFICA globalmente (window.dispatchEvent) cuando una mutación termina OK,
 // despachando 'providers:changed' con detalle { action, id, row } para que consumidores (wizard) se actualicen.
 
-// IMPORT: usar ruta absoluta al módulo central para evitar instancias duplicadas
-import { supabase, ensureSupabase, getClient } from '/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
+// IMPORT: usar ruta pública correcta (repo en GitHub Pages es /BYT-SOFTWARE/...)
+import { supabase, ensureSupabase, getClient } from '/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
 
 /**
  * Obtiene el cliente real (no el proxy) o devuelve error si no está inicializado.
