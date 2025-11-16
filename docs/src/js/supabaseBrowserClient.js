@@ -1,33 +1,37 @@
 // Supabase browser client — robust initializer and runtime shim
-// - Exporta named `supabase` (Proxy) inmediatamente para evitar null imports.
-// - Proporciona ensureSupabase(timeoutMs), getClient(), y initializeSupabase({url,key}).
-// - Ahora también lee credenciales desde localStorage para persistir entre navegaciones (login -> otras páginas).
+// - Exporta named `supabase` (Proxy) inmediatamente.
+// - Proporciona ensureSupabase(timeoutMs), getClient(), initializeSupabase({url,key}).
+// - Lee credenciales desde window, localStorage, o desde un archivo central servido por GitHub Pages:
+//   /BYT_SOFTWARE/supabase-config.json
+// - Soporta polling para reconfiguración en caliente (opcional).
 
 let _realClient = null;
 let _initializing = false;
 let _autoInitAttempted = false;
 
-// localStorage keys used to persist anon credentials across pages
 const LS_KEY_URL = 'byt_supabase_url';
 const LS_KEY_KEY = 'byt_supabase_anon_key';
 
-// Small util
+// IMPORTANT: GitHub Pages path to the JSON in your repo root
+const SERVER_CONFIG_URL = '/BYT_SOFTWARE/supabase-config.json';
+
+// Poll interval ms to check for remote config changes (set to 0 to disable)
+const CONFIG_POLL_INTERVAL_MS = 30 * 1000; // 30s
+
+let _lastServerConfig = null;
+let _configPollerId = null;
+
 function isValidClient(c) {
   return !!c && typeof c.from === 'function';
 }
 
-// Create a supabase client given url and key (dynamic import)
 async function _createClient(url, key) {
+  if (!url || !key) return null;
   try {
     const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
     const { createClient } = mod;
-    if (typeof createClient !== 'function') {
-      console.warn('[supabaseBrowserClient] createClient not found in imported module');
-      return null;
-    }
-    const client = createClient(url, key, {
-      // you can set fetch: window.fetch here if needed
-    });
+    if (typeof createClient !== 'function') return null;
+    const client = createClient(url, key);
     return client;
   } catch (e) {
     console.error('[supabaseBrowserClient] error importing supabase-js:', e);
@@ -35,27 +39,35 @@ async function _createClient(url, key) {
   }
 }
 
-// Try to create a client from window env variables OR from localStorage.
+async function _fetchConfigFromServer() {
+  try {
+    const r = await fetch(SERVER_CONFIG_URL, { cache: 'no-cache' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const url = j?.url || j?.supabaseUrl || null;
+    const key = j?.anonKey || j?.anon_key || j?.supabaseAnonKey || null;
+    if (url && key) return { url, key };
+  } catch (e) {
+    // ignore network errors
+  }
+  return null;
+}
+
 async function _createClientFromWindowEnv() {
   if (typeof window === 'undefined') return null;
 
-  // Prefer explicit window globals
   const url = window.SUPABASE_URL || window.__SUPABASE_URL || null;
   const key = window.SUPABASE_ANON_KEY || window.__SUPABASE_ANON_KEY || null;
-  if (url && key) {
-    return await _createClient(url, key);
-  }
+  if (url && key) return await _createClient(url, key);
 
-  // Fallback: try localStorage (persisted after login)
   try {
     const lsUrl = localStorage.getItem(LS_KEY_URL) || null;
     const lsKey = localStorage.getItem(LS_KEY_KEY) || null;
-    if (lsUrl && lsKey) {
-      return await _createClient(lsUrl, lsKey);
-    }
-  } catch (e) {
-    // ignore localStorage read errors (e.g., blocked)
-  }
+    if (lsUrl && lsKey) return await _createClient(lsUrl, lsKey);
+  } catch (e) {}
+
+  const serverCfg = await _fetchConfigFromServer();
+  if (serverCfg && serverCfg.url && serverCfg.key) return await _createClient(serverCfg.url, serverCfg.key);
 
   return null;
 }
@@ -67,83 +79,63 @@ function _exposeClientGlobally(client) {
       window.globalSupabase = window.globalSupabase || {};
       window.globalSupabase.client = client;
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 }
 
 function _dispatchReady() {
-  try {
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('supabase:ready'));
-  } catch (e) { /* ignore */ }
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
+}
+function _dispatchUpdated(detail = {}) {
+  try { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('supabase:updated', { detail })); } catch (e) {}
 }
 
-/**
- * initializeSupabase({ url, key })
- * - Inicializa explícitamente el cliente Supabase con las credenciales proporcionadas.
- * - Si init OK, guarda credenciales (anon key) en localStorage para que persistan entre páginas.
- */
 export async function initializeSupabase({ url, key } = {}) {
-  // si ya hay cliente válido, retornarlo
   if (isValidClient(_realClient)) return _realClient;
 
-  // si se pasaron url/key explícitas, crear con ellas
   if (url && key) {
     const client = await _createClient(url, key);
     if (isValidClient(client)) {
       _realClient = client;
-      // persistir anon credentials en localStorage (para nuevas cargas de página)
-      try {
-        localStorage.setItem(LS_KEY_URL, url);
-        localStorage.setItem(LS_KEY_KEY, key);
-      } catch (e) { /* ignore */ }
+      try { localStorage.setItem(LS_KEY_URL, url); localStorage.setItem(LS_KEY_KEY, key); } catch (e) {}
       _exposeClientGlobally(_realClient);
       _dispatchReady();
       console.log('[supabaseBrowserClient] initializeSupabase: cliente inicializado y expuesto (from args)');
+      _lastServerConfig = { url, key };
       return _realClient;
     }
     return null;
   }
 
-  // si no se pasaron, intentar crear desde window env o localStorage
   const created = await _createClientFromWindowEnv();
   if (isValidClient(created)) {
     _realClient = created;
     _exposeClientGlobally(_realClient);
     _dispatchReady();
-    console.log('[supabaseBrowserClient] initializeSupabase: cliente inicializado desde window env/localStorage');
+    console.log('[supabaseBrowserClient] initializeSupabase: cliente inicializado desde window/localStorage/server-config');
+    try { const serverCfg = await _fetchConfigFromServer(); if (serverCfg) _lastServerConfig = serverCfg; } catch(e){}
     return _realClient;
   }
 
-  // no se pudo inicializar
   return null;
 }
 
-// ensureSupabase: attempts to guarantee a real client exists within timeoutMs.
 export async function ensureSupabase(timeoutMs = 5000) {
   if (isValidClient(_realClient)) return _realClient;
 
   if (_initializing) {
-    // wait for initialization by another caller
     const start = Date.now();
-    while (_initializing && (Date.now() - start) < timeoutMs) {
-      await new Promise(r => setTimeout(r, 100));
-    }
+    while (_initializing && (Date.now() - start) < timeoutMs) await new Promise(r => setTimeout(r, 100));
     return isValidClient(_realClient) ? _realClient : null;
   }
 
   _initializing = true;
   try {
-    // 1) check already on window
     try {
       if (typeof window !== 'undefined') {
-        if (isValidClient(window.supabase)) {
-          _realClient = window.supabase;
-        } else if (window.globalSupabase && isValidClient(window.globalSupabase.client)) {
-          _realClient = window.globalSupabase.client;
-        }
+        if (isValidClient(window.supabase)) _realClient = window.supabase;
+        else if (window.globalSupabase && isValidClient(window.globalSupabase.client)) _realClient = window.globalSupabase.client;
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {}
 
     if (isValidClient(_realClient)) {
       _exposeClientGlobally(_realClient);
@@ -151,55 +143,37 @@ export async function ensureSupabase(timeoutMs = 5000) {
       return _realClient;
     }
 
-    // 2) attempt to create from window env or localStorage now
     const created = await _createClientFromWindowEnv();
     if (isValidClient(created)) {
       _realClient = created;
       _exposeClientGlobally(_realClient);
       _dispatchReady();
-      console.log('[supabaseBrowserClient] supabase initialized from window env/localStorage and exposed globally');
+      try { const serverCfg = await _fetchConfigFromServer(); if (serverCfg) _lastServerConfig = serverCfg; } catch(e){}
+      console.log('[supabaseBrowserClient] supabase initialized from window/localStorage/server and exposed globally');
       return _realClient;
     }
 
-    // 3) no immediate client -> wait for possible external initializer or event within timeout
     let resolved = false;
     const promise = new Promise((resolve) => {
       const onReady = () => {
         if (resolved) return;
         resolved = true;
         cleanup();
-        // prefer window.supabase if available
         try {
-          if (isValidClient(window.supabase)) {
-            _realClient = window.supabase;
-          } else if (window.globalSupabase && isValidClient(window.globalSupabase.client)) {
-            _realClient = window.globalSupabase.client;
-          }
+          if (isValidClient(window.supabase)) _realClient = window.supabase;
+          else if (window.globalSupabase && isValidClient(window.globalSupabase.client)) _realClient = window.globalSupabase.client;
         } catch (e) {}
         resolve(isValidClient(_realClient) ? _realClient : null);
       };
-      const cleanup = () => {
-        try { window.removeEventListener('supabase:ready', onReady); } catch (e) {}
-        clearInterval(poller);
-        clearTimeout(timeoutId);
-      };
-      // listen event
+      const cleanup = () => { try { window.removeEventListener('supabase:ready', onReady); } catch (e) {} ; clearInterval(poller); clearTimeout(timeoutId); };
       try { window.addEventListener('supabase:ready', onReady); } catch (e) {}
-      // poller in case other script sets window.supabase without firing event
       const poller = setInterval(() => {
         try {
-          if (isValidClient(window.supabase) || (window.globalSupabase && isValidClient(window.globalSupabase.client))) {
-            onReady();
-          }
+          if (isValidClient(window.supabase) || (window.globalSupabase && isValidClient(window.globalSupabase.client))) onReady();
         } catch (e) {}
       }, 200);
 
-      const timeoutId = setTimeout(() => {
-        if (resolved) return;
-        resolved = true;
-        cleanup();
-        resolve(null);
-      }, timeoutMs);
+      const timeoutId = setTimeout(() => { if (resolved) return; resolved = true; cleanup(); resolve(null); }, timeoutMs);
     });
 
     const client = await promise;
@@ -214,24 +188,11 @@ export async function ensureSupabase(timeoutMs = 5000) {
   }
 }
 
-export function getClient() {
-  return _realClient;
-}
+export function getClient() { return _realClient; }
 
-// QueryShim: record method calls and run them when a real client becomes available.
 class QueryShim {
-  constructor(table) {
-    this._table = table;
-    this._ops = []; // sequence of { method, args }
-    this._promise = null;
-  }
-
-  _push(method, args) {
-    this._ops.push({ method, args });
-    return this;
-  }
-
-  // Common methods used in repo
+  constructor(table) { this._table = table; this._ops = []; this._promise = null; }
+  _push(method, args) { this._ops.push({ method, args }); return this; }
   select(...args) { return this._push('select', args); }
   eq(...args) { return this._push('eq', args); }
   ilike(...args) { return this._push('ilike', args); }
@@ -242,11 +203,10 @@ class QueryShim {
   delete(...args) { return this._push('delete', args); }
   single(...args) { return this._push('single', args); }
   limit(...args) { return this._push('limit', args); }
-
   async _exec() {
     if (!this._promise) {
       this._promise = (async () => {
-        const client = await ensureSupabase(10000); // wait a bit longer if necessary
+        const client = await ensureSupabase(10000);
         if (!isValidClient(client)) throw new Error('Supabase client not initialized');
         let q = client.from(this._table);
         for (const op of this._ops) {
@@ -259,98 +219,94 @@ class QueryShim {
     }
     return this._promise;
   }
-
   then(onFulfilled, onRejected) { return this._exec().then(onFulfilled, onRejected); }
   catch(onRejected) { return this._exec().catch(onRejected); }
   finally(onFinally) { return this._exec().finally(onFinally); }
 }
 
-// Minimal auth shim deferring to real client when available.
 const authShim = {
-  async getSession() {
-    const client = await ensureSupabase();
-    if (!client || !client.auth || typeof client.auth.getSession !== 'function') {
-      return { data: { session: null }, error: new Error('Auth not available') };
-    }
-    return client.auth.getSession();
-  },
-  async signIn(...args) {
-    const client = await ensureSupabase();
-    if (!client || !client.auth || typeof client.auth.signIn !== 'function') throw new Error('Auth not available');
-    return client.auth.signIn(...args);
-  },
-  async signOut(...args) {
-    const client = await ensureSupabase();
-    if (!client || !client.auth || typeof client.auth.signOut !== 'function') throw new Error('Auth not available');
-    return client.auth.signOut(...args);
-  }
+  async getSession() { const client = await ensureSupabase(); if (!client || !client.auth || typeof client.auth.getSession !== 'function') return { data: { session: null }, error: new Error('Auth not available') }; return client.auth.getSession(); },
+  async signIn(...args) { const client = await ensureSupabase(); if (!client || !client.auth || typeof client.auth.signIn !== 'function') throw new Error('Auth not available'); return client.auth.signIn(...args); },
+  async signOut(...args) { const client = await ensureSupabase(); if (!client || !client.auth || typeof client.auth.signOut !== 'function') throw new Error('Auth not available'); return client.auth.signOut(...args); }
 };
 
-// Exported proxy object `supabase` available immediately.
 export const supabase = new Proxy({}, {
   get(_, prop) {
-    // If real client exists, forward directly
     if (isValidClient(_realClient)) {
       const val = _realClient[prop];
       if (typeof val === 'function') return val.bind(_realClient);
       return val;
     }
-    // Provide helpful behaviours before client exists
     if (prop === 'from') return (table) => new QueryShim(table);
     if (prop === 'auth') return authShim;
     if (prop === 'ensureSupabase') return ensureSupabase;
     if (prop === 'initializeSupabase') return initializeSupabase;
     if (prop === 'getClient' || prop === 'get') return getClient;
-    // otherwise undefined (callers should call ensureSupabase first)
     return undefined;
   },
-  set(_, prop, value) {
-    if (isValidClient(_realClient)) {
-      try { _realClient[prop] = value; } catch (e) {}
-    }
-    return true;
-  },
-  has(_, prop) {
-    if (prop === 'from' || prop === 'auth' || prop === 'ensureSupabase' || prop === 'initializeSupabase') return true;
-    return isValidClient(_realClient) ? prop in _realClient : false;
-  }
+  set(_, prop, value) { if (isValidClient(_realClient)) { try { _realClient[prop] = value; } catch (e) {} } return true; },
+  has(_, prop) { if (prop === 'from' || prop === 'auth' || prop === 'ensureSupabase' || prop === 'initializeSupabase') return true; return isValidClient(_realClient) ? prop in _realClient : false; }
 });
 
-// Automatic best-effort initialization (non-blocking):
-// Try to reuse an existing window.supabase; if none, attempt to create from env on window or localStorage
 (async function _autoInit() {
   if (_autoInitAttempted) return;
   _autoInitAttempted = true;
-
   try {
-    // reuse window.supabase if present
     if (typeof window !== 'undefined') {
       try {
         if (isValidClient(window.supabase)) {
           _realClient = window.supabase;
           _exposeClientGlobally(_realClient);
           _dispatchReady();
-          console.log('[supabaseBrowserClient] reused existing window.supabase');
+          try { const serverCfg = await _fetchConfigFromServer(); if (serverCfg) _lastServerConfig = serverCfg; } catch(e){}
+          if (CONFIG_POLL_INTERVAL_MS > 0) _startConfigPoller();
           return;
         }
       } catch (e) {}
     }
-
-    // attempt create using window env or localStorage
     const created = await _createClientFromWindowEnv();
     if (isValidClient(created)) {
       _realClient = created;
       _exposeClientGlobally(_realClient);
       _dispatchReady();
-      console.log('[supabaseBrowserClient] initialized supabase from window env/localStorage');
+      try { const serverCfg = await _fetchConfigFromServer(); if (serverCfg) _lastServerConfig = serverCfg; } catch(e){}
+      if (CONFIG_POLL_INTERVAL_MS > 0) _startConfigPoller();
+      console.log('[supabaseBrowserClient] initialized supabase from window/localStorage/server-config');
       return;
     }
-
-    console.log('[supabaseBrowserClient] no supabase auto-initialized (no window client or env variables)');
+    console.log('[supabaseBrowserClient] no supabase auto-initialized (no window client, env, localStorage or server config)');
+    if (CONFIG_POLL_INTERVAL_MS > 0) _startConfigPoller();
   } catch (e) {
     console.error('[supabaseBrowserClient] autoInit error:', e);
   }
 })();
 
-// default export for compatibility
+function _startConfigPoller() {
+  if (_configPollerId) return;
+  try {
+    _configPollerId = setInterval(async () => {
+      try {
+        const cfg = await _fetchConfigFromServer();
+        if (!cfg) return;
+        const changed = !_lastServerConfig || cfg.url !== _lastServerConfig.url || cfg.key !== _lastServerConfig.key;
+        if (changed) {
+          console.log('[supabaseBrowserClient] server config changed — reinitializing supabase client');
+          _lastServerConfig = cfg;
+          const newClient = await _createClient(cfg.url, cfg.key);
+          if (isValidClient(newClient)) {
+            _realClient = newClient;
+            try { localStorage.setItem(LS_KEY_URL, cfg.url); localStorage.setItem(LS_KEY_KEY, cfg.key); } catch(e){}
+            _exposeClientGlobally(_realClient);
+            _dispatchReady();
+            _dispatchUpdated({ url: cfg.url });
+            console.log('[supabaseBrowserClient] supabase reinitialized from updated server config and exposed globally');
+          } else {
+            console.warn('[supabaseBrowserClient] could not create client from updated server config');
+          }
+        }
+      } catch (e) {}
+    }, CONFIG_POLL_INTERVAL_MS);
+  } catch (e) {}
+}
+
 export default supabase;
