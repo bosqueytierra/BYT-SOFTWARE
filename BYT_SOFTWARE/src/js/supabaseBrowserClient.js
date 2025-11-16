@@ -1,13 +1,15 @@
 // Supabase browser client — robust initializer and runtime shim
 // - Exporta named `supabase` (Proxy) inmediatamente para evitar null imports.
-// - Proporciona ensureSupabase(timeoutMs), getClient(), y ahora initializeSupabase({url,key})
-//   para inicializar el cliente desde el flujo de login u otra parte de la app.
-// - Auto-init sigue funcionando (best-effort), pero ahora puedes inicializar explícitamente
-//   desde el login y garantizar que window.supabase esté disponible.
+// - Proporciona ensureSupabase(timeoutMs), getClient(), y initializeSupabase({url,key}).
+// - Ahora también lee credenciales desde localStorage para persistir entre navegaciones (login -> otras páginas).
 
 let _realClient = null;
 let _initializing = false;
 let _autoInitAttempted = false;
+
+// localStorage keys used to persist anon credentials across pages
+const LS_KEY_URL = 'byt_supabase_url';
+const LS_KEY_KEY = 'byt_supabase_anon_key';
 
 // Small util
 function isValidClient(c) {
@@ -33,13 +35,29 @@ async function _createClient(url, key) {
   }
 }
 
-// Try to create a client from window env variables (existing behavior)
+// Try to create a client from window env variables OR from localStorage.
 async function _createClientFromWindowEnv() {
   if (typeof window === 'undefined') return null;
-  const url = window.SUPABASE_URL || null;
-  const key = window.SUPABASE_ANON_KEY || null;
-  if (!url || !key) return null;
-  return await _createClient(url, key);
+
+  // Prefer explicit window globals
+  const url = window.SUPABASE_URL || window.__SUPABASE_URL || null;
+  const key = window.SUPABASE_ANON_KEY || window.__SUPABASE_ANON_KEY || null;
+  if (url && key) {
+    return await _createClient(url, key);
+  }
+
+  // Fallback: try localStorage (persisted after login)
+  try {
+    const lsUrl = localStorage.getItem(LS_KEY_URL) || null;
+    const lsKey = localStorage.getItem(LS_KEY_KEY) || null;
+    if (lsUrl && lsKey) {
+      return await _createClient(lsUrl, lsKey);
+    }
+  } catch (e) {
+    // ignore localStorage read errors (e.g., blocked)
+  }
+
+  return null;
 }
 
 function _exposeClientGlobally(client) {
@@ -63,8 +81,7 @@ function _dispatchReady() {
 /**
  * initializeSupabase({ url, key })
  * - Inicializa explícitamente el cliente Supabase con las credenciales proporcionadas.
- * - Útil para llamar desde el flujo de login cuando el servidor (o la UI) entrega la URL/key.
- * - Si ya existe un cliente válido, devuelve el existente.
+ * - Si init OK, guarda credenciales (anon key) en localStorage para que persistan entre páginas.
  */
 export async function initializeSupabase({ url, key } = {}) {
   // si ya hay cliente válido, retornarlo
@@ -75,6 +92,11 @@ export async function initializeSupabase({ url, key } = {}) {
     const client = await _createClient(url, key);
     if (isValidClient(client)) {
       _realClient = client;
+      // persistir anon credentials en localStorage (para nuevas cargas de página)
+      try {
+        localStorage.setItem(LS_KEY_URL, url);
+        localStorage.setItem(LS_KEY_KEY, key);
+      } catch (e) { /* ignore */ }
       _exposeClientGlobally(_realClient);
       _dispatchReady();
       console.log('[supabaseBrowserClient] initializeSupabase: cliente inicializado y expuesto (from args)');
@@ -83,13 +105,13 @@ export async function initializeSupabase({ url, key } = {}) {
     return null;
   }
 
-  // si no se pasaron, intentar crear desde window env
+  // si no se pasaron, intentar crear desde window env o localStorage
   const created = await _createClientFromWindowEnv();
   if (isValidClient(created)) {
     _realClient = created;
     _exposeClientGlobally(_realClient);
     _dispatchReady();
-    console.log('[supabaseBrowserClient] initializeSupabase: cliente inicializado desde window env');
+    console.log('[supabaseBrowserClient] initializeSupabase: cliente inicializado desde window env/localStorage');
     return _realClient;
   }
 
@@ -98,10 +120,6 @@ export async function initializeSupabase({ url, key } = {}) {
 }
 
 // ensureSupabase: attempts to guarantee a real client exists within timeoutMs.
-// - If client already exists returns it.
-// - Otherwise it will attempt to create from window env immediately.
-// - Then will wait for event 'supabase:ready' or window.supabase to appear up to timeoutMs.
-// - Returns client or null if unavailable after timeout.
 export async function ensureSupabase(timeoutMs = 5000) {
   if (isValidClient(_realClient)) return _realClient;
 
@@ -133,13 +151,13 @@ export async function ensureSupabase(timeoutMs = 5000) {
       return _realClient;
     }
 
-    // 2) attempt to create from window env now
+    // 2) attempt to create from window env or localStorage now
     const created = await _createClientFromWindowEnv();
     if (isValidClient(created)) {
       _realClient = created;
       _exposeClientGlobally(_realClient);
       _dispatchReady();
-      console.log('[supabaseBrowserClient] supabase initialized from window env and exposed globally');
+      console.log('[supabaseBrowserClient] supabase initialized from window env/localStorage and exposed globally');
       return _realClient;
     }
 
@@ -299,7 +317,7 @@ export const supabase = new Proxy({}, {
 });
 
 // Automatic best-effort initialization (non-blocking):
-// Try to reuse an existing window.supabase; if none, attempt to create from env on window
+// Try to reuse an existing window.supabase; if none, attempt to create from env on window or localStorage
 (async function _autoInit() {
   if (_autoInitAttempted) return;
   _autoInitAttempted = true;
@@ -318,13 +336,13 @@ export const supabase = new Proxy({}, {
       } catch (e) {}
     }
 
-    // attempt create using window env
+    // attempt create using window env or localStorage
     const created = await _createClientFromWindowEnv();
     if (isValidClient(created)) {
       _realClient = created;
       _exposeClientGlobally(_realClient);
       _dispatchReady();
-      console.log('[supabaseBrowserClient] initialized supabase from window env');
+      console.log('[supabaseBrowserClient] initialized supabase from window env/localStorage');
       return;
     }
 
