@@ -45,8 +45,25 @@
   </table>
 
   <script type="module">
-    // providers page with graceful handling when supabase is not initialized.
+    /**
+     * Mejora crítica aplicada: esperar a que el cliente Supabase esté disponible
+     * (bien sea expuesto en window.supabase por otro script o inicializado por
+     * supabaseBrowserClient.ensureSupabase) ANTES de intentar listar proveedores.
+     *
+     * Razonamiento: el wizard/otros scripts pueden inicializar window.supabase
+     * en un orden distinto. En tu caso el wizard sí lee de Supabase pero la página
+     * de Configuración-Proveedores intentaba leer antes de que existiera el cliente,
+     * provocando errores "Cannot read properties of null (reading 'from')" o "no-supabase".
+     *
+     * Solución única (la recomendada): esperar hasta 5s por el evento 'supabase:ready'
+     * o por window.supabase, llamando a ensureSupabase() como fallback. Si al final no
+     * hay cliente, se muestra mensaje y se habilita modo demo (localStorage).
+     *
+     * Este archivo es el HTML completo con esa lógica integrada.
+     */
+
     import * as apiModule from '../../lib/providersApi.js';
+    import { ensureSupabase } from '../../js/supabaseBrowserClient.js';
 
     const tbody = document.querySelector('#providersTable tbody');
     const btnNew = document.getElementById('btnNew');
@@ -54,7 +71,6 @@
     const btnDemo = document.getElementById('btnDemo');
     const bannerContainer = document.getElementById('banner-container');
 
-    // Demo/local mode (uses localStorage)
     const DEMO_KEY = 'byt_demo_providers_v1';
 
     function escapeHtml(s) {
@@ -63,26 +79,94 @@
     }
 
     function showBanner(message, kind = 'warning') {
-      bannerContainer.innerHTML = `<div class="banner ${kind}">${escapeHtml(message)}</div>`;
+      bannerContainer.innerHTML = `<div class="banner ${kind}">${message}</div>`;
+    }
+    function clearBanner() { bannerContainer.innerHTML = ''; }
+
+    // Espera por supabase:ready o window.supabase hasta timeoutMs (ms)
+    async function waitForSupabase(timeoutMs = 5000) {
+      // Si ya existe, resolvemos inmediato
+      try {
+        if (window.supabase && typeof window.supabase.from === 'function') {
+          return true;
+        }
+        if (window.globalSupabase && window.globalSupabase.client && typeof window.globalSupabase.client.from === 'function') {
+          return true;
+        }
+      } catch (e) {}
+
+      // Intentar ensureSupabase immediato (podría inicializar desde este módulo)
+      try {
+        const got = await ensureSupabase();
+        if (got && typeof got.from === 'function') return true;
+      } catch (e) {
+        // ignore: proceed to event wait
+      }
+
+      // Esperar evento supabase:ready o polling
+      return new Promise((resolve) => {
+        let resolved = false;
+        const onReady = async () => {
+          if (resolved) return;
+          resolved = true;
+          cleanup();
+          resolve(true);
+        };
+        const cleanup = () => {
+          window.removeEventListener('supabase:ready', onReady);
+          if (timeoutId) clearTimeout(timeoutId);
+          if (intervalId) clearInterval(intervalId);
+        };
+        window.addEventListener('supabase:ready', onReady);
+
+        // Polling breve por si otro script expone window.supabase sin emitir evento
+        const intervalId = setInterval(() => {
+          try {
+            if (window.supabase && typeof window.supabase.from === 'function') {
+              onReady();
+            } else if (window.globalSupabase && window.globalSupabase.client && typeof window.globalSupabase.client.from === 'function') {
+              onReady();
+            }
+          } catch (e) {}
+        }, 200);
+
+        const timeoutId = setTimeout(() => {
+          if (resolved) return;
+          resolved = true;
+          cleanup();
+          resolve(false); // no hay supabase en el tiempo esperado
+        }, timeoutMs);
+      });
     }
 
-    function clearBanner() {
-      bannerContainer.innerHTML = '';
-    }
-
+    // --- Loader principal con espera por supabase ---
     async function loadAdminProviders({ forceDemo = false } = {}) {
       tbody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
 
+      // Si forzamos modo demo, saltamos cualquier intento
       if (forceDemo || isDemoMode()) {
         loadDemoDataToTable();
         return;
       }
 
+      // Esperar brevemente por supabase (para que el wizard u otros scripts la inicialicen)
+      showBanner('Esperando conexión a Supabase (breve)…', 'warning');
+      const ready = await waitForSupabase(5000); // 5s de espera por defecto
+      if (!ready) {
+        clearBanner();
+        showBanner('No hay cliente de persistencia disponible (Supabase). Puedes activar el <strong>Modo Demo</strong> para operar localmente o configurar el cliente Supabase en la app.', 'error');
+        btnDemo.style.display = 'inline-block';
+        tbody.innerHTML = `<tr><td colspan="6" class="muted">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
+        return;
+      }
+
+      // Si llegamos acá, supabase debería estar listo (o ensureSupabase lo inicializó)
+      clearBanner();
+
       try {
         const { listProviders } = apiModule;
         const { data, error } = await listProviders({ onlyActive: false });
         if (error) {
-          // handle no-supabase specifically
           if (error && (error.message === 'no-supabase' || error === 'no-supabase')) {
             showBanner('No hay cliente de persistencia disponible (Supabase). Puedes activar el <strong>Modo Demo</strong> para operar localmente o configurar el cliente Supabase en la app.', 'error');
             btnDemo.style.display = 'inline-block';
@@ -97,7 +181,6 @@
           tbody.innerHTML = '<tr><td colspan="6">No hay proveedores</td></tr>';
           return;
         }
-        clearBanner();
         btnDemo.style.display = 'none';
         renderProviders(data);
       } catch (e) {
@@ -108,9 +191,7 @@
 
     function renderProviders(list) {
       tbody.innerHTML = '';
-      list.forEach(p => {
-        appendRowForProvider(p);
-      });
+      list.forEach(p => appendRowForProvider(p));
       attachRowEvents();
     }
 
@@ -133,7 +214,7 @@
 
     function attachRowEvents() {
       document.querySelectorAll('.saveProv').forEach(btn => {
-        btn.onclick = async (ev) => {
+        btn.onclick = async () => {
           const id = btn.dataset.id;
           const row = btn.closest('tr');
           const name = row.querySelector('.prov-name').value.trim();
@@ -162,8 +243,7 @@
         btn.onclick = async () => {
           const id = btn.dataset.id;
           const row = btn.closest('tr');
-          const activeCheckbox = row.querySelector('.prov-active');
-          const newActive = !activeCheckbox.checked;
+          const newActive = !row.querySelector('.prov-active').checked;
           if (isDemoMode()) {
             updateDemoProvider(id, { active: newActive });
             await loadAdminProviders({ forceDemo: true });
@@ -295,13 +375,9 @@
       }
     });
 
-    // Initial load: attempt to show providers; if no supabase, provide Demo button
+    // Initial load: attempt to show providers; waits for supabase if other scripts create it.
     (async () => {
-      // If module provides a helpful flag, show it. We try to call listProviders and handle no-supabase.
       await loadAdminProviders();
-
-      // If after load we have 'no-supabase' banner, show Demo button prominently
-      // (btnDemo display handled by loadAdminProviders)
     })();
 
   </script>
