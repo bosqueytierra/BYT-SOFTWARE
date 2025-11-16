@@ -5,7 +5,8 @@
 // Además: NOTIFICA globalmente (window.dispatchEvent) cuando una mutación termina OK,
 // despachando 'providers:changed' con detalle { action, id, row } para que consumidores (wizard) se actualicen.
 
-import { supabase, ensureSupabase, getClient } from '../js/supabaseBrowserClient.js';
+// IMPORT: usar ruta absoluta al módulo central para evitar instancias duplicadas
+import { supabase, ensureSupabase, getClient } from '/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
 
 /**
  * Obtiene el cliente real (no el proxy) o devuelve error si no está inicializado.
