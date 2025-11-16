@@ -1,16 +1,9 @@
 // Supabase browser client — robust initializer and runtime shim
-// - Exports a named `supabase` binding immediately (Proxy) so imports never get `null`.
-// - Exports default `supabase` as well for compatibility.
-// - Exports ensureSupabase(timeoutMs) and getClient() helpers.
-// - Strategy:
-//   1) Try reuse window.supabase or window.globalSupabase.client if already created by other script (preferred).
-//   2) If window.SUPABASE_URL and window.SUPABASE_ANON_KEY are present, create client via dynamic import of @supabase/supabase-js.
-//   3) Otherwise do not hard-fail: provide a Proxy/QueryShim so callers that do `supabase.from(...).select(...).then(...)` won't throw — the shim will wait until a real client becomes available (via ensureSupabase or window.dispatched event 'supabase:ready') and then execute the recorded query.
-//   4) When a real client becomes available we expose it on window.supabase and dispatch 'supabase:ready'.
-// Notes:
-// - This file is defensive: it avoids the "Cannot read properties of null (reading 'from')" error by always exporting a usable object.
-// - Consumers should prefer calling ensureSupabase() when they need to guarantee a real client synchronously available before running queries (providersApi was updated accordingly).
-// - If you want to force immediate initialization, set window.SUPABASE_URL and window.SUPABASE_ANON_KEY BEFORE loading this script (or set them in a small inline script tag).
+// - Exporta named `supabase` (Proxy) inmediatamente para evitar null imports.
+// - Proporciona ensureSupabase(timeoutMs), getClient(), y ahora initializeSupabase({url,key})
+//   para inicializar el cliente desde el flujo de login u otra parte de la app.
+// - Auto-init sigue funcionando (best-effort), pero ahora puedes inicializar explícitamente
+//   desde el login y garantizar que window.supabase esté disponible.
 
 let _realClient = null;
 let _initializing = false;
@@ -21,14 +14,8 @@ function isValidClient(c) {
   return !!c && typeof c.from === 'function';
 }
 
-// Try to create a client from environment-like variables on window.
-// Returns client or null.
-async function _createClientFromWindowEnv() {
-  if (typeof window === 'undefined') return null;
-  const url = window.SUPABASE_URL || null;
-  const key = window.SUPABASE_ANON_KEY || null;
-  if (!url || !key) return null;
-
+// Create a supabase client given url and key (dynamic import)
+async function _createClient(url, key) {
   try {
     const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
     const { createClient } = mod;
@@ -37,14 +24,22 @@ async function _createClientFromWindowEnv() {
       return null;
     }
     const client = createClient(url, key, {
-      // Optionally set fetch or other options here
-      // fetch: window.fetch
+      // you can set fetch: window.fetch here if needed
     });
     return client;
   } catch (e) {
     console.error('[supabaseBrowserClient] error importing supabase-js:', e);
     return null;
   }
+}
+
+// Try to create a client from window env variables (existing behavior)
+async function _createClientFromWindowEnv() {
+  if (typeof window === 'undefined') return null;
+  const url = window.SUPABASE_URL || null;
+  const key = window.SUPABASE_ANON_KEY || null;
+  if (!url || !key) return null;
+  return await _createClient(url, key);
 }
 
 function _exposeClientGlobally(client) {
@@ -63,6 +58,43 @@ function _dispatchReady() {
   try {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('supabase:ready'));
   } catch (e) { /* ignore */ }
+}
+
+/**
+ * initializeSupabase({ url, key })
+ * - Inicializa explícitamente el cliente Supabase con las credenciales proporcionadas.
+ * - Útil para llamar desde el flujo de login cuando el servidor (o la UI) entrega la URL/key.
+ * - Si ya existe un cliente válido, devuelve el existente.
+ */
+export async function initializeSupabase({ url, key } = {}) {
+  // si ya hay cliente válido, retornarlo
+  if (isValidClient(_realClient)) return _realClient;
+
+  // si se pasaron url/key explícitas, crear con ellas
+  if (url && key) {
+    const client = await _createClient(url, key);
+    if (isValidClient(client)) {
+      _realClient = client;
+      _exposeClientGlobally(_realClient);
+      _dispatchReady();
+      console.log('[supabaseBrowserClient] initializeSupabase: cliente inicializado y expuesto (from args)');
+      return _realClient;
+    }
+    return null;
+  }
+
+  // si no se pasaron, intentar crear desde window env
+  const created = await _createClientFromWindowEnv();
+  if (isValidClient(created)) {
+    _realClient = created;
+    _exposeClientGlobally(_realClient);
+    _dispatchReady();
+    console.log('[supabaseBrowserClient] initializeSupabase: cliente inicializado desde window env');
+    return _realClient;
+  }
+
+  // no se pudo inicializar
+  return null;
 }
 
 // ensureSupabase: attempts to guarantee a real client exists within timeoutMs.
@@ -112,7 +144,6 @@ export async function ensureSupabase(timeoutMs = 5000) {
     }
 
     // 3) no immediate client -> wait for possible external initializer or event within timeout
-    const start = Date.now();
     let resolved = false;
     const promise = new Promise((resolve) => {
       const onReady = () => {
@@ -250,6 +281,7 @@ export const supabase = new Proxy({}, {
     if (prop === 'from') return (table) => new QueryShim(table);
     if (prop === 'auth') return authShim;
     if (prop === 'ensureSupabase') return ensureSupabase;
+    if (prop === 'initializeSupabase') return initializeSupabase;
     if (prop === 'getClient' || prop === 'get') return getClient;
     // otherwise undefined (callers should call ensureSupabase first)
     return undefined;
@@ -261,7 +293,7 @@ export const supabase = new Proxy({}, {
     return true;
   },
   has(_, prop) {
-    if (prop === 'from' || prop === 'auth' || prop === 'ensureSupabase') return true;
+    if (prop === 'from' || prop === 'auth' || prop === 'ensureSupabase' || prop === 'initializeSupabase') return true;
     return isValidClient(_realClient) ? prop in _realClient : false;
   }
 });
