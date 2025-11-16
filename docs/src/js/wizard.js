@@ -423,6 +423,39 @@ class WizardCotizacion {
         }
     }
 
+    actualizarBotonesNavegacion() {
+        const btnAnterior = document.getElementById('btn-anterior');
+        const btnSiguiente = document.getElementById('btn-siguiente');
+
+        if (btnAnterior) {
+            btnAnterior.style.display = this.pasoActual > 1 ? 'inline-block' : 'none';
+        }
+
+        if (btnSiguiente) {
+            btnSiguiente.textContent = this.pasoActual < this.totalPasos ? 'Siguiente →' : 'Finalizar';
+        }
+    }
+
+    // ------------- Métodos de navegación (se añaden para evitar TypeError) -------------
+    anteriorPaso() {
+        if (this.pasoActual > 1) {
+            this.pasoActual--;
+            this.actualizarProgreso();
+            this.mostrarPaso(this.pasoActual);
+        }
+    }
+
+    siguientePaso() {
+        if (this.pasoActual < this.totalPasos) {
+            this.pasoActual++;
+            this.actualizarProgreso();
+            this.mostrarPaso(this.pasoActual);
+        } else {
+            // finalizar: intentar guardar
+            try { this.saveCotizacionSupabase(); } catch (e) { console.error('Error al finalizar/siguientePaso:', e); }
+        }
+    }
+
     mostrarPaso(numeroPaso) {
         this.pasoActual = Number(numeroPaso) || 1;
         for (let i = 1; i <= this.totalPasos; i++) {
