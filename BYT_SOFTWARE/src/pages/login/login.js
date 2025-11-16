@@ -1,123 +1,163 @@
-// login.js - usa supabase-js (v2 via CDN) para email/password sign-in,
-// registra byt_logged_in en localStorage para la lógica existente del proyecto.
+// BYT_SOFTWARE/src/pages/login/login.js
+// Login que utiliza el cliente centralizado (supabaseBrowserClient.js).
+// Si el cliente central no está disponible se usa un fallback local creado dinámicamente.
 
-// IMPORTS
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-import { initializeSupabase } from '../../js/supabaseBrowserClient.js';
+import { initializeSupabase, ensureSupabase, getClient } from '/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
 
-const SUPABASE_URL = window.__SUPABASE_URL || (import.meta.env?.VITE_SUPABASE_URL);
-const ANON_KEY = window.__SUPABASE_ANON_KEY || (import.meta.env?.VITE_SUPABASE_ANON_KEY) || null;
+const SUPABASE_URL = window.__SUPABASE_URL || window.SUPABASE_URL || localStorage.getItem('byt_supabase_url') || null;
+const ANON_KEY = window.__SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY || localStorage.getItem('byt_supabase_anon_key') || null;
 
 console.log('login.js loaded', { SUPABASE_URL, hasAnon: !!ANON_KEY });
 
 const form = document.getElementById('loginForm');
 const msgEl = document.getElementById('msg');
 
-if (!ANON_KEY || !SUPABASE_URL) {
-  const text = 'Falta configuración Supabase. Añade ANON key temporal en login.html o configura build-time.';
-  console.warn(text, { SUPABASE_URL, ANON_KEY });
-  if (msgEl) msgEl.textContent = text;
-}
-
-// Cliente local usado para autenticar (se mantiene para la llamada a signIn)
-const sup = createClient(SUPABASE_URL, ANON_KEY);
-
-// Keys de localStorage que usamos para persistir credenciales entre páginas
 const LS_KEY_URL = 'byt_supabase_url';
 const LS_KEY_KEY = 'byt_supabase_anon_key';
 
-form.addEventListener('submit', async (e) => {
+function showMsg(text, color = '#000') {
+  if (msgEl) {
+    msgEl.style.color = color;
+    msgEl.textContent = text;
+  } else {
+    console.log('login msg:', text);
+  }
+}
+
+// Helper: attempt to sign in using a real supabase client instance
+async function signInClient(client, email, password) {
+  if (!client || !client.auth) throw new Error('Auth no disponible en el cliente');
+  // v2: signInWithPassword, fallback a signIn si existe
+  if (typeof client.auth.signInWithPassword === 'function') {
+    return await client.auth.signInWithPassword({ email, password });
+  }
+  if (typeof client.auth.signIn === 'function') {
+    return await client.auth.signIn({ email, password });
+  }
+  throw new Error('Método de auth no encontrado en cliente Supabase');
+}
+
+// Fallback: crear cliente local dinámicamente si ensureSupabase falla
+async function createLocalClient(url, key) {
+  if (!url || !key) return null;
+  try {
+    const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+    const { createClient } = mod;
+    return createClient(url, key);
+  } catch (e) {
+    console.error('createLocalClient: error importando supabase-js', e);
+    return null;
+  }
+}
+
+form?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  if (!ANON_KEY) {
-    msgEl.textContent = 'Falta la ANON KEY. No se puede autenticar.';
+  showMsg('Iniciando sesión...', '#000');
+
+  const email = document.getElementById('usuario')?.value?.trim();
+  const password = document.getElementById('password')?.value;
+
+  if (!email || !password) {
+    showMsg('Completa usuario y contraseña', 'red');
     return;
   }
 
-  msgEl.textContent = 'Iniciando sesión...';
-  const email = document.getElementById('usuario').value.trim();
-  const password = document.getElementById('password').value;
-
   try {
-    // sup.auth.signInWithPassword devuelve { data, error }
-    const { data, error } = await sup.auth.signInWithPassword({ email, password });
-    console.log('signIn result', { data, error });
+    // 1) Intentar inicializar el cliente central (lee window/localStorage/JSON remoto)
+    try {
+      await initializeSupabase(); // no pasa url/key para usar auto-init (window/localStorage/server)
+    } catch (e) {
+      // no fatal, seguiremos con ensureSupabase o fallback
+      console.warn('initializeSupabase lanzó error (no fatal):', e);
+    }
 
-    if (error) {
-      // Mostrar el mensaje de error devuelto por Supabase
-      msgEl.textContent = `Error: ${error.message || JSON.stringify(error)}`;
+    // 2) Esperar a que haya un cliente real disponible
+    let client = await ensureSupabase(7000);
+
+    // 3) Si no hay cliente tras ensure, intentar crear un cliente local con las credenciales presentes
+    if (!client) {
+      if (SUPABASE_URL && ANON_KEY) {
+        client = await createLocalClient(SUPABASE_URL, ANON_KEY);
+        if (client) {
+          console.warn('[login] Se creó cliente local como fallback');
+        }
+      }
+    }
+
+    if (!client) {
+      showMsg('No se pudo inicializar el cliente Supabase. Revisa la configuración.', 'red');
+      console.error('login: no se obtuvo cliente Supabase (ensureSupabase y fallback fallaron)');
       return;
     }
 
+    // 4) Intentar autenticar con el cliente obtenido
+    const result = await signInClient(client, email, password).catch(err => ({ error: err }));
+    const { data, error } = result;
+
+    if (error) {
+      // Si error es objeto de Supabase, puede tener message; si no, mostramos el toString
+      const message = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
+      showMsg(`Error: ${message}`, 'red');
+      return;
+    }
+
+    // 5) Si autenticación exitosa, exponer y persistir credenciales (initializeSupabase con args persiste en localStorage)
     const session = data?.session;
     const user = data?.user ?? session?.user;
 
-    if (session) {
-      // Intentar inicializar y exponer el cliente globalmente desde el flujo de login
-      try {
-        // Preferir pasar las credenciales que ya usamos en este archivo (las tomadas de window/__)
-        const url = SUPABASE_URL || window.SUPABASE_URL || window.__SUPABASE_URL || null;
-        const key = ANON_KEY || window.SUPABASE_ANON_KEY || window.__SUPABASE_ANON_KEY || null;
-
-        const client = await initializeSupabase({ url, key });
-        if (client && typeof client.from === 'function') {
-          console.log('[login] initializeSupabase: Supabase inicializado y expuesto globalmente (y persistido en localStorage)');
-          // initializeSupabase already persists creds in localStorage
-        } else {
-          // Fallback: si initializeSupabase por alguna razón devolvió null, exponemos el cliente local `sup` y persistimos las credenciales usadas
-          console.warn('[login] initializeSupabase no devolvió cliente válido, exponiendo cliente local `sup` como fallback');
-          try {
-            if (typeof window !== 'undefined') {
-              window.supabase = sup;
-              window.globalSupabase = window.globalSupabase || {};
-              window.globalSupabase.client = sup;
-              try { window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
-              // persistir las credenciales que usamos localmente (para futuras cargas)
-              try {
-                if (url) localStorage.setItem(LS_KEY_URL, url);
-                if (key) localStorage.setItem(LS_KEY_KEY, key);
-              } catch (e) { /* ignore */ }
-              console.log('[login] fallback: window.supabase establecido desde cliente local `sup` y credenciales persistidas en localStorage');
-            }
-          } catch (e) {
-            console.warn('[login] no se pudo exponer fallback sup en window', e);
-          }
-        }
-      } catch (initErr) {
-        console.error('[login] Error inicializando Supabase tras login:', initErr);
-        // Intentamos exponer igualmente el cliente local `sup` como fallback y persistir credenciales
+    // Llamar initializeSupabase con las credenciales detectadas para asegurar persistencia/exposición global
+    try {
+      const urlToPersist = SUPABASE_URL || (client?.supabaseUrl) || null;
+      const keyToPersist = ANON_KEY || null;
+      // Si tenemos url/key explícitas las pasamos para garantizar persistencia en localStorage por nuestra implementación.
+      if (urlToPersist && keyToPersist) {
+        await initializeSupabase({ url: urlToPersist, key: keyToPersist });
+      } else {
+        // si no, intentar exponer el cliente actual (en caso de cliente creado localmente)
         try {
           if (typeof window !== 'undefined') {
-            window.supabase = sup;
+            window.supabase = client;
             window.globalSupabase = window.globalSupabase || {};
-            window.globalSupabase.client = sup;
+            window.globalSupabase.client = client;
             try { window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
-            try {
-              if (SUPABASE_URL) localStorage.setItem(LS_KEY_URL, SUPABASE_URL);
-              if (ANON_KEY) localStorage.setItem(LS_KEY_KEY, ANON_KEY);
-            } catch (e) { /* ignore */ }
-            console.log('[login] fallback tras error: window.supabase establecido desde cliente local `sup` y credenciales persistidas');
           }
-        } catch (e) {
-          console.warn('[login] no se pudo exponer fallback sup en window después de error', e);
-        }
+        } catch (e) { /* ignore */ }
       }
-
-      // Guardar flag que otras páginas del repo esperan
-      localStorage.setItem('byt_logged_in', '1');
-      localStorage.setItem('byt_user', JSON.stringify(user || {}));
-      // Supabase-js guarda la sesión en localStorage también por defecto
-
-      msgEl.style.color = 'green';
-      msgEl.textContent = 'Login OK. Redirigiendo...';
-      // Ajustá la ruta si tu menú principal está en otro lugar
-      window.location.href = '../menu_principal.html';
-      return;
+    } catch (initErr) {
+      console.warn('[login] initializeSupabase tras auth lanzó error (no fatal):', initErr);
+      // intentar exponer igualmente el cliente
+      try {
+        if (typeof window !== 'undefined') {
+          window.supabase = client;
+          window.globalSupabase = window.globalSupabase || {};
+          window.globalSupabase.client = client;
+          try { window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
+        }
+      } catch (e) {}
     }
 
-    msgEl.textContent = 'Respuesta inesperada de autenticación. Revisa la consola.';
-    console.warn('Auth response sin session:', data);
+    // Persistir marka de login y user
+    try {
+      localStorage.setItem('byt_logged_in', '1');
+      if (user) localStorage.setItem('byt_user', JSON.stringify(user));
+    } catch (e) { /* ignore */ }
+
+    // Si initializeSupabase persiste keys en localStorage (implementación actual), ya quedaron guardadas.
+    // Si no, guardamos las credenciales actuales por compatibilidad:
+    try {
+      if (SUPABASE_URL) localStorage.setItem(LS_KEY_URL, SUPABASE_URL);
+      if (ANON_KEY) localStorage.setItem(LS_KEY_KEY, ANON_KEY);
+    } catch (e) {}
+
+    showMsg('Login OK. Redirigiendo...', 'green');
+
+    // Redirigir a pantalla principal (ajustar ruta si necesario)
+    setTimeout(() => {
+      window.location.href = '../menu_principal.html';
+    }, 700);
+
   } catch (err) {
-    console.error('signIn exception', err);
-    msgEl.textContent = 'Error inesperado. Ver consola.';
+    console.error('login exception', err);
+    showMsg('Error inesperado. Mira la consola para más detalles.', 'red');
   }
 });
