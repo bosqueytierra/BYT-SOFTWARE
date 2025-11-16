@@ -1,7 +1,9 @@
 // login.js - usa supabase-js (v2 via CDN) para email/password sign-in,
 // registra byt_logged_in en localStorage para la lógica existente del proyecto.
 
+// IMPORTS
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { initializeSupabase } from '../../js/supabaseBrowserClient.js';
 
 const SUPABASE_URL = window.__SUPABASE_URL || (import.meta.env?.VITE_SUPABASE_URL);
 const ANON_KEY = window.__SUPABASE_ANON_KEY || (import.meta.env?.VITE_SUPABASE_ANON_KEY) || null;
@@ -17,6 +19,7 @@ if (!ANON_KEY || !SUPABASE_URL) {
   if (msgEl) msgEl.textContent = text;
 }
 
+// Cliente local usado para autenticar (se mantiene para la llamada a signIn)
 const sup = createClient(SUPABASE_URL, ANON_KEY);
 
 form.addEventListener('submit', async (e) => {
@@ -45,10 +48,51 @@ form.addEventListener('submit', async (e) => {
     const user = data?.user ?? session?.user;
 
     if (session) {
+      // Intentar inicializar y exponer el cliente globalmente desde el flujo de login
+      try {
+        // Preferir pasar las credenciales que ya usamos en este archivo (las tomadas de window/__)
+        const url = SUPABASE_URL || window.SUPABASE_URL || window.__SUPABASE_URL || null;
+        const key = ANON_KEY || window.SUPABASE_ANON_KEY || window.__SUPABASE_ANON_KEY || null;
+
+        const client = await initializeSupabase({ url, key });
+        if (client && typeof client.from === 'function') {
+          console.log('[login] initializeSupabase: Supabase inicializado y expuesto globalmente');
+        } else {
+          // Fallback: si initializeSupabase por alguna razón devolvió null, exponemos el cliente local `sup`
+          console.warn('[login] initializeSupabase no devolvió cliente válido, exponiendo cliente local `sup` como fallback');
+          try {
+            if (typeof window !== 'undefined') {
+              window.supabase = sup;
+              window.globalSupabase = window.globalSupabase || {};
+              window.globalSupabase.client = sup;
+              try { window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
+              console.log('[login] fallback: window.supabase establecido desde cliente local `sup`');
+            }
+          } catch (e) {
+            console.warn('[login] no se pudo exponer fallback sup en window', e);
+          }
+        }
+      } catch (initErr) {
+        console.error('[login] Error inicializando Supabase tras login:', initErr);
+        // Intentamos exponer igualmente el cliente local `sup` como fallback
+        try {
+          if (typeof window !== 'undefined') {
+            window.supabase = sup;
+            window.globalSupabase = window.globalSupabase || {};
+            window.globalSupabase.client = sup;
+            try { window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
+            console.log('[login] fallback tras error: window.supabase establecido desde cliente local `sup`');
+          }
+        } catch (e) {
+          console.warn('[login] no se pudo exponer fallback sup en window después de error', e);
+        }
+      }
+
       // Guardar flag que otras páginas del repo esperan
       localStorage.setItem('byt_logged_in', '1');
       localStorage.setItem('byt_user', JSON.stringify(user || {}));
       // Supabase-js guarda la sesión en localStorage también por defecto
+
       msgEl.style.color = 'green';
       msgEl.textContent = 'Login OK. Redirigiendo...';
       // Ajustá la ruta si tu menú principal está en otro lugar
