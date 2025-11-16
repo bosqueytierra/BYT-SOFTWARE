@@ -1,50 +1,154 @@
-// Supabase browser client initializer
-// Crea window.supabase si no existe, usando el CDN ESM de supabase-js.
-// Contiene la URL y ANON KEY proporcionadas.
-// IMPORTANTE: despacha un evento 'supabase:ready' cuando el cliente esté listo.
-// Coloca este archivo antes de wizard.js en tus HTML para evitar esperas.
+// Supabase browser client initializer (módulo ESM)
+// - Exporta una binding nombrada `supabase` (live binding) y también por defecto.
+// - Proporciona ensureSupabase() para inicialización asincrónica y getClient() para obtener el cliente actual.
+// - Reutiliza window.supabase / window.globalSupabase.client si ya existen.
+// - Si hay variables window.SUPABASE_URL y window.SUPABASE_ANON_KEY, intenta crear el cliente automáticamente
+//   mediante import dinámico de @supabase/supabase-js desde CDN (útil para entornos estáticos).
+//
+// Reemplaza/coloca este archivo antes de cualquier módulo que haga `import { supabase } from './supabaseBrowserClient.js'`
+// para asegurar que la exportación exista y se actualice cuando el cliente esté listo.
 
-(async function initSupabaseBrowserClient(){
+export let supabase = null;
+
+function isValidClient(c) {
+  return c && typeof c.from === 'function';
+}
+
+async function createClientFromEnv() {
+  if (typeof window === 'undefined') return null;
+
+  const url = window.SUPABASE_URL || null;
+  const key = window.SUPABASE_ANON_KEY || null;
+  if (!url || !key) return null;
+
   try {
-    // Si ya está creado, no hacemos nada
-    if (window.supabase && typeof window.supabase.from === 'function') {
-      console.log('[supabaseBrowserClient] window.supabase ya inicializado');
-      // también exponer en globalSupabase por compatibilidad
+    // Cargar ESM desde CDN (jsDelivr) y crear cliente
+    const module = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+    const { createClient } = module;
+    if (typeof createClient !== 'function') {
+      console.warn('[supabaseBrowserClient] createClient no encontrado en el módulo importado');
+      return null;
+    }
+    const client = createClient(url, key, {
+      // Opciones por defecto; se pueden ajustar si hace falta.
+      // fetch: window.fetch
+    });
+    return client;
+  } catch (e) {
+    console.error('[supabaseBrowserClient] Error importando supabase-js desde CDN:', e);
+    return null;
+  }
+}
+
+/**
+ * ensureSupabase - intenta garantizar que exista un cliente supabase funcional.
+ * - Reusa window.supabase o window.globalSupabase.client si ya existen.
+ * - Si no existen, intenta crear uno si hay credenciales en window.
+ * - Devuelve el cliente o null si no pudo obtenerlo.
+ */
+export async function ensureSupabase() {
+  // 1) Si ya hay binding válido
+  if (isValidClient(supabase)) return supabase;
+
+  // 2) Verificar window (otro script pudo haberlo creado)
+  try {
+    if (typeof window !== 'undefined') {
+      if (isValidClient(window.supabase)) {
+        supabase = window.supabase;
+      } else if (window.globalSupabase && isValidClient(window.globalSupabase.client)) {
+        supabase = window.globalSupabase.client;
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  if (isValidClient(supabase)) {
+    // asegurar exposición global consistente
+    try {
+      if (typeof window !== 'undefined') {
+        window.supabase = supabase;
+        window.globalSupabase = window.globalSupabase || {};
+        window.globalSupabase.client = supabase;
+      }
+    } catch (e) {}
+    // notify listeners
+    try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('supabase:ready')); } catch (_) {}
+    return supabase;
+  }
+
+  // 3) Intentar crear cliente desde env/browser variables
+  const created = await createClientFromEnv();
+  if (isValidClient(created)) {
+    supabase = created;
+    try {
+      if (typeof window !== 'undefined') {
+        window.supabase = supabase;
+        window.globalSupabase = window.globalSupabase || {};
+        window.globalSupabase.client = supabase;
+      }
+    } catch (e) {}
+    try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('supabase:ready')); } catch (_) {}
+    console.log('[supabaseBrowserClient] supabase inicializado y expuesto en window.supabase');
+    return supabase;
+  }
+
+  // 4) No se pudo obtener cliente
+  return null;
+}
+
+/** getClient - devuelve el cliente actual (posible null). */
+export function getClient() {
+  return supabase;
+}
+
+// Inicialización automática no bloqueante: intentar tomar cliente global o crear si hay credenciales.
+// No lanzamos errores hacia afuera; solo intentamos dejar supabase disponible lo antes posible.
+(async function autoInit() {
+  try {
+    // Si ya existe window.supabase y es válido, úsalo.
+    if (typeof window !== 'undefined' && isValidClient(window.supabase)) {
+      supabase = window.supabase;
+      // Asegurar globalSupabase
       window.globalSupabase = window.globalSupabase || {};
       window.globalSupabase.client = window.supabase;
-      // dispatch por si alguien lo espera
-      window.dispatchEvent(new Event('supabase:ready'));
+      try { window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
+      console.log('[supabaseBrowserClient] window.supabase ya inicializado (reuse).');
       return;
     }
 
-    // Tu URL y ANON KEY (los dejé tal como me diste)
-    const SUPABASE_URL = 'https://qwbeectinjasekkjzxls.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
-
-    // Import dinámico de la versión ESM de supabase-js desde jsdelivr
-    const module = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-    const { createClient } = module;
-
-    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      // Opciones opcionales: por ejemplo tiempo de espera
-      // fetch: window.fetch
-    });
-
-    // También exponer en globalSupabase por compatibilidad con código que la use
-    window.globalSupabase = window.globalSupabase || {};
-    window.globalSupabase.client = window.supabase;
-
-    console.log('[supabaseBrowserClient] window.supabase inicializado con URL y ANON KEY');
-
-    // Dispatch event para avisar a quien espere a supabase
-    try {
-      window.dispatchEvent(new Event('supabase:ready'));
-      console.log('[supabaseBrowserClient] evento supabase:ready despachado');
-    } catch (e) {
-      console.warn('[supabaseBrowserClient] no se pudo despachar evento supabase:ready', e);
+    // Si no existe, intentar crear si hay SUPABASE_URL/ANON_KEY
+    const maybe = await createClientFromEnv();
+    if (isValidClient(maybe)) {
+      supabase = maybe;
+      try {
+        if (typeof window !== 'undefined') {
+          window.supabase = supabase;
+          window.globalSupabase = window.globalSupabase || {};
+          window.globalSupabase.client = supabase;
+        }
+      } catch (e) {}
+      try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('supabase:ready')); } catch (e) {}
+      console.log('[supabaseBrowserClient] supabase inicializado con credenciales encontradas en window.');
+      return;
     }
+
+    // Si aún no hay cliente, solo registramos que la inicialización quedó pendiente.
+    console.log('[supabaseBrowserClient] supabase no inicializado automáticamente (no detectado en window y no hay credenciales).');
   } catch (err) {
-    console.error('[supabaseBrowserClient] Error inicializando supabase client:', err);
-    // No debemos bloquear la app; dejar que el wizard intente reintentar más tarde.
+    console.error('[supabaseBrowserClient] autoInit error:', err);
   }
 })();
+
+// También intentamos exponer un pequeño helper global para compatibilidad con código antiguo
+try {
+  if (typeof window !== 'undefined') {
+    window.globalSupabase = window.globalSupabase || {};
+    // No sobrescribimos si ya existe
+    if (!isValidClient(window.globalSupabase.client) && isValidClient(supabase)) {
+      window.globalSupabase.client = supabase;
+    }
+  }
+} catch (e) { /* ignore */ }
+
+// Export por defecto (binding live) para compatibilidad con import default.
+export default supabase;
