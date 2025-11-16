@@ -1673,18 +1673,31 @@ class WizardCotizacion {
 let bytWizard = null;
 
 function anteriorPaso() {
-    const inst = (window.bytWizard && typeof window.bytWizard.anteriorPaso === 'function') ? window.bytWizard
-               : (window.wizard && typeof window.wizard.anteriorPaso === 'function') ? window.wizard
-               : null;
-    if (inst) return inst.anteriorPaso();
+    // Intentar varias fuentes seguras de instancia
+    const candidates = [
+        window.bytWizard,
+        window.wizard,
+        window.__bytWizardProxy
+    ];
+    for (const inst of candidates) {
+        if (inst && typeof inst.anteriorPaso === 'function') {
+            try { return inst.anteriorPaso(); } catch (e) { console.error('Error calling anteriorPaso on instance', e); }
+        }
+    }
     console.error('Wizard instance not available for anteriorPaso. bytWizard:', window.bytWizard, 'wizard:', window.wizard);
 }
 
 function siguientePaso() {
-    const inst = (window.bytWizard && typeof window.bytWizard.siguientePaso === 'function') ? window.bytWizard
-               : (window.wizard && typeof window.wizard.siguientePaso === 'function') ? window.wizard
-               : null;
-    if (inst) return inst.siguientePaso();
+    const candidates = [
+        window.bytWizard,
+        window.wizard,
+        window.__bytWizardProxy
+    ];
+    for (const inst of candidates) {
+        if (inst && typeof inst.siguientePaso === 'function') {
+            try { return inst.siguientePaso(); } catch (e) { console.error('Error calling siguientePaso on instance', e); }
+        }
+    }
     console.error('Wizard instance not available for siguientePaso. bytWizard:', window.bytWizard, 'wizard:', window.wizard);
 }
 
@@ -1693,20 +1706,59 @@ document.addEventListener('DOMContentLoaded', function() {
         bytWizard = new WizardCotizacion();
         // Exponer explicitamente la instancia en window.bytWizard
         window.bytWizard = bytWizard;
-        // Intentar también exponer en window.wizard SOLO si no hay un elemento DOM conflictivo
+
+        // Crear un proxy seguro que delegue a bytWizard y que se pueda usar si alguna parte del HTML llama a "wizard?.siguientePaso()"
+        // Solo creamos/reemplazamos window.wizard si NO existe un elemento DOM con id/name "wizard".
         try {
             const existing = Object.prototype.hasOwnProperty.call(window, 'wizard') ? window.wizard : undefined;
             const isDOM = (existing && (existing instanceof HTMLElement || existing instanceof Node));
             if (!isDOM) {
-                window.wizard = bytWizard;
+                // build a lightweight proxy that forwards property access and binds methods to the instance
+                const proxy = new Proxy(bytWizard, {
+                    get(target, prop) {
+                        const val = target[prop];
+                        if (typeof val === 'function') {
+                            return val.bind(target);
+                        }
+                        return val;
+                    },
+                    set(target, prop, value) {
+                        // allow writable properties on the instance
+                        try {
+                            target[prop] = value;
+                            return true;
+                        } catch (e) { return false; }
+                    },
+                    has(target, prop) {
+                        return prop in target;
+                    }
+                });
+                // keep a reference in window.__bytWizardProxy for the wrapper functions to try if needed
+                window.__bytWizardProxy = proxy;
+                // expose as window.wizard for compatibility (so inline onclick="wizard?.siguientePaso()" works)
+                window.wizard = proxy;
+                console.log('window.wizard set as proxy to window.bytWizard (no DOM conflict detected).');
             } else {
-                // no sobreescribimos el elemento DOM; mantenemos window.bytWizard como la referencia segura
-                console.warn('No sobrescribiendo window.wizard porque existe un elemento DOM con ese nombre/id.');
+                // si existe un elemento DOM llamado 'wizard', no lo sobrescribimos; se usa window.bytWizard explícitamente
+                console.warn('No sobrescribiendo window.wizard porque existe un elemento DOM con ese nombre/id. Usar window.bytWizard en su lugar.');
             }
         } catch (e) {
-            // fallback: siempre aseguremos window.bytWizard
-            console.warn('No se pudo evaluar window.wizard, exponiendo solamente window.bytWizard');
+            // fallback: exponer al menos window.bytWizard y la referencia proxy en __bytWizardProxy
+            try {
+                const proxyFallback = new Proxy(bytWizard, {
+                    get(target, prop) {
+                        const val = target[prop];
+                        if (typeof val === 'function') return val.bind(target);
+                        return val;
+                    }
+                });
+                window.__bytWizardProxy = proxyFallback;
+                console.warn('No se pudo evaluar window.wizard; se expuso window.__bytWizardProxy como fallback.');
+            } catch (er) {
+                console.warn('No se pudo crear proxy fallback para bytWizard', er);
+            }
         }
+
         console.log('WizardCotizacion inicializado (window.bytWizard)');
     } catch (e) {
         console.error('Error inicializando WizardCotizacion:', e);
