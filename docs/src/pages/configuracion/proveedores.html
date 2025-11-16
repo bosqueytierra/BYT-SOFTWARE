@@ -9,7 +9,7 @@
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{border:1px solid #ddd;padding:8px}
     th{background:#f5f5f5;text-align:left}
-    input[type=text]{width:100%;box-sizing:border-box;padding:6px}
+    input[type=text], input[type=url], input[type=password] {width:100%;box-sizing:border-box;padding:6px}
     button{padding:6px 10px;margin-right:6px}
     .actions{display:flex;gap:6px}
     .banner{padding:12px;border-radius:6px;margin:10px 0}
@@ -17,6 +17,10 @@
     .banner.error{background:#f8d7da;border:1px solid #f5c6cb;color:#721c24}
     .muted{color:#777;font-size:13px}
     .small{font-size:13px}
+    .connect-form{border:1px dashed #ccc;padding:12px;margin-top:10px;border-radius:6px;background:#fafafa}
+    .row{display:flex;gap:10px}
+    .col{flex:1}
+    .right{text-align:right}
   </style>
 </head>
 <body>
@@ -24,10 +28,32 @@
 
   <div id="banner-container" aria-live="polite"></div>
 
-  <div>
-    <button id="btnNew">+ Nuevo Proveedor</button>
-    <button id="btnReload">Recargar</button>
-    <button id="btnDemo" title="Cargar modo demo/local" style="display:none">Activar Modo Demo</button>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+    <div>
+      <button id="btnNew">+ Nuevo Proveedor</button>
+      <button id="btnReload">Recargar</button>
+      <button id="btnDemo" title="Activar modo demo/local" style="display:none">Activar Modo Demo</button>
+    </div>
+    <div class="right" style="flex:1">
+      <span id="statusText" class="muted small"></span>
+    </div>
+  </div>
+
+  <div id="connectArea" class="connect-form" style="display:none;">
+    <div class="muted small">No se detectó una conexión con Supabase. Puedes pegar credenciales temporales (solo para pruebas) o usar Modo Demo.</div>
+    <div style="margin-top:8px;">
+      <label class="small">Supabase URL</label>
+      <input id="connUrl" type="url" placeholder="https://xyz.supabase.co" />
+    </div>
+    <div style="margin-top:8px;">
+      <label class="small">ANON KEY</label>
+      <input id="connKey" type="password" placeholder="eyJhbGciOi..." />
+    </div>
+    <div style="margin-top:8px;display:flex;gap:8px;">
+      <button id="btnConnect">Conectar</button>
+      <button id="btnUseDemo">Modo Demo</button>
+      <button id="btnCancelConnect">Cancelar</button>
+    </div>
   </div>
 
   <table id="providersTable" aria-label="Proveedores">
@@ -46,30 +72,40 @@
 
   <script type="module">
     /**
-     * Mejora crítica aplicada: esperar a que el cliente Supabase esté disponible
-     * (bien sea expuesto en window.supabase por otro script o inicializado por
-     * supabaseBrowserClient.ensureSupabase) ANTES de intentar listar proveedores.
-     *
-     * Razonamiento: el wizard/otros scripts pueden inicializar window.supabase
-     * en un orden distinto. En tu caso el wizard sí lee de Supabase pero la página
-     * de Configuración-Proveedores intentaba leer antes de que existiera el cliente,
-     * provocando errores "Cannot read properties of null (reading 'from')" o "no-supabase".
-     *
-     * Solución única (la recomendada): esperar hasta 5s por el evento 'supabase:ready'
-     * o por window.supabase, llamando a ensureSupabase() como fallback. Si al final no
-     * hay cliente, se muestra mensaje y se habilita modo demo (localStorage).
-     *
-     * Este archivo es el HTML completo con esa lógica integrada.
+     * Página autónoma y robusta para Configuración - Proveedores
+     * - Intenta asegurarse de que existe un cliente Supabase disponible (initializeSupabase/ensureSupabase).
+     * - Si no hay cliente, muestra panel para pegar SUPABASE_URL + ANON_KEY temporalmente (solo pruebas) o activar Modo Demo.
+     * - Sigue usando ../lib/providersApi.js (que a su vez usa ensureSupabase()).
+     * - Expone window.providersApi y alias en consola para depuración.
+     * - No elimina funciones existentes: es un reemplazo completo de la página.
      */
 
     import * as apiModule from '../../lib/providersApi.js';
-    import { ensureSupabase } from '../../js/supabaseBrowserClient.js';
+    import { ensureSupabase, initializeSupabase } from '../../js/supabaseBrowserClient.js';
+
+    // Exponer módulo en window para pruebas / consola
+    try {
+      window.providersApi = apiModule;
+      window.createProvider = async (...args) => (await window.providersApi.createProvider(...args));
+      window.updateProvider = async (...args) => (await window.providersApi.updateProvider(...args));
+      window.deleteProvider = async (...args) => (await window.providersApi.deleteProvider(...args));
+      console.log('[proveedores] providersApi expuesto en window.providersApi (para pruebas en consola)');
+    } catch (e) {
+      console.warn('[proveedores] no se pudo exponer providersApi globalmente', e);
+    }
 
     const tbody = document.querySelector('#providersTable tbody');
     const btnNew = document.getElementById('btnNew');
     const btnReload = document.getElementById('btnReload');
     const btnDemo = document.getElementById('btnDemo');
     const bannerContainer = document.getElementById('banner-container');
+    const connectArea = document.getElementById('connectArea');
+    const connUrl = document.getElementById('connUrl');
+    const connKey = document.getElementById('connKey');
+    const btnConnect = document.getElementById('btnConnect');
+    const btnUseDemo = document.getElementById('btnUseDemo');
+    const btnCancelConnect = document.getElementById('btnCancelConnect');
+    const statusText = document.getElementById('statusText');
 
     const DEMO_KEY = 'byt_demo_providers_v1';
 
@@ -83,93 +119,56 @@
     }
     function clearBanner() { bannerContainer.innerHTML = ''; }
 
-    // Espera por supabase:ready o window.supabase hasta timeoutMs (ms)
-    async function waitForSupabase(timeoutMs = 5000) {
-      // Si ya existe, resolvemos inmediato
-      try {
-        if (window.supabase && typeof window.supabase.from === 'function') {
-          return true;
-        }
-        if (window.globalSupabase && window.globalSupabase.client && typeof window.globalSupabase.client.from === 'function') {
-          return true;
-        }
-      } catch (e) {}
-
-      // Intentar ensureSupabase immediato (podría inicializar desde este módulo)
-      try {
-        const got = await ensureSupabase();
-        if (got && typeof got.from === 'function') return true;
-      } catch (e) {
-        // ignore: proceed to event wait
+    async function tryEnsureSupabase(timeoutMs = 3000) {
+      statusText.textContent = 'Verificando conexión a Supabase...';
+      const client = await ensureSupabase(timeoutMs);
+      if (client && typeof client.from === 'function') {
+        statusText.textContent = 'Conectado a Supabase';
+        return true;
       }
-
-      // Esperar evento supabase:ready o polling
-      return new Promise((resolve) => {
-        let resolved = false;
-        const onReady = async () => {
-          if (resolved) return;
-          resolved = true;
-          cleanup();
-          resolve(true);
-        };
-        const cleanup = () => {
-          window.removeEventListener('supabase:ready', onReady);
-          if (timeoutId) clearTimeout(timeoutId);
-          if (intervalId) clearInterval(intervalId);
-        };
-        window.addEventListener('supabase:ready', onReady);
-
-        // Polling breve por si otro script expone window.supabase sin emitir evento
-        const intervalId = setInterval(() => {
-          try {
-            if (window.supabase && typeof window.supabase.from === 'function') {
-              onReady();
-            } else if (window.globalSupabase && window.globalSupabase.client && typeof window.globalSupabase.client.from === 'function') {
-              onReady();
-            }
-          } catch (e) {}
-        }, 200);
-
-        const timeoutId = setTimeout(() => {
-          if (resolved) return;
-          resolved = true;
-          cleanup();
-          resolve(false); // no hay supabase en el tiempo esperado
-        }, timeoutMs);
-      });
+      statusText.textContent = 'No conectado a Supabase';
+      return false;
     }
 
-    // --- Loader principal con espera por supabase ---
+    // Si no hay cliente, mostramos connectArea para que admin pegue credenciales temporales
+    function showConnectPanel() {
+      connectArea.style.display = 'block';
+      btnDemo.style.display = 'inline-block';
+    }
+    function hideConnectPanel() {
+      connectArea.style.display = 'none';
+    }
+
+    // Main loader: intenta obtener datos ya sea desde supabase o demo
     async function loadAdminProviders({ forceDemo = false } = {}) {
       tbody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
-
-      // Si forzamos modo demo, saltamos cualquier intento
+      // Si demo forzado o modo demo activado, cargar demo
       if (forceDemo || isDemoMode()) {
         loadDemoDataToTable();
         return;
       }
 
-      // Esperar brevemente por supabase (para que el wizard u otros scripts la inicialicen)
-      showBanner('Esperando conexión a Supabase (breve)…', 'warning');
-      const ready = await waitForSupabase(5000); // 5s de espera por defecto
-      if (!ready) {
+      // Intentar asegurar supabase
+      const ok = await tryEnsureSupabase(3000);
+      if (!ok) {
+        // No hay cliente, mostrar opción de conectar manualmente o demo
         clearBanner();
-        showBanner('No hay cliente de persistencia disponible (Supabase). Puedes activar el <strong>Modo Demo</strong> para operar localmente o configurar el cliente Supabase en la app.', 'error');
-        btnDemo.style.display = 'inline-block';
+        showBanner('No hay cliente de persistencia disponible (Supabase). Puedes conectar manualmente credenciales temporales o activar el Modo Demo.', 'error');
+        showConnectPanel();
         tbody.innerHTML = `<tr><td colspan="6" class="muted">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
         return;
       }
 
-      // Si llegamos acá, supabase debería estar listo (o ensureSupabase lo inicializó)
       clearBanner();
+      hideConnectPanel();
 
       try {
         const { listProviders } = apiModule;
         const { data, error } = await listProviders({ onlyActive: false });
         if (error) {
           if (error && (error.message === 'no-supabase' || error === 'no-supabase')) {
-            showBanner('No hay cliente de persistencia disponible (Supabase). Puedes activar el <strong>Modo Demo</strong> para operar localmente o configurar el cliente Supabase en la app.', 'error');
-            btnDemo.style.display = 'inline-block';
+            showBanner('No hay cliente de persistencia disponible (Supabase). Puedes activar el Modo Demo o conectar credenciales.', 'error');
+            showConnectPanel();
             tbody.innerHTML = `<tr><td colspan="6" class="muted">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
             return;
           }
@@ -231,6 +230,7 @@
               alert('Error actualizando proveedor: ' + (res.error.message || JSON.stringify(res.error)));
               return;
             }
+            // providersApi already dispatches providers:changed
             await loadAdminProviders();
           } catch (err) {
             console.error('updateProvider error', err);
@@ -279,7 +279,7 @@
       });
     }
 
-    // New provider handler (works in demo or real)
+    // New provider handler
     btnNew.addEventListener('click', async () => {
       const name = prompt('Nombre proveedor:');
       if (!name) return;
@@ -304,11 +304,46 @@
     // Reload
     btnReload.addEventListener('click', () => loadAdminProviders());
 
-    // Demo mode helpers
+    // Connect panel actions
+    btnConnect.addEventListener('click', async () => {
+      const url = connUrl.value.trim();
+      const key = connKey.value.trim();
+      if (!url || !key) {
+        alert('Provee SUPABASE URL y ANON KEY para conectar.');
+        return;
+      }
+      showBanner('Intentando conectar a Supabase...', 'warning');
+      try {
+        const client = await initializeSupabase({ url, key });
+        if (client && typeof client.from === 'function') {
+          clearBanner();
+          hideConnectPanel();
+          btnDemo.style.display = 'none';
+          await loadAdminProviders();
+          alert('Conexión a Supabase establecida correctamente.');
+        } else {
+          showBanner('No se pudo crear el cliente Supabase con las credenciales provistas.', 'error');
+        }
+      } catch (e) {
+        console.error('connect error', e);
+        showBanner('Error al intentar conectar: ' + (e.message || e), 'error');
+      }
+    });
+
+    btnUseDemo.addEventListener('click', async () => {
+      activateDemoMode();
+      await loadAdminProviders({ forceDemo: true });
+    });
+
+    btnCancelConnect.addEventListener('click', () => {
+      hideConnectPanel();
+      clearBanner();
+    });
+
+    // Demo helpers (localStorage)
     function isDemoMode() {
       return localStorage.getItem(DEMO_KEY + ':mode') === '1';
     }
-
     function activateDemoMode() {
       localStorage.setItem(DEMO_KEY + ':mode', '1');
       if (!localStorage.getItem(DEMO_KEY)) {
@@ -319,11 +354,9 @@
         localStorage.setItem(DEMO_KEY, JSON.stringify(seed));
       }
     }
-
     function deactivateDemoMode() {
       localStorage.removeItem(DEMO_KEY + ':mode');
     }
-
     function loadDemoDataToTable() {
       const raw = localStorage.getItem(DEMO_KEY);
       let data = [];
@@ -338,7 +371,6 @@
       btnDemo.textContent = 'Desactivar Modo Demo';
       attachRowEvents();
     }
-
     function createDemoProvider(payload) {
       const raw = localStorage.getItem(DEMO_KEY);
       let data = raw ? JSON.parse(raw) : [];
@@ -347,14 +379,12 @@
       data.unshift(item);
       localStorage.setItem(DEMO_KEY, JSON.stringify(data));
     }
-
     function updateDemoProvider(id, payload) {
       const raw = localStorage.getItem(DEMO_KEY);
       let data = raw ? JSON.parse(raw) : [];
       data = data.map(d => d.id === id ? { ...d, ...payload } : d);
       localStorage.setItem(DEMO_KEY, JSON.stringify(data));
     }
-
     function deleteDemoProvider(id) {
       const raw = localStorage.getItem(DEMO_KEY);
       let data = raw ? JSON.parse(raw) : [];
@@ -375,8 +405,22 @@
       }
     });
 
-    // Initial load: attempt to show providers; waits for supabase if other scripts create it.
+    // Listen providers:changed just in case providersApi emits (keeps page in sync)
+    window.addEventListener('providers:changed', async (e) => {
+      console.log('providers:changed event received', e && e.detail);
+      // recargar lista cuando haya cambio
+      await loadAdminProviders();
+    });
+
+    // Initial load: try to ensure supabase or show connect panel
     (async () => {
+      const ok = await tryEnsureSupabase(2000);
+      if (!ok) {
+        showBanner('No hay cliente de persistencia disponible (Supabase). Puedes conectar manualmente o activar Modo Demo.', 'error');
+        showConnectPanel();
+      } else {
+        hideConnectPanel();
+      }
       await loadAdminProviders();
     })();
 
