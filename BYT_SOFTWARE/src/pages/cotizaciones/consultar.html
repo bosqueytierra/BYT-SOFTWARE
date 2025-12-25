@@ -267,9 +267,9 @@
 }
 
         // Duplicar cotización (por implementar)
-        function duplicarCotizacion(id) {
-            window.utils.mostrarNotificacion('Función de duplicación en desarrollo', 'info');
-        }
+       function duplicarCotizacion(id) {
+  window.location.href = `nueva.html?duplicate=${id}`;
+}
 
         // Eliminar cotización
         async function eliminarCotizacion(id, btnEl) {
@@ -307,5 +307,6 @@
     </script>
 </body>
 </html>
+
 
 
