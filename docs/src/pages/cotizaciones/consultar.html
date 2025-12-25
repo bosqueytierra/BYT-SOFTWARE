@@ -271,31 +271,29 @@
   window.location.href = `nueva.html?duplicate=${id}`;
 }
 
-        // Eliminar cotización
         async function eliminarCotizacion(id, btnEl) {
-            if (!confirm('¿Está seguro de que desea eliminar esta cotización? Esta acción no se puede deshacer.')) {
-                return;
-            }
-            
-            try {
-                const resultado = await window.supabaseClient.eliminarCotizacion(id);
-                
-                if (resultado.success) {
-                    window.utils.mostrarNotificacion('Cotización eliminada exitosamente', 'success');
-                    cargarCotizaciones();
-                    try {
-                        const card = btnEl.closest('.cotizacion-item');
-                        if (card) card.remove();
-                    } catch (e) { /* ignore */ }
-                } else {
-                    throw new Error(resultado.error);
-                }
-                
-            } catch (error) {
-                console.error('Error al eliminar cotización:', error);
-                window.utils.mostrarNotificacion('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
-            }
-        }
+  if (!confirm('¿Está seguro de que desea eliminar esta cotización? Esta acción no se puede deshacer.')) return;
+  try {
+    if (window.supabaseClient?.init) await window.supabaseClient.init();
+
+    const resultado = await window.supabaseClient.eliminarCotizacion(id);
+    if (!resultado.success) throw new Error(resultado.error);
+
+    // Quitar la tarjeta al vuelo (opcional)
+    try {
+      const card = btnEl?.closest('.cotizacion-item');
+      if (card) card.remove();
+    } catch (_) {}
+
+    // Recargar lista completa para dejar filtros/orden en estado correcto
+    await cargarCotizaciones();
+
+    window.utils?.mostrarNotificacion?.('Cotización eliminada exitosamente', 'success');
+  } catch (error) {
+    console.error('Error al eliminar cotización:', error);
+    window.utils?.mostrarNotificacion?.('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
+  }
+}
 
         // escapeHtml para proteger la inyección de HTML
         function escapeHtml(str) {
@@ -307,6 +305,7 @@
     </script>
 </body>
 </html>
+
 
 
 
