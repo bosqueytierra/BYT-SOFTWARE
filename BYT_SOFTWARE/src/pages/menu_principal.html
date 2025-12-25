@@ -4,10 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BYT SOFTWARE - Panel</title>
-  <!-- Estilo base existente -->
   <link rel="stylesheet" href="../styles/global.css">
-
-  <!-- Nueva skin -->
   <style>
     :root {
       --bg: #f6f7f8;
@@ -18,103 +15,109 @@
       --border: #e4e7eb;
       --card: #ffffff;
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
-      --sidebar: #1f2c34;
-      --sidebar-hover: rgba(255,255,255,0.08);
-      --sidebar-active: rgba(255,255,255,0.14);
+      --sidebar: #1f2229;
+      --pill-bg: #f4f6f8;
+      --pill-border: #dce1e7;
     }
-
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: "Inter", "Roboto", system-ui, -apple-system, sans-serif;
+      font-family: "Inter","Roboto",system-ui,sans-serif;
       background: var(--bg);
       color: var(--text);
     }
-    a { text-decoration: none; color: inherit; }
-
     .app-shell {
       display: grid;
-      grid-template-columns: 240px 1fr;
+      grid-template-columns: 88px 1fr;
       min-height: 100vh;
-      transition: grid-template-columns 0.2s ease;
     }
-    .app-shell.collapsed {
-      grid-template-columns: 80px 1fr;
-    }
-
-    /* Sidebar */
+    /* Sidebar vertical tipo “píldora” */
     .sidebar {
       background: var(--sidebar);
       color: #fff;
-      padding: 14px 10px;
+      padding: 18px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+    }
+    .brand {
+      width: 60px;
+      height: 60px;
+      border-radius: 18px;
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+    .brand img { width: 36px; height: 36px; object-fit: contain; }
+
+    .nav-stack {
       display: flex;
       flex-direction: column;
       gap: 12px;
-      transition: width 0.2s ease;
-      overflow: hidden;
-    }
-    .brand {
-      display: flex;
+      width: 100%;
       align-items: center;
-      gap: 10px;
-      padding: 10px 10px;
-      font-weight: 700;
-      font-size: 16px;
     }
-    .brand img { height: 28px; width: 28px; object-fit: contain; }
-    .nav {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      flex: 1;
+    .nav-pill {
+      width: 60px;
+      height: 60px;
+      border-radius: 18px;
+      background: var(--pill-bg);
+      border: 1px solid var(--pill-border);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+      color: #4a4f58;
+      font-size: 18px;
     }
-    .nav-item {
-      border: none;
-      background: transparent;
-      color: #dce3ea;
+    .nav-pill:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    }
+    .nav-pill.active {
+      background: #eaf3ef;
+      border-color: var(--primary);
+      color: var(--primary);
+      box-shadow: 0 10px 20px rgba(46,94,78,0.18);
+    }
+    /* Submenú flotante */
+    .submenu {
+      position: absolute;
+      left: 70px;
+      top: 0;
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 16px 30px rgba(0,0,0,0.12);
+      padding: 8px;
+      display: none;
+      min-width: 180px;
+      z-index: 20;
+    }
+    .submenu a {
+      display: block;
       padding: 10px 12px;
       border-radius: 10px;
-      text-align: left;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
+      color: var(--text);
       font-size: 14px;
-      transition: background 0.15s ease, color 0.15s ease;
     }
-    .nav-item:hover {
-      background: var(--sidebar-hover);
+    .submenu a:hover {
+      background: #f1f3f5;
     }
-    .nav-item.active {
-      background: var(--sidebar-active);
-      color: #fff;
-      font-weight: 600;
+    .nav-pill:hover .submenu {
+      display: block;
     }
-    .nav-icon {
-      width: 20px;
-      display: inline-flex;
-      justify-content: center;
-    }
-    .sidebar-footer {
-      padding: 8px 10px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      color: #b8c4cc;
-      font-size: 12px;
-    }
-    .collapsed .nav-item span.label,
-    .collapsed .brand span.label,
-    .collapsed .sidebar-footer span {
-      display: none;
-    }
-    .collapsed .nav-item { justify-content: center; }
-    .collapsed .brand { justify-content: center; }
-
     /* Topbar */
     .topbar {
       background: #ffffff;
       border-bottom: 1px solid var(--border);
       box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-      padding: 10px 18px;
+      padding: 12px 18px;
       display: grid;
       grid-template-columns: 1fr 1.5fr 1fr;
       align-items: center;
@@ -132,11 +135,7 @@
       border-radius: 10px;
       cursor: pointer;
       color: var(--text);
-      transition: background 0.15s ease;
     }
-    .icon-btn:hover { background: #e4e9ed; }
-    .logo-text { font-weight: 700; color: var(--primary); }
-
     .search-bar {
       display: flex;
       align-items: center;
@@ -154,8 +153,7 @@
       outline: none;
       font-size: 14px;
     }
-
-    /* Page header */
+    /* Page header, KPIs y cards (igual que antes) */
     .page-header {
       display: flex;
       justify-content: space-between;
@@ -174,19 +172,10 @@
       cursor: pointer;
       font-weight: 600;
       color: var(--text);
-      transition: transform 0.1s ease, box-shadow 0.1s ease;
     }
-    .btn:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
-    .btn.primary {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
-    .btn.ghost {
-      background: transparent;
-    }
+    .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn.ghost { background: transparent; }
 
-    /* KPIs */
     .kpis {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -201,25 +190,7 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.03);
       color: var(--muted);
     }
-    .kpi-card strong {
-      display: block;
-      margin-top: 6px;
-      color: var(--text);
-      font-size: 20px;
-    }
-    .pill {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 11px;
-      color: #fff;
-      margin-left: 6px;
-    }
-    .pill.green { background: #2e8b57; }
-    .pill.orange { background: #ee7b45; }
-    .pill.blue { background: #4fa3d1; }
-
-    /* Cards */
+    .kpi-card strong { display: block; margin-top: 6px; color: var(--text); font-size: 20px; }
     .content-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -228,7 +199,6 @@
       padding: 16px;
       box-shadow: var(--shadow);
     }
-    .content-card h3 { margin: 0 0 12px 0; }
     .table-placeholder {
       border: 1px dashed var(--border);
       border-radius: 10px;
@@ -236,51 +206,85 @@
       text-align: center;
       color: var(--muted);
     }
-
-    /* Responsive */
     @media (max-width: 960px) {
+      .app-shell { grid-template-columns: 72px 1fr; }
       .topbar { grid-template-columns: 1fr; }
       .page-header { flex-direction: column; align-items: flex-start; }
       .actions { width: 100%; flex-wrap: wrap; }
-      .app-shell { grid-template-columns: 72px 1fr; }
-      .sidebar { padding: 12px 8px; }
-      .brand span.label,
-      .nav-item span.label,
-      .sidebar-footer span { display: none; }
-      .nav-item { justify-content: center; }
     }
   </style>
 </head>
 <body>
-  <div class="app-shell" id="appShell">
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <img src="../assets/logo_byt.png" alt="BYT">
-        <span class="label">Bosque y Tierra</span>
-      </div>
-      <nav class="nav">
-        <button class="nav-item active"><span class="nav-icon">🏠</span><span class="label">Dashboard</span></button>
-        <button class="nav-item"><span class="nav-icon">📄</span><span class="label">Cotizaciones</span></button>
-        <button class="nav-item"><span class="nav-icon">👥</span><span class="label">Clientes</span></button>
-        <button class="nav-item"><span class="nav-icon">📂</span><span class="label">Proyectos</span></button>
-        <button class="nav-item"><span class="nav-icon">📦</span><span class="label">Inventario</span></button>
-        <button class="nav-item"><span class="nav-icon">📊</span><span class="label">Reportes</span></button>
-        <button class="nav-item"><span class="nav-icon">💰</span><span class="label">Finanzas</span></button>
-        <button class="nav-item"><span class="nav-icon">⚙️</span><span class="label">Ajustes</span></button>
-      </nav>
-      <div class="sidebar-footer">
-        <span>BYT SOFTWARE</span>
+  <div class="app-shell">
+    <!-- Sidebar con iconos tipo píldora -->
+    <aside class="sidebar">
+      <div class="brand"><img src="../assets/logo_byt.png" alt="BYT"></div>
+      <div class="nav-stack">
+        <div class="nav-pill active" title="Dashboard">
+          🏠
+          <div class="submenu">
+            <a href="#">Resumen</a>
+            <a href="#">Actividad</a>
+          </div>
+        </div>
+        <div class="nav-pill" title="Cotizaciones">
+          📄
+          <div class="submenu">
+            <a href="#">Listado</a>
+            <a href="#">Nueva cotización</a>
+            <a href="#">Importar</a>
+          </div>
+        </div>
+        <div class="nav-pill" title="Clientes">
+          👥
+          <div class="submenu">
+            <a href="#">Listado</a>
+            <a href="#">Nuevo cliente</a>
+          </div>
+        </div>
+        <div class="nav-pill" title="Proyectos">
+          📂
+          <div class="submenu">
+            <a href="#">Proyectos activos</a>
+            <a href="#">Nuevo proyecto</a>
+          </div>
+        </div>
+        <div class="nav-pill" title="Inventario">
+          📦
+          <div class="submenu">
+            <a href="#">Stock</a>
+            <a href="#">Entradas/Salidas</a>
+          </div>
+        </div>
+        <div class="nav-pill" title="Reportes">
+          📊
+          <div class="submenu">
+            <a href="#">Finanzas</a>
+            <a href="#">Ventas</a>
+          </div>
+        </div>
+        <div class="nav-pill" title="Finanzas">
+          💰
+          <div class="submenu">
+            <a href="#">Resumen financiero</a>
+            <a href="#">Cuentas</a>
+          </div>
+        </div>
+        <div class="nav-pill" title="Ajustes">
+          ⚙️
+          <div class="submenu">
+            <a href="#">Perfil</a>
+            <a href="#">Preferencias</a>
+          </div>
+        </div>
       </div>
     </aside>
 
     <!-- Main -->
     <div class="main">
-      <!-- Topbar -->
       <header class="topbar">
         <div class="left">
-          <button class="icon-btn" id="toggleSidebar" title="Mostrar/ocultar menú">☰</button>
-          <span class="logo-text">Panel</span>
+          <span class="logo-text">Bosque y Tierra</span>
         </div>
         <div class="search-bar">
           <span style="color: var(--muted);">🔍</span>
@@ -293,7 +297,6 @@
         </div>
       </header>
 
-      <!-- Page header -->
       <section class="page-header">
         <div>
           <div class="breadcrumb">Dashboard / Resumen</div>
@@ -305,29 +308,18 @@
         </div>
       </section>
 
-      <!-- KPIs -->
       <section class="kpis">
-        <div class="kpi-card">Total cotizaciones <span class="pill blue">Hoy</span><strong>128</strong></div>
-        <div class="kpi-card">En progreso <span class="pill orange">12</span><strong>32</strong></div>
-        <div class="kpi-card">Aprobadas <span class="pill green">+8</span><strong>76</strong></div>
+        <div class="kpi-card">Total cotizaciones<strong>128</strong></div>
+        <div class="kpi-card">En progreso<strong>32</strong></div>
+        <div class="kpi-card">Aprobadas<strong>76</strong></div>
         <div class="kpi-card">Rechazadas<strong>20</strong></div>
       </section>
 
-      <!-- Content -->
       <section class="content-card">
         <h3>Últimas cotizaciones</h3>
         <div class="table-placeholder">Aquí irá la tabla/lista de cotizaciones recientes.</div>
       </section>
     </div>
   </div>
-
-  <script>
-    // Toggle sidebar
-    const appShell = document.getElementById('appShell');
-    const toggleBtn = document.getElementById('toggleSidebar');
-    toggleBtn?.addEventListener('click', () => {
-      appShell.classList.toggle('collapsed');
-    });
-  </script>
 </body>
 </html>
