@@ -127,8 +127,17 @@
         </div>
     </div>
 
-    <!-- Scripts: el orden es importante. globalSupabase.js debe cargarse antes que cualquier script que lo use. -->
+    <!-- Scripts: el orden es importante. -->
+    <!-- Config Supabase: URL y ANON key -->
+    <script src="../../lib/supabaseConfig.js"></script>
+
+    <!-- Inicializador que crea window.supabase y emite supabase:ready -->
+    <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+
+    <!-- Librería globalSupabase (usa el cliente ya creado) -->
     <script src="../../js/globalSupabase.js" defer></script>
+
+    <!-- Resto de dependencias -->
     <script src="../../js/categorias_reales.js" defer></script>
     <script src="../../js/wizard.js" defer></script>
 
@@ -145,7 +154,7 @@
                     const conexionOk = await window.supabaseClient.validarConexion();
                     if (!conexionOk) {
                         console.warn('Conexión con Supabase no disponible - funcionando en modo offline');
-                        window.utils.mostrarNotificacion('Trabajando en modo offline', 'warning');
+                        window.utils?.mostrarNotificacion?.('Trabajando en modo offline', 'warning');
                     }
                 } else {
                     console.warn('supabaseClient no está disponible aún en window');
@@ -157,3 +166,4 @@
     </script>
 </body>
 </html>
+
