@@ -9,21 +9,23 @@ let supabase = null;
 // Inicializa la librería y crea el client; expone window.supabase y window.globalSupabase.client
 async function initSupabase() {
     try {
-        // Primero verificar si window.supabase ya está inicializado (por supabaseBrowserClient.js)
-        if (window.supabase && typeof window.supabase.from === 'function') {
-            supabase = window.supabase;
+        // Helper para sincronizar el cliente con window globals
+        const syncClientToGlobals = (client) => {
+            supabase = client;
+            window.supabase = client;
             window.globalSupabase = window.globalSupabase || {};
-            window.globalSupabase.client = supabase;
-            console.log('Supabase ya estaba inicializado - usando cliente existente');
+            window.globalSupabase.client = client;
+        };
+
+        // Verificar si ya hay un cliente inicializado (local o en window por supabaseBrowserClient.js)
+        if (supabase && typeof supabase.from === 'function') {
+            syncClientToGlobals(supabase);
             return true;
         }
-
-        // Si ya inicializó localmente, retornarlo
-        if (supabase && typeof supabase.from === 'function') {
-            // también aseguramos que esté en globals
-            window.supabase = supabase;
-            window.globalSupabase = window.globalSupabase || {};
-            window.globalSupabase.client = supabase;
+        
+        if (window.supabase && typeof window.supabase.from === 'function') {
+            syncClientToGlobals(window.supabase);
+            console.log('Supabase ya estaba inicializado - usando cliente existente');
             return true;
         }
 
@@ -41,12 +43,8 @@ async function initSupabase() {
         }
 
         // Aquí window.supabase es la librería; creamos el cliente real
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // Exponer el cliente en globals para compatibilidad con wizard y otros scripts
-        window.supabase = supabase; // cliente en window.supabase (método .from disponible)
-        window.globalSupabase = window.globalSupabase || {};
-        window.globalSupabase.client = supabase;
+        const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        syncClientToGlobals(client);
 
         // Opcional: despachar evento para quien lo escuche
         try {
