@@ -278,13 +278,13 @@
     const resultado = await window.supabaseClient.eliminarCotizacion(id);
     if (!resultado.success) throw new Error(resultado.error);
 
-    // Quitar del DOM si tenemos el botón
+    // Remueve del DOM si está el botón
     try {
       const card = btnEl?.closest('.cotizacion-item');
       if (card) card.remove();
     } catch (_) {}
 
-    // Quitar de los arrays locales y re-renderizar
+    // Actualiza arrays locales y re-renderiza (sin volver a pedir a Supabase)
     cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
     cotizacionesFiltradas = (cotizacionesFiltradas || []).filter(c => c.id !== id);
     mostrarCotizaciones();
@@ -306,6 +306,7 @@
     </script>
 </body>
 </html>
+
 
 
 
