@@ -127,10 +127,55 @@
         </div>
     </div>
 
-    <!-- Scripts: el orden es importante. globalSupabase.js debe cargarse antes que cualquier script que lo use. -->
-    <script src="../../js/globalSupabase.js" defer></script>
-    <script src="../../js/categorias_reales.js" defer></script>
-    <script src="../../js/wizard.js" defer></script>
+    <!-- Scripts: Orden crítico para inicialización correcta de Supabase -->
+    <!-- 1. Cargar librería Supabase desde CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    
+    <!-- 2. Cargar configuración de Supabase (define window.__SUPABASE_URL y window.__SUPABASE_ANON_KEY) -->
+    <script src="../../lib/supabaseConfig.js"></script>
+    
+    <!-- 3. Inicializar cliente Supabase inmediatamente -->
+    <script>
+        (function() {
+            try {
+                if (window.supabase && typeof window.supabase.createClient === 'function' && 
+                    window.__SUPABASE_URL && window.__SUPABASE_ANON_KEY) {
+                    
+                    // Crear cliente Supabase usando la configuración
+                    const client = window.supabase.createClient(
+                        window.__SUPABASE_URL, 
+                        window.__SUPABASE_ANON_KEY
+                    );
+                    
+                    // Exponer cliente en globalSupabase pero mantener la librería en window.supabase
+                    // para que globalSupabase.js no intente recargarla
+                    window.globalSupabase = window.globalSupabase || {};
+                    window.globalSupabase.client = client;
+                    
+                    // También exponer en window.supabase para compatibilidad
+                    // Guardamos la librería primero por si se necesita
+                    window.globalSupabase._library = window.supabase;
+                    window.supabase = client;
+                    
+                    // Emitir evento de que Supabase está listo
+                    window.dispatchEvent(new Event('supabase:ready'));
+                    
+                    console.log('Supabase client initialized successfully');
+                } else {
+                    console.error('Failed to initialize Supabase: missing library or config');
+                }
+            } catch (error) {
+                console.error('Error initializing Supabase client:', error);
+            }
+        })();
+    </script>
+    
+    <!-- 4. Cargar globalSupabase.js (funciones de persistencia) -->
+    <script src="../../js/globalSupabase.js"></script>
+    
+    <!-- 5. Cargar dependencias -->
+    <script src="../../js/categorias_reales.js"></script>
+    <script src="../../js/wizard.js"></script>
 
     <script>
         // Verificar autenticación
@@ -138,14 +183,16 @@
             window.location.href = '../login/login.html';
         }
 
-        // Inicializar Supabase al cargar la página (usará globalSupabase.js)
+        // Inicializar Supabase al cargar la página
         window.addEventListener('load', async () => {
             try {
                 if (window.supabaseClient && typeof window.supabaseClient.validarConexion === 'function') {
                     const conexionOk = await window.supabaseClient.validarConexion();
                     if (!conexionOk) {
                         console.warn('Conexión con Supabase no disponible - funcionando en modo offline');
-                        window.utils.mostrarNotificacion('Trabajando en modo offline', 'warning');
+                        if (window.utils && window.utils.mostrarNotificacion) {
+                            window.utils.mostrarNotificacion('Trabajando en modo offline', 'warning');
+                        }
                     }
                 } else {
                     console.warn('supabaseClient no está disponible aún en window');
