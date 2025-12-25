@@ -164,12 +164,14 @@
         });
     </script>
 
-    <!-- Carga en modo edición si viene ?id=... -->
+       <!-- Carga en modo edición o duplicado -->
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
         const params = new URLSearchParams(window.location.search);
         const editId = params.get('id');
-        if (!editId) return;
+        const duplicateId = params.get('duplicate');
+        const targetId = duplicateId || editId;
+        if (!targetId) return;
 
         try {
           // Asegurar Supabase inicializado
@@ -184,19 +186,31 @@
 
           // Cargar la cotización existente en el wizard
           if (window.bytWizard?.loadCotizacionSupabase) {
-            const res = await window.bytWizard.loadCotizacionSupabase(editId);
-            if (!res?.ok) {
-              console.warn('No se pudo cargar la cotización para edición', res?.error);
-              alert('No se pudo cargar la cotización. Intenta de nuevo.');
+            const res = await window.bytWizard.loadCotizacionSupabase(targetId);
+            if (!res?.ok) throw new Error(res?.error || 'No se pudo cargar');
+
+            // Si es duplicado, limpiar ID/numero y renombrar proyecto
+            if (duplicateId) {
+              const d = window.bytWizard.datos || {};
+              d._id = null;
+              d.numero = 'COT-' + Date.now();
+              if (d.cliente) {
+                const base = d.cliente.nombre_proyecto || d.cliente.nombre || 'Proyecto';
+                d.cliente.nombre_proyecto = `${base} (Copia)`;
+              }
+              // Re-render paso 1 y barra
+              window.bytWizard.mostrarPaso(1);
+              window.bytWizard.actualizarBarraSuperior?.();
             }
           } else {
             console.warn('loadCotizacionSupabase no disponible en bytWizard');
           }
         } catch (e) {
-          console.error('Error cargando cotización para edición', e);
+          console.error('Error cargando cotización (ed/dup)', e);
           alert('No se pudo cargar la cotización. Intenta de nuevo.');
         }
       });
     </script>
 </body>
 </html>
+
