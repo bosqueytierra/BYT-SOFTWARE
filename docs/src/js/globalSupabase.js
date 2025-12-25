@@ -9,18 +9,24 @@ let supabase = null;
 // Inicializa la librería y crea el client; expone window.supabase y window.globalSupabase.client
 async function initSupabase() {
     try {
-        // Si ya inicializó y es cliente, retornarlo
+        // 1) Si ya hay cliente creado (p.ej. por supabaseBrowserClient.js), úsalo
+        if (window.supabase && typeof window.supabase.from === 'function') {
+            supabase = window.supabase;
+            window.globalSupabase = window.globalSupabase || {};
+            window.globalSupabase.client = supabase;
+            return true;
+        }
+
+        // 2) Si este módulo ya creó el cliente antes, reutilizar
         if (supabase && typeof supabase.from === 'function') {
-            // también aseguramos que esté en globals
             window.supabase = supabase;
             window.globalSupabase = window.globalSupabase || {};
             window.globalSupabase.client = supabase;
             return true;
         }
 
-        // Si la librería no está cargada en window.supabase (manager de CDN), cargarla
+        // 3) Si la librería UMD no está cargada, cargarla
         if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-            // cargamos la versión UMD de supabase-js que crea window.supabase
             await new Promise((resolve, reject) => {
                 const s = document.createElement('script');
                 s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
@@ -31,7 +37,7 @@ async function initSupabase() {
             });
         }
 
-        // Aquí window.supabase es la librería; creamos el cliente real
+        // 4) Crear cliente desde la librería UMD
         supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Exponer el cliente en globals para compatibilidad con wizard y otros scripts
@@ -241,3 +247,4 @@ window.supabaseClient = {
 window.utils = {
     mostrarNotificacion
 };
+
