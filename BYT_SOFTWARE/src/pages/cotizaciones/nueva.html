@@ -127,7 +127,9 @@
         </div>
     </div>
 
-    <!-- Scripts: el orden es importante. globalSupabase.js debe cargarse antes que cualquier script que lo use. -->
+    <!-- Scripts: el orden es importante para evitar errores de duplicación y asegurar inicialización correcta. -->
+    <script src="../../lib/supabaseConfig.js"></script>
+    <script src="../../js/supabaseBrowserClient.js" type="module"></script>
     <script src="../../js/globalSupabase.js" defer></script>
     <script src="../../js/categorias_reales.js" defer></script>
     <script src="../../js/wizard.js" defer></script>
