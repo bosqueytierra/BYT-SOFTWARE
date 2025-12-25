@@ -485,87 +485,115 @@
                 container.innerHTML = html;
             }
 
-            // Mostrar valores traspasados
+            // Mostrar valores traspasados (nuevo: soporta data.valoresTraspasados y legacy fierro/cuarzo/etc.)
             function mostrarValoresTraspasados() {
                 const container = document.getElementById('valores-detalle');
+                const trasp = getTraspasados(cotizacionActual);
                 let html = '';
-                let totalTraspasados = 0;
-                
-                // Soporte a estructura directa en fila o en data.valoresTraspasados
-                const datos = cotizacionActual.data?.valoresTraspasados || {};
-                const conceptosExplicit = ['fierro','cuarzo','ventanas','transporte','almuerzo'];
-
-                let filas = '';
-                // Si datos tiene entradas estructuradas
-                if (datos && Object.keys(datos).length > 0) {
-                    Object.keys(datos).forEach(k => {
-                        const m = datos[k];
-                        const nombre = m.nombre || k;
-                        const subtotal = Number(m.subtotal || ( (m.cantidad||0) * (m.precio||0) ) || 0);
-                        if (subtotal > 0) {
-                            totalTraspasados += subtotal;
-                            filas += `<tr>
-                                <td>${escapeHtml(nombre)}</td>
-                                <td>${escapeHtml(m.descripcion || '')}</td>
-                                <td style="text-align:right; font-weight:600;">${formatPrecio(subtotal)}</td>
-                            </tr>`;
-                        }
-                    });
-                } else {
-                    // intentar campos sueltos en la fila (antiguo)
-                    conceptosExplicit.forEach(concepto => {
-                        const valor = Number(cotizacionActual[concepto] || 0);
-                        if (valor > 0) {
-                            totalTraspasados += valor;
-                            filas += `<tr>
-                                <td>${escapeHtml(concepto)}</td>
-                                <td>-</td>
-                                <td style="text-align:right; font-weight:600;">${formatPrecio(valor)}</td>
-                            </tr>`;
-                        }
-                    });
-
-                    // extras (si existen)
-                    try {
-                        const extras = JSON.parse(cotizacionActual.extras || cotizacionActual.data?.extras || '{}');
-                        Object.keys(extras).forEach(key => {
-                            const valor = Number(extras[key] || 0);
-                            if (valor > 0) {
-                                totalTraspasados += valor;
-                                filas += `<tr>
-                                    <td>Extra</td>
-                                    <td>${escapeHtml(key)}</td>
-                                    <td style="text-align:right; font-weight:600;">${formatPrecio(valor)}</td>
-                                </tr>`;
-                            }
-                        });
-                    } catch (e) {
-                        // ignore
-                    }
+                const secciones = Object.keys(trasp).filter(k => trasp[k] && trasp[k].materiales && Object.keys(trasp[k].materiales).length);
+                if (!secciones.length) {
+                    container.innerHTML = '<p class="no-data">No se registraron valores traspasados para este proyecto.</p>';
+                    return;
                 }
 
-                if (filas) {
-                    html = `
-                        <div class="table-container">
-                            <table class="table">
-                                <thead>
-                                    <tr><th>Concepto</th><th>Descripción</th><th style="text-align:right;">Monto</th></tr>
-                                </thead>
-                                <tbody>
-                                    ${filas}
-                                    <tr style="background: rgba(46,94,78,0.06); font-weight:600;">
-                                        <td colspan="2" style="text-align:right;">Total Valores Traspasados:</td>
-                                        <td style="text-align:right; color:var(--color-primary);">${formatPrecio(totalTraspasados)}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                secciones.forEach(sec => {
+                    const cat = trasp[sec] || {};
+                    const factor = cat.factor || 0;
+                    const items = cat.materiales || {};
+                    let filas = '';
+                    let totalBase = 0;
+
+                    Object.keys(items).forEach(k => {
+                        const it = items[k] || {};
+                        const sub = (Number(it.cantidad || 0) * Number(it.precio || 0)) || 0;
+                        totalBase += sub;
+                        filas += `
+                            <tr>
+                                <td>${escapeHtml(it.nombre || k)}</td>
+                                <td>${escapeHtml(it.descripcion || '')}</td>
+                                <td>${escapeHtml(it.lugar || '')}</td>
+                                <td>${Number(it.cantidad || 0)}</td>
+                                <td>$${Number(it.precio || 0).toLocaleString()}</td>
+                                <td style="font-weight:600;">$${sub.toLocaleString()}</td>
+                            </tr>
+                        `;
+                    });
+
+                    const totalFactor = totalBase * factor;
+                    html += `
+                        <div class="detalle-section">
+                            <h4 style="margin: 0 0 10px 0; color: #f57c00; text-transform: uppercase;">
+                                ${escapeHtml(cat.nombre || sec)} ${factor ? `(factor ${Number(factor).toFixed(2)})` : ''}
+                            </h4>
+                            <div class="table-container">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Servicio</th>
+                                            <th>Descripción</th>
+                                            <th>Lugar</th>
+                                            <th>Cant.</th>
+                                            <th>Valor Unit.</th>
+                                            <th>Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${filas || '<tr><td colspan="6" class="no-data">Sin datos</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="margin-top:10px; font-weight:600;">
+                                Total base: $${totalBase.toLocaleString()} &nbsp; | &nbsp;
+                                Factor (${Number(factor).toFixed(2)}): $${totalFactor.toLocaleString()} &nbsp; | &nbsp;
+                                Total con factor: $${(totalBase + totalFactor).toLocaleString()}
+                            </div>
                         </div>
                     `;
-                } else {
-                    html = '<p class="no-data">No se registraron valores traspasados para este proyecto.</p>';
-                }
+                });
 
                 container.innerHTML = html;
+            }
+
+            // Helpers para valores traspasados
+            function getTraspasados(c) {
+                if (c?.data?.valoresTraspasados) return c.data.valoresTraspasados;
+                if (c?.valoresTraspasados) return c.valoresTraspasados;
+                return buildLegacyTrasp(c);
+            }
+            function buildLegacyTrasp(c) {
+                const hasLegacy = ['fierro','cuarzo','ventanas','transporte','almuerzo'].some(k => c && c[k]);
+                const extras = safeJSON(c?.extras);
+                if (!hasLegacy && !extras) return {};
+                const res = {};
+                ['fierro','cuarzo','ventanas','transporte','almuerzo'].forEach(k => {
+                    if (c && c[k]) {
+                        res[k] = {
+                            nombre: k.toUpperCase(),
+                            factor: 0,
+                            materiales: {
+                                [k]: { nombre: k.toUpperCase(), cantidad: 1, precio: Number(c[k]) || 0, descripcion: '' }
+                            }
+                        };
+                    }
+                });
+                if (extras && typeof extras === 'object') {
+                    res.extras = { nombre: 'EXTRAS', factor: 0, materiales: {} };
+                    Object.keys(extras).forEach(k => {
+                        const v = extras[k];
+                        res.extras.materiales[k] = {
+                            nombre: v?.nombre || k,
+                            cantidad: v?.cantidad || 1,
+                            precio: v?.precio || Number(v) || 0,
+                            descripcion: v?.descripcion || ''
+                        };
+                    });
+                }
+                return res;
+            }
+            function safeJSON(v) {
+                if (!v) return null;
+                if (typeof v === 'string') { try { return JSON.parse(v); } catch (_) { return null; } }
+                return v;
             }
 
             // Utilities: formateo de precios y escape
@@ -606,4 +634,3 @@
     </script>
 </body>
 </html>
-
