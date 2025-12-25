@@ -1,140 +1,333 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Menú Principal - BYT SOFTWARE</title>
-  <link rel="stylesheet" href="../styles/global.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BYT SOFTWARE - Panel</title>
+  <!-- Estilo base existente -->
+  <link rel="stylesheet" href="../styles/global.css">
+
+  <!-- Nueva skin -->
+  <style>
+    :root {
+      --bg: #f6f7f8;
+      --primary: #2e5e4e;
+      --accent: #ee7b45;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --border: #e4e7eb;
+      --card: #ffffff;
+      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+      --sidebar: #1f2c34;
+      --sidebar-hover: rgba(255,255,255,0.08);
+      --sidebar-active: rgba(255,255,255,0.14);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Inter", "Roboto", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    a { text-decoration: none; color: inherit; }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: 100vh;
+      transition: grid-template-columns 0.2s ease;
+    }
+    .app-shell.collapsed {
+      grid-template-columns: 80px 1fr;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: var(--sidebar);
+      color: #fff;
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: width 0.2s ease;
+      overflow: hidden;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 10px;
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .brand img { height: 28px; width: 28px; object-fit: contain; }
+    .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .nav-item {
+      border: none;
+      background: transparent;
+      color: #dce3ea;
+      padding: 10px 12px;
+      border-radius: 10px;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+    .nav-item:hover {
+      background: var(--sidebar-hover);
+    }
+    .nav-item.active {
+      background: var(--sidebar-active);
+      color: #fff;
+      font-weight: 600;
+    }
+    .nav-icon {
+      width: 20px;
+      display: inline-flex;
+      justify-content: center;
+    }
+    .sidebar-footer {
+      padding: 8px 10px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      color: #b8c4cc;
+      font-size: 12px;
+    }
+    .collapsed .nav-item span.label,
+    .collapsed .brand span.label,
+    .collapsed .sidebar-footer span {
+      display: none;
+    }
+    .collapsed .nav-item { justify-content: center; }
+    .collapsed .brand { justify-content: center; }
+
+    /* Topbar */
+    .topbar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      padding: 10px 18px;
+      display: grid;
+      grid-template-columns: 1fr 1.5fr 1fr;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar .left { display: flex; align-items: center; gap: 10px; }
+    .topbar .right { display: flex; justify-content: flex-end; gap: 8px; }
+    .icon-btn {
+      border: none;
+      background: #eef2f5;
+      padding: 9px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      color: var(--text);
+      transition: background 0.15s ease;
+    }
+    .icon-btn:hover { background: #e4e9ed; }
+    .logo-text { font-weight: 700; color: var(--primary); }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      background: #f0f3f5;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0 12px;
+      gap: 8px;
+    }
+    .search-bar input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 10px 0;
+      outline: none;
+      font-size: 14px;
+    }
+
+    /* Page header */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px;
+      gap: 12px;
+    }
+    .breadcrumb { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+    h1 { margin: 0; font-size: 22px; }
+    .actions { display: flex; gap: 8px; }
+    .btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+    .btn:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+    .btn.primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .btn.ghost {
+      background: transparent;
+    }
+
+    /* KPIs */
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      padding: 0 18px 12px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+      color: var(--muted);
+    }
+    .kpi-card strong {
+      display: block;
+      margin-top: 6px;
+      color: var(--text);
+      font-size: 20px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      color: #fff;
+      margin-left: 6px;
+    }
+    .pill.green { background: #2e8b57; }
+    .pill.orange { background: #ee7b45; }
+    .pill.blue { background: #4fa3d1; }
+
+    /* Cards */
+    .content-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin: 0 18px 18px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .content-card h3 { margin: 0 0 12px 0; }
+    .table-placeholder {
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 28px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    /* Responsive */
+    @media (max-width: 960px) {
+      .topbar { grid-template-columns: 1fr; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .actions { width: 100%; flex-wrap: wrap; }
+      .app-shell { grid-template-columns: 72px 1fr; }
+      .sidebar { padding: 12px 8px; }
+      .brand span.label,
+      .nav-item span.label,
+      .sidebar-footer span { display: none; }
+      .nav-item { justify-content: center; }
+    }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div class="header-content">
-        <div class="logo-section">
-          <img src="../assets/logo_byt.png" alt="Logo BYT" class="logo" />
-          <div>
-            <h1 class="header-title">BYT SOFTWARE</h1>
-            <p class="header-subtitle">Sistema de Gestión - Bosque y Tierra</p>
-          </div>
+  <div class="app-shell" id="appShell">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <img src="../assets/logo_byt.png" alt="BYT">
+        <span class="label">Bosque y Tierra</span>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active"><span class="nav-icon">🏠</span><span class="label">Dashboard</span></button>
+        <button class="nav-item"><span class="nav-icon">📄</span><span class="label">Cotizaciones</span></button>
+        <button class="nav-item"><span class="nav-icon">👥</span><span class="label">Clientes</span></button>
+        <button class="nav-item"><span class="nav-icon">📂</span><span class="label">Proyectos</span></button>
+        <button class="nav-item"><span class="nav-icon">📦</span><span class="label">Inventario</span></button>
+        <button class="nav-item"><span class="nav-icon">📊</span><span class="label">Reportes</span></button>
+        <button class="nav-item"><span class="nav-icon">💰</span><span class="label">Finanzas</span></button>
+        <button class="nav-item"><span class="nav-icon">⚙️</span><span class="label">Ajustes</span></button>
+      </nav>
+      <div class="sidebar-footer">
+        <span>BYT SOFTWARE</span>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="left">
+          <button class="icon-btn" id="toggleSidebar" title="Mostrar/ocultar menú">☰</button>
+          <span class="logo-text">Panel</span>
         </div>
-
-        <!-- User widget: muestra campos amigables en lugar del JSON -->
-        <div id="userWidget" style="display:flex;align-items:center;gap:12px;margin-left:auto;">
-          <img id="userAvatar" src="" alt="avatar" style="width:44px;height:44px;border-radius:50%;object-fit:cover;background:#f0f0f0;" />
-          <div style="min-width:220px;">
-            <div id="userName" style="font-weight:600;color:#16362e;"></div>
-            <div id="userEmail" style="font-size:13px;color:#666;"></div>
-          </div>
-          <div style="margin-left:12px;">
-            <button id="logoutBtn" class="btn btn-secondary">Cerrar Sesión</button>
-          </div>
+        <div class="search-bar">
+          <span style="color: var(--muted);">🔍</span>
+          <input type="search" placeholder="Buscar proyectos, cotizaciones, clientes…" aria-label="Buscar">
         </div>
-      </div>
-    </header>
+        <div class="right">
+          <button class="icon-btn" title="Notificaciones">🔔</button>
+          <button class="icon-btn" title="Apps">🔳</button>
+          <button class="icon-btn" title="Usuario">😊</button>
+        </div>
+      </header>
 
-    <main>
-      <div class="card">
-        <h2 class="card-title">Bienvenido al Sistema de Gestión</h2>
-        <p>Selecciona el módulo con el que deseas trabajar:</p>
-      </div>
+      <!-- Page header -->
+      <section class="page-header">
+        <div>
+          <div class="breadcrumb">Dashboard / Resumen</div>
+          <h1>Dashboard</h1>
+        </div>
+        <div class="actions">
+          <button class="btn primary">+ Nueva cotización</button>
+          <button class="btn ghost">Exportar</button>
+        </div>
+      </section>
 
-      <div class="menu-grid">
-        <a href="proyectos/index.html" class="menu-item">
-          <div class="menu-icon">📋</div>
-          <h3 class="menu-title">Proyectos</h3>
-          <p class="menu-description">Gestión de proyectos de muebles personalizados</p>
-        </a>
+      <!-- KPIs -->
+      <section class="kpis">
+        <div class="kpi-card">Total cotizaciones <span class="pill blue">Hoy</span><strong>128</strong></div>
+        <div class="kpi-card">En progreso <span class="pill orange">12</span><strong>32</strong></div>
+        <div class="kpi-card">Aprobadas <span class="pill green">+8</span><strong>76</strong></div>
+        <div class="kpi-card">Rechazadas<strong>20</strong></div>
+      </section>
 
-        <a href="cotizaciones/index.html" class="menu-item">
-          <div class="menu-icon">💰</div>
-          <h3 class="menu-title">Cotizaciones</h3>
-          <p class="menu-description">Crear, consultar, editar e imprimir cotizaciones</p>
-        </a>
-
-        <a href="compras/index.html" class="menu-item">
-          <div class="menu-icon">🛒</div>
-          <h3 class="menu-title">Compras</h3>
-          <p class="menu-description">Gestión de compras y proveedores</p>
-        </a>
-
-        <a href="finanzas/index.html" class="menu-item">
-          <div class="menu-icon">📊</div>
-          <h3 class="menu-title">Finanzas</h3>
-          <p class="menu-description">Control financiero y reportes</p>
-        </a>
-
-        <a href="configuracion/index.html" class="menu-item">
-          <div class="menu-icon">⚙️</div>
-          <h3 class="menu-title">Configuración</h3>
-          <p class="menu-description">Materiales, datos maestros y configuración del sistema</p>
-        </a>
-      </div>
-    </main>
+      <!-- Content -->
+      <section class="content-card">
+        <h3>Últimas cotizaciones</h3>
+        <div class="table-placeholder">Aquí irá la tabla/lista de cotizaciones recientes.</div>
+      </section>
+    </div>
   </div>
 
-  <script type="module">
-    // Renderizado seguro del user: toma localStorage.byt_user (JSON) o consulta la sesión de Supabase.
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-    const SUPABASE_URL = window.__SUPABASE_URL || 'https://qwbeectinjasekkjzxls.supabase.co';
-    const ANON_KEY = window.__SUPABASE_ANON_KEY || null;
-    const sup = ANON_KEY ? createClient(SUPABASE_URL, ANON_KEY) : null;
-
-    function safeParse(s) {
-      try { return JSON.parse(s); } catch (e) { return null; }
-    }
-
-    async function getUser() {
-      const stored = safeParse(localStorage.getItem('byt_user') || '{}');
-      if (stored && Object.keys(stored).length) return stored;
-      if (sup) {
-        try {
-          const { data } = await sup.auth.getSession();
-          const session = data?.session;
-          if (session && session.user) return session.user;
-        } catch (e) {
-          console.warn('No se pudo obtener sesión:', e);
-        }
-      }
-      return null;
-    }
-
-    (async () => {
-      // Redirigir al login si no está logueado
-      if (!localStorage.getItem('byt_logged_in')) {
-        window.location.href = 'login/login.html';
-        return;
-      }
-
-      const user = await getUser();
-      const nameEl = document.getElementById('userName');
-      const emailEl = document.getElementById('userEmail');
-      const avatarEl = document.getElementById('userAvatar');
-      const logoutBtn = document.getElementById('logoutBtn');
-
-      if (user) {
-        const displayName = user.user_metadata?.full_name || user.full_name || user.email || 'Usuario';
-        nameEl.textContent = displayName;
-        emailEl.textContent = user.email || '';
-        const avatar = user.avatar_url || user.user_metadata?.avatar_url || '';
-        avatarEl.src = avatar || 'https://www.gravatar.com/avatar/' + (user.email || '').trim().toLowerCase() + '?d=mp&s=64';
-      } else {
-        nameEl.textContent = 'Usuario';
-        emailEl.textContent = '';
-        avatarEl.src = 'https://www.gravatar.com/avatar/?d=mp&s=64';
-      }
-
-      logoutBtn.addEventListener('click', async () => {
-        try {
-          if (sup) await sup.auth.signOut();
-        } catch (e) {
-          console.warn('signOut error', e);
-        }
-        localStorage.removeItem('byt_logged_in');
-        localStorage.removeItem('byt_user');
-        window.location.href = 'login/login.html';
-      });
-    })();
+  <script>
+    // Toggle sidebar
+    const appShell = document.getElementById('appShell');
+    const toggleBtn = document.getElementById('toggleSidebar');
+    toggleBtn?.addEventListener('click', () => {
+      appShell.classList.toggle('collapsed');
+    });
   </script>
 </body>
 </html>
