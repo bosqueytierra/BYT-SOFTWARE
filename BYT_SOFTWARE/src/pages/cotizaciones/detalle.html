@@ -140,7 +140,16 @@
     </div>
 
     <!-- Scripts: globalSupabase debe cargarse antes y con defer para mantener orden -->
+     <!-- Config Supabase -->
+    <script src="../../lib/supabaseConfig.js"></script>
+
+    <!-- Inicializador: crea window.supabase y emite supabase:ready -->
+    <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+
+    <!-- Cliente global que consume el supabase ya creado -->
     <script src="../../js/globalSupabase.js" defer></script>
+
+    <!-- Scripts propios de la página -->
     <script src="../../js/categorias.js" defer></script>
 
     <script>
@@ -597,3 +606,4 @@
     </script>
 </body>
 </html>
+
