@@ -6,7 +6,7 @@
     <title>Nueva Cotización - BYT SOFTWARE</title>
     <link rel="stylesheet" href="../../styles/global.css">
 
-
+        <!-- aca añadí esto -->
 <style>
   .step-nav {
     display: flex;
@@ -245,7 +245,64 @@
         }
       });
     </script>
+
+
+
+
+
+
+
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const steps = [
+    '1. Datos del Cliente', '2. Quincallería', '3. Tableros', '4. Tapacantos',
+    '5. Tableros de Madera', '6. LED y Electricidad', '7. Otras compras',
+    '8. Valores Traspasados', '9. Factor General', '10. Resumen'
+  ];
+  const nav = document.getElementById('step-nav');
+  if (!nav) return;
+
+  nav.innerHTML = steps.map((t, i) =>
+    `<button class="step-chip" data-step="${i+1}">${t}</button>`).join('');
+
+  nav.addEventListener('click', (e) => {
+    const btn = e.target.closest('.step-chip');
+    if (!btn) return;
+    const step = Number(btn.dataset.step || 1);
+    if (window.bytWizard?.mostrarPaso) window.bytWizard.mostrarPaso(step);
+  });
+
+  function updateStepNav(step) {
+    nav.querySelectorAll('.step-chip').forEach(chip => {
+      chip.classList.toggle('active', Number(chip.dataset.step) === Number(step));
+    });
+  }
+
+  // Parchear mostrarPaso para actualizar el menú
+  const hook = setInterval(() => {
+    if (window.bytWizard?.mostrarPaso && !window.bytWizard.__patchedNav) {
+      const orig = window.bytWizard.mostrarPaso.bind(window.bytWizard);
+      window.bytWizard.mostrarPaso = function(n) {
+        const r = orig(n);
+        updateStepNav(n);
+        return r;
+      };
+      window.bytWizard.__patchedNav = true;
+      updateStepNav(window.bytWizard.pasoActual || 1);
+    }
+  }, 200);
+  setTimeout(() => clearInterval(hook), 4000);
+});
+</script>
+
+
+
+    
+
+
+    
 </body>
 </html>
+
 
 
