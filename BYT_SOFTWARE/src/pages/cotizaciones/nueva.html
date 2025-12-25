@@ -7,34 +7,35 @@
     <link rel="stylesheet" href="../../styles/global.css">
 
         <!-- aca añadí esto -->
-<style>
-  .step-nav {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    margin: 12px 0 4px 0;
-    padding: 4px 2px;
-  }
-  .step-chip {
-    border: 1px solid #d9e3dd;
-    background: #f7faf8;
-    padding: 8px 12px;
-    border-radius: 10px;
-    cursor: pointer;
-    white-space: nowrap;
-    font-size: 12px;
-    color: #2e5e4e;
-    transition: 0.15s;
-  }
-  .step-chip:hover { background: #e9f2ed; }
-  .step-chip.active {
-    background: #2e5e4e;
-    color: #fff;
-    border-color: #2e5e4e;
-    font-weight: 600;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  }
-</style>
+<!-- Estilos del menú de pasos -->
+    <style>
+      .step-nav {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        margin: 12px 0 4px 0;
+        padding: 4px 2px;
+      }
+      .step-chip {
+        border: 1px solid #d9e3dd;
+        background: #f7faf8;
+        padding: 8px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-size: 12px;
+        color: #2e5e4e;
+        transition: 0.15s;
+      }
+      .step-chip:hover { background: #e9f2ed; }
+      .step-chip.active {
+        background: #2e5e4e;
+        color: #fff;
+        border-color: #2e5e4e;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      }
+    </style>
 
 
 
@@ -97,8 +98,8 @@
             </div>
         </div>
 
-<!-- Lo agreré yo, son los link supuestamente -->
-    <div class="step-nav" id="step-nav"></div>
+ <!-- Menú de pasos clicable -->
+        <div class="step-nav" id="step-nav"></div>
 
 
         
@@ -257,48 +258,47 @@
 
 
 
+<!-- Menú de pasos: construcción y hook con wizard -->
     <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const steps = [
-    '1. Datos del Cliente', '2. Quincallería', '3. Tableros', '4. Tapacantos',
-    '5. Tableros de Madera', '6. LED y Electricidad', '7. Otras compras',
-    '8. Valores Traspasados', '9. Factor General', '10. Resumen'
-  ];
-  const nav = document.getElementById('step-nav');
-  if (!nav) return;
+    document.addEventListener('DOMContentLoaded', () => {
+      const steps = [
+        '1. Datos del Cliente','2. Quincallería','3. Tableros','4. Tapacantos',
+        '5. Tableros de Madera','6. LED y Electricidad','7. Otras compras',
+        '8. Valores Traspasados','9. Factor General','10. Resumen'
+      ];
+      const nav = document.getElementById('step-nav');
+      if (!nav) return;
 
-  nav.innerHTML = steps.map((t, i) =>
-    `<button class="step-chip" data-step="${i+1}">${t}</button>`).join('');
+      nav.innerHTML = steps.map((t,i)=>`<button class="step-chip" data-step="${i+1}">${t}</button>`).join('');
 
-  nav.addEventListener('click', (e) => {
-    const btn = e.target.closest('.step-chip');
-    if (!btn) return;
-    const step = Number(btn.dataset.step || 1);
-    if (window.bytWizard?.mostrarPaso) window.bytWizard.mostrarPaso(step);
-  });
+      nav.addEventListener('click',(e)=>{
+        const btn = e.target.closest('.step-chip');
+        if (!btn) return;
+        const step = Number(btn.dataset.step || 1);
+        if (window.bytWizard?.mostrarPaso) window.bytWizard.mostrarPaso(step);
+      });
 
-  function updateStepNav(step) {
-    nav.querySelectorAll('.step-chip').forEach(chip => {
-      chip.classList.toggle('active', Number(chip.dataset.step) === Number(step));
+      function updateStepNav(step) {
+        nav.querySelectorAll('.step-chip').forEach(chip=>{
+          chip.classList.toggle('active', Number(chip.dataset.step)===Number(step));
+        });
+      }
+
+      const hook = setInterval(()=>{
+        if (window.bytWizard?.mostrarPaso && !window.bytWizard.__patchedNav) {
+          const orig = window.bytWizard.mostrarPaso.bind(window.bytWizard);
+          window.bytWizard.mostrarPaso = function(n){
+            const r = orig(n);
+            updateStepNav(n);
+            return r;
+          };
+          window.bytWizard.__patchedNav = true;
+          updateStepNav(window.bytWizard.pasoActual || 1);
+        }
+      },200);
+      setTimeout(()=>clearInterval(hook),4000);
     });
-  }
-
-  // Parchear mostrarPaso para actualizar el menú
-  const hook = setInterval(() => {
-    if (window.bytWizard?.mostrarPaso && !window.bytWizard.__patchedNav) {
-      const orig = window.bytWizard.mostrarPaso.bind(window.bytWizard);
-      window.bytWizard.mostrarPaso = function(n) {
-        const r = orig(n);
-        updateStepNav(n);
-        return r;
-      };
-      window.bytWizard.__patchedNav = true;
-      updateStepNav(window.bytWizard.pasoActual || 1);
-    }
-  }, 200);
-  setTimeout(() => clearInterval(hook), 4000);
-});
-</script>
+    </script>
 
 
 
@@ -308,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 </body>
 </html>
+
 
 
 
