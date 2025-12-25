@@ -163,7 +163,51 @@
             }
         });
     </script>
+
+    
+
+    <!-- Carga en modo edición si viene ?id=... -->
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        const params = new URLSearchParams(window.location.search);
+        const editId = params.get('id');
+        if (!editId) return;
+
+        try {
+          // Asegurar Supabase inicializado
+          if (window.supabaseClient?.init) {
+            await window.supabaseClient.init();
+          }
+
+          // Asegurar que el wizard tenga cliente supabase listo
+          if (window.bytWizard?._ensureSupabase) {
+            await window.bytWizard._ensureSupabase(5000);
+          }
+
+          // Cargar la cotización existente en el wizard
+          if (window.bytWizard?.loadCotizacionSupabase) {
+            const res = await window.bytWizard.loadCotizacionSupabase(editId);
+            if (!res?.ok) {
+              console.warn('No se pudo cargar la cotización para edición', res?.error);
+              alert('No se pudo cargar la cotización. Intenta de nuevo.');
+            }
+          } else {
+            console.warn('loadCotizacionSupabase no disponible en bytWizard');
+          }
+        } catch (e) {
+          console.error('Error cargando cotización para edición', e);
+          alert('No se pudo cargar la cotización. Intenta de nuevo.');
+        }
+      });
+    </script>
 </body>
 </html>
+
+
+
+    
+</body>
+</html>
+
 
 
