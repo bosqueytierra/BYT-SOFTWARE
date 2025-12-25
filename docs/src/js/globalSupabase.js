@@ -18,6 +18,24 @@ async function initSupabase() {
             return true;
         }
 
+        // Verificar si ya existe un cliente válido en window.supabase
+        if (window.supabase && typeof window.supabase.from === 'function') {
+            supabase = window.supabase;
+            window.globalSupabase = window.globalSupabase || {};
+            window.globalSupabase.client = supabase;
+            console.log('Supabase ya estaba inicializado - usando cliente existente');
+            return true;
+        }
+
+        // Verificar si ya existe un cliente válido en window.globalSupabase.client
+        if (window.globalSupabase && window.globalSupabase.client && 
+            typeof window.globalSupabase.client.from === 'function') {
+            supabase = window.globalSupabase.client;
+            window.supabase = supabase;
+            console.log('Supabase ya estaba inicializado en globalSupabase - usando cliente existente');
+            return true;
+        }
+
         // Si la librería no está cargada en window.supabase (manager de CDN), cargarla
         if (!window.supabase || typeof window.supabase.createClient !== 'function') {
             // cargamos la versión UMD de supabase-js que crea window.supabase
