@@ -1,14 +1,16 @@
 // ===== CONFIGURACIÓN SUPABASE (modificado para exponer cliente global y despachar evento) =====
 
-// Configuración del cliente Supabase
-const SUPABASE_URL = 'https://qwbeectinjasekkjzxls.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
+// Las credenciales se obtienen de window.__SUPABASE_URL y window.__SUPABASE_ANON_KEY
+// definidas por supabaseConfig.js
 
 let supabase = null;
 
 // Inicializa la librería y crea el client; expone window.supabase y window.globalSupabase.client
 async function initSupabase() {
     try {
+        // Helper para validar si un cliente es válido
+        const isValidClient = (client) => client && typeof client.from === 'function';
+        
         // Helper para sincronizar el cliente con window globals
         const syncClientToGlobals = (client) => {
             supabase = client;
@@ -18,12 +20,12 @@ async function initSupabase() {
         };
 
         // Verificar si ya hay un cliente inicializado (local o en window por supabaseBrowserClient.js)
-        if (supabase && typeof supabase.from === 'function') {
+        if (isValidClient(supabase)) {
             syncClientToGlobals(supabase);
             return true;
         }
         
-        if (window.supabase && typeof window.supabase.from === 'function') {
+        if (isValidClient(window.supabase)) {
             syncClientToGlobals(window.supabase);
             console.log('Supabase ya estaba inicializado - usando cliente existente');
             return true;
@@ -42,8 +44,16 @@ async function initSupabase() {
             });
         }
 
+        // Obtener credenciales de window (definidas por supabaseConfig.js)
+        const url = window.__SUPABASE_URL || window.SUPABASE_URL;
+        const key = window.__SUPABASE_ANON_KEY || window.SUPABASE_ANON_KEY;
+        
+        if (!url || !key) {
+            throw new Error('Credenciales de Supabase no encontradas en window.__SUPABASE_URL o window.__SUPABASE_ANON_KEY');
+        }
+
         // Aquí window.supabase es la librería; creamos el cliente real
-        const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const client = window.supabase.createClient(url, key);
         syncClientToGlobals(client);
 
         // Opcional: despachar evento para quien lo escuche
