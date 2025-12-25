@@ -18,6 +18,15 @@ async function initSupabase() {
             return true;
         }
 
+        // Si window.supabase ya es un cliente (inicializado por supabaseBrowserClient.js), usarlo
+        if (window.supabase && typeof window.supabase.from === 'function') {
+            supabase = window.supabase;
+            window.globalSupabase = window.globalSupabase || {};
+            window.globalSupabase.client = supabase;
+            console.log('Supabase cliente ya estaba inicializado en window.supabase');
+            return true;
+        }
+
         // Si la librería no está cargada en window.supabase (manager de CDN), cargarla
         if (!window.supabase || typeof window.supabase.createClient !== 'function') {
             // cargamos la versión UMD de supabase-js que crea window.supabase

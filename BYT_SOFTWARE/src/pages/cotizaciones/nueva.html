@@ -127,9 +127,20 @@
         </div>
     </div>
 
-    <!-- Scripts: el orden es importante. globalSupabase.js debe cargarse antes que cualquier script que lo use. -->
+    <!-- Scripts: orden crítico para inicialización correcta de Supabase -->
+    <!-- 1. Configuración: define window.__SUPABASE_URL y window.__SUPABASE_ANON_KEY -->
+    <script src="../../lib/supabaseConfig.js"></script>
+    
+    <!-- 2. Cliente browser: crea el cliente Supabase y lo expone en window.supabase -->
+    <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+    
+    <!-- 3. GlobalSupabase: proporciona funciones de utilidad (defer para esperar módulos ES) -->
     <script src="../../js/globalSupabase.js" defer></script>
+    
+    <!-- 4. Datos: categorías de materiales (defer) -->
     <script src="../../js/categorias_reales.js" defer></script>
+    
+    <!-- 5. Wizard: lógica principal (defer, espera a que Supabase esté listo) -->
     <script src="../../js/wizard.js" defer></script>
 
     <script>
@@ -138,14 +149,16 @@
             window.location.href = '../login/login.html';
         }
 
-        // Inicializar Supabase al cargar la página (usará globalSupabase.js)
+        // Inicializar Supabase al cargar la página
         window.addEventListener('load', async () => {
             try {
                 if (window.supabaseClient && typeof window.supabaseClient.validarConexion === 'function') {
                     const conexionOk = await window.supabaseClient.validarConexion();
                     if (!conexionOk) {
                         console.warn('Conexión con Supabase no disponible - funcionando en modo offline');
-                        window.utils.mostrarNotificacion('Trabajando en modo offline', 'warning');
+                        if (window.utils && typeof window.utils.mostrarNotificacion === 'function') {
+                            window.utils.mostrarNotificacion('Trabajando en modo offline', 'warning');
+                        }
                     }
                 } else {
                     console.warn('supabaseClient no está disponible aún en window');
