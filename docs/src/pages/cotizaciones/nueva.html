@@ -151,10 +151,9 @@
                     // para que globalSupabase.js no intente recargarla
                     window.globalSupabase = window.globalSupabase || {};
                     window.globalSupabase.client = client;
-                    window.globalSupabase._clientInitialized = true;
                     
                     // También exponer en window.supabase para compatibilidad
-                    // Guardamos la librería primero
+                    // Guardamos la librería primero por si se necesita
                     window.globalSupabase._library = window.supabase;
                     window.supabase = client;
                     
