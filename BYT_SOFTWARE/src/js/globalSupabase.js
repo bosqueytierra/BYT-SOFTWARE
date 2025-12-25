@@ -1,64 +1,75 @@
-// ===== CONFIGURACIÓN SUPABASE (modificado para exponer cliente global y despachar evento) =====
+// ===== CONFIGURACIÓN SUPABASE (usa el cliente ya inicializado por supabaseBrowserClient.js) =====
 
-// Configuración del cliente Supabase
-const SUPABASE_URL = 'https://qwbeectinjasekkjzxls.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
-
-let supabase = null;
-
-// Inicializa la librería y crea el client; expone window.supabase y window.globalSupabase.client
-async function initSupabase() {
-    try {
-        // Si ya inicializó y es cliente, retornarlo
-        if (supabase && typeof supabase.from === 'function') {
-            // también aseguramos que esté en globals
-            window.supabase = supabase;
-            window.globalSupabase = window.globalSupabase || {};
-            window.globalSupabase.client = supabase;
-            return true;
-        }
-
-        // Si la librería no está cargada en window.supabase (manager de CDN), cargarla
-        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-            // cargamos la versión UMD de supabase-js que crea window.supabase
-            await new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-                s.async = false; // mantener ejecución ordenada
-                s.onload = () => resolve();
-                s.onerror = (e) => reject(new Error('No se pudo cargar supabase-js: ' + e));
-                document.head.appendChild(s);
-            });
-        }
-
-        // Aquí window.supabase es la librería; creamos el cliente real
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // Exponer el cliente en globals para compatibilidad con wizard y otros scripts
-        window.supabase = supabase; // cliente en window.supabase (método .from disponible)
-        window.globalSupabase = window.globalSupabase || {};
-        window.globalSupabase.client = supabase;
-
-        // Opcional: despachar evento para quien lo escuche
-        try {
-            window.dispatchEvent(new Event('supabase:ready'));
-        } catch (e) { /* no crítico */ }
-
-        console.log('Supabase inicializado correctamente y expuesto en window.supabase');
-        return true;
-    } catch (error) {
-        console.error('Error al inicializar Supabase:', error);
-        return false;
+// Obtiene el cliente Supabase ya inicializado desde window.supabase
+// Si no está disponible, espera por el evento 'supabase:ready'
+function getSupabaseClient() {
+    // Si ya está disponible en window, usarlo directamente
+    if (window.supabase && typeof window.supabase.from === 'function') {
+        return window.supabase;
     }
+    
+    // Si window.globalSupabase.client está disponible, usarlo
+    if (window.globalSupabase && window.globalSupabase.client && typeof window.globalSupabase.client.from === 'function') {
+        return window.globalSupabase.client;
+    }
+    
+    return null;
+}
+
+// Espera a que Supabase esté inicializado (con timeout)
+async function waitForSupabase(timeoutMs = 5000) {
+    const client = getSupabaseClient();
+    if (client) return client;
+    
+    // Esperar por el evento supabase:ready
+    return new Promise((resolve) => {
+        let resolved = false;
+        const timeout = setTimeout(() => {
+            if (!resolved) {
+                resolved = true;
+                cleanup();
+                console.warn('[globalSupabase] Timeout esperando inicialización de Supabase');
+                resolve(null);
+            }
+        }, timeoutMs);
+        
+        const onReady = () => {
+            if (!resolved) {
+                resolved = true;
+                cleanup();
+                resolve(getSupabaseClient());
+            }
+        };
+        
+        const cleanup = () => {
+            window.removeEventListener('supabase:ready', onReady);
+            clearTimeout(timeout);
+        };
+        
+        window.addEventListener('supabase:ready', onReady);
+        
+        // También hacer polling por si el evento ya se disparó
+        const interval = setInterval(() => {
+            const client = getSupabaseClient();
+            if (client && !resolved) {
+                resolved = true;
+                clearInterval(interval);
+                cleanup();
+                resolve(client);
+            }
+        }, 100);
+        
+        setTimeout(() => clearInterval(interval), timeoutMs);
+    });
 }
 
 // ===== FUNCIONES DE COTIZACIONES =====
-// (Mantengo tus funciones expuestas, pero usan la variable supabase que ahora se inicializa)
+// Usan el cliente Supabase ya inicializado
 async function guardarCotizacion(datosCompletos) {
     try {
+        const supabase = await waitForSupabase();
         if (!supabase || typeof supabase.from !== 'function') {
-            const ok = await initSupabase();
-            if (!ok) throw new Error('Supabase no inicializado');
+            throw new Error('Servicio de persistencia no disponible');
         }
 
         const { data, error } = await supabase
@@ -101,9 +112,9 @@ async function guardarCotizacion(datosCompletos) {
 
 async function obtenerCotizaciones() {
     try {
+        const supabase = await waitForSupabase();
         if (!supabase || typeof supabase.from !== 'function') {
-            const ok = await initSupabase();
-            if (!ok) throw new Error('Supabase no inicializado');
+            throw new Error('Servicio de persistencia no disponible');
         }
 
         const { data, error } = await supabase
@@ -121,9 +132,9 @@ async function obtenerCotizaciones() {
 
 async function obtenerCotizacionPorId(id) {
     try {
+        const supabase = await waitForSupabase();
         if (!supabase || typeof supabase.from !== 'function') {
-            const ok = await initSupabase();
-            if (!ok) throw new Error('Supabase no inicializado');
+            throw new Error('Servicio de persistencia no disponible');
         }
 
         const { data, error } = await supabase
@@ -142,9 +153,9 @@ async function obtenerCotizacionPorId(id) {
 
 async function actualizarCotizacion(id, datosActualizados) {
     try {
+        const supabase = await waitForSupabase();
         if (!supabase || typeof supabase.from !== 'function') {
-            const ok = await initSupabase();
-            if (!ok) throw new Error('Supabase no inicializado');
+            throw new Error('Servicio de persistencia no disponible');
         }
 
         const { data, error } = await supabase
@@ -162,9 +173,9 @@ async function actualizarCotizacion(id, datosActualizados) {
 
 async function eliminarCotizacion(id) {
     try {
+        const supabase = await waitForSupabase();
         if (!supabase || typeof supabase.from !== 'function') {
-            const ok = await initSupabase();
-            if (!ok) throw new Error('Supabase no inicializado');
+            throw new Error('Servicio de persistencia no disponible');
         }
 
         const { data, error } = await supabase
@@ -213,9 +224,9 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
 
 async function validarConexionSupabase() {
     try {
+        const supabase = await waitForSupabase();
         if (!supabase || typeof supabase.from !== 'function') {
-            const ok = await initSupabase();
-            if (!ok) return false;
+            return false;
         }
         // simple ping: listar 1 row (no crítico si tabla no existe)
         const { error } = await supabase.from('cotizaciones').select('id').limit(1);
@@ -229,13 +240,13 @@ async function validarConexionSupabase() {
 
 // Exponer funciones globalmente
 window.supabaseClient = {
-    init: initSupabase,
     guardarCotizacion,
     obtenerCotizaciones,
     obtenerCotizacionPorId,
     actualizarCotizacion,
     eliminarCotizacion,
-    validarConexion: validarConexionSupabase
+    validarConexion: validarConexionSupabase,
+    getClient: getSupabaseClient
 };
 
 window.utils = {

@@ -127,7 +127,17 @@
         </div>
     </div>
 
-    <!-- Scripts: el orden es importante. globalSupabase.js debe cargarse antes que cualquier script que lo use. -->
+    <!-- Scripts: el orden es importante. Supabase config → browser client → globalSupabase → otros scripts -->
+    <!-- 1. Cargar configuración de Supabase (URL y anon key) -->
+    <script src="../../lib/supabaseConfig.js"></script>
+    <!-- 2. Inicializar Supabase browser client (crea window.supabase y despacha supabase:ready) -->
+    <script type="module">
+        import { initializeSupabase } from '../../js/supabaseBrowserClient.js';
+        // Inicializar con las credenciales de window.__SUPABASE_URL y window.__SUPABASE_ANON_KEY
+        await initializeSupabase();
+        console.log('[nueva.html] Supabase inicializado:', typeof window.supabase, typeof window.supabase?.from);
+    </script>
+    <!-- 3. Cargar globalSupabase (funciones de negocio) y otros scripts -->
     <script src="../../js/globalSupabase.js" defer></script>
     <script src="../../js/categorias_reales.js" defer></script>
     <script src="../../js/wizard.js" defer></script>
