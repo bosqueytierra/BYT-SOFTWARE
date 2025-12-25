@@ -9,7 +9,16 @@ let supabase = null;
 // Inicializa la librería y crea el client; expone window.supabase y window.globalSupabase.client
 async function initSupabase() {
     try {
-        // Si ya inicializó y es cliente, retornarlo
+        // Primero verificar si window.supabase ya está inicializado (por supabaseBrowserClient.js)
+        if (window.supabase && typeof window.supabase.from === 'function') {
+            supabase = window.supabase;
+            window.globalSupabase = window.globalSupabase || {};
+            window.globalSupabase.client = supabase;
+            console.log('Supabase ya estaba inicializado - usando cliente existente');
+            return true;
+        }
+
+        // Si ya inicializó localmente, retornarlo
         if (supabase && typeof supabase.from === 'function') {
             // también aseguramos que esté en globals
             window.supabase = supabase;
