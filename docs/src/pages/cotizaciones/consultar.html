@@ -279,14 +279,16 @@
     const resultado = await window.supabaseClient.eliminarCotizacion(id);
     if (!resultado.success) throw new Error(resultado.error);
 
-    // Quitar la tarjeta al vuelo (opcional)
+    // Quitar del DOM si tenemos el botón
     try {
       const card = btnEl?.closest('.cotizacion-item');
       if (card) card.remove();
     } catch (_) {}
 
-    // Recargar lista completa para dejar filtros/orden en estado correcto
-    await cargarCotizaciones();
+    // Quitar de los arrays locales y re-renderizar
+    cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
+    cotizacionesFiltradas = (cotizacionesFiltradas || []).filter(c => c.id !== id);
+    mostrarCotizaciones();
 
     window.utils?.mostrarNotificacion?.('Cotización eliminada exitosamente', 'success');
   } catch (error) {
@@ -305,6 +307,7 @@
     </script>
 </body>
 </html>
+
 
 
 
