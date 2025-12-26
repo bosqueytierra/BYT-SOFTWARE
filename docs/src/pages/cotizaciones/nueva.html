@@ -348,56 +348,11 @@
         });
     </script>
 
-    <!-- Guardar rápido paso 1 -->
+    <!-- Guardar rápido paso 1: llama directo a saveCotizacionSupabase -->
     <script>
-      // Nombre real de la función de guardado en wizard.js (se ve en el botón de paso 10)
-      const BYT_SAVE_FN = 'saveCotizacionSupabase';
-
-      const SAVE_FN_NAMES = [
-        BYT_SAVE_FN,
-        'guardarCotizacion',
-        'guardar',
-        'guardarBorrador',
-        'save',
-        'saveDraft',
-        'guardarCotizacionSupabase',
-        'saveCotizacion',
-        'saveCotizacionSupabase',
-        'guardarCotizacionPaso10'
-      ];
-      let _cachedSaveFn = null;
-
-      function resolverFuncionGuardado() {
-        if (_cachedSaveFn) return _cachedSaveFn;
-        const wiz = window.bytWizard;
-        const win = window;
-        const candObjs = [wiz, win];
-        for (const obj of candObjs) {
-          if (!obj) continue;
-          for (const n of SAVE_FN_NAMES) {
-            if (typeof obj[n] === 'function') {
-              _cachedSaveFn = obj[n].bind(obj);
-              console.log('[BYT] usando función de guardado:', n, 'en', obj === win ? 'window' : 'bytWizard');
-              return _cachedSaveFn;
-            }
-          }
-        }
-        console.warn('[BYT] No encontré función de guardado. bytWizard existe?', !!wiz, 'claves:', wiz ? Object.keys(wiz) : 'n/a');
-        return null;
-      }
-
-      async function guardarCotizacionPaso1(intento = 0) {
-        let fn = resolverFuncionGuardado();
-        if (!fn) {
-          if (intento < 12) { // ~3.6s total
-            setTimeout(() => guardarCotizacionPaso1(intento + 1), 300);
-            return;
-          }
-          alert('No encontré la función de guardado. Revisa consola: se listan las claves de window.bytWizard.');
-          return;
-        }
+      async function guardarCotizacionPaso1() {
         try {
-          await fn();
+          await window.bytWizard.saveCotizacionSupabase();
           alert('Guardado');
         } catch (e) {
           console.error(e);
