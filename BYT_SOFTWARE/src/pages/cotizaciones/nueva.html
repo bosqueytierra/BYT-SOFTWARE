@@ -349,7 +349,7 @@
       });
     </script>
 
-    <!-- Menú de pasos: construcción y hook con wizard -->
+    <!-- Menú de pasos: construcción y hook con wizard + actualiza barra -->
     <script>
     document.addEventListener('DOMContentLoaded', () => {
       const steps = [
@@ -357,22 +357,35 @@
         '5. Tableros de Madera','6. LED y Electricidad','7. Otras compras',
         '8. Valores Traspasados','9. Factor General','10. Resumen'
       ];
+      const totalSteps = 10;
       const nav = document.getElementById('step-nav');
-      if (!nav) return;
+      const bar = document.getElementById('progreso-barra');
+      const info = document.getElementById('progreso-texto');
 
-      nav.innerHTML = steps.map((t,i)=>`<button class="step-chip" data-step="${i+1}">${t}</button>`).join('');
-
-      nav.addEventListener('click',(e)=>{
-        const btn = e.target.closest('.step-chip');
-        if (!btn) return;
-        const step = Number(btn.dataset.step || 1);
-        if (window.bytWizard?.mostrarPaso) window.bytWizard.mostrarPaso(step);
-      });
+      if (nav) {
+        nav.innerHTML = steps.map((t,i)=>`<button class="step-chip" data-step="${i+1}">${t}</button>`).join('');
+        nav.addEventListener('click',(e)=>{
+          const btn = e.target.closest('.step-chip');
+          if (!btn) return;
+          const step = Number(btn.dataset.step || 1);
+          if (window.bytWizard?.mostrarPaso) window.bytWizard.mostrarPaso(step);
+        });
+      }
 
       function updateStepNav(step) {
-        nav.querySelectorAll('.step-chip').forEach(chip=>{
-          chip.classList.toggle('active', Number(chip.dataset.step)===Number(step));
-        });
+        if (nav) {
+          nav.querySelectorAll('.step-chip').forEach(chip=>{
+            chip.classList.toggle('active', Number(chip.dataset.step)===Number(step));
+          });
+        }
+        if (bar) {
+          const pct = Math.max(0, Math.min(100, (step-1)/(totalSteps-1)*100));
+          bar.style.width = `${pct}%`;
+        }
+        if (info) {
+          const label = steps[step-1] || '';
+          info.innerHTML = `<span>Paso ${step} de ${totalSteps}</span><span><strong>${label.replace(/^\d+\\.\\s*/, '')}</strong></span>`;
+        }
       }
 
       const hook = setInterval(()=>{
