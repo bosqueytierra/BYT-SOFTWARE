@@ -208,6 +208,7 @@
       .btn-primary:hover, .btn:not(.btn-secondary).btn:hover {
         box-shadow: 0 16px 26px rgba(53,86,76,0.28);
       }
+      .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -280,6 +281,35 @@
             <div id="paso-8" class="wizard-step" style="display: none;"></div>
             <div id="paso-9" class="wizard-step" style="display: none;"></div>
             <div id="paso-10" class="wizard-step" style="display: none;"></div>
+        </div>
+
+        <!-- Bloque de archivos -->
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0 0 4px;">Archivos de la cotización</h3>
+              <p style="margin:0; color:#6c7380; font-size:13px;">Imágenes/PDF hasta 10MB; videos MP4 hasta 50MB. Guarda la cotización antes de subir.</p>
+              <p id="file-hint" style="margin:2px 0 0; color:#d9534f; font-size:12px; display:none;">Primero guarda la cotización para habilitar la subida.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <label class="btn" style="cursor:pointer; font-weight:700;">
+                Subir archivo
+                <input id="file-input" type="file" accept="image/*,application/pdf,video/mp4" multiple style="display:none;">
+              </label>
+              <label class="btn" style="cursor:pointer; font-weight:700;">
+                Tomar foto
+                <input id="photo-input" type="file" accept="image/*" capture="environment" multiple style="display:none;">
+              </label>
+            </div>
+          </div>
+
+          <div id="dropzone" style="
+            margin-top:12px; border:1px dashed #dfe3e6; border-radius:12px; padding:18px;
+            text-align:center; color:#6c7380; background:#f9fafb;">
+            Arrastra archivos aquí o usa los botones para subir/tomar foto.
+          </div>
+
+          <div id="file-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
         </div>
 
         <!-- Botones de Navegación -->
@@ -384,7 +414,7 @@
         }
         if (info) {
           const label = steps[step-1] || '';
-          info.innerHTML = `<span>Paso ${step} de ${totalSteps}</span><span><strong>${label.replace(/^\d+\\.\\s*/, '')}</strong></span>`;
+          info.innerHTML = `<span>Paso ${step} de ${totalSteps}</span><span><strong>${label.replace(/^\\d+\\.\\s*/, '')}</strong></span>`;
         }
       }
 
@@ -402,6 +432,200 @@
       },200);
       setTimeout(()=>clearInterval(hook),4000);
     });
+    </script>
+
+    <!-- Archivos: subida/listado/ver/eliminar (Supabase) -->
+    <script>
+      (function(){
+        const BUCKET = 'cotizaciones';
+        const MAX_IMG_PDF_MB = 10;
+        const MAX_VIDEO_MB = 50;
+        const ALLOWED = ['image/', 'application/pdf', 'video/mp4'];
+
+        const drop = document.getElementById('dropzone');
+        const input = document.getElementById('file-input');
+        const photo = document.getElementById('photo-input');
+        const listEl = document.getElementById('file-list');
+        const hint = document.getElementById('file-hint');
+
+        function getCotizacionId() {
+          // Usamos el uuid de la cotización
+          return window.bytWizard?.datos?._id || window.bytWizard?.datos?.id || null;
+        }
+
+        function sanitizeName(name) {
+          return name.normalize("NFD").replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9._-]/g, '_');
+        }
+
+        function canUpload() {
+          const id = getCotizacionId();
+          const ok = !!(id && window.supabaseClient);
+          if (hint) hint.style.display = ok ? 'none' : 'block';
+          return ok;
+        }
+
+        async function uploadFile(file) {
+          if (!canUpload()) throw new Error('Guarda primero la cotización');
+          const id = getCotizacionId();
+          if (!id) throw new Error('Sin ID de cotización');
+
+          const isVideo = file.type === 'video/mp4';
+          const max = isVideo ? MAX_VIDEO_MB : MAX_IMG_PDF_MB;
+          if (file.size > max * 1024 * 1024) throw new Error(`Máx ${max} MB para este tipo`);
+
+          const okType = ALLOWED.some(p => file.type.startsWith(p));
+          if (!okType) throw new Error('Solo imágenes, PDF o MP4');
+
+          const ts = Date.now();
+          const rand = Math.random().toString(36).slice(2, 7);
+          const safe = sanitizeName(file.name || 'archivo');
+          const path = `${id}/${ts}-${rand}-${safe}`;
+
+          const { error } = await supabaseClient.storage.from(BUCKET).upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || undefined
+          });
+          if (error) throw error;
+
+          // Guardar metadatos en tabla (si existe)
+          if (supabaseClient.from) {
+            await supabaseClient
+              .from('cotizacion_files')
+              .insert({
+                cotizacion_id: id,
+                path,
+                filename: safe,
+                content_type: file.type || null,
+                size: file.size
+              });
+          }
+          return { path, filename: safe, size: file.size, content_type: file.type };
+        }
+
+        async function listFiles() {
+          if (!canUpload()) return [];
+          const id = getCotizacionId();
+          if (!id) return [];
+          // Lista desde tabla
+          const { data, error } = await supabaseClient
+            .from('cotizacion_files')
+            .select('id,path,filename,size,created_at,content_type')
+            .eq('cotizacion_id', id)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          return data || [];
+        }
+
+        async function getFileUrl(path) {
+          const { data, error } = await supabaseClient.storage.from(BUCKET).createSignedUrl(path, 3600);
+          if (error) throw error;
+          return data.signedUrl;
+        }
+
+        async function removeFile(path) {
+          const { error } = await supabaseClient.storage.from(BUCKET).remove([path]);
+          if (error) throw error;
+          if (supabaseClient.from) {
+            await supabaseClient.from('cotizacion_files').delete().eq('path', path);
+          }
+        }
+
+        function renderList(items) {
+          if (!listEl) return;
+          listEl.innerHTML = '';
+          if (!items || !items.length) {
+            listEl.innerHTML = '<div style="color:#6c7380;">Sin archivos aún.</div>';
+            return;
+          }
+          items.forEach(item => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.alignItems = 'center';
+            row.style.gap = '8px';
+            row.style.border = '1px solid #e4e7eb';
+            row.style.borderRadius = '10px';
+            row.style.padding = '8px 10px';
+            const sizeMB = item.size ? (item.size/1024/1024).toFixed(2) : '';
+            row.innerHTML = `
+              <div style="display:flex; flex-direction:column;">
+                <strong style="font-size:14px;">${item.filename || 'archivo'}</strong>
+                <span style="color:#6c7380; font-size:12px;">${sizeMB ? sizeMB + ' MB' : ''}</span>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" data-action="view" data-path="${item.path}">Ver</button>
+                <button class="btn btn-secondary btn-sm" data-action="delete" data-path="${item.path}">Eliminar</button>
+              </div>
+            `;
+            listEl.appendChild(row);
+          });
+        }
+
+        async function refreshList() {
+          try {
+            const items = await listFiles();
+            renderList(items);
+          } catch(e) {
+            console.error(e);
+            alert('No se pudo listar archivos');
+          }
+        }
+
+        async function handleFiles(files) {
+          if (!files?.length) return;
+          for (const f of files) {
+            try { await uploadFile(f); }
+            catch (e) { console.error(e); alert(e.message || 'Error subiendo archivo'); }
+          }
+          refreshList();
+        }
+
+        if (drop) {
+          drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.background = '#eef1f3'; });
+          drop.addEventListener('dragleave', e => { drop.style.background = '#f9fafb'; });
+          drop.addEventListener('drop', e => {
+            e.preventDefault();
+            drop.style.background = '#f9fafb';
+            handleFiles(e.dataTransfer.files);
+          });
+        }
+        if (input) input.addEventListener('change', e => handleFiles(e.target.files));
+        if (photo) photo.addEventListener('change', e => handleFiles(e.target.files));
+
+        listEl?.addEventListener('click', async (e)=>{
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const path = btn.dataset.path;
+          if (!path) return;
+          if (action === 'view') {
+            try {
+              const url = await getFileUrl(path);
+              window.open(url, '_blank');
+            } catch (err) {
+              console.error(err);
+              alert('No se pudo abrir el archivo');
+            }
+          } else if (action === 'delete') {
+            if (!confirm('¿Eliminar este archivo?')) return;
+            try {
+              await removeFile(path);
+              refreshList();
+            } catch (err) {
+              console.error(err);
+              alert('No se pudo eliminar');
+            }
+          }
+        });
+
+        // Cargar listado al entrar (si hay ID)
+        setTimeout(() => {
+          canUpload(); // muestra u oculta el hint
+          refreshList();
+        }, 800);
+      })();
     </script>
 </body>
 </html>
