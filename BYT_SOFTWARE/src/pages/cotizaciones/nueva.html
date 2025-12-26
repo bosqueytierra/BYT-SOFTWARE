@@ -12,9 +12,9 @@
         --card: #ffffff;
         --border: #e4e7eb;
         --text: #1f2430;
-        --muted: #6c7a86;
-        --primary: #2e5e4e;
-        --primary-soft: #375f50;
+        --muted: #6c7380;
+        --primary: #35564c;          /* verde más gris */
+        --primary-soft: #3f6056;
         --chip-bg: #f4f6f8;
         --chip-border: #dfe3e6;
         --shadow-soft: 0 12px 30px rgba(0,0,0,0.08);
@@ -131,11 +131,11 @@
       }
       .step-chip:hover { background: #eef1f3; }
       .step-chip.active {
-        background: #2e5e4e;
+        background: var(--primary);
         color: #fff;
-        border-color: #2e5e4e;
+        border-color: var(--primary);
         font-weight: 700;
-        box-shadow: 0 10px 18px rgba(46,94,78,0.18);
+        box-shadow: 0 10px 18px rgba(53,86,76,0.18);
       }
 
       /* Wizard container */
@@ -169,8 +169,8 @@
       }
       input:focus, textarea:focus {
         outline: none;
-        border-color: rgba(46,94,78,0.65);
-        box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
+        border-color: rgba(53,86,76,0.65);
+        box-shadow: 0 0 0 3px rgba(53,86,76,0.12);
       }
       textarea { min-height: 110px; resize: vertical; }
 
@@ -203,14 +203,14 @@
         background: var(--primary);
         color: #fff;
         border-color: var(--primary);
-        box-shadow: 0 12px 22px rgba(46,94,78,0.22);
+        box-shadow: 0 12px 22px rgba(53,86,76,0.22);
       }
       .btn-primary:hover, .btn:not(.btn-secondary).btn:hover {
-        box-shadow: 0 16px 26px rgba(46,94,78,0.28);
+        box-shadow: 0 16px 26px rgba(53,86,76,0.28);
       }
 
       /* Fade shell */
-      .fade-shell { transition: opacity 0.25s ease; opacity: 1; }
+      .fade-shell { transition: opacity 0.125s ease; opacity: 1; }
       .fade-shell.is-fading { opacity: 0; }
     </style>
 </head>
@@ -396,14 +396,14 @@
     });
     </script>
 
-    <!-- Fade helper (0.25s) -->
+    <!-- Fade helper (0.125s) -->
     <script>
       (function() {
         const shell = document.getElementById('fade-shell');
         if (!shell) return;
         const trigger = () => {
           shell.classList.add('is-fading');
-          setTimeout(() => shell.classList.remove('is-fading'), 250);
+          setTimeout(() => shell.classList.remove('is-fading'), 125);
         };
         window._fadeShell = { trigger };
 
