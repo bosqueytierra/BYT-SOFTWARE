@@ -185,7 +185,7 @@
       .btn {
         border: 1px solid var(--border);
         background: #fff;
-        color: var(--text);
+        color: #1f2430;
         padding: 10px 16px;
         border-radius: 12px;
         cursor: pointer;
@@ -293,7 +293,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
             <div>
               <h3 style="margin:0 0 4px;">Archivos de la cotización</h3>
-              <p style="margin:0; color:#6c7380; font-size:13px;">Imágenes/PDF hasta 10MB; videos MP4 hasta 50MB. Guarda la cotización antes de subir.</p>
+              <p style="margin:0; color:#6c7380; font-size:13px;">Imágenes hasta 10MB, PDF hasta 20MB, videos MP4 hasta 50MB. Guarda la cotización antes de subir.</p>
               <p id="file-hint" style="margin:2px 0 0; color:#d9534f; font-size:12px; display:none;">Primero guarda la cotización para habilitar la subida.</p>
             </div>
             <div style="display:flex; gap:8px;">
@@ -350,22 +350,41 @@
 
     <!-- Guardar rápido paso 1 -->
     <script>
+      // Ajusta este nombre si tu función de guardado tiene otro nombre.
+      const BYT_SAVE_FN = 'guardarCotizacion'; // cambia aquí si tu función real se llama distinto.
+
       async function guardarCotizacionPaso1() {
-        const fn = window.bytWizard?.guardarCotizacion
-            || window.bytWizard?.guardar
-            || window.bytWizard?.guardarBorrador;
+        const wiz = window.bytWizard || {};
+        const fn = wiz[BYT_SAVE_FN]
+          || wiz.guardarCotizacion
+          || wiz.guardar
+          || wiz.guardarBorrador
+          || wiz.save
+          || wiz.saveDraft;
         if (!fn) {
-          alert('No encontré la función de guardado. Ajusta guardarCotizacionPaso1() con el nombre correcto.');
+          alert('No encontré la función de guardado. Ajusta BYT_SAVE_FN con el nombre correcto.');
           return;
         }
         try {
-          await fn();
+          await fn.call(wiz);
           alert('Guardado');
         } catch (e) {
           console.error(e);
           alert('Error al guardar');
         }
       }
+    </script>
+
+    <!-- Redirigir botón Finalizar (paso 10) al menú principal -->
+    <script>
+      const MENU_PRINCIPAL_URL = "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/menu_principal.html";
+      document.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('#btn-finalizar, button[data-role="finalizar"], button[data-action="finalizar"]');
+        if (btn) {
+          ev.preventDefault();
+          window.location.href = MENU_PRINCIPAL_URL;
+        }
+      });
     </script>
 
     <!-- Carga en modo edición o duplicado -->
@@ -463,7 +482,8 @@
     <script>
       (function(){
         const BUCKET = 'cotizaciones';
-        const MAX_IMG_PDF_MB = 10;
+        const MAX_IMG_MB = 10;
+        const MAX_PDF_MB = 20;
         const MAX_VIDEO_MB = 50;
         const ALLOWED = ['image/', 'application/pdf', 'video/mp4'];
 
@@ -489,13 +509,18 @@
           return ok;
         }
 
+        function maxFor(file) {
+          if (file.type === 'video/mp4') return MAX_VIDEO_MB;
+          if (file.type === 'application/pdf') return MAX_PDF_MB;
+          return MAX_IMG_MB; // imágenes
+        }
+
         async function uploadFile(file) {
           if (!canUpload()) throw new Error('Guarda primero la cotización');
           const id = getCotizacionId();
           if (!id) throw new Error('Sin ID de cotización');
 
-          const isVideo = file.type === 'video/mp4';
-          const max = isVideo ? MAX_VIDEO_MB : MAX_IMG_PDF_MB;
+          const max = maxFor(file);
           if (file.size > max * 1024 * 1024) throw new Error(`Máx ${max} MB para este tipo`);
 
           const okType = ALLOWED.some(p => file.type.startsWith(p));
