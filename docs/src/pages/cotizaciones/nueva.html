@@ -11,10 +11,12 @@
         --bg: #f5f6f7;
         --card: #ffffff;
         --border: #e4e7eb;
-        --text: #1f2933;
+        --text: #1f2430;
         --muted: #6c7a86;
         --primary: #2e5e4e;
         --primary-soft: #375f50;
+        --chip-bg: #f4f6f8;
+        --chip-border: #dfe3e6;
         --shadow-soft: 0 12px 30px rgba(0,0,0,0.08);
         --shadow-light: 0 6px 16px rgba(0,0,0,0.06);
       }
@@ -29,7 +31,7 @@
 
       /* Summary bar */
       .summary-bar {
-        background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.78) 100%);
+        background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.82) 100%);
         backdrop-filter: blur(6px);
         border-bottom: 1px solid var(--border);
         padding: 10px 14px;
@@ -63,9 +65,7 @@
       }
 
       /* Header card */
-      .header {
-        margin-bottom: 12px;
-      }
+      .header { margin-bottom: 12px; }
       .wizard-header {
         background: var(--card);
         border: 1px solid var(--border);
@@ -119,17 +119,17 @@
         padding: 4px 2px;
       }
       .step-chip {
-        border: 1px solid #d9e3dd;
-        background: #f7faf8;
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
         padding: 9px 13px;
         border-radius: 999px;
         cursor: pointer;
         white-space: nowrap;
         font-size: 12px;
-        color: #2e5e4e;
+        color: var(--text);
         transition: 0.2s ease;
       }
-      .step-chip:hover { background: #e9f2ed; }
+      .step-chip:hover { background: #eef1f3; }
       .step-chip.active {
         background: #2e5e4e;
         color: #fff;
@@ -147,8 +147,7 @@
         box-shadow: var(--shadow-soft);
       }
 
-      .wizard-step { }
-      .wizard-step h3 { margin: 0 0 8px; font-size: 16px; }
+      .wizard-step h3 { margin: 0 0 8px; font-size: 16px; color: var(--text); }
       .wizard-step p.lead { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
 
       .form-grid {
@@ -211,7 +210,7 @@
       }
 
       /* Fade shell */
-      .fade-shell { transition: opacity 0.5s ease; opacity: 1; }
+      .fade-shell { transition: opacity 0.25s ease; opacity: 1; }
       .fade-shell.is-fading { opacity: 0; }
     </style>
 </head>
@@ -275,102 +274,46 @@
 
         <!-- Contenedor del Wizard -->
         <div class="wizard-container">
-            <!-- Paso 1: Datos del Cliente -->
-            <div id="paso-1" class="wizard-step">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 2: Quincallería -->
-            <div id="paso-2" class="wizard-step" style="display: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 3: Tableros -->
-            <div id="paso-3" class="wizard-step" style="display: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 4: Tapacantos -->
-            <div id="paso-4" class="wizard-step" style="display: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 5: Tableros de Madera -->
-            <div id="paso-5" class="wizard-step" style="display: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 6: LED y Electricidad -->
-            <div id="paso-6" class="wizard-step" style="display: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 7: Otras Compras -->
-            <div id="paso-7" class="wizard-step" style="display: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 8: Valores Traspasados -->
-            <div id="paso-8" class="wizard-step" style:: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 9: Factor General -->
-            <div id="paso-9" class="wizard-step" style="display: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
-
-            <!-- Paso 10: Resumen Final -->
-            <div id="paso-10" class="wizard-step" style="display: none;">
-                <!-- Se genera dinámicamente -->
-            </div>
+            <div id="paso-1" class="wizard-step"><!-- dinámico --></div>
+            <div id="paso-2" class="wizard-step" style="display: none;"></div>
+            <div id="paso-3" class="wizard-step" style="display: none;"></div>
+            <div id="paso-4" class="wizard-step" style="display: none;"></div>
+            <div id="paso-5" class="wizard-step" style="display: none;"></div>
+            <div id="paso-6" class="wizard-step" style="display: none;"></div>
+            <div id="paso-7" class="wizard-step" style="display: none;"></div>
+            <div id="paso-8" class="wizard-step" style="display: none;"></div>
+            <div id="paso-9" class="wizard-step" style="display: none;"></div>
+            <div id="paso-10" class="wizard-step" style="display: none;"></div>
         </div>
 
         <!-- Botones de Navegación -->
         <div class="card" style="text-align: right; margin-top: 18px; display:flex; justify-content:flex-end; gap:10px;">
-            <button type="button" class="btn btn-secondary" id="btn-anterior" onclick="anteriorPaso()">
-                ← Atrás
-            </button>
-            <button type="button" class="btn btn-primary" id="btn-siguiente" onclick="siguientePaso()">
-                Siguiente →
-            </button>
+            <button type="button" class="btn btn-secondary" id="btn-anterior" onclick="anteriorPaso()">← Atrás</button>
+            <button type="button" class="btn btn-primary" id="btn-siguiente" onclick="siguientePaso()">Siguiente →</button>
         </div>
     </div>
 
     <!-- Config Supabase: URL y ANON key -->
     <script src="../../lib/supabaseConfig.js"></script>
-
-    <!-- Inicializador que crea window.supabase y emite supabase:ready -->
     <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-
-    <!-- Librería globalSupabase (usa el cliente ya creado) -->
     <script src="../../js/globalSupabase.js" defer></script>
-
-    <!-- Resto de dependencias -->
     <script src="../../js/categorias_reales.js" defer></script>
     <script src="../../js/wizard.js" defer></script>
 
     <script>
-        // Verificar autenticación
         if (!localStorage.getItem('byt_logged_in')) {
             window.location.href = '../login/login.html';
         }
-
-        // Inicializar Supabase al cargar la página (usará globalSupabase.js)
         window.addEventListener('load', async () => {
             try {
                 if (window.supabaseClient && typeof window.supabaseClient.validarConexion === 'function') {
-                    const conexionOk = await window.supabaseClient.validarConexion();
-                    if (!conexionOk) {
-                        console.warn('Conexión con Supabase no disponible - funcionando en modo offline');
+                    const ok = await window.supabaseClient.validarConexion();
+                    if (!ok) {
+                        console.warn('Conexión Supabase no disponible - offline');
                         window.utils?.mostrarNotificacion?.('Trabajando en modo offline', 'warning');
                     }
-                } else {
-                    console.warn('supabaseClient no está disponible aún en window');
                 }
-            } catch (e) {
-                console.warn('Error validando conexión Supabase:', e);
-            }
+            } catch (e) { console.warn('Error validando conexión Supabase:', e); }
         });
     </script>
 
@@ -384,12 +327,8 @@
         if (!targetId) return;
 
         try {
-          if (window.supabaseClient?.init) {
-            await window.supabaseClient.init();
-          }
-          if (window.bytWizard?._ensureSupabase) {
-            await window.bytWizard._ensureSupabase(5000);
-          }
+          if (window.supabaseClient?.init) await window.supabaseClient.init();
+          if (window.bytWizard?._ensureSupabase) await window.bytWizard._ensureSupabase(5000);
           if (window.bytWizard?.loadCotizacionSupabase) {
             const res = await window.bytWizard.loadCotizacionSupabase(targetId);
             if (!res?.ok) throw new Error(res?.error || 'No se pudo cargar');
@@ -431,7 +370,7 @@
         const btn = e.target.closest('.step-chip');
         if (!btn) return;
         const step = Number(btn.dataset.step || 1);
-        window._fadeShell?.trigger(); // fade antes
+        window._fadeShell?.trigger();
         if (window.bytWizard?.mostrarPaso) window.bytWizard.mostrarPaso(step);
       });
 
@@ -457,23 +396,21 @@
     });
     </script>
 
-    <!-- Fade helper (0.50s) sin romper el flujo actual -->
+    <!-- Fade helper (0.25s) -->
     <script>
       (function() {
         const shell = document.getElementById('fade-shell');
         if (!shell) return;
         const trigger = () => {
           shell.classList.add('is-fading');
-          setTimeout(() => shell.classList.remove('is-fading'), 500);
+          setTimeout(() => shell.classList.remove('is-fading'), 250);
         };
         window._fadeShell = { trigger };
 
-        // Botones anterior/siguiente (no se cancela su onclick)
         document.addEventListener('click', (ev) => {
           const btn = ev.target.closest('#btn-anterior, #btn-siguiente');
           if (btn) trigger();
         });
-        // Step chips: arriba ya se llama a trigger, esto es respaldo
         document.addEventListener('click', (ev) => {
           const chip = ev.target.closest('.step-chip');
           if (chip) trigger();
