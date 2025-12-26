@@ -208,10 +208,6 @@
       .btn-primary:hover, .btn:not(.btn-secondary).btn:hover {
         box-shadow: 0 16px 26px rgba(53,86,76,0.28);
       }
-
-      /* Fade shell */
-      .fade-shell { transition: opacity 0.125s ease; opacity: 1; }
-      .fade-shell.is-fading { opacity: 0; }
     </style>
 </head>
 <body>
@@ -247,7 +243,7 @@
         </div>
     </div>
 
-    <div class="container fade-shell" id="fade-shell">
+    <div class="container">
         <header class="header">
             <div class="wizard-header">
                 <div class="logo-chip">BYT</div>
@@ -370,7 +366,6 @@
         const btn = e.target.closest('.step-chip');
         if (!btn) return;
         const step = Number(btn.dataset.step || 1);
-        window._fadeShell?.trigger();
         if (window.bytWizard?.mostrarPaso) window.bytWizard.mostrarPaso(step);
       });
 
@@ -394,28 +389,6 @@
       },200);
       setTimeout(()=>clearInterval(hook),4000);
     });
-    </script>
-
-    <!-- Fade helper (0.125s) -->
-    <script>
-      (function() {
-        const shell = document.getElementById('fade-shell');
-        if (!shell) return;
-        const trigger = () => {
-          shell.classList.add('is-fading');
-          setTimeout(() => shell.classList.remove('is-fading'), 125);
-        };
-        window._fadeShell = { trigger };
-
-        document.addEventListener('click', (ev) => {
-          const btn = ev.target.closest('#btn-anterior, #btn-siguiente');
-          if (btn) trigger();
-        });
-        document.addEventListener('click', (ev) => {
-          const chip = ev.target.closest('.step-chip');
-          if (chip) trigger();
-        });
-      })();
     </script>
 </body>
 </html>
