@@ -350,23 +350,45 @@
 
     <!-- Guardar rápido paso 1 -->
     <script>
-      // Ajusta este nombre si tu función de guardado tiene otro nombre.
-      const BYT_SAVE_FN = 'guardarCotizacion'; // cambia aquí si tu función real se llama distinto.
+      // Nombre real de la función de guardado en wizard.js
+      const BYT_SAVE_FN = 'saveCotizacionSupabase';
 
-      async function guardarCotizacionPaso1() {
-        const wiz = window.bytWizard || {};
-        const fn = wiz[BYT_SAVE_FN]
-          || wiz.guardarCotizacion
-          || wiz.guardar
-          || wiz.guardarBorrador
-          || wiz.save
-          || wiz.saveDraft;
+      const SAVE_FN_NAMES = [
+        BYT_SAVE_FN,
+        'guardarCotizacion',
+        'guardar',
+        'guardarBorrador',
+        'save',
+        'saveDraft',
+        'guardarCotizacionSupabase',
+        'saveCotizacionSupabase',
+        'guardarCotizacionPaso10'
+      ];
+      let _cachedSaveFn = null;
+      function resolverFuncionGuardado() {
+        if (_cachedSaveFn) return _cachedSaveFn;
+        const wiz = window.bytWizard;
+        if (!wiz) return null;
+        for (const n of SAVE_FN_NAMES) {
+          if (typeof wiz[n] === 'function') {
+            _cachedSaveFn = wiz[n].bind(wiz);
+            return _cachedSaveFn;
+          }
+        }
+        return null;
+      }
+      async function guardarCotizacionPaso1(intento = 0) {
+        let fn = resolverFuncionGuardado();
         if (!fn) {
+          if (intento < 10) {
+            setTimeout(() => guardarCotizacionPaso1(intento + 1), 300);
+            return;
+          }
           alert('No encontré la función de guardado. Ajusta BYT_SAVE_FN con el nombre correcto.');
           return;
         }
         try {
-          await fn.call(wiz);
+          await fn();
           alert('Guardado');
         } catch (e) {
           console.error(e);
