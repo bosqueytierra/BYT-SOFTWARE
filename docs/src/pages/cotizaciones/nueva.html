@@ -283,6 +283,11 @@
             <div id="paso-10" class="wizard-step" style="display: none;"></div>
         </div>
 
+        <!-- Botón Guardar (paso 1 / datos básicos) -->
+        <div class="card" style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn btn-primary" onclick="guardarCotizacionPaso1()">Guardar</button>
+        </div>
+
         <!-- Bloque de archivos -->
         <div class="card" style="margin-top:16px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -341,6 +346,26 @@
                 }
             } catch (e) { console.warn('Error validando conexión Supabase:', e); }
         });
+    </script>
+
+    <!-- Guardar rápido paso 1 -->
+    <script>
+      async function guardarCotizacionPaso1() {
+        const fn = window.bytWizard?.guardarCotizacion
+            || window.bytWizard?.guardar
+            || window.bytWizard?.guardarBorrador;
+        if (!fn) {
+          alert('No encontré la función de guardado. Ajusta guardarCotizacionPaso1() con el nombre correcto.');
+          return;
+        }
+        try {
+          await fn();
+          alert('Guardado');
+        } catch (e) {
+          console.error(e);
+          alert('Error al guardar');
+        }
+      }
     </script>
 
     <!-- Carga en modo edición o duplicado -->
@@ -449,7 +474,6 @@
         const hint = document.getElementById('file-hint');
 
         function getCotizacionId() {
-          // Usamos el uuid de la cotización
           return window.bytWizard?.datos?._id || window.bytWizard?.datos?.id || null;
         }
 
@@ -489,7 +513,6 @@
           });
           if (error) throw error;
 
-          // Guardar metadatos en tabla (si existe)
           if (supabaseClient.from) {
             await supabaseClient
               .from('cotizacion_files')
@@ -508,7 +531,6 @@
           if (!canUpload()) return [];
           const id = getCotizacionId();
           if (!id) return [];
-          // Lista desde tabla
           const { data, error } = await supabaseClient
             .from('cotizacion_files')
             .select('id,path,filename,size,created_at,content_type')
@@ -622,7 +644,7 @@
 
         // Cargar listado al entrar (si hay ID)
         setTimeout(() => {
-          canUpload(); // muestra u oculta el hint
+          canUpload();
           refreshList();
         }, 800);
       })();
