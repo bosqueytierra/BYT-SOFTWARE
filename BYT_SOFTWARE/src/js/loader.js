@@ -1,8 +1,6 @@
-// Loader reusable con overlay + blur.
-// Usamos GIF: /assets/img/Cargando.gif
-
 (function() {
   const overlayId = 'byt-loader-overlay';
+  const GIF_SRC = "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/assets/img/Cargando.gif";
 
   function ensureOverlay() {
     let ov = document.getElementById(overlayId);
@@ -14,7 +12,7 @@
     ov.innerHTML = `
       <div class="byt-loader-card">
         <div class="byt-loader-animation">
-          <img src="/assets/img/Cargando.gif" alt="Cargando..." style="width:160px;height:120px;object-fit:contain;" />
+          <img src="${GIF_SRC}" alt="Cargando..." style="width:160px;height:120px;object-fit:contain;" />
         </div>
         <div class="byt-loader-text">Cargando...</div>
       </div>
