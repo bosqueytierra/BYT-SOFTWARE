@@ -118,7 +118,6 @@
     <!-- pdf.js para previsualizar PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
-      // ruta worker pdf.js
       if (window['pdfjsLib']) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
       }
@@ -148,78 +147,53 @@
             </div>
         </header>
 
-        <!-- Estado de carga -->
         <div id="loading-state" class="card text-center">
             <div class="loading-spinner" style="margin: 20px auto;"></div>
             <p>Cargando cotización...</p>
         </div>
 
-        <!-- Contenido del detalle -->
         <div id="detalle-content" style="display: none;">
-            
-            <!-- Información del Proyecto -->
             <div class="card detalle-section">
                 <h3 class="card-title">Información del Proyecto</h3>
-                <div class="detalle-grid" id="info-proyecto">
-                    <!-- Se carga dinámicamente -->
-                </div>
+                <div class="detalle-grid" id="info-proyecto"></div>
             </div>
 
-            <!-- Resumen Financiero -->
             <div class="card detalle-section">
                 <h3 class="card-title">Resumen Financiero</h3>
-                <div class="detalle-grid" id="resumen-financiero">
-                    <!-- Se carga dinámicamente -->
-                </div>
+                <div class="detalle-grid" id="resumen-financiero"></div>
             </div>
 
-            <!-- Materiales -->
             <div class="card detalle-section">
                 <h3 class="card-title">Materiales</h3>
-                <div id="materiales-detalle">
-                    <!-- Se carga dinámicamente -->
-                </div>
+                <div id="materiales-detalle"></div>
             </div>
 
-            <!-- Valores Traspasados -->
             <div class="card detalle-section">
                 <h3 class="card-title">Valores Traspasados</h3>
-                <div id="valores-detalle">
-                    <!-- Se carga dinámicamente -->
-                </div>
+                <div id="valores-detalle"></div>
             </div>
 
-            <!-- Archivos -->
             <div class="card detalle-section">
                 <h3 class="card-title">Archivos</h3>
-                <div id="archivos-detalle">
-                    <!-- Se carga dinámicamente -->
-                </div>
+                <div id="archivos-detalle"></div>
             </div>
 
-            <!-- Información de la Empresa -->
             <div class="card detalle-section" style="text-align: center; margin-top: 40px;">
                 <h4 style="color: var(--primary); margin-bottom: 10px;">Bosque y Tierra</h4>
                 <p style="color: #666; margin: 5px 0;">Diseño y Fabricación de Muebles Personalizados</p>
                 <p style="color: #666; margin: 5px 0;">Fecha de cotización: <span id="fecha-cotizacion"></span></p>
-                <p style="color: #666; margin: 5px 0; font-size: 12px;">
-                    © 2025 BYT SOFTWARE - Sistema Interno de Gestión
-                </p>
+                <p style="color: #666; margin: 5px 0; font-size: 12px;">© 2025 BYT SOFTWARE - Sistema Interno de Gestión</p>
             </div>
         </div>
 
-        <!-- Estado de error -->
         <div id="error-state" class="card text-center" style="display: none;">
             <div style="font-size: 64px; color: #f44336; margin: 20px 0;">❌</div>
             <h3 style="color: #f44336;">Error al cargar cotización</h3>
             <p style="color: #999;" id="error-message">No se pudo cargar la información de la cotización.</p>
-            <button class="btn" onclick="cargarCotizacion()">
-                Reintentar
-            </button>
+            <button class="btn" onclick="cargarCotizacion()">Reintentar</button>
         </div>
     </div>
 
-    <!-- Scripts: globalSupabase debe cargarse antes y con defer para mantener orden -->
     <script src="../../lib/supabaseConfig.js"></script>
     <script type="module" src="../../js/supabaseBrowserClient.js"></script>
     <script src="../../js/globalSupabase.js" defer></script>
@@ -383,7 +357,6 @@
                 const container = document.getElementById('materiales-detalle');
                 let html = '';
                 const datosMateriales = cotizacionActual.data?.materiales || {};
-                const categoriasMaterialesExplicit = ['quincalleria','tableros','tapacantos','corte','madera','led','otras_compras'];
                 const camposPosibles = ['quincalleria','tableros','tapacantos','corte','madera','led','otras_compras','otras_compras'];
                 let foundAny = false;
                 const categoriasMeta = window.categorias && window.categorias.materiales ? window.categorias.materiales : null;
@@ -650,7 +623,6 @@
                 const cont = document.getElementById('archivos-detalle');
                 const html = items.map(item => renderFileCard(item)).join('');
                 cont.innerHTML = `<div class="files-grid">${html}</div>`;
-                // Render PDFs tras insertar DOM
                 items.forEach(item => {
                     if (isPdf(item.content_type || item.filename)) {
                         renderPdfPreview(item);
@@ -686,10 +658,12 @@
             }
 
             function isImage(ct) {
-                return /^image\\//i.test(ct) || /\.(png|jpe?g|gif|webp|bmp)$/i.test(ct || '');
+                const c = (ct || '').toLowerCase();
+                return /^image\//i.test(c) || /\.(png|jpe?g|gif|webp|bmp)$/i.test(c);
             }
             function isPdf(ct) {
-                return /pdf$/i.test(ct) || /\.pdf$/i.test(ct || '');
+                const c = (ct || '').toLowerCase();
+                return /pdf$/i.test(c) || /\.pdf$/i.test(c);
             }
 
             async function renderPdfPreview(file) {
@@ -712,7 +686,6 @@
                 }
             }
 
-            // Utilities: formateo y escape
             function formatPrecio(n) {
                 if (window.categorias && typeof window.categorias.formatearPrecio === 'function') {
                     try { return window.categorias.formatearPrecio(n); } catch (e) {}
@@ -734,7 +707,6 @@
                 }
             }
 
-            // Imprimir un archivo individual (abre nueva pestaña y llama print)
             window.imprimirArchivo = function(url) {
                 if (!url) return;
                 const w = window.open(url, '_blank');
