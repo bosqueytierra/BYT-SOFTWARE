@@ -963,13 +963,13 @@ class WizardCotizacion {
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                     <h5>💡 Factores Sugeridos:</h5>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(2)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(2.5)">
                             2.0x (100%)
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(2.5)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(3.0)">
                             2.5x (150%)
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(3)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(3.5)">
                             3.0x (200%)
                         </button>
                     </div>
@@ -1864,6 +1864,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
 
