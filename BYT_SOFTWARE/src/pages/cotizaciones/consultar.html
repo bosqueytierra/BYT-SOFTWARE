@@ -1,315 +1,438 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Consultar Cotizaciones - BYT SOFTWARE</title>
-    <link rel="stylesheet" href="../../styles/global.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consultar Cotizaciones - BYT SOFTWARE</title>
+  <link rel="stylesheet" href="../../styles/global.css">
+  <link rel="stylesheet" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css">
+  <style>
+    :root {
+      --bg: #f6f7f8;
+      --card: #ffffff;
+      --border: #e4e7eb;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --primary: #2e5e4e;
+      --primary-soft: #3f705d;
+      --accent: #ee7b45;
+      --danger: #e55353;
+      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    body {
+      margin: 0;
+      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .page {
+      max-width: 1200px;
+      margin: 22px auto 48px;
+      padding: 0 16px;
+    }
+    .header-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+    }
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      object-fit: contain;
+      background: #edf1f3;
+      padding: 6px;
+      border: 1px solid var(--border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+    .header-title { margin: 0; font-size: 20px; font-weight: 800; color: var(--text); }
+    .header-subtitle { margin: 0; color: var(--muted); font-size: 13px; }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .card + .card { margin-top: 14px; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    label { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: block; }
+    input, select {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fdfdfd;
+      font-family: inherit;
+      font-size: 14px;
+      transition: border 0.15s ease, box-shadow 0.15s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: rgba(46,94,78,0.6);
+      box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-soft); }
+    .btn-ghost { background: #f0f3f5; color: var(--text); }
+    .btn-warning { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+    .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
+    .btn-icon { width: 18px; height: 18px; }
+
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .quote-card {
+      padding: 16px;
+    }
+    .quote-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .quote-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .quote-meta { margin: 6px 0; color: var(--muted); font-size: 13px; }
+    .quote-total { margin: 4px 0 0; font-weight: 700; color: var(--primary); }
+    .quote-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .state {
+      text-align: center;
+      color: var(--muted);
+      padding: 24px 12px;
+    }
+    .state-icon {
+      width: 54px; height: 54px; margin: 0 auto 8px;
+      display: grid; place-items: center;
+      border-radius: 16px;
+      background: #eef2f5;
+      color: var(--primary);
+      font-size: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .loading-spinner {
+      width: 36px; height: 36px;
+      border: 4px solid #e6e9ed;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    a.btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+      background: #e8efeb;
+      border: 1px solid rgba(46,94,78,0.25);
+    }
+    a.btn-back:hover { background: #dce7e1; }
+  </style>
 </head>
 <body>
+  <div class="page">
     <a href="../menu_principal.html" class="btn-back">← Atrás</a>
 
-    <div class="container">
-        <header class="header">
-            <div class="header-content">
-                <div class="logo-section">
-                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo">
-                    <div>
-                        <h1 class="header-title">Consultar Cotizaciones</h1>
-                        <p class="header-subtitle">Historial de Proyectos - Bosque y Tierra</p>
-                    </div>
-                </div>
-                <div>
-                    <button class="btn" onclick="cargarCotizaciones()">
-                        🔄 Actualizar
-                    </button>
-                    <a href="nueva.html" class="btn" style="margin-left: 10px;">
-                        + Nueva Cotización
-                    </a>
-                </div>
-            </div>
-        </header>
-
-        <!-- Filtros -->
-        <div class="card">
-            <h3 class="card-title">Filtros de Búsqueda</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Buscar por Proyecto o Cliente</label>
-                    <input type="text" class="form-control" id="filtro-busqueda" 
-                           placeholder="Escriba el nombre del proyecto o cliente..." 
-                           oninput="filtrarCotizaciones()">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Ordenar por</label>
-                    <select class="form-control" id="filtro-orden" onchange="ordenarCotizaciones()">
-                        <option value="fecha_desc">Fecha (Más reciente)</option>
-                        <option value="fecha_asc">Fecha (Más antigua)</option>
-                        <option value="cliente_asc">Cliente (A-Z)</option>
-                        <option value="cliente_desc">Cliente (Z-A)</option>
-                        <option value="total_desc">Total (Mayor a menor)</option>
-                        <option value="total_asc">Total (Menor a mayor)</option>
-                    </select>
-                </div>
-            </div>
+    <div class="header-card">
+      <div class="logo-row">
+        <img class="logo" src="../../assets/logo_byt.png" alt="BYT">
+        <div>
+          <h1 class="header-title">Consultar Cotizaciones</h1>
+          <p class="header-subtitle">Historial de Proyectos · Bosque y Tierra</p>
         </div>
-
-        <!-- Estado de carga -->
-        <div id="loading-state" class="card text-center" style="display: none;">
-            <div class="loading-spinner" style="margin: 20px auto;"></div>
-            <p>Cargando cotizaciones...</p>
-        </div>
-
-        <!-- Estado vacío -->
-        <div id="empty-state" class="card text-center" style="display: none;">
-            <div style="font-size: 64px; color: #ccc; margin: 20px 0;">📋</div>
-            <h3 style="color: #666;">No hay cotizaciones</h3>
-            <p style="color: #999;">Aún no se han creado cotizaciones. 
-               <a href="nueva.html">Crear primera cotización</a>
-            </p>
-        </div>
-
-        <!-- Lista de cotizaciones -->
-        <div id="cotizaciones-container">
-            <!-- Las cotizaciones se cargarán aquí dinámicamente -->
-        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="cargarCotizaciones()" title="Actualizar">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 9 9"/><path d="M3 16v-4h4"/></svg>
+          Actualizar
+        </button>
+        <a class="btn btn-primary" href="nueva.html">
+          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+          Nueva Cotización
+        </a>
+      </div>
     </div>
 
-    <!-- BLOQUE DE SCRIPTS CORRECTO -->
-    <!-- Config Supabase -->
-    <script src="../../lib/supabaseConfig.js"></script>
+    <div class="card">
+      <h3 style="margin:0 0 12px;">Filtros de Búsqueda</h3>
+      <div class="filters">
+        <div>
+          <label>Buscar por Proyecto o Cliente</label>
+          <input id="filtro-busqueda" type="text" placeholder="Escriba el nombre del proyecto o cliente..." oninput="filtrarCotizaciones()">
+        </div>
+        <div>
+          <label>Ordenar por</label>
+          <select id="filtro-orden" onchange="ordenarCotizaciones()">
+            <option value="fecha_desc">Fecha (Más reciente)</option>
+            <option value="fecha_asc">Fecha (Más antigua)</option>
+            <option value="cliente_asc">Cliente (A-Z)</option>
+            <option value="cliente_desc">Cliente (Z-A)</option>
+            <option value="total_desc">Total (Mayor a menor)</option>
+            <option value="total_asc">Total (Menor a mayor)</option>
+          </select>
+        </div>
+      </div>
+    </div>
 
-    <!-- Inicializador: crea window.supabase y emite supabase:ready -->
-    <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+    <div id="loading-state" class="card state" style="display:none;">
+      <div class="loading-spinner"></div>
+      <div>Cargando cotizaciones...</div>
+    </div>
 
-    <!-- Cliente global que consume el supabase ya creado -->
-    <script src="../../js/globalSupabase.js" defer></script>
+    <div id="empty-state" class="card state" style="display:none;">
+      <div class="state-icon">📁</div>
+      <h3 style="margin:6px 0 4px; color: var(--text);">No hay cotizaciones</h3>
+      <p style="margin:0; color: var(--muted);">Aún no se han creado cotizaciones. <a href="nueva.html" style="color:var(--primary); font-weight:700;">Crear primera cotización</a></p>
+    </div>
 
-    <!-- Scripts propios de la página -->
-    <script src="../../js/categorias.js" defer></script>
+    <div id="cotizaciones-container" class="list" style="display:none;"></div>
+  </div>
 
-    <script>
-        let cotizacionesData = [];
-        let cotizacionesFiltradas = [];
+  <!-- Supabase -->
+  <script src="../../lib/supabaseConfig.js"></script>
+  <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+  <script src="../../js/globalSupabase.js" defer></script>
+  <script src="../../js/categorias.js" defer></script>
 
-        // Verificar autenticación
-        if (!localStorage.getItem('byt_logged_in')) {
-            window.location.href = '../login/login.html';
+  <script>
+    let cotizacionesData = [];
+    let cotizacionesFiltradas = [];
+
+    if (!localStorage.getItem('byt_logged_in')) {
+      window.location.href = '../login/login.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarCotizaciones();
+    });
+
+    function mostrarEstado(estado) {
+      const loading = document.getElementById('loading-state');
+      const empty = document.getElementById('empty-state');
+      const container = document.getElementById('cotizaciones-container');
+      loading.style.display = estado === 'loading' ? 'block' : 'none';
+      empty.style.display = estado === 'empty' ? 'block' : 'none';
+      container.style.display = estado === 'data' ? 'flex' : 'none';
+    }
+
+    async function cargarCotizaciones() {
+      mostrarEstado('loading');
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        const resultado = await window.supabaseClient.obtenerCotizaciones();
+        if (!resultado.success) throw new Error(resultado.error);
+        cotizacionesData = resultado.data || [];
+        cotizacionesFiltradas = [...cotizacionesData];
+        if (cotizacionesData.length === 0) {
+          mostrarEstado('empty');
+        } else {
+          ordenarCotizaciones(); // incluye mostrarCotizaciones
         }
+      } catch (error) {
+        console.error('Error al cargar cotizaciones:', error);
+        window.utils?.mostrarNotificacion?.('Error al cargar cotizaciones: ' + (error.message || String(error)), 'error');
+        mostrarEstado('empty');
+      }
+    }
 
-        // Cargar cotizaciones al inicializar
-        document.addEventListener('DOMContentLoaded', function() {
-            cargarCotizaciones();
+    function getClienteNombre(c) {
+      if (!c) return 'N/A';
+      if (typeof c === 'string') return c;
+      if (typeof c === 'object') {
+        return c.nombre || c.nombre_proyecto || c.razon_social || JSON.stringify(c);
+      }
+      return String(c);
+    }
+
+    function filtrarCotizaciones() {
+      const filtro = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
+      if (!filtro) {
+        cotizacionesFiltradas = [...cotizacionesData];
+      } else {
+        cotizacionesFiltradas = cotizacionesData.filter(c => {
+          const proj = (c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || '').toLowerCase();
+          const cli  = (getClienteNombre(c.cliente || c.data?.cliente) || '').toLowerCase();
+          const notas = (c.notas || '').toLowerCase();
+          return proj.includes(filtro) || cli.includes(filtro) || notas.includes(filtro);
         });
+      }
+      ordenarCotizaciones();
+    }
 
-        // Cargar cotizaciones desde Supabase
-        async function cargarCotizaciones() {
-            mostrarEstado('loading');
-            
-            try {
-                const resultado = await window.supabaseClient.obtenerCotizaciones();
-                
-                if (resultado.success) {
-                    cotizacionesData = resultado.data || [];
-                    cotizacionesFiltradas = [...cotizacionesData];
-                    
-                    if (cotizacionesData.length === 0) {
-                        mostrarEstado('empty');
-                    } else {
-                        mostrarCotizaciones();
-                    }
-                } else {
-                    throw new Error(resultado.error);
-                }
-                
-            } catch (error) {
-                console.error('Error al cargar cotizaciones:', error);
-                window.utils.mostrarNotificacion('Error al cargar cotizaciones: ' + (error.message || String(error)), 'error');
-                mostrarEstado('empty');
-            }
+    function ordenarCotizaciones() {
+      const orden = document.getElementById('filtro-orden').value;
+      cotizacionesFiltradas.sort((a, b) => {
+        switch(orden) {
+          case 'fecha_asc':  return new Date(a.created_at) - new Date(b.created_at);
+          case 'fecha_desc': return new Date(b.created_at) - new Date(a.created_at);
+          case 'cliente_asc': {
+            const ca = getClienteNombre(a.cliente || a.data?.cliente);
+            const cb = getClienteNombre(b.cliente || b.data?.cliente);
+            return ca.localeCompare(cb);
+          }
+          case 'cliente_desc': {
+            const ca = getClienteNombre(a.cliente || a.data?.cliente);
+            const cb = getClienteNombre(b.cliente || b.data?.cliente);
+            return cb.localeCompare(ca);
+          }
+          case 'total_asc':  return (a.total_proyecto || a.total || 0) - (b.total_proyecto || b.total || 0);
+          case 'total_desc': return (b.total_proyecto || b.total || 0) - (a.total_proyecto || a.total || 0);
+          default: return new Date(b.created_at) - new Date(a.created_at);
         }
+      });
+      mostrarCotizaciones();
+    }
 
-        // Mostrar diferentes estados
-        function mostrarEstado(estado) {
-            const loading = document.getElementById('loading-state');
-            const empty = document.getElementById('empty-state');
-            const container = document.getElementById('cotizaciones-container');
-            
-            loading.style.display = estado === 'loading' ? 'block' : 'none';
-            empty.style.display = estado === 'empty' ? 'block' : 'none';
-            container.style.display = estado === 'data' ? 'block' : 'none';
-        }
+    function mostrarCotizaciones() {
+      const container = document.getElementById('cotizaciones-container');
+      if (!cotizacionesFiltradas.length) {
+        container.innerHTML = `
+          <div class="card state">
+            <div class="state-icon">🔎</div>
+            <h3 style="margin:6px 0 4px; color: var(--text);">No se encontraron resultados</h3>
+            <p style="margin:0; color: var(--muted);">Intente con otros criterios de búsqueda</p>
+          </div>`;
+        mostrarEstado('data');
+        return;
+      }
 
-        // Mostrar cotizaciones en la interfaz
-        function mostrarCotizaciones() {
-            mostrarEstado('data');
-            const container = document.getElementById('cotizaciones-container');
-            
-            if (cotizacionesFiltradas.length === 0) {
-                container.innerHTML = `
-                    <div class="card text-center">
-                        <h3 style="color: #666;">No se encontraron resultados</h3>
-                        <p style="color: #999;">Intente con otros criterios de búsqueda</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            
-            cotizacionesFiltradas.forEach(cotizacion => {
-                // Determinar nombre del proyecto con soporte multi-formato
-                const nombreProyecto = cotizacion.nombre_proyecto
-                    || cotizacion.project_key
-                    || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente.nombre_proyecto)
-                    || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente.nombre)
-                    || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente?.nombre_proyecto)
-                    || 'Sin nombre';
+      const html = cotizacionesFiltradas.map(c => {
+        const nombreProyecto = c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || 'Sin nombre';
+        const clienteNombre = getClienteNombre(c.cliente || c.data?.cliente);
+        const fecha = c.created_at ? new Date(c.created_at).toLocaleDateString('es-CL') : '-';
+        const totalNum = c.total_proyecto || c.total || 0;
+        const totalFmt = window.categorias?.formatearPrecio ? window.categorias.formatearPrecio(totalNum) : totalNum;
 
-                const clienteNombre = cotizacion.cliente || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente.nombre) || 'N/A';
-                const fecha = new Date(cotizacion.created_at).toLocaleDateString('es-CL');
-                const total = window.categorias ? window.categorias.formatearPrecio(cotizacion.total_proyecto || cotizacion.total || 0) : (cotizacion.total_proyecto || 0);
-                
-                html += `
-                    <div class="card cotizacion-item" style="margin-bottom: 15px;" data-id="${cotizacion.id}">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div style="flex: 1;">
-                                <h4 style="color: var(--color-primary); margin-bottom: 5px;">
-                                    <a href="detalle.html?id=${cotizacion.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
-                                </h4>
-                                <p style="margin: 5px 0; color: #666;">
-                                    <strong>Cliente:</strong> ${escapeHtml(clienteNombre)} | 
-                                    <strong>Fecha:</strong> ${fecha}
-                                </p>
-                                <p style="margin: 5px 0; color: #666;">
-                                    <strong>Total:</strong> <span style="color: var(--color-primary); font-weight: 600;">${total}</span>
-                                </p>
-                            </div>
-                            <div style="display: flex; gap: 10px;">
-                                <button class="btn btn-secondary" onclick="verDetalle('${cotizacion.id}')">
-                                    👁️ Ver
-                                </button>
-                                <button class="btn btn-secondary" onclick="editarCotizacion('${cotizacion.id}')">
-                                    ✏️ Editar
-                                </button>
-                                <button class="btn" onclick="duplicarCotizacion('${cotizacion.id}')" 
-                                        style="background: var(--color-warning);">
-                                    📋 Duplicar
-                                <button class="btn" onclick="eliminarCotizacion('${cotizacion.id}', this)" style="background: var(--color-error);">
-  🗑️ Eliminar
-</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
+        return `
+          <div class="card quote-card cotizacion-item" data-id="${c.id}">
+            <div class="quote-head">
+              <div>
+                <h4 class="quote-title">
+                  <a href="detalle.html?id=${c.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
+                </h4>
+                <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</p>
+                <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
+              </div>
+              <div class="quote-actions">
+                <button class="btn btn-secondary" onclick="verDetalle('${c.id}')" title="Ver">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M3.5 12s3.5-6 8.5-6 8.5 6 8.5 6-3.5 6-8.5 6-8.5-6-8.5-6Z"/></svg>
+                  Ver
+                </button>
+                <button class="btn btn-secondary" onclick="editarCotizacion('${c.id}')" title="Editar">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17.5 17.5 4a1.41 1.41 0 0 1 2 2L6 19.5 4 20z"/><path d="M14.5 6.5 17.5 9.5"/></svg>
+                  Editar
+                </button>
+                <button class="btn btn-warning" onclick="duplicarCotizacion('${c.id}')" title="Duplicar">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v12H7z"/><path d="M5 5h10v12"/></svg>
+                  Duplicar
+                </button>
+                <button class="btn btn-danger" onclick="eliminarCotizacion('${c.id}', this)" title="Eliminar">
+                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7h12"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M9 11v6M12 11v6M15 11v6"/><path d="M6 7v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7"/></svg>
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
 
-        // Filtrar cotizaciones por texto
-        function filtrarCotizaciones() {
-            const filtro = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
-            
-            if (!filtro) {
-                cotizacionesFiltradas = [...cotizacionesData];
-            } else {
-                cotizacionesFiltradas = cotizacionesData.filter(cotizacion => {
-                    const proyecto = ((cotizacion.nombre_proyecto || cotizacion.project_key) || (cotizacion.data && cotizacion.data.cliente && (cotizacion.data.cliente.nombre_proyecto || cotizacion.data.cliente.nombre)) || '').toLowerCase();
-                    const cliente = (cotizacion.cliente || (cotizacion.data && cotizacion.data.cliente && cotizacion.data.cliente.nombre) || '').toLowerCase();
-                    const notas = (cotizacion.notas || '').toLowerCase();
-                    
-                    return proyecto.includes(filtro) || 
-                           cliente.includes(filtro) || 
-                           notas.includes(filtro);
-                });
-            }
-            
-            ordenarCotizaciones();
-        }
+      container.innerHTML = html;
+      mostrarEstado('data');
+    }
 
-        // Ordenar cotizaciones
-        function ordenarCotizaciones() {
-            const orden = document.getElementById('filtro-orden').value;
-            
-            cotizacionesFiltradas.sort((a, b) => {
-                switch(orden) {
-                    case 'fecha_asc':
-                        return new Date(a.created_at) - new Date(b.created_at);
-                    case 'fecha_desc':
-                        return new Date(b.created_at) - new Date(a.created_at);
-                    case 'cliente_asc':
-                        return ((a.cliente || (a.data && a.data.cliente && a.data.cliente.nombre) || '')).localeCompare((b.cliente || (b.data && b.data.cliente && b.data.cliente.nombre) || ''));
-                    case 'cliente_desc':
-                        return ((b.cliente || (b.data && b.data.cliente && b.data.cliente.nombre) || '')).localeCompare((a.cliente || (a.data && a.data.cliente && a.data.cliente.nombre) || ''));
-                    case 'total_asc':
-                        return (a.total_proyecto || a.total || 0) - (b.total_proyecto || b.total || 0);
-                    case 'total_desc':
-                        return (b.total_proyecto || b.total || 0) - (a.total_proyecto || a.total || 0);
-                    default:
-                        return new Date(b.created_at) - new Date(a.created_at);
-                }
-            });
-            
-            mostrarCotizaciones();
-        }
+    function verDetalle(id) {
+      window.location.href = `detalle.html?id=${id}`;
+    }
+    function editarCotizacion(id) {
+      window.location.href = `nueva.html?id=${id}`;
+    }
+    function duplicarCotizacion(id) {
+      window.location.href = `nueva.html?duplicate=${id}`;
+    }
 
-        // Ver detalle de cotización
-        function verDetalle(id) {
-            window.location.href = `detalle.html?id=${id}`;
-        }
+    async function eliminarCotizacion(id, btnEl) {
+      if (!confirm('¿Está seguro de que desea eliminar esta cotización? Esta acción no se puede deshacer.')) return;
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        const resultado = await window.supabaseClient.eliminarCotizacion(id);
+        if (!resultado.success) throw new Error(resultado.error);
 
-        // Editar cotización (por implementar)
-        function editarCotizacion(id) {
-  window.location.href = `nueva.html?id=${id}`;
-}
+        // Remueve del DOM
+        try { btnEl?.closest('.cotizacion-item')?.remove(); } catch (_) {}
 
-        // Duplicar cotización (por implementar)
-       function duplicarCotizacion(id) {
-  window.location.href = `nueva.html?duplicate=${id}`;
-}
+        cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
+        cotizacionesFiltradas = (cotizacionesFiltradas || []).filter(c => c.id !== id);
+        mostrarCotizaciones();
 
-        async function eliminarCotizacion(id, btnEl) {
-  if (!confirm('¿Está seguro de que desea eliminar esta cotización? Esta acción no se puede deshacer.')) return;
-  try {
-    if (window.supabaseClient?.init) await window.supabaseClient.init();
+        window.utils?.mostrarNotificacion?.('Cotización eliminada exitosamente', 'success');
+      } catch (error) {
+        console.error('Error al eliminar cotización:', error);
+        window.utils?.mostrarNotificacion?.('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
+      }
+    }
 
-    const resultado = await window.supabaseClient.eliminarCotizacion(id);
-    if (!resultado.success) throw new Error(resultado.error);
-
-    // Remueve del DOM si está el botón
-    try {
-      const card = btnEl?.closest('.cotizacion-item');
-      if (card) card.remove();
-    } catch (_) {}
-
-    // Actualiza arrays locales y re-renderiza (sin volver a pedir a Supabase)
-    cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
-    cotizacionesFiltradas = (cotizacionesFiltradas || []).filter(c => c.id !== id);
-    mostrarCotizaciones();
-
-    window.utils?.mostrarNotificacion?.('Cotización eliminada exitosamente', 'success');
-  } catch (error) {
-    console.error('Error al eliminar cotización:', error);
-    window.utils?.mostrarNotificacion?.('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
-  }
-}
-
-        // escapeHtml para proteger la inyección de HTML
-        function escapeHtml(str) {
-            if (str === undefined || str === null) return '';
-            return String(str).replace(/[&<>"']/g, function (m) {
-                return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m];
-            });
-        }
-    </script>
+    function escapeHtml(str) {
+      if (str === undefined || str === null) return '';
+      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+  </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
