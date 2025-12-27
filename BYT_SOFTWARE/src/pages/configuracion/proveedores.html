@@ -12,7 +12,7 @@
       color: #2d2d2d;
     }
     .container {
-      max-width: 1300px;
+      max-width: 1350px;
       margin: 38px auto 60px auto;
       padding: 0 12px;
     }
@@ -119,7 +119,6 @@
       padding: 11px 18px;
       height: 45px;
     }
-    /* Icons inside button */
     .btn svg {
       flex-shrink: 0;
       margin-right: 7px;
@@ -151,7 +150,7 @@
     }
     table.providers-table {
       width: 100%;
-      min-width: 950px;
+      min-width: 1150px;
       margin: 0 auto;
       border-collapse: separate;
       border-spacing: 0;
@@ -179,7 +178,7 @@
       background: #fff;
       text-align: center;
       vertical-align: middle;
-      max-width: 330px;
+      max-width: 370px;
     }
     .prov-name-cell, .prov-website-cell, .prov-phone-cell {
       text-align: left;
@@ -259,14 +258,20 @@
       color: #444;
       cursor: pointer;
     }
-    @media (max-width: 960px){
+    @media (max-width: 1200px){
       .container {max-width:98vw;}
+      table.providers-table {min-width:700px;}
+      .providers-table td {max-width:270px;}
+      .actions .btn {min-width:80px;}
+    }
+    @media (max-width: 900px){
+      table.providers-table {min-width:550px;}
+      .providers-table td {max-width:170px;}
+      .actions .btn {min-width:60px;}
       .card {padding:10px 2px;}
       .modal {min-width:93vw;}
       .tabla-box {padding:5px 0;}
       table.providers-table th,table.providers-table td {font-size:14px;padding:9px 4px;}
-      table.providers-table {min-width: 550px;}
-      .actions .btn {min-width:80px;}
     }
   </style>
 </head>
@@ -303,7 +308,6 @@
               <th>nombre</th>
               <th>website</th>
               <th>teléfono</th>
-              <th>activo</th>
               <th>creado</th>
               <th>acciones</th>
             </tr>
@@ -322,10 +326,6 @@
         <div class="form-row"><label>nombre *</label><input type="text" id="prov-modal-name" autocomplete="off" required /></div>
         <div class="form-row"><label>website</label><input type="url" id="prov-modal-website" autocomplete="off" /></div>
         <div class="form-row"><label>teléfono</label><input type="text" id="prov-modal-phone" autocomplete="off" /></div>
-        <div class="form-row" style="margin-top:8px;">
-          <label style="display:inline-block;margin-right:10px;">activo</label>
-          <input type="checkbox" id="prov-modal-active" checked>
-        </div>
       </div>
       <div class="modal-actions">
         <button class="btn" id="prov-modal-save">guardar</button>
@@ -344,10 +344,8 @@
     const modalName = document.getElementById('prov-modal-name');
     const modalWebsite = document.getElementById('prov-modal-website');
     const modalPhone = document.getElementById('prov-modal-phone');
-    const modalActive = document.getElementById('prov-modal-active');
     const modalSave = document.getElementById('prov-modal-save');
 
-    // ---- LOGICA BACKEND ORIGINAL CONSERVADA ----
     try {
       window.providersApi = apiModule;
       window.createProvider = async (...args) => (await window.providersApi.createProvider(...args));
@@ -396,7 +394,7 @@
     }
 
     async function loadAdminProviders({ forceDemo = false } = {}) {
-      tbody.innerHTML = `<tr><td colspan="6" class="nodata">Cargando...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="nodata">Cargando...</td></tr>`;
       if (forceDemo || isDemoMode()) {
         loadDemoDataToTable();
         return;
@@ -406,7 +404,7 @@
         clearBanner();
         showBanner('No hay cliente de persistencia disponible (Supabase). Puedes conectar manualmente credenciales temporales o activar el Modo Demo.', 'error');
         showConnectPanel();
-        tbody.innerHTML = `<tr><td colspan="6" class="nodata">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="nodata">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
         return;
       }
       clearBanner();
@@ -418,20 +416,20 @@
           if (error && (error.message === 'no-supabase' || error === 'no-supabase')) {
             showBanner('No hay cliente de persistencia disponible (Supabase). Puedes activar el Modo Demo o conectar credenciales.', 'error');
             showConnectPanel();
-            tbody.innerHTML = `<tr><td colspan="6" class="nodata">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="nodata">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
             return;
           }
-          tbody.innerHTML = `<tr><td colspan="6" class="nodata" style="color:#b32;">Error: ${escapeHtml(error.message || JSON.stringify(error))}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5" class="nodata" style="color:#b32;">Error: ${escapeHtml(error.message || JSON.stringify(error))}</td></tr>`;
           return;
         }
         if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" class="nodata">No hay proveedores</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" class="nodata">No hay proveedores</td></tr>';
           return;
         }
         btnDemo.style.display = 'none';
         renderProviders(data);
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="6" class="nodata" style="color:#b32;">Error inesperado: ${escapeHtml(e.message || String(e))}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="nodata" style="color:#b32;">Error inesperado: ${escapeHtml(e.message || String(e))}</td></tr>`;
       }
     }
 
@@ -447,7 +445,6 @@
         <td class="prov-name-cell">${escapeHtml(p.name||'')}</td>
         <td class="prov-website-cell">${escapeHtml(p.website||'')}</td>
         <td class="prov-phone-cell">${escapeHtml(p.phone||'')}</td>
-        <td class="center"><input type="checkbox" ${p.active ? 'checked' : ''} disabled></td>
         <td class="prov-created-cell">${p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
         <td class="actions">
           <button class="btn secondary btnEdit" title="editar">
@@ -495,7 +492,6 @@
       modalName.value = provider?.name || '';
       modalWebsite.value = provider?.website || '';
       modalPhone.value = provider?.phone || '';
-      modalActive.checked = provider?.active !== false;
       setTimeout(()=>{ modalName.focus(); }, 120);
     }
     window.closeProviderModal = function() {
@@ -507,8 +503,7 @@
       const obj = {
         name: modalName.value.trim(),
         website: modalWebsite.value.trim(),
-        phone: modalPhone.value.trim(),
-        active: modalActive.checked
+        phone: modalPhone.value.trim()
       };
       if (!obj.name) { alert('Debes ingresar nombre'); return; }
       // Crear o editar
@@ -602,7 +597,7 @@
       let data = [];
       try { data = raw ? JSON.parse(raw) : []; } catch (e) { data = []; }
       if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="nodata">Modo Demo activo: no hay proveedores</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="nodata">Modo Demo activo: no hay proveedores</td></tr>';
         return;
       }
       renderProviders(data);
@@ -614,7 +609,7 @@
       const raw = localStorage.getItem(DEMO_KEY);
       let data = raw ? JSON.parse(raw) : [];
       const id = 'demo-' + Date.now();
-      const item = { id, name: payload.name || '', website: payload.website || '', phone: payload.phone || '', active: payload.active ?? true, created_at: new Date().toISOString() };
+      const item = { id, name: payload.name || '', website: payload.website || '', phone: payload.phone || '', created_at: new Date().toISOString() };
       data.unshift(item);
       localStorage.setItem(DEMO_KEY, JSON.stringify(data));
     }
