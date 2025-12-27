@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
+
+
+
+<link rel="stylesheet" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css">
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nueva Cotización - BYT SOFTWARE</title>
@@ -662,10 +668,12 @@
     </script>
 
 
+<!-- Loader (JS) -->
+<script src="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/js/loader.js"></script>
 <script>
-  // Mantén el overlay visible 2.5 segundos tras cargar la página
+  // Mantén visible el loader 2.5 s al cargar esta página
   window.addEventListener('load', () => {
-    setTimeout(() => BYTLoader?.hide(), 20500);
+    setTimeout(() => BYTLoader?.hide(), 2500);
   });
 </script>
 
@@ -674,5 +682,6 @@
     
 </body>
 </html>
+
 
 
