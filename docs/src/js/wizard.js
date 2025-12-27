@@ -567,13 +567,6 @@ generatePasoCliente(container) {
     });
 }
 
-    // Encargado quedó fuera de los inputs anteriores, asegúrate de tenerlo en el DOM:
-    const encargadoEl = document.getElementById('encargado');
-    if (!encargadoEl) {
-        // Si tu HTML no tiene el campo, agrégalo al form-row de dirección/comuna o crea otro form-row
-    }
-}
-
     generarPasoMaterial(container, categoria) {
         const estructurasBYT = {
             quincalleria: {
@@ -1862,6 +1855,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
 
