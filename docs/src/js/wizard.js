@@ -494,7 +494,7 @@ class WizardCotizacion {
     }
 
     // ------------- PASOS (completos) -------------
-  generatePasoCliente(container) {
+generatePasoCliente(container) {
     container.innerHTML = `
         <div class="card">
             <h3 class="card-title">Datos del Cliente y Proyecto</h3>
@@ -540,6 +540,14 @@ class WizardCotizacion {
                 </div>
             </div>
 
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Encargado</label>
+                    <input type="text" class="form-control" id="encargado" 
+                           value="${this.escapeHtml(this.datos.cliente.encargado || '')}">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Notas del Proyecto</label>
                 <textarea class="form-control" id="notas" rows="4" 
@@ -557,6 +565,7 @@ class WizardCotizacion {
             });
         }
     });
+}
 
     // Encargado quedó fuera de los inputs anteriores, asegúrate de tenerlo en el DOM:
     const encargadoEl = document.getElementById('encargado');
@@ -1853,5 +1862,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
