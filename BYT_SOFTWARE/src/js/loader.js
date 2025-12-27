@@ -1,6 +1,7 @@
 (function() {
   const overlayId = 'byt-loader-overlay';
-  const GIF_SRC = "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/assets/img/Cargando.gif";
+  // Ruta absoluta correcta al GIF
+  const GIF_SRC = "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/assets/Cargando.gif";
 
   function ensureOverlay() {
     let ov = document.getElementById(overlayId);
