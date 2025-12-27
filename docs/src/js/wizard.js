@@ -45,39 +45,39 @@ class WizardCotizacion {
             },
             valoresTraspasados: {
                 doer: { 
-                    nombre: 'DOER',
+                    nombre: 'Estructuras de fierro',
                     factor: 0.1,
                     materiales: {
-                        'estructuras_fierro_1': { nombre: 'Estructuras Fierro 1', cantidad: 0, precio: 0, lugar: 'Doer' },
-                        'estructuras_fierro_2': { nombre: 'Estructuras Fierro 2', cantidad: 0, precio: 0, lugar: 'Doer' }
+                        'estructuras_fierro_1': { nombre: 'Estructuras Fierro 1', cantidad: 0, precio: 0, lugar: '' },
+                        'estructuras_fierro_2': { nombre: 'Estructuras Fierro 2', cantidad: 0, precio: 0, lugar: '' }
                     }
                 },
                 eplum: { 
-                    nombre: 'EPLUM',
+                    nombre: 'Puertas de Aluminio, vidrios',
                     factor: 0.1,
                     materiales: {
                         'puertas_eplum_1': { nombre: 'Puertas vidrio 1', cantidad: 0, precio: 0, lugar: '' },
-                        'puertas_eplum_2': { nombre: 'Puertas vidrio 2', cantidad: 0, precio: 0, lugar: 'Eplum' },
-                        'puertas_eplum_3': { nombre: 'Puertas vidrio 3', cantidad: 0, precio: 0, lugar: 'Eplum' }
+                        'puertas_eplum_2': { nombre: 'Puertas vidrio 2', cantidad: 0, precio: 0, lugar: '' },
+                        'puertas_eplum_3': { nombre: 'Puertas vidrio 3', cantidad: 0, precio: 0, lugar: '' }
                     }
                 },
                 cuarzo: { 
-                    nombre: 'CUARZO',
+                    nombre: 'Piedras, granitos y ultracompactos',
                     factor: 0.1,
                     materiales: {
-                        'estructuras_cuarzo_1': { nombre: 'Estructuras Cuarzo 1', cantidad: 0, precio: 0, lugar: 'Marco 1' },
-                        'estructuras_cuarzo_2': { nombre: 'Estructuras Cuarzo 2', cantidad: 0, precio: 0, lugar: 'Marco 1' }
+                        'estructuras_cuarzo_1': { nombre: 'Estructuras Cuarzo 1', cantidad: 0, precio: 0, lugar: '' },
+                        'estructuras_cuarzo_2': { nombre: 'Estructuras Cuarzo 2', cantidad: 0, precio: 0, lugar: '' }
                     }
                 },
                 almuerzo: { 
-                    nombre: 'ALMUERZO',
+                    nombre: 'Viaticos',
                     factor: 0.1,
                     materiales: {
                         'almuerzo_1': { nombre: 'Almuerzo 1', cantidad: 0, precio: 0, lugar: '' }
                     }
                 },
                 transporte: { 
-                    nombre: 'TRANSPORTE',
+                    nombre: 'Transporte, bencina, despachos',
                     factor: 0.1,
                     materiales: {
                         'transporte_1': { nombre: 'Transporte y despacho 1', cantidad: 0, precio: 0, lugar: 'Indicar Lugar', destino: 'Indicar Lugar' },
@@ -1864,4 +1864,5 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
