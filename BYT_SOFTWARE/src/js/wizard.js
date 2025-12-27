@@ -588,10 +588,10 @@ class WizardCotizacion {
                     { nombre: 'Corredera Telescópica', cantidad: 0, precio: 0 },
                     { nombre: 'Manillas tipo 1', cantidad: 0, precio: 0 },
                     { nombre: 'Manillas tipo 2', cantidad: 0, precio: 0 },
-                    { nombre: 'Tip On', cantidad: 0, precio: 0 },
+                    { nombre: 'Expulsador Tip On', cantidad: 0, precio: 0 },
                     { nombre: 'Zócalo PVC', cantidad: 0, precio: 0 },
-                    { nombre: 'Juego Zócalo Patas', cantidad: 0, precio: 0 },
-                    { nombre: 'Barra Closet', cantidad: 0, precio: 0 },
+                    { nombre: 'Juego zócalo patas', cantidad: 0, precio: 0 },
+                    { nombre: 'Barra closet', cantidad: 0, precio: 0 },
                     { nombre: 'Perfil tubular redondo', cantidad: 0, precio: 0 }
                 ]
             },
@@ -599,12 +599,12 @@ class WizardCotizacion {
                 nombre: 'Tableros',
                 descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor total',
                 materiales: [
-                    { nombre: 'Melamina 18mm TIPO 1', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 18mm TIPO 2', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 18mm TIPO 3', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 15mm TIPO 1', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 15mm TIPO 2', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 15mm TIPO 3', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 18mm tipo 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 18mm tipo 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 18mm tipo 3', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm tipo 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm tipo 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm tipo 3', cantidad: 0, precio: 0 },
                     { nombre: 'Durolac', cantidad: 0, precio: 0 },
                     { nombre: 'MDF', cantidad: 0, precio: 0 }
                 ]
@@ -613,9 +613,9 @@ class WizardCotizacion {
                 nombre: 'Tapacantos',
                 descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
-                    { nombre: 'Metros de tapacanto delgado TIPO 1', cantidad: 0, precio: 400 },
-                    { nombre: 'Metros de tapacanto delgado TIPO 2', cantidad: 0, precio: 400 },
-                    { nombre: 'Metros de tapacanto delgado TIPO 3', cantidad: 0, precio: 400 },
+                    { nombre: 'Metros de tapacanto delgado tipo 1', cantidad: 0, precio: 400 },
+                    { nombre: 'Metros de tapacanto delgado tipo 2', cantidad: 0, precio: 400 },
+                    { nombre: 'Metros de tapacanto delgado tipo 3', cantidad: 0, precio: 400 },
                     { nombre: 'Metros de tapacanto grueso tipo 1', cantidad: 0, precio: 800 },
                     { nombre: 'Metros de tapacanto grueso tipo 2', cantidad: 0, precio: 800 },
                     { nombre: 'Metros de tapacanto grueso tipo 3', cantidad: 0, precio: 800 }
@@ -625,33 +625,33 @@ class WizardCotizacion {
                 nombre: 'Servicios Externo de corte',
                 descripcion: 'Esta conversa con tableros y tapacantos ya que depende de eso los metros y la cantidad de tableros',
                 materiales: [
-                    { nombre: 'Servicio Corte tablero EXTERNO', cantidad: 0, precio: 7000 },
-                    { nombre: 'Servicio Pegado tapacanto Delgado', cantidad: 0, precio: 450 },
-                    { nombre: 'Servicio Corte Durolac EXTERNO', cantidad: 0, precio: 3400 },
-                    { nombre: 'Servicio Pegado tapacanto Grueso', cantidad: 0, precio: 700 }
+                    { nombre: 'Servicio Corte tablero Ext o Int', cantidad: 0, precio: 7000 },
+                    { nombre: 'Servicio pegado tapacanto delgado', cantidad: 0, precio: 450 },
+                    { nombre: 'Servicio corte durolac Ext o Int', cantidad: 0, precio: 3400 },
+                    { nombre: 'Servicio pegado tapacanto grueso', cantidad: 0, precio: 700 }
                 ]
             },
             tableros_madera: {
                 nombre: 'Tableros de Madera',
                 descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
-                    { nombre: 'Panel de Pino 30 mm', cantidad: 0, precio: 0 },
-                    { nombre: 'Panel de Pino 18 mm', cantidad: 0, precio: 0 },
-                    { nombre: 'Panel de Pino 16 mm', cantidad: 0, precio: 0 },
-                    { nombre: 'Terciado 18 mm', cantidad: 0, precio: 0 },
-                    { nombre: 'Terciado 12 mm', cantidad: 0, precio: 0 }
+                    { nombre: 'Panel de madera 30 mm', cantidad: 0, precio: 0 },
+                    { nombre: 'Panel de madera 18 mm', cantidad: 0, precio: 0 },
+                    { nombre: 'Panel de madera 16 mm', cantidad: 0, precio: 0 },
+                    { nombre: 'Panel de Terciado 18 mm', cantidad: 0, precio: 0 },
+                    { nombre: 'Panel de Terciado 12 mm', cantidad: 0, precio: 0 }
                 ]
             },
             led_electricidad: {
                 nombre: 'Led y electricidad',
                 descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
-                    { nombre: 'Canaleta Led TIPO 1', cantidad: 0, precio: 0 },
-                    { nombre: 'Canaleta Led TIPO 2', cantidad: 0, precio: 0 },
-                    { nombre: 'Cinta Led TIPO 1', cantidad: 0, precio: 0 },
-                    { nombre: 'Cinta Led TIPO 2', cantidad: 0, precio: 0 },
-                    { nombre: 'Fuente de Poder TIPO 1', cantidad: 0, precio: 0 },
-                    { nombre: 'Fuente de Poder TIPO 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Canaleta Led tipo 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Canaleta Led tipo 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Cinta Led tipo 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Cinta Led tipo 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Fuente de Poder tipo 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Fuente de Poder tipo 2', cantidad: 0, precio: 0 },
                     { nombre: 'Interruptor Led', cantidad: 0, precio: 0 },
                     { nombre: 'Cables Led', cantidad: 0, precio: 0 },
                     { nombre: 'Cables Cordón', cantidad: 0, precio: 0 }
@@ -1864,4 +1864,5 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
