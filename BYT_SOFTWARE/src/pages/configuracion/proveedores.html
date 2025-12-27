@@ -35,7 +35,7 @@
     }
 
     .page {
-      max-width: 1280px;
+      max-width: 1360px;
       margin: 0 auto;
     }
 
@@ -76,6 +76,7 @@
       text-decoration: none;
       background: var(--btn-ghost);
       color: var(--byt-text);
+      white-space: nowrap;
     }
     button:disabled { opacity: 0.6; cursor: not-allowed; }
     button:hover { background: var(--btn-ghost-hover); }
@@ -121,20 +122,18 @@
       color: var(--byt-muted);
       font-size: 13px;
       letter-spacing: 0.2px;
-      padding: 12px 10px;
+      padding: 12px 12px;
       border-bottom: 1px solid var(--byt-border);
     }
     tbody td {
-      padding: 12px 10px;
+      padding: 12px 12px;
       border-bottom: 1px solid var(--byt-border);
       vertical-align: middle;
       color: var(--byt-text);
       word-break: break-word;
       overflow-wrap: anywhere;
     }
-    tbody tr:hover {
-      background: #f8fbfa;
-    }
+    tbody tr:hover { background: #f8fbfa; }
 
     .pill {
       display: inline-flex;
@@ -153,8 +152,14 @@
 
     .actions {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: nowrap;
+      justify-content: flex-start;
+      align-items: center;
+    }
+    .actions button {
+      min-width: 112px;
+      justify-content: center;
     }
 
     .muted { color: var(--byt-muted); font-size: 13px; }
@@ -288,8 +293,9 @@
       font-size: 12px;
     }
 
-    @media (max-width: 720px) {
+    @media (max-width: 880px) {
       .actions { flex-wrap: wrap; }
+      .actions button { width: 100%; justify-content: center; min-width: 0; }
       button { width: 100%; justify-content: center; }
       .toolbar { flex-direction: column; align-items: stretch; }
       .status-text { text-align: left; }
@@ -352,11 +358,11 @@
         <table id="providersTable" aria-label="Proveedores">
           <thead>
             <tr>
-              <th style="width:26%;">Nombre</th>
-              <th style="width:26%;">Website</th>
+              <th style="width:28%;">Nombre</th>
+              <th style="width:28%;">Website</th>
               <th style="width:18%;">Teléfono</th>
-              <th style="width:16%;">Creado</th>
-              <th style="width:14%;">Acciones</th>
+              <th style="width:14%;">Creado</th>
+              <th style="width:12%; text-align:left;">Acciones</th>
             </tr>
           </thead>
           <tbody></tbody>
