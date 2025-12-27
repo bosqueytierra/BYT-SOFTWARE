@@ -395,18 +395,27 @@
                 document.getElementById('fecha-cotizacion').textContent = fecha;
             }
 
-            function mostrarInfoProyecto() {
+                     function mostrarInfoProyecto() {
                 const container = document.getElementById('info-proyecto');
-                const proyecto = cotizacionActual.nombre_proyecto || cotizacionActual.data?.cliente?.nombre_proyecto || '';
-                const cliente = cotizacionActual.cliente || cotizacionActual.data?.cliente?.nombre || '';
-                const direccion = cotizacionActual.direccion || cotizacionActual.data?.cliente?.direccion || '';
-                const encargado = cotizacionActual.encargado || cotizacionActual.data?.cliente?.encargado || '';
-                const notas = cotizacionActual.notas || cotizacionActual.data?.cliente?.notas || '';
+                const clienteRaw = cotizacionActual.cliente ?? cotizacionActual.data?.cliente ?? {};
+                const clienteObj = (clienteRaw && typeof clienteRaw === 'object') ? clienteRaw : { nombre: clienteRaw };
+
+                const proyecto = cotizacionActual.nombre_proyecto || clienteObj.nombre_proyecto || cotizacionActual.data?.cliente?.nombre_proyecto || '';
+                const cliente = clienteObj.nombre || clienteObj.nombre_cliente || '';
+                const direccion = cotizacionActual.direccion || clienteObj.direccion || '';
+                const comuna = clienteObj.comuna || '';
+                const correo = clienteObj.correo || clienteObj.email || '';
+                const telefono = clienteObj.telefono || clienteObj.fono || '';
+                const encargado = cotizacionActual.encargado || clienteObj.encargado || '';
+                const notas = cotizacionActual.notas || clienteObj.notas || '';
 
                 const items = [
                     { label: 'Nombre del Proyecto', value: proyecto || 'N/A' },
                     { label: 'Cliente', value: cliente || 'N/A' },
                     { label: 'Dirección', value: direccion || 'N/A' },
+                    { label: 'Comuna', value: comuna || 'N/A' },
+                    { label: 'Correo', value: correo || 'N/A' },
+                    { label: 'Teléfono', value: telefono || 'N/A' },
                     { label: 'Encargado', value: encargado || 'N/A' },
                     { label: 'ID Cotización', value: `#${cotizacionActual.id || (cotizacionActual._id || '')}` },
                     { label: 'Fecha de Creación', value: new Date(cotizacionActual.created_at || cotizacionActual._created_at || Date.now()).toLocaleDateString('es-CL') }
@@ -896,4 +905,5 @@
     </script>
 </body>
 </html>
+
 
