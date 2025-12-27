@@ -86,7 +86,7 @@ class WizardCotizacion {
                     }
                 }
             },
-            factorGeneral: 1.3
+            factorGeneral: 2
         };
 
         // Supabase client cache (se inicializa con _ensureSupabase)
@@ -956,20 +956,20 @@ class WizardCotizacion {
                         <input type="number" class="form-control" id="factor_general" 
                                value="${this.datos.factorGeneral}" step="0.1" min="1" max="3"
                                onchange="window.bytWizard.actualizarFactor(this.value)" style="width: 120px;">
-                        <span style="color: #666;">(Ejemplo: 1.3 = 30% de ganancia)</span>
+                        <span style="color: #666;">(Ejemplo: 2 = 100% de ganancia)</span>
                     </div>
                 </div>
 
                 <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
                     <h5>💡 Factores Sugeridos:</h5>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(2)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(2.5)">
                             2.0x (100%)
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(2.5)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(3.0)">
                             2.5x (150%)
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(3)">
+                        <button type="button" class="btn btn-outline-secondary" onclick="window.bytWizard.establecerFactor(3.5)">
                             3.0x (200%)
                         </button>
                     </div>
@@ -979,7 +979,7 @@ class WizardCotizacion {
     }
 
     actualizarFactor(valor) {
-        this.datos.factorGeneral = parseFloat(valor) || 1.3;
+        this.datos.factorGeneral = parseFloat(valor) || 2;
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
@@ -1364,7 +1364,7 @@ class WizardCotizacion {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 1.3 };
+                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 2 };
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
@@ -1864,5 +1864,3 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
-
-
