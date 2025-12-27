@@ -947,7 +947,7 @@ class WizardCotizacion {
             <div class="card">
                 <h3 class="card-title">⚙️ Factor General BYT</h3>
                 <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <strong>📋 Información:</strong> El factor general se aplica a todos los materiales para calcular la ganancia base de BYT.
+                    <strong>📋 Información:</strong> El factor general se aplica a todos los materiales para calcular la ganancia base.
                 </p>
 
                 <div class="form-group">
@@ -1864,5 +1864,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
