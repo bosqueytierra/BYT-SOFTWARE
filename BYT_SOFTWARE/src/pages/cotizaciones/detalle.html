@@ -14,7 +14,7 @@
             --muted: #6c7a86;
             --primary: #2e5e4e;
             --primary-soft: #3f705d;
-            --viewer-scale: 0.25; /* se recalcula por JS en función del viewport */
+            --viewer-scale: 1;
         }
         body { background: var(--bg); }
         .detalle-section { margin-bottom: 30px; }
@@ -153,7 +153,7 @@
             padding: 16px;
         }
         .viewer-body img, .viewer-body iframe {
-            max-width: 90vw;
+            max-width: 95vw;
             max-height: 80vh;
             object-fit: contain;
             background: #fff;
@@ -330,14 +330,21 @@
                 cargarCotizacion();
             }
 
-            // Ajusta escala del visor según viewport (más grande en móvil, más chico en desktop)
+            // Escala dinámica: móvil más grande, desktop moderado
             function updateViewerScale() {
                 const vw = window.innerWidth;
                 const vh = window.innerHeight;
-                // escalar respecto a un tamaño base (1400x900); clamp 0.25–0.9
-                const base = Math.min(vw / 1400, vh / 900);
-                const scale = Math.max(0.25, Math.min(0.9, base));
-                document.documentElement.style.setProperty('--viewer-scale', scale.toString());
+                if (vw < 768) {
+                    // móvil: entre 0.9 y 1.0
+                    const base = Math.min(vw / 360, vh / 640);
+                    const scale = Math.max(0.9, Math.min(1.0, base * 1.1));
+                    document.documentElement.style.setProperty('--viewer-scale', scale.toString());
+                } else {
+                    // desktop/tablet: clamp 0.35–0.7
+                    const base = Math.min(vw / 1400, vh / 900);
+                    const scale = Math.max(0.35, Math.min(0.7, base));
+                    document.documentElement.style.setProperty('--viewer-scale', scale.toString());
+                }
             }
             window.addEventListener('resize', updateViewerScale);
 
