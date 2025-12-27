@@ -24,7 +24,16 @@ class WizardCotizacion {
         ];
 
         this.datos = {
-            cliente: {},
+            cliente: {
+                nombre_proyecto: '',
+                nombre: '',
+                direccion: '',
+                comuna: '',
+                correo: '',
+                telefono: '',
+                encargado: '',
+                notas: ''
+            },
             materiales: {
                 quincalleria: {},
                 tableros: {},
@@ -494,78 +503,78 @@ class WizardCotizacion {
     }
 
     // ------------- PASOS (completos) -------------
-generatePasoCliente(container) {
-    container.innerHTML = `
-        <div class="card">
-            <h3 class="card-title">Datos del Cliente y Proyecto</h3>
+    generatePasoCliente(container) {
+        container.innerHTML = `
+            <div class="card">
+                <h3 class="card-title">Datos del Cliente y Proyecto</h3>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Nombre del Proyecto *</label>
-                    <input type="text" class="form-control" id="nombre_proyecto" 
-                           value="${this.escapeHtml(this.datos.cliente.nombre_proyecto || '')}" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nombre del Proyecto *</label>
+                        <input type="text" class="form-control" id="nombre_proyecto" 
+                               value="${this.escapeHtml(this.datos.cliente.nombre_proyecto || '')}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cliente *</label>
+                        <input type="text" class="form-control" id="nombre_cliente" 
+                               value="${this.escapeHtml(this.datos.cliente.nombre || '')}" required>
+                    </div>
                 </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Dirección</label>
+                        <input type="text" class="form-control" id="direccion" 
+                               value="${this.escapeHtml(this.datos.cliente.direccion || '')}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Comuna</label>
+                        <input type="text" class="form-control" id="comuna" 
+                               value="${this.escapeHtml(this.datos.cliente.comuna || '')}">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Correo Electrónico</label>
+                        <input type="email" class="form-control" id="correo"
+                               inputmode="email" autocomplete="email"
+                               value="${this.escapeHtml(this.datos.cliente.correo || '')}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Número de contacto</label>
+                        <input type="tel" class="form-control" id="telefono"
+                               inputmode="tel" pattern="^[0-9+()\\s-]{6,}$"
+                               value="${this.escapeHtml(this.datos.cliente.telefono || '')}">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Encargado</label>
+                        <input type="text" class="form-control" id="encargado" 
+                               value="${this.escapeHtml(this.datos.cliente.encargado || '')}">
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label class="form-label">Cliente *</label>
-                    <input type="text" class="form-control" id="nombre_cliente" 
-                           value="${this.escapeHtml(this.datos.cliente.nombre || '')}" required>
+                    <label class="form-label">Notas del Proyecto</label>
+                    <textarea class="form-control" id="notas" rows="4" 
+                              placeholder="Describir detalles específicos del proyecto...">${this.escapeHtml(this.datos.cliente.notas || '')}</textarea>
                 </div>
             </div>
+        `;
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Dirección</label>
-                    <input type="text" class="form-control" id="direccion" 
-                           value="${this.escapeHtml(this.datos.cliente.direccion || '')}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Comuna</label>
-                    <input type="text" class="form-control" id="comuna" 
-                           value="${this.escapeHtml(this.datos.cliente.comuna || '')}">
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Correo Electrónico</label>
-                    <input type="email" class="form-control" id="correo"
-                           inputmode="email" autocomplete="email"
-                           value="${this.escapeHtml(this.datos.cliente.correo || '')}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Número de contacto</label>
-                    <input type="tel" class="form-control" id="telefono"
-                           inputmode="tel" pattern="^[0-9+()\\s-]{6,}$"
-                           value="${this.escapeHtml(this.datos.cliente.telefono || '')}">
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Encargado</label>
-                    <input type="text" class="form-control" id="encargado" 
-                           value="${this.escapeHtml(this.datos.cliente.encargado || '')}">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Notas del Proyecto</label>
-                <textarea class="form-control" id="notas" rows="4" 
-                          placeholder="Describir detalles específicos del proyecto...">${this.escapeHtml(this.datos.cliente.notas || '')}</textarea>
-            </div>
-        </div>
-    `;
-
-    ['nombre_proyecto','nombre_cliente','direccion','comuna','correo','telefono','encargado','notas'].forEach(c => {
-        const el = document.getElementById(c);
-        if (el) {
-            el.addEventListener('input', () => {
-                const key = (c === 'nombre_cliente') ? 'nombre' : c;
-                this.datos.cliente[key] = el.value;
-            });
-        }
-    });
-}
+        ['nombre_proyecto','nombre_cliente','direccion','comuna','correo','telefono','encargado','notas'].forEach(c => {
+            const el = document.getElementById(c);
+            if (el) {
+                el.addEventListener('input', () => {
+                    const key = (c === 'nombre_cliente') ? 'nombre' : c;
+                    this.datos.cliente[key] = el.value;
+                });
+            }
+        });
+    }
 
     generarPasoMaterial(container, categoria) {
         const estructurasBYT = {
@@ -1355,7 +1364,7 @@ generatePasoCliente(container) {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { cliente: {}, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 1.3 };
+                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 1.3 };
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
@@ -1855,7 +1864,3 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
-
-
-
-
