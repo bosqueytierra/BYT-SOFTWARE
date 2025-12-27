@@ -86,7 +86,7 @@ class WizardCotizacion {
                     }
                 }
             },
-            factorGeneral: 1.3
+            factorGeneral: 2
         };
 
         // Supabase client cache (se inicializa con _ensureSupabase)
@@ -1864,5 +1864,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
