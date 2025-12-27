@@ -607,7 +607,7 @@
             return;
           }
           try {
-            await apiModule.deleteProvider(id); // hard delete (sin soft)
+            await apiModule.deleteProvider(id, { soft: false }); // hard delete en Supabase
             await loadAdminProviders();
           } catch (err) {
             console.error('deleteProvider error', err);
