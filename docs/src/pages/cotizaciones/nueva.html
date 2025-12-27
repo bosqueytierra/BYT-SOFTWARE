@@ -470,7 +470,17 @@
     });
     </script>
 
-    <!-- Archivos: subida/listado/ver/eliminar (Supabase) -->
+
+
+
+
+
+
+
+
+
+    
+        <!-- Archivos: subida/listado/ver/eliminar (Supabase) -->
     <script>
       (function(){
         const BUCKET = 'cotizaciones';
@@ -507,7 +517,7 @@
           return MAX_IMG_MB; // imágenes
         }
 
-        async function uploadFile(file) {
+        async function uploadFile(file, nota = '') {
           if (!canUpload()) throw new Error('Guarda primero la cotización');
           const id = getCotizacionId();
           if (!id) throw new Error('Sin ID de cotización');
@@ -538,10 +548,11 @@
                 path,
                 filename: safe,
                 content_type: file.type || null,
-                size: file.size
+                size: file.size,
+                nota: nota || null
               });
           }
-          return { path, filename: safe, size: file.size, content_type: file.type };
+          return { path, filename: safe, size: file.size, content_type: file.type, nota };
         }
 
         async function listFiles() {
@@ -550,7 +561,7 @@
           if (!id) return [];
           const { data, error } = await supabaseClient
             .from('cotizacion_files')
-            .select('id,path,filename,size,created_at,content_type')
+            .select('id,path,filename,size,created_at,content_type,nota')
             .eq('cotizacion_id', id)
             .order('created_at', { ascending: false });
           if (error) throw error;
@@ -590,11 +601,12 @@
             const sizeMB = item.size ? (item.size/1024/1024).toFixed(2) : '';
             row.innerHTML = `
               <div style="display:flex; flex-direction:column;">
-                <strong style="font-size:14px;">${item.filename || 'archivo'}</strong>
+                <strong style="font-size:14px;">${item.filename || 'archivo'} ${item.nota ? '💬' : ''}</strong>
                 <span style="color:#6c7380; font-size:12px;">${sizeMB ? sizeMB + ' MB' : ''}</span>
+                ${item.nota ? `<span style="color:#35564c; font-size:12px; margin-top:2px;">${item.nota}</span>` : ''}
               </div>
               <div style="display:flex; gap:6px;">
-                <button class="btn btn-secondary btn-sm" data-action="view" data-path="${item.path}">Ver</button>
+                <button class="btn btn-secondary btn-sm" data-action="view" data-path="${item.path}" data-nota="${item.nota || ''}">Ver</button>
                 <button class="btn btn-secondary btn-sm" data-action="delete" data-path="${item.path}">Eliminar</button>
               </div>
             `;
@@ -615,8 +627,10 @@
         async function handleFiles(files) {
           if (!files?.length) return;
           for (const f of files) {
-            try { await uploadFile(f); }
-            catch (e) { console.error(e); alert(e.message || 'Error subiendo archivo'); }
+            try {
+              const nota = prompt(`Comentario para "${f.name}" (opcional):`, '') || '';
+              await uploadFile(f, nota);
+            } catch (e) { console.error(e); alert(e.message || 'Error subiendo archivo'); }
           }
           refreshList();
         }
@@ -668,6 +682,20 @@
     </script>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 <!-- Loader inline + retardo 2.5s -->
 <script>
 (function() {
@@ -720,6 +748,7 @@ window.addEventListener('load', () => {
     
 </body>
 </html>
+
 
 
 
