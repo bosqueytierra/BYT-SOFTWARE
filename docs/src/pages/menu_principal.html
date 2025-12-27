@@ -280,25 +280,30 @@
     }
   </script>
 
-  <!-- Loader JS (ruta absoluta para evitar 404) -->
-  <script src="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/js/loader.js"></script>
-  <script>
-    const linkCrear = document.getElementById('link-crear-cot');
-    const linkAdmin = document.getElementById('link-admin-cot');
+  <!-- Loader JS (ruta absoluta) -->
+<script src="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/js/loader.js"></script>
+<script>
+  const linkCrear = document.getElementById('link-crear-cot');
+  const linkAdmin = document.getElementById('link-admin-cot');
 
-    function attachLoader(el) {
-      if (!el) return;
-      el.addEventListener('click', () => {
-        BYTLoader?.show();
-        // Navega con el href existente; no bloqueamos la navegación.
-      });
-    }
+  function attachLoader(el) {
+    if (!el) return;
+    el.addEventListener('click', (e) => {
+      // deja nuevas pestañas (Ctrl/Meta/Shift o botón != 0)
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
+      const href = el.href;
+      BYTLoader?.show();
+      // espera un poco antes de navegar para que se vea el overlay
+      setTimeout(() => { window.location.href = href; }, 200); // ajusta 150-300ms a gusto
+    });
+  }
 
-    attachLoader(linkCrear);
-    attachLoader(linkAdmin);
+  attachLoader(linkCrear);
+  attachLoader(linkAdmin);
 
-    // Si esta misma página tarda en montar algo, oculta al cargar.
-    window.addEventListener('load', () => BYTLoader?.hide());
-  </script>
+  // Oculta si recargas el menú
+  window.addEventListener('load', () => BYTLoader?.hide());
+</script>
 </body>
 </html>
