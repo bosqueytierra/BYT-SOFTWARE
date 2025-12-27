@@ -956,7 +956,7 @@ class WizardCotizacion {
                         <input type="number" class="form-control" id="factor_general" 
                                value="${this.datos.factorGeneral}" step="0.1" min="1" max="3"
                                onchange="window.bytWizard.actualizarFactor(this.value)" style="width: 120px;">
-                        <span style="color: #666;">(Ejemplo: 1.3 = 30% de ganancia)</span>
+                        <span style="color: #666;">(Ejemplo: 2 = 100% de ganancia)</span>
                     </div>
                 </div>
 
@@ -979,7 +979,7 @@ class WizardCotizacion {
     }
 
     actualizarFactor(valor) {
-        this.datos.factorGeneral = parseFloat(valor) || 1.3;
+        this.datos.factorGeneral = parseFloat(valor) || 2;
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
@@ -1864,6 +1864,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
 
