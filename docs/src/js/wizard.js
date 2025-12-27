@@ -1864,9 +1864,3 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
-
-
-
-
-
-
