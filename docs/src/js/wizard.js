@@ -56,9 +56,9 @@ class WizardCotizacion {
                     nombre: 'EPLUM',
                     factor: 0.1,
                     materiales: {
-                        'puertas_eplum_1': { nombre: 'Puertas Eplum 1', cantidad: 0, precio: 0, lugar: 'Eplum' },
-                        'puertas_eplum_2': { nombre: 'Puertas Eplum 2', cantidad: 0, precio: 0, lugar: 'Eplum' },
-                        'puertas_eplum_3': { nombre: 'Puertas Eplum 3', cantidad: 0, precio: 0, lugar: 'Eplum' }
+                        'puertas_eplum_1': { nombre: 'Puertas vidrio 1', cantidad: 0, precio: 0, lugar: '' },
+                        'puertas_eplum_2': { nombre: 'Puertas vidrio 2', cantidad: 0, precio: 0, lugar: 'Eplum' },
+                        'puertas_eplum_3': { nombre: 'Puertas vidrio 3', cantidad: 0, precio: 0, lugar: 'Eplum' }
                     }
                 },
                 cuarzo: { 
@@ -1864,3 +1864,4 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
