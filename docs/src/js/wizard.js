@@ -502,8 +502,8 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- PASOS (completos) -------------
-    generatePasoCliente(container) {
+    // ------------- PASOS (completos) -------------generarPasoCliente
+    generarPasoCliente(container) {
         container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">Datos del Cliente y Proyecto</h3>
@@ -1864,3 +1864,4 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
