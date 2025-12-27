@@ -15,8 +15,9 @@
       --muted: #6c7a86;
       --primary: #2e5e4e;
       --primary-soft: #3f705d;
-      --accent: #ee7b45;
-      --danger: #e55353;
+      --accent: #2e5e4e;
+      --accent-2: #3f705d;
+      --danger: #2e5e4e; /* eliminamos rojo/amarillo; mantenemos verde */
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
     }
     body {
@@ -112,9 +113,12 @@
     .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
     .btn-primary:hover { background: var(--primary-soft); }
     .btn-ghost { background: #f0f3f5; color: var(--text); }
-    .btn-warning { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
     .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
+    /* Ajustes de color para acciones */
+    .btn-ver      { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
+    .btn-editar   { background: var(--primary-soft); color: #fff; border-color: var(--primary-soft); }
+    .btn-duplicar { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-eliminar { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
     .btn-icon { width: 18px; height: 18px; }
 
     .list {
@@ -372,19 +376,19 @@
                 <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
               </div>
               <div class="quote-actions">
-                <button class="btn btn-secondary" onclick="verDetalle('${c.id}')" title="Ver">
+                <button class="btn btn-ver" onclick="verDetalle('${c.id}')" title="Ver">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M3.5 12s3.5-6 8.5-6 8.5 6 8.5 6-3.5 6-8.5 6-8.5-6-8.5-6Z"/></svg>
                   Ver
                 </button>
-                <button class="btn btn-secondary" onclick="editarCotizacion('${c.id}')" title="Editar">
+                <button class="btn btn-editar" onclick="editarCotizacion('${c.id}')" title="Editar">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17.5 17.5 4a1.41 1.41 0 0 1 2 2L6 19.5 4 20z"/><path d="M14.5 6.5 17.5 9.5"/></svg>
                   Editar
                 </button>
-                <button class="btn btn-warning" onclick="duplicarCotizacion('${c.id}')" title="Duplicar">
+                <button class="btn btn-duplicar" onclick="duplicarCotizacion('${c.id}')" title="Duplicar">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v12H7z"/><path d="M5 5h10v12"/></svg>
                   Duplicar
                 </button>
-                <button class="btn btn-danger" onclick="eliminarCotizacion('${c.id}', this)" title="Eliminar">
+                <button class="btn btn-eliminar" onclick="eliminarCotizacion('${c.id}', this)" title="Eliminar">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7h12"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M9 11v6M12 11v6M15 11v6"/><path d="M6 7v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7"/></svg>
                   Eliminar
                 </button>
