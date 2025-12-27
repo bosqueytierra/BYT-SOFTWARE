@@ -395,7 +395,7 @@
                 document.getElementById('fecha-cotizacion').textContent = fecha;
             }
 
-                     function mostrarInfoProyecto() {
+                        function mostrarInfoProyecto() {
                 const container = document.getElementById('info-proyecto');
                 const clienteRaw = cotizacionActual.cliente ?? cotizacionActual.data?.cliente ?? {};
                 const clienteObj = (clienteRaw && typeof clienteRaw === 'object') ? clienteRaw : { nombre: clienteRaw };
