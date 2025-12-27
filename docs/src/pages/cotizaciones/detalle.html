@@ -109,6 +109,75 @@
         .btn-ghost { background: #f0f3f5; color: var(--text); }
         .btn-icon { width: 16px; height: 16px; }
 
+        /* Visor (lightbox) */
+        .viewer-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .viewer-overlay.active { display: flex; }
+        .viewer-inner {
+            position: relative;
+            background: #0f1114;
+            max-width: 96vw;
+            max-height: 92vh;
+            width: 96vw;
+            height: 92vh;
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .viewer-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            color: #fff;
+            font-weight: 700;
+            background: rgba(255,255,255,0.06);
+        }
+        .viewer-counter { font-size: 14px; color: #cfd4da; }
+        .viewer-close {
+            background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;
+        }
+        .viewer-body {
+            flex: 1;
+            display: grid;
+            place-items: center;
+            background: #0f1114;
+        }
+        .viewer-body img, .viewer-body iframe {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            background: #fff;
+        }
+        .viewer-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+        .viewer-btn {
+            pointer-events: all;
+            background: rgba(0,0,0,0.45);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            width: 44px; height: 44px;
+            display: grid; place-items: center;
+            cursor: pointer;
+            margin: 0 10px;
+            font-size: 20px;
+        }
+
         @media print {
             .btn-back, .no-print { display: none !important; }
             body { background: white !important; }
@@ -194,6 +263,21 @@
         </div>
     </div>
 
+    <!-- Visor -->
+    <div id="file-viewer" class="viewer-overlay">
+      <div class="viewer-inner">
+        <div class="viewer-top">
+          <div class="viewer-counter" id="viewer-counter">1 / 1</div>
+          <button class="viewer-close" onclick="closeViewer()">×</button>
+        </div>
+        <div class="viewer-body" id="viewer-body"></div>
+        <div class="viewer-nav">
+          <button class="viewer-btn" onclick="prevViewer()">‹</button>
+          <button class="viewer-btn" onclick="nextViewer()">›</button>
+        </div>
+      </div>
+    </div>
+
     <script src="../../lib/supabaseConfig.js"></script>
     <script type="module" src="../../js/supabaseBrowserClient.js"></script>
     <script src="../../js/globalSupabase.js" defer></script>
@@ -204,6 +288,10 @@
             let cotizacionActual = null;
             let cotizacionId = null;
             const BUCKET = 'cotizaciones';
+
+            // Visor
+            let viewerItems = [];
+            let viewerIndex = 0;
 
             if (!localStorage.getItem('byt_logged_in')) {
                 window.location.href = '../login/login.html';
@@ -606,12 +694,13 @@
                         return;
                     }
                     const items = await Promise.all(files.map(async f => {
-                        const { data: signed, error: errSigned } = await window.supabase
+                        const { data: signed } = await window.supabase
                             .storage.from(BUCKET)
                             .createSignedUrl(f.path, 3600);
                         const url = signed?.signedUrl || null;
                         return { ...f, signedUrl: url };
                     }));
+                    viewerItems = items;
                     renderArchivos(items);
                 } catch (e) {
                     console.error('Archivos error:', e);
@@ -621,7 +710,7 @@
 
             function renderArchivos(items) {
                 const cont = document.getElementById('archivos-detalle');
-                const html = items.map(item => renderFileCard(item)).join('');
+                const html = items.map((item, idx) => renderFileCard(item, idx)).join('');
                 cont.innerHTML = `<div class="files-grid">${html}</div>`;
                 items.forEach(item => {
                     if (isPdf(item.content_type || item.filename)) {
@@ -630,7 +719,7 @@
                 });
             }
 
-            function renderFileCard(file) {
+            function renderFileCard(file, idx) {
                 const isImg = isImage(file.content_type || file.filename);
                 const isPdfFile = isPdf(file.content_type || file.filename);
                 const name = file.filename || file.path || 'archivo';
@@ -647,6 +736,7 @@
                       <p class="file-name">${escapeHtml(name)}</p>
                       <div class="file-meta">${escapeHtml(file.content_type || '')} ${sizeMB ? '· ' + sizeMB : ''}</div>
                       <div class="file-actions">
+                        <button class="btn btn-secondary" onclick="openViewer(${idx})">Ver</button>
                         <a class="btn btn-secondary" href="${file.signedUrl || '#'}" target="_blank" rel="noopener" download>
                           Descargar
                         </a>
@@ -685,6 +775,56 @@
                     console.warn('No se pudo renderizar PDF', e);
                 }
             }
+
+            // Visor (lightbox)
+            window.openViewer = function(idx) {
+                if (!viewerItems.length) return;
+                viewerIndex = Math.max(0, Math.min(viewerItems.length - 1, idx));
+                renderViewer();
+                const overlay = document.getElementById('file-viewer');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            };
+            window.closeViewer = function() {
+                const overlay = document.getElementById('file-viewer');
+                overlay.classList.remove('active');
+                document.getElementById('viewer-body').innerHTML = '';
+                document.body.style.overflow = '';
+            };
+            window.nextViewer = function() {
+                if (!viewerItems.length) return;
+                viewerIndex = (viewerIndex + 1) % viewerItems.length;
+                renderViewer();
+            };
+            window.prevViewer = function() {
+                if (!viewerItems.length) return;
+                viewerIndex = (viewerIndex - 1 + viewerItems.length) % viewerItems.length;
+                renderViewer();
+            };
+            function renderViewer() {
+                const body = document.getElementById('viewer-body');
+                const counter = document.getElementById('viewer-counter');
+                const item = viewerItems[viewerIndex];
+                const name = item.filename || item.path || 'archivo';
+                counter.textContent = `${viewerIndex + 1} / ${viewerItems.length}`;
+                if (isImage(item.content_type || name)) {
+                    body.innerHTML = `<img src="${item.signedUrl}" alt="${escapeHtml(name)}">`;
+                } else if (isPdf(item.content_type || name)) {
+                    body.innerHTML = `<iframe src="${item.signedUrl}" style="border:0; width:100%; height:100%; background:#fff;"></iframe>`;
+                } else {
+                    body.innerHTML = `<div style="color:#fff; padding:20px;">No hay vista previa para este tipo de archivo.</div>`;
+                }
+            }
+            document.addEventListener('keydown', (e) => {
+                const overlay = document.getElementById('file-viewer');
+                if (!overlay.classList.contains('active')) return;
+                if (e.key === 'Escape') closeViewer();
+                if (e.key === 'ArrowRight') nextViewer();
+                if (e.key === 'ArrowLeft') prevViewer();
+            });
+            document.getElementById('file-viewer').addEventListener('click', (e) => {
+                if (e.target.id === 'file-viewer') closeViewer();
+            });
 
             function formatPrecio(n) {
                 if (window.categorias && typeof window.categorias.formatearPrecio === 'function') {
