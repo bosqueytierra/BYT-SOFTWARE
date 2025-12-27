@@ -1364,7 +1364,7 @@ class WizardCotizacion {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 1.3 };
+                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 2 };
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
@@ -1864,6 +1864,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
 
