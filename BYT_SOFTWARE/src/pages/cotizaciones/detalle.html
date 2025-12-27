@@ -119,18 +119,19 @@
             z-index: 9999;
         }
         .viewer-overlay.active { display: flex; }
-        .viewer-inner {
-            position: relative;
-            background: #0f1114;
-            max-width: 96vw;
-            max-height: 92vh;
-            width: 96vw;
-            height: 92vh;
-            border-radius: 14px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
+          .viewer-overlay.active { display: flex; }
+      .viewer-inner {
+    position: relative;
+    background: #0f1114;
+    max-width: 96vw;
+    max-height: 92vh;
+    width: 96vw;
+    height: 92vh;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
         .viewer-top {
             display: flex;
             justify-content: space-between;
@@ -144,18 +145,22 @@
         .viewer-close {
             background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer;
         }
-        .viewer-body {
-            flex: 1;
-            display: grid;
-            place-items: center;
-            background: #0f1114;
-        }
-        .viewer-body img, .viewer-body iframe {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            background: #fff;
-        }
+       .viewer-body {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    background: #0f1114;
+    padding: 16px;
+}
+        .viewer-body img,
+.viewer-body iframe {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.3);
+}
         .viewer-nav {
             position: absolute;
             top: 50%;
@@ -871,3 +876,4 @@
     </script>
 </body>
 </html>
+
