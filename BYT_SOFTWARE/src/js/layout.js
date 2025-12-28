@@ -1,6 +1,10 @@
 // Inyecta la shell (layout.html), coloca el contenido de la página en el slot
 // y re-ejecuta los scripts de la página (excepto layout.js para evitar recursión).
 (async function() {
+  // Evita doble inyección si el script se corre más de una vez.
+  if (window.__BYT_SHELL_APPLIED__) return;
+  window.__BYT_SHELL_APPLIED__ = true;
+
   const FRAGMENT_URL = '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html';
   const CURRENT_PATH = window.location.pathname;
 
