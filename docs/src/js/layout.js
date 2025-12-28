@@ -1,15 +1,21 @@
 // Inyecta la shell (layout.html) y coloca el contenido de la página en el slot.
 (async function() {
-  const FRAGMENT_URL = '../fragments/layout.html'; // ajustar si mueves el fragmento
+  // Ruta absoluta en GitHub Pages (evita 404 y CSP)
+  const FRAGMENT_URL = '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html';
   const CURRENT_PATH = window.location.pathname;
 
   // Carga fragmento
-  const html = await fetch(FRAGMENT_URL).then(r => r.text());
+  const html = await fetch(FRAGMENT_URL).then(r => {
+    if (!r.ok) throw new Error(`No se pudo cargar layout: ${r.status}`);
+    return r.text();
+  });
+
   // Guarda contenido actual de la página (todo el body)
   const pageContent = document.body.innerHTML;
 
   // Reemplaza body por la shell
   document.documentElement.innerHTML = html;
+
   // Inserta el contenido previo en el slot
   const slot = document.getElementById('page-content-slot');
   if (slot) {
@@ -35,7 +41,6 @@
       const href = el.getAttribute('href') || '';
       if (href && CURRENT_PATH.endsWith(href.split('/').pop())) {
         el.classList.add('active');
-        // Si está en submenu, marcar también el padre
         const parentGroup = el.closest('.nav-group');
         const parentItem = parentGroup?.querySelector('.nav-item');
         parentItem?.classList.add('active');
