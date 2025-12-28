@@ -6,6 +6,7 @@
 // - Autosave silencioso cada 20s con notificación "AutoSave aplicado".
 // - CRUD completo: save (insert/update), load, list, delete, duplicate.
 // - Mantiene toda la lógica BYT original (pasos, cálculo, impresión).
+// - Añadido: gestión de Partidas en Paso 1 (mínimo 1, con IDs estables y validación).
 //
 // Reemplaza BYT_SOFTWARE/src/js/wizard.js por este contenido. Haz backup antes.
 
@@ -86,7 +87,8 @@ class WizardCotizacion {
                     }
                 }
             },
-            factorGeneral: 2
+            factorGeneral: 2,
+            partidas: [] // nuevo: arreglo de partidas {id, nombre}
         };
 
         // Supabase client cache (se inicializa con _ensureSupabase)
@@ -117,6 +119,7 @@ class WizardCotizacion {
     // ------------- Init -------------
     init() {
         try {
+            this._ensurePartidasInit();
             this.actualizarProgreso();
             this.mostrarPaso(1);
             this.actualizarBarraSuperior();
@@ -504,6 +507,8 @@ class WizardCotizacion {
 
     // ------------- PASOS (completos) -------------generarPasoCliente
     generarPasoCliente(container) {
+        this._ensurePartidasInit();
+
         container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">Datos del Cliente y Proyecto</h3>
@@ -563,6 +568,19 @@ class WizardCotizacion {
                               placeholder="Describir detalles específicos del proyecto...">${this.escapeHtml(this.datos.cliente.notas || '')}</textarea>
                 </div>
             </div>
+
+            <div class="card" style="margin-top:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <div>
+                        <h3 class="card-title" style="margin-bottom:4px;">Partidas / Áreas del proyecto</h3>
+                        <p class="muted" style="margin:0;">Define las partidas (ej: Cocina, Closet visita, Mueble baño). Al menos una es obligatoria.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" style="white-space:nowrap;" onclick="window.bytWizard.agregarPartida()">
+                        + Agregar partida
+                    </button>
+                </div>
+                <div id="partidas-list" style="margin-top:12px; display:flex; flex-direction:column; gap:10px;"></div>
+            </div>
         `;
 
         ['nombre_proyecto','nombre_cliente','direccion','comuna','correo','telefono','encargado','notas'].forEach(c => {
@@ -574,6 +592,101 @@ class WizardCotizacion {
                 });
             }
         });
+
+        this._renderPartidasUI();
+    }
+
+    _renderPartidasUI() {
+        const listEl = document.getElementById('partidas-list');
+        if (!listEl) return;
+        this._ensurePartidasInit();
+
+        listEl.innerHTML = '';
+
+        this.datos.partidas.forEach((p, idx) => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.gap = '10px';
+            row.style.alignItems = 'center';
+            row.style.flexWrap = 'wrap';
+            row.style.padding = '10px';
+            row.style.border = '1px solid #e3e8ea';
+            row.style.borderRadius = '10px';
+            row.style.background = '#f9fbfb';
+
+            row.innerHTML = `
+                <div style="flex:1; min-width:240px;">
+                    <label class="form-label" style="font-size:13px; margin-bottom:6px;">Nombre de la partida ${this.escapeHtml('#' + (idx+1))}</label>
+                    <input type="text" class="form-control" value="${this.escapeAttr(p.nombre || '')}" placeholder="Ej: Cocina" data-partida-id="${this.escapeAttr(p.id)}">
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn btn-secondary" data-action="delete" data-partida-id="${this.escapeAttr(p.id)}" ${this.datos.partidas.length <= 1 ? 'disabled' : ''}>
+                        Eliminar
+                    </button>
+                </div>
+            `;
+            listEl.appendChild(row);
+        });
+
+        // Bind inputs
+        listEl.querySelectorAll('input[data-partida-id]').forEach(inp => {
+            inp.oninput = () => {
+                const id = inp.getAttribute('data-partida-id');
+                this._actualizarPartidaNombre(id, inp.value);
+            };
+        });
+        listEl.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+            btn.onclick = () => {
+                const id = btn.getAttribute('data-partida-id');
+                this.eliminarPartida(id);
+            };
+        });
+    }
+
+    _ensurePartidasInit() {
+        if (!Array.isArray(this.datos.partidas)) this.datos.partidas = [];
+        // asegurar IDs y mínimo 1
+        this.datos.partidas = this.datos.partidas.map(p => ({
+            id: p.id || this._genPartidaId(),
+            nombre: p.nombre || ''
+        }));
+        if (this.datos.partidas.length === 0) {
+            this.datos.partidas.push({ id: this._genPartidaId(), nombre: '' });
+        }
+    }
+
+    _genPartidaId() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return 'part-' + Date.now() + '-' + Math.random().toString(16).slice(2, 8);
+    }
+
+    agregarPartida() {
+        this._ensurePartidasInit();
+        this.datos.partidas.push({ id: this._genPartidaId(), nombre: '' });
+        this._renderPartidasUI();
+    }
+
+    eliminarPartida(id) {
+        this._ensurePartidasInit();
+        if (this.datos.partidas.length <= 1) {
+            alert('Debe existir al menos una partida.');
+            return;
+        }
+        this.datos.partidas = this.datos.partidas.filter(p => p.id !== id);
+        if (this.datos.partidas.length === 0) {
+            this.datos.partidas.push({ id: this._genPartidaId(), nombre: '' });
+        }
+        this._renderPartidasUI();
+    }
+
+    _actualizarPartidaNombre(id, nombre) {
+        this._ensurePartidasInit();
+        const p = this.datos.partidas.find(x => x.id === id);
+        if (p) {
+            p.nombre = nombre;
+        }
     }
 
     generarPasoMaterial(container, categoria) {
@@ -1218,13 +1331,16 @@ class WizardCotizacion {
     }
 
     validateBeforeSave() {
-        return !!(this.datos && this.datos.cliente && String(this.datos.cliente.nombre_proyecto || '').trim() !== '');
+        const hasProyecto = !!(this.datos && this.datos.cliente && String(this.datos.cliente.nombre_proyecto || '').trim() !== '');
+        const partidas = Array.isArray(this.datos.partidas) ? this.datos.partidas : [];
+        const hasPartida = partidas.some(p => String(p.nombre || '').trim() !== '');
+        return hasProyecto && hasPartida;
     }
 
     async saveCotizacionSupabase({ forceNew = false, silent = false } = {}) {
         try {
             if (!this.validateBeforeSave()) {
-                if (!silent) alert('Nombre del proyecto es obligatorio para guardar.');
+                if (!silent) alert('Nombre del proyecto y al menos una partida con nombre son obligatorios.');
                 return { ok:false, error:'validation' };
             }
 
@@ -1319,6 +1435,7 @@ class WizardCotizacion {
             this.datos._created_at = data.created_at;
             this.datos._updated_at = data.updated_at;
 
+            this._ensurePartidasInit();
             this.actualizarBarraSuperior();
             this.mostrarPaso(1);
             this._showToast('Cotización cargada');
@@ -1364,7 +1481,8 @@ class WizardCotizacion {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 2 };
+                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 2, partidas: [] };
+                this._ensurePartidasInit();
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
@@ -1386,6 +1504,14 @@ class WizardCotizacion {
             cloned._created_at = null;
             cloned._updated_at = null;
             cloned.version = 1;
+
+            // Regenerar IDs de partidas manteniendo nombres
+            if (Array.isArray(cloned.partidas)) {
+                cloned.partidas = cloned.partidas.map(p => ({ id: this._genPartidaId(), nombre: p.nombre || '' }));
+            } else {
+                cloned.partidas = [{ id: this._genPartidaId(), nombre: '' }];
+            }
+
             const prev = this.datos;
             this.datos = cloned;
             const res = await this.saveCotizacionSupabase({ forceNew: true });
@@ -1864,6 +1990,3 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
-
-
-
