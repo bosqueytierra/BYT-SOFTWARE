@@ -1,8 +1,16 @@
-// Inyecta la shell (layout.html) y coloca el contenido de la página en el slot.
+// Inyecta la shell (layout.html), coloca el contenido de la página en el slot
+// y re-ejecuta los scripts de la página.
 (async function() {
-  // Ruta absoluta en GitHub Pages (evita 404 y CSP)
   const FRAGMENT_URL = '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html';
   const CURRENT_PATH = window.location.pathname;
+
+  // Guarda estilos del head de la página (para no perder CSS específico)
+  const pageHeadStyles = Array.from(
+    document.head.querySelectorAll('style, link[rel="stylesheet"]')
+  ).map(el => el.outerHTML).join('\n');
+
+  // Guarda contenido actual de la página (todo el body)
+  const pageContent = document.body.innerHTML;
 
   // Carga fragmento
   const html = await fetch(FRAGMENT_URL).then(r => {
@@ -10,20 +18,43 @@
     return r.text();
   });
 
-  // Guarda contenido actual de la página (todo el body)
-  const pageContent = document.body.innerHTML;
-
   // Reemplaza body por la shell
   document.documentElement.innerHTML = html;
 
+  // Restaura los estilos específicos de la página
+  if (pageHeadStyles) {
+    document.head.insertAdjacentHTML('beforeend', pageHeadStyles);
+  }
+
   // Inserta el contenido previo en el slot
   const slot = document.getElementById('page-content-slot');
+  let wrapper = null;
   if (slot) {
-    const wrapper = document.createElement('div');
+    wrapper = document.createElement('div');
     wrapper.id = 'page-content';
     wrapper.innerHTML = pageContent;
     slot.appendChild(wrapper);
   }
+
+  // Función para re-ejecutar los scripts insertados
+  function runScripts(root) {
+    if (!root) return;
+    const scripts = root.querySelectorAll('script');
+    scripts.forEach(old => {
+      const s = document.createElement('script');
+      // Copia atributos (incluido type="module")
+      for (const { name, value } of Array.from(old.attributes)) {
+        s.setAttribute(name, value);
+      }
+      if (old.src) {
+        s.src = old.src;
+      } else {
+        s.textContent = old.textContent;
+      }
+      document.body.appendChild(s);
+    });
+  }
+  runScripts(wrapper);
 
   // Sidebar hover expand/collapse
   const appShell = document.getElementById('appShell');
