@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-
-
-
-
 <link rel="stylesheet" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css">
     
     <meta charset="UTF-8">
@@ -323,6 +319,31 @@
           <div id="file-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
         </div>
 
+        <!-- Bloque de archivos CAD/3D -->
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0 0 4px;">Archivos CAD / 3D (SKP, DWG, 3ds, etc.)</h3>
+              <p style="margin:0; color:#6c7380; font-size:13px;">Hasta 100MB. Guarda la cotización antes de subir. Se permiten formatos CAD/3D y comprimidos relacionados.</p>
+              <p id="file-hint-cad" style="margin:2px 0 0; color:#d9534f; font-size:12px; display:none;">Primero guarda la cotización para habilitar la subida.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <label class="btn" style="cursor:pointer; font-weight:700;">
+                Subir archivo CAD/3D
+                <input id="file-input-cad" type="file" accept=".skp,.3ds,.max,.dwg,.dxf,.fbx,.obj,.stl,.rvt,.step,.stp,.iges,.igs,.ifc,.blend,.zip,.rar,.7z" multiple style="display:none;">
+              </label>
+            </div>
+          </div>
+
+          <div id="dropzone-cad" style="
+            margin-top:12px; border:1px dashed #dfe3e6; border-radius:12px; padding:18px;
+            text-align:center; color:#6c7380; background:#f9fafb;">
+            Arrastra archivos CAD/3D aquí o usa el botón para subir.
+          </div>
+
+          <div id="file-list-cad" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+
         <!-- Botones de Navegación -->
         <div class="card" style="text-align: right; margin-top: 18px; display:flex; justify-content:flex-end; gap:10px;">
             <button type="button" class="btn btn-secondary" id="btn-anterior" onclick="anteriorPaso()">← Atrás</button>
@@ -450,7 +471,7 @@
         }
         if (info) {
           const label = steps[step-1] || '';
-          info.innerHTML = `<span>Paso ${step} de ${totalSteps}</span><span><strong>${label.replace(/^\\d+\\.\\s*/, '')}</strong></span>`;
+          info.innerHTML = `<span>Paso ${step} de ${totalSteps}</span><span><strong>${label.replace(/^\d+\.\s*/, '')}</strong></span>`;
         }
       }
 
@@ -470,17 +491,7 @@
     });
     </script>
 
-
-
-
-
-
-
-
-
-
-    
-        <!-- Archivos: subida/listado/ver/eliminar (Supabase) -->
+    <!-- Archivos: subida/listado/ver/eliminar (Supabase) -->
     <script>
       (function(){
         const BUCKET = 'cotizaciones';
@@ -681,21 +692,205 @@
       })();
     </script>
 
+    <!-- Archivos CAD/3D: subida/listado/ver/eliminar (Supabase) -->
+    <script>
+      (function(){
+        const BUCKET = 'cotizaciones';
+        const MAX_MB = 100;
+        // Permitimos extensiones comunes CAD/3D y contenedores
+        const EXT_ALLOW = ['skp','3ds','max','dwg','dxf','fbx','obj','stl','rvt','step','stp','iges','igs','ifc','blend','zip','rar','7z','cad'];
+        const drop = document.getElementById('dropzone-cad');
+        const input = document.getElementById('file-input-cad');
+        const listEl = document.getElementById('file-list-cad');
+        const hint = document.getElementById('file-hint-cad');
 
+        function getCotizacionId() {
+          return window.bytWizard?.datos?._id || window.bytWizard?.datos?.id || null;
+        }
 
+        function sanitizeName(name) {
+          return name.normalize("NFD").replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9._-]/g, '_');
+        }
 
+        function canUpload() {
+          const id = getCotizacionId();
+          const ok = !!(id && window.supabaseClient);
+          if (hint) hint.style.display = ok ? 'none' : 'block';
+          return ok;
+        }
 
+        function extOf(file) {
+          const parts = (file.name || '').toLowerCase().split('.');
+          return parts.length > 1 ? parts.pop() : '';
+        }
 
+        async function uploadFile(file, nota = '') {
+          if (!canUpload()) throw new Error('Guarda primero la cotización');
+          const id = getCotizacionId();
+          if (!id) throw new Error('Sin ID de cotización');
 
+          if (file.size > MAX_MB * 1024 * 1024) throw new Error(`Máx ${MAX_MB} MB para CAD/3D`);
 
+          const ext = extOf(file);
+          if (!EXT_ALLOW.includes(ext)) {
+            throw new Error('Extensión no permitida para CAD/3D');
+          }
 
+          const ts = Date.now();
+          const rand = Math.random().toString(36).slice(2, 7);
+          const safe = sanitizeName(file.name || 'archivo');
+          const path = `${id}/cad/${ts}-${rand}-${safe}`;
 
+          const { error } = await supabaseClient.storage.from(BUCKET).upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || 'application/octet-stream'
+          });
+          if (error) throw error;
 
+          if (supabaseClient.from) {
+            await supabaseClient
+              .from('cotizacion_files')
+              .insert({
+                cotizacion_id: id,
+                path,
+                filename: safe,
+                content_type: file.type || null,
+                size: file.size,
+                nota: nota || 'CAD/3D'
+              });
+          }
+          return { path, filename: safe, size: file.size, content_type: file.type, nota };
+        }
 
+        async function listFiles() {
+          if (!canUpload()) return [];
+          const id = getCotizacionId();
+          if (!id) return [];
+          // Filtramos por prefijo cad/ en el path
+          const { data, error } = await supabaseClient
+            .from('cotizacion_files')
+            .select('id,path,filename,size,created_at,content_type,nota')
+            .eq('cotizacion_id', id)
+            .like('path', `${id}/cad/%`)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          return data || [];
+        }
 
+        async function getFileUrl(path) {
+          const { data, error } = await supabaseClient.storage.from(BUCKET).createSignedUrl(path, 3600);
+          if (error) throw error;
+          return data.signedUrl;
+        }
 
+        async function removeFile(path) {
+          const { error } = await supabaseClient.storage.from(BUCKET).remove([path]);
+          if (error) throw error;
+          if (supabaseClient.from) {
+            await supabaseClient.from('cotizacion_files').delete().eq('path', path);
+          }
+        }
 
-    
+        function renderList(items) {
+          if (!listEl) return;
+          listEl.innerHTML = '';
+          if (!items || !items.length) {
+            listEl.innerHTML = '<div style="color:#6c7380;">Sin archivos CAD/3D aún.</div>';
+            return;
+          }
+          items.forEach(item => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.alignItems = 'center';
+            row.style.gap = '8px';
+            row.style.border = '1px solid #e4e7eb';
+            row.style.borderRadius = '10px';
+            row.style.padding = '8px 10px';
+            const sizeMB = item.size ? (item.size/1024/1024).toFixed(2) : '';
+            row.innerHTML = `
+              <div style="display:flex; flex-direction:column;">
+                <strong style="font-size:14px;">${item.filename || 'archivo'}</strong>
+                <span style="color:#6c7380; font-size:12px;">${sizeMB ? sizeMB + ' MB' : ''}</span>
+                ${item.nota ? `<span style="color:#35564c; font-size:12px; margin-top:2px;">${item.nota}</span>` : ''}
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" data-action="view" data-path="${item.path}">Descargar</button>
+                <button class="btn btn-secondary btn-sm" data-action="delete" data-path="${item.path}">Eliminar</button>
+              </div>
+            `;
+            listEl.appendChild(row);
+          });
+        }
+
+        async function refreshList() {
+          try {
+            const items = await listFiles();
+            renderList(items);
+          } catch(e) {
+            console.error(e);
+            alert('No se pudo listar archivos CAD/3D');
+          }
+        }
+
+        async function handleFiles(files) {
+          if (!files?.length) return;
+          for (const f of files) {
+            try {
+              const nota = prompt(`Comentario para "${f.name}" (opcional):`, 'CAD/3D') || 'CAD/3D';
+              await uploadFile(f, nota);
+            } catch (e) { console.error(e); alert(e.message || 'Error subiendo archivo'); }
+          }
+          refreshList();
+        }
+
+        if (drop) {
+          drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.background = '#eef1f3'; });
+          drop.addEventListener('dragleave', e => { drop.style.background = '#f9fafb'; });
+          drop.addEventListener('drop', e => {
+            e.preventDefault();
+            drop.style.background = '#f9fafb';
+            handleFiles(e.dataTransfer.files);
+          });
+        }
+        if (input) input.addEventListener('change', e => handleFiles(e.target.files));
+
+        listEl?.addEventListener('click', async (e)=>{
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const path = btn.dataset.path;
+          if (!path) return;
+          if (action === 'view') {
+            try {
+              const url = await getFileUrl(path);
+              window.open(url, '_blank');
+            } catch (err) {
+              console.error(err);
+              alert('No se pudo descargar el archivo');
+            }
+          } else if (action === 'delete') {
+            if (!confirm('¿Eliminar este archivo CAD/3D?')) return;
+            try {
+              await removeFile(path);
+              refreshList();
+            } catch (err) {
+              console.error(err);
+              alert('No se pudo eliminar');
+            }
+          }
+        });
+
+        // Cargar listado al entrar (si hay ID)
+        setTimeout(() => {
+          canUpload();
+          refreshList();
+        }, 800);
+      })();
+    </script>
+
 <!-- Loader inline + retardo 2.5s -->
 <script>
 (function() {
@@ -743,8 +938,5 @@ window.addEventListener('load', () => {
 });
 </script>
 
-    
-
-    
 </body>
 </html>
