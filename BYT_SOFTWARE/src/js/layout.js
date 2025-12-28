@@ -61,6 +61,11 @@
   }
   runScripts(wrapper);
 
+  // Dispara DOMContentLoaded para que corran los listeners añadidos en los scripts reinyectados
+  setTimeout(() => {
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+  }, 0);
+
   // Sidebar hover expand/collapse
   const appShell = document.getElementById('appShell');
   const sidebar  = document.querySelector('.sidebar');
