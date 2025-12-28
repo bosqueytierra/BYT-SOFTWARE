@@ -1,5 +1,5 @@
 // Inyecta la shell (layout.html), coloca el contenido de la página en el slot
-// y re-ejecuta los scripts de la página.
+// y re-ejecuta los scripts de la página (excepto layout.js para evitar recursión).
 (async function() {
   const FRAGMENT_URL = '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html';
   const CURRENT_PATH = window.location.pathname;
@@ -36,18 +36,19 @@
     slot.appendChild(wrapper);
   }
 
-  // Función para re-ejecutar los scripts insertados
+  // Re-ejecuta scripts del contenido, saltando layout.js para evitar recursión
   function runScripts(root) {
     if (!root) return;
     const scripts = root.querySelectorAll('script');
     scripts.forEach(old => {
+      const src = old.getAttribute('src') || '';
+      if (src.includes('layout.js')) return; // evita recursión
       const s = document.createElement('script');
-      // Copia atributos (incluido type="module")
       for (const { name, value } of Array.from(old.attributes)) {
         s.setAttribute(name, value);
       }
-      if (old.src) {
-        s.src = old.src;
+      if (src) {
+        s.src = src;
       } else {
         s.textContent = old.textContent;
       }
