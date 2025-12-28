@@ -330,7 +330,7 @@
             <div style="display:flex; gap:8px;">
               <label class="btn" style="cursor:pointer; font-weight:700;">
                 Subir archivo CAD/3D
-                <input id="file-input-cad" type="file" accept=".skp,.3ds,.max,.dwg,.dxf,.fbx,.obj,.stl,.rvt,.step,.stp,.iges,.igs,.ifc,.blend,.zip,.rar,.7z" multiple style="display:none;">
+                <input id="file-input-cad" type="file" accept=".skp,.3ds,.max,.dwg,.dxf,.fbx,.obj,.stl,.rvt,.step,.stp,.iges,.igs,.ifc,.blend,.zip,.rar,.7z,.cad" multiple style="display:none;">
               </label>
             </div>
           </div>
@@ -576,7 +576,11 @@
             .eq('cotizacion_id', id)
             .order('created_at', { ascending: false });
           if (error) throw error;
-          return data || [];
+          // excluir los que estén en subcarpeta cad/
+          return (data || []).filter(item => {
+            const p = item.path || '';
+            return !(p.includes(`${id}/cad/`) || p.includes(`/cad/`));
+          });
         }
 
         async function getFileUrl(path) {
