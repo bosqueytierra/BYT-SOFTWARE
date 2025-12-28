@@ -94,7 +94,6 @@
       box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
     }
 
-    
     .btn {
       border: 1px solid var(--border);
       background: #fff;
@@ -115,7 +114,6 @@
     .btn-primary:hover { background: var(--primary-soft); }
     .btn-ghost { background: #f0f3f5; color: var(--text); }
     .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
-    /* Ajustes de color para acciones */
     .btn-ver      { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
     .btn-editar   { background: var(--primary-soft); color: #fff; border-color: var(--primary-soft); }
     .btn-duplicar { background: var(--primary); color: #fff; border-color: var(--primary); }
@@ -176,23 +174,45 @@
     }
     a.btn-back:hover { background: #dce7e1; }
 
-    /* Hold-to-delete overlay */
-    .hold-overlay {
-      position: absolute;
+    /* Modal de confirmación */
+    .modal-backdrop {
+      position: fixed;
       inset: 0;
-      border-radius: inherit;
-      background: rgba(46,94,78,0.12);
-      pointer-events: none;
-      display: flex;
+      background: rgba(0,0,0,0.35);
+      display: none;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
-      color: var(--primary);
-      font-weight: 700;
-      opacity: 0;
-      transition: opacity 0.15s ease;
+      z-index: 1000;
+      padding: 16px;
     }
-    .btn-eliminar.holding .hold-overlay { opacity: 1; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+      width: min(420px, 100%);
+      padding: 18px;
+    }
+    .modal h3 { margin: 0 0 8px; }
+    .modal p { margin: 0 0 14px; color: var(--muted); }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .hold-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    .hold-fill {
+      position: absolute;
+      inset: 0;
+      background: rgba(46,94,78,0.15);
+      width: 0%;
+      pointer-events: none;
+      transition: width 0.1s linear;
+    }
   </style>
 </head>
 <body>
@@ -254,6 +274,21 @@
     <div id="cotizaciones-container" class="list" style="display:none;"></div>
   </div>
 
+  <!-- Modal de confirmación -->
+  <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
+    <div class="modal">
+      <h3>Eliminar cotización</h3>
+      <p>¿Seguro que deseas eliminar esta cotización? Mantén el botón 9 segundos para confirmar.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="delete-cancel">Cancelar</button>
+        <button class="btn btn-primary hold-btn" id="delete-hold-btn">
+          <span id="delete-hold-text">Mantén 9s para eliminar</span>
+          <div class="hold-fill" id="delete-hold-fill"></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Supabase -->
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
@@ -263,6 +298,9 @@
   <script>
     let cotizacionesData = [];
     let cotizacionesFiltradas = [];
+    let deleteTargetId = null;
+    let holdTimer = null;
+    let holdInterval = null;
 
     if (!localStorage.getItem('byt_logged_in')) {
       window.location.href = '../login/login.html';
@@ -270,6 +308,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       cargarCotizaciones();
+      setupDeleteModal();
     });
 
     function mostrarEstado(estado) {
@@ -392,10 +431,7 @@
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v12H7z"/><path d="M5 5h10v12"/></svg>
                   Duplicar
                 </button>
-                <button class="btn btn-eliminar" data-id="${c.id}" title="Eliminar (mantén 5s)">
-                  <span>Eliminar</span>
-                  <div class="hold-overlay" aria-hidden="true">Mantén 5s</div>
-                </button>
+                <button class="btn btn-eliminar" data-id="${c.id}" title="Eliminar">Eliminar</button>
               </div>
             </div>
           </div>
@@ -403,7 +439,7 @@
       }).join('');
 
       container.innerHTML = html;
-      wireHoldToDelete();
+      wireDeleteButtons();
       mostrarEstado('data');
     }
 
@@ -411,64 +447,95 @@
     function editarCotizacion(id) { window.location.href = `nueva.html?id=${id}`; }
     function duplicarCotizacion(id) { window.location.href = `nueva.html?duplicate=${id}`; }
 
-    // Hold-to-delete de 5s con confirmación visual y refresco auto
-    function wireHoldToDelete() {
-      const buttons = document.querySelectorAll('.btn-eliminar[data-id]');
-      buttons.forEach(btn => {
-        let timer = null;
-        let countdownTimer = null;
-        const overlay = btn.querySelector('.hold-overlay');
-        const id = btn.dataset.id;
-        const HOLD_MS = 5000;
-        const STEP_MS = 200;
-
-        const reset = () => {
-          if (timer) clearTimeout(timer);
-          if (countdownTimer) clearInterval(countdownTimer);
-          timer = null;
-          countdownTimer = null;
-          btn.classList.remove('holding');
-          if (overlay) overlay.textContent = 'Mantén 5s';
-        };
-
-        const startHold = () => {
-          if (!id) return;
-          btn.classList.add('holding');
-          let remaining = HOLD_MS;
-          if (overlay) overlay.textContent = `Mantén ${(remaining/1000).toFixed(1)}s`;
-          countdownTimer = setInterval(() => {
-            remaining -= STEP_MS;
-            if (overlay) overlay.textContent = `Mantén ${(remaining/1000).toFixed(1)}s`;
-          }, STEP_MS);
-
-          timer = setTimeout(async () => {
-            reset();
-            await eliminarCotizacion(id, btn, { silentRemove: true });
-            // refresh automático
-            cargarCotizaciones();
-          }, HOLD_MS);
-        };
-
-        btn.addEventListener('mousedown', startHold);
-        btn.addEventListener('touchstart', startHold);
-        ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => {
-          btn.addEventListener(ev, reset);
-        });
+    function wireDeleteButtons() {
+      document.querySelectorAll('.btn-eliminar[data-id]').forEach(btn => {
+        btn.onclick = () => openDeleteModal(btn.dataset.id);
       });
+    }
+
+    function setupDeleteModal() {
+      const modal = document.getElementById('delete-modal');
+      const cancelBtn = document.getElementById('delete-cancel');
+      const holdBtn = document.getElementById('delete-hold-btn');
+      const holdText = document.getElementById('delete-hold-text');
+      const holdFill = document.getElementById('delete-hold-fill');
+      const HOLD_MS = 9000;
+      const STEP_MS = 100;
+
+      const resetHold = () => {
+        if (holdTimer) clearTimeout(holdTimer);
+        if (holdInterval) clearInterval(holdInterval);
+        holdTimer = null;
+        holdInterval = null;
+        holdFill.style.width = '0%';
+        holdText.textContent = 'Mantén 9s para eliminar';
+      };
+
+      const closeModal = () => {
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        resetHold();
+        deleteTargetId = null;
+      };
+
+      const startHold = () => {
+        if (!deleteTargetId) return;
+        resetHold();
+        let elapsed = 0;
+        holdInterval = setInterval(() => {
+          elapsed += STEP_MS;
+          const pct = Math.min(100, (elapsed / HOLD_MS) * 100);
+          holdFill.style.width = pct + '%';
+          holdText.textContent = `Mantén ${(Math.max(0, HOLD_MS - elapsed)/1000).toFixed(1)}s`;
+        }, STEP_MS);
+        holdTimer = setTimeout(async () => {
+          resetHold();
+          await eliminarCotizacion(deleteTargetId, null, { silentRemove: true });
+          closeModal();
+          cargarCotizaciones();
+        }, HOLD_MS);
+      };
+
+      const stopHold = () => resetHold();
+
+      cancelBtn.onclick = closeModal;
+      holdBtn.addEventListener('mousedown', startHold);
+      holdBtn.addEventListener('touchstart', startHold);
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => {
+        holdBtn.addEventListener(ev, stopHold);
+      });
+      modal.addEventListener('click', e => {
+        if (e.target === modal) closeModal();
+      });
+      window.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+      });
+    }
+
+    function openDeleteModal(id) {
+      deleteTargetId = id;
+      const modal = document.getElementById('delete-modal');
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
     }
 
     async function eliminarCotizacion(id, btnEl, opts = {}) {
       const silentRemove = !!opts.silentRemove;
+      // Si se llamó sin el flujo de hold, pedimos confirm simple
       if (!silentRemove) {
-        const ok = confirm('¿Eliminar esta cotización? Mantén el botón 5s para confirmar.');
+        const ok = confirm('Para eliminar, confirma y luego mantén el botón en el modal.');
         if (!ok) return;
+        openDeleteModal(id);
+        return;
       }
       try {
         if (window.supabaseClient?.init) await window.supabaseClient.init();
         const resultado = await window.supabaseClient.eliminarCotizacion(id);
         if (!resultado.success) throw new Error(resultado.error);
 
-        // Remueve del DOM
+        // Remueve del DOM localmente
         try { btnEl?.closest('.cotizacion-item')?.remove(); } catch (_) {}
 
         cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
@@ -489,4 +556,3 @@
   </script>
 </body>
 </html>
-
