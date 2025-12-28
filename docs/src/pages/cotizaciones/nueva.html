@@ -30,14 +30,14 @@
     a { color: inherit; text-decoration: none; }
 
     /* Summary bar */
-  .summary-bar {
+.summary-bar {
   background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.82) 100%);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
   padding: 10px 14px;
   position: sticky;
-  top: 64px;      /* desplaza la barra debajo del topbar */
-  z-index: 5;
+  top: 80px;   /* súbelo o bájalo 4px si ves un pequeño solape/gap */
+  z-index: 5;  /* menor que el topbar, para que el topbar quede encima */
 }
     .summary-grid {
       display: grid;
@@ -946,4 +946,5 @@
   <script src="../../js/layout.js"></script>
 </body>
 </html>
+
 
