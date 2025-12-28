@@ -129,6 +129,21 @@
     }
     .search-bar input { width: 100%; border: none; background: transparent; padding: 10px 0; outline: none; font-size: 14px; }
 
+    /* Botón Atrás en topbar */
+    .top-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: #eef2f5;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      border: 1px solid var(--border);
+    }
+    .top-back:hover { background: #e4e8ec; }
+
     /* Slot de contenido */
     .main { position: relative; min-height: 100vh; }
     #page-content-slot { padding: 0; }
@@ -217,7 +232,10 @@
 
     <div class="main">
       <header class="topbar">
-        <div class="left"><span class="logo-text" style="font-weight:700;color:var(--primary);">Bosque y Tierra</span></div>
+        <div class="left">
+          <a class="top-back" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/menu_principal.html">← Atrás</a>
+          <span class="logo-text" style="font-weight:700;color:var(--primary);">Bosque y Tierra</span>
+        </div>
         <div class="search-bar">
           <span style="color: var(--muted);">🔍</span>
           <input type="search" placeholder="Buscar proyectos, cotizaciones, clientes…" aria-label="Buscar">
