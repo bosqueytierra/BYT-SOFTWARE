@@ -1,442 +1,942 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Consultar Cotizaciones - BYT SOFTWARE</title>
-  <link rel="stylesheet" href="../../styles/global.css">
-  <link rel="stylesheet" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css">
-  <style>
-    :root {
-      --bg: #f6f7f8;
-      --card: #ffffff;
-      --border: #e4e7eb;
-      --text: #2d2d2d;
-      --muted: #6c7a86;
-      --primary: #2e5e4e;
-      --primary-soft: #3f705d;
-      --accent: #2e5e4e;
-      --accent-2: #3f705d;
-      --danger: #2e5e4e; /* eliminamos rojo/amarillo; mantenemos verde */
-      --shadow: 0 6px 16px rgba(0,0,0,0.06);
-    }
-    body {
-      margin: 0;
-      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-    .page {
-      max-width: 1200px;
-      margin: 22px auto 48px;
-      padding: 0 16px;
-    }
-    .header-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: center;
-    }
-    .logo-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .logo {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      object-fit: contain;
-      background: #edf1f3;
-      padding: 6px;
-      border: 1px solid var(--border);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-    }
-    .header-title { margin: 0; font-size: 20px; font-weight: 800; color: var(--text); }
-    .header-subtitle { margin: 0; color: var(--muted); font-size: 13px; }
+<link rel="stylesheet" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css">
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nueva Cotización - BYT SOFTWARE</title>
+    <link rel="stylesheet" href="../../styles/global.css">
 
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    <style>
+      :root {
+        --bg: #f5f6f7;
+        --card: #ffffff;
+        --border: #e4e7eb;
+        --text: #1f2430;
+        --muted: #6c7380;
+        --primary: #35564c;          /* verde más gris */
+        --primary-soft: #3f6056;
+        --chip-bg: #f4f6f8;
+        --chip-border: #dfe3e6;
+        --shadow-soft: 0 12px 30px rgba(0,0,0,0.08);
+        --shadow-light: 0 6px 16px rgba(0,0,0,0.06);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      a { color: inherit; text-decoration: none; }
 
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-    }
-    .card + .card { margin-top: 14px; }
+      /* Summary bar */
+      .summary-bar {
+        background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.82) 100%);
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid var(--border);
+        padding: 10px 14px;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+        gap: 10px;
+      }
+      .summary-item {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 12px;
+        box-shadow: var(--shadow-light);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .summary-label { font-size: 12px; color: var(--muted); letter-spacing: 0.2px; text-transform: uppercase; }
+      .summary-value { font-size: 16px; font-weight: 700; color: var(--text); }
 
-    .filters {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
-      align-items: end;
-    }
-    label { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: block; }
-    input, select {
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fdfdfd;
-      font-family: inherit;
-      font-size: 14px;
-      transition: border 0.15s ease, box-shadow 0.15s ease;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: rgba(46,94,78,0.6);
-      box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
-    }
+      /* Container */
+      .container {
+        max-width: 1280px;
+        margin: 16px auto 48px;
+        padding: 0 16px 0 16px;
+      }
 
-    .btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--text);
-      padding: 10px 14px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
-    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-primary:hover { background: var(--primary-soft); }
-    .btn-ghost { background: #f0f3f5; color: var(--text); }
-    .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
-    /* Ajustes de color para acciones */
-    .btn-ver      { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
-    .btn-editar   { background: var(--primary-soft); color: #fff; border-color: var(--primary-soft); }
-    .btn-duplicar { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-eliminar { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
-    .btn-icon { width: 18px; height: 18px; }
+      /* Header card */
+      .header { margin-bottom: 12px; }
+      .wizard-header {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: var(--shadow-soft);
+      }
+      .logo-chip {
+        width: 38px; height: 38px;
+        border-radius: 12px;
+        background: #e9f0ec;
+        color: var(--primary);
+        display: grid; place-items: center;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+      }
+      .header-title { margin: 0; font-size: 18px; font-weight: 700; color: var(--text); }
+      .header-subtitle { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
 
-    .list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .quote-card {
-      padding: 16px;
-    }
-    .quote-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }
-    .quote-title {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 800;
-      color: var(--text);
-    }
-    .quote-meta { margin: 6px 0; color: var(--muted); font-size: 13px; }
-    .quote-total { margin: 4px 0 0; font-weight: 700; color: var(--primary); }
-    .quote-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+      /* Progress */
+      .wizard-progress {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        box-shadow: var(--shadow-light);
+        margin-bottom: 12px;
+      }
+      .progress-bar {
+        width: 100%; height: 8px; background: #ecf0f3; border-radius: 999px; overflow: hidden;
+        margin-bottom: 8px;
+      }
+      .progress-fill {
+        height: 100%; background: var(--primary); border-radius: 999px;
+        transition: width 0.3s ease;
+      }
+      .step-info {
+        display: flex; justify-content: space-between; font-size: 13px; color: var(--muted);
+      }
+      .step-info strong { color: var(--text); }
 
-    .state {
-      text-align: center;
-      color: var(--muted);
-      padding: 24px 12px;
-    }
-    .state-icon {
-      width: 54px; height: 54px; margin: 0 auto 8px;
-      display: grid; place-items: center;
-      border-radius: 16px;
-      background: #eef2f5;
-      color: var(--primary);
-      font-size: 24px;
-      border: 1px solid var(--border);
-    }
+      /* Step nav chips */
+      .step-nav {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        margin: 12px 0 6px 0;
+        padding: 4px 2px;
+      }
+      .step-chip {
+        border: 1px solid var(--chip-border);
+        background: var(--chip-bg);
+        padding: 9px 13px;
+        border-radius: 999px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-size: 12px;
+        color: var(--text);
+        transition: 0.2s ease;
+      }
+      .step-chip:hover { background: #eef1f3; }
+      .step-chip.active {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+        font-weight: 700;
+        box-shadow: 0 10px 18px rgba(53,86,76,0.18);
+      }
 
-    .loading-spinner {
-      width: 36px; height: 36px;
-      border: 4px solid #e6e9ed;
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-      margin: 0 auto 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+      /* Wizard container */
+      .wizard-container {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px;
+        box-shadow: var(--shadow-soft);
+      }
 
-    a.btn-back {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 12px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 700;
-      background: #e8efeb;
-      border: 1px solid rgba(46,94,78,0.25);
-    }
-    a.btn-back:hover { background: #dce7e1; }
-  </style>
+      .wizard-step h3 { margin: 0 0 8px; font-size: 16px; color: var(--text); }
+      .wizard-step p.lead { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+      }
+      .form-group { display: flex; flex-direction: column; gap: 6px; }
+      .form-group label { font-size: 13px; color: var(--text); font-weight: 600; }
+      .form-group small { color: var(--muted); font-size: 12px; }
+      input, textarea {
+        border: 1px solid #dfe3e6;
+        border-radius: 10px;
+        padding: 11px 12px;
+        font-size: 14px;
+        font-family: inherit;
+        background: #fff;
+        transition: border 0.15s ease, box-shadow 0.15s ease;
+      }
+      input:focus, textarea:focus {
+        outline: none;
+        border-color: rgba(53,86,76,0.65);
+        box-shadow: 0 0 0 3px rgba(53,86,76,0.12);
+      }
+      textarea { min-height: 110px; resize: vertical; }
+
+      /* Bottom buttons */
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 12px 14px;
+        box-shadow: var(--shadow-light);
+      }
+      .btn {
+        border: 1px solid var(--border);
+        background: #fff;
+        color: #1f2430;
+        padding: 10px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 14px;
+        transition: 0.2s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      }
+      .btn:hover { background: #eef1f3; }
+      .btn-secondary {
+        border-color: #dfe3e6;
+        color: var(--text);
+      }
+      .btn-primary, .btn:not(.btn-secondary).btn {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+        box-shadow: 0 12px 22px rgba(53,86,76,0.22);
+      }
+      .btn-primary:hover, .btn:not(.btn-secondary).btn:hover {
+        box-shadow: 0 16px 26px rgba(53,86,76,0.28);
+      }
+      .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 10px; }
+    </style>
 </head>
 <body>
-  <div class="page">
     <a href="../menu_principal.html" class="btn-back">← Atrás</a>
 
-    <div class="header-card">
-      <div class="logo-row">
-        <img class="logo" src="../../assets/logo_byt.png" alt="BYT">
-        <div>
-          <h1 class="header-title">Consultar Cotizaciones</h1>
-          <p class="header-subtitle">Historial de Proyectos · Bosque y Tierra</p>
+    <!-- Barra de Resumen Superior -->
+    <div class="summary-bar">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <span class="summary-label">Total Materiales</span>
+                <span class="summary-value" id="total-materiales">$0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Factor</span>
+                <span class="summary-value" id="factor-valor">1.3x</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Neto</span>
+                <span class="summary-value" id="neto-valor">$0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">IVA (19%)</span>
+                <span class="summary-value" id="iva-valor">$0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Total Proyecto</span>
+                <span class="summary-value" id="total-proyecto">$0</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Ganancia</span>
+                <span class="summary-value" id="ganancia-valor">$0</span>
+            </div>
         </div>
-      </div>
-      <div class="actions">
-        <button class="btn btn-ghost" onclick="cargarCotizaciones()" title="Actualizar">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 9 9"/><path d="M3 16v-4h4"/></svg>
-          Actualizar
-        </button>
-        <a class="btn btn-primary" href="nueva.html">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
-          Nueva Cotización
-        </a>
-      </div>
     </div>
 
-    <div class="card">
-      <h3 style="margin:0 0 12px;">Filtros de Búsqueda</h3>
-      <div class="filters">
-        <div>
-          <label>Buscar por Proyecto o Cliente</label>
-          <input id="filtro-busqueda" type="text" placeholder="Escriba el nombre del proyecto o cliente..." oninput="filtrarCotizaciones()">
+    <div class="container">
+        <header class="header">
+            <div class="wizard-header">
+                <div class="logo-chip">BYT</div>
+                <div>
+                    <h1 class="header-title">Nueva Cotización</h1>
+                    <p class="header-subtitle">Wizard de 10 pasos — Bosque y Tierra</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra de Progreso -->
+        <div class="wizard-progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progreso-barra" style="width:0%;"></div>
+            </div>
+            <div class="step-info" id="progreso-texto">
+                <span>Paso 1 de 10</span>
+                <span><strong>Datos del Cliente</strong></span>
+            </div>
         </div>
-        <div>
-          <label>Ordenar por</label>
-          <select id="filtro-orden" onchange="ordenarCotizaciones()">
-            <option value="fecha_desc">Fecha (Más reciente)</option>
-            <option value="fecha_asc">Fecha (Más antigua)</option>
-            <option value="cliente_asc">Cliente (A-Z)</option>
-            <option value="cliente_desc">Cliente (Z-A)</option>
-            <option value="total_desc">Total (Mayor a menor)</option>
-            <option value="total_asc">Total (Menor a mayor)</option>
-          </select>
+
+        <!-- Menú de pasos clicable -->
+        <div class="step-nav" id="step-nav"></div>
+
+        <!-- Contenedor del Wizard -->
+        <div class="wizard-container">
+            <div id="paso-1" class="wizard-step"><!-- dinámico --></div>
+            <div id="paso-2" class="wizard-step" style="display: none;"></div>
+            <div id="paso-3" class="wizard-step" style="display: none;"></div>
+            <div id="paso-4" class="wizard-step" style="display: none;"></div>
+            <div id="paso-5" class="wizard-step" style="display: none;"></div>
+            <div id="paso-6" class="wizard-step" style="display: none;"></div>
+            <div id="paso-7" class="wizard-step" style="display: none;"></div>
+            <div id="paso-8" class="wizard-step" style="display: none;"></div>
+            <div id="paso-9" class="wizard-step" style="display: none;"></div>
+            <div id="paso-10" class="wizard-step" style="display: none;"></div>
         </div>
-      </div>
-    </div>
 
-    <div id="loading-state" class="card state" style="display:none;">
-      <div class="loading-spinner"></div>
-      <div>Cargando cotizaciones...</div>
-    </div>
+        <!-- Botón Guardar (paso 1 / datos básicos) -->
+        <div class="card" style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
+          <button type="button" class="btn btn-primary" onclick="guardarCotizacionPaso1()">Guardar</button>
+        </div>
 
-    <div id="empty-state" class="card state" style="display:none;">
-      <div class="state-icon">📁</div>
-      <h3 style="margin:6px 0 4px; color: var(--text);">No hay cotizaciones</h3>
-      <p style="margin:0; color: var(--muted);">Aún no se han creado cotizaciones. <a href="nueva.html" style="color:var(--primary); font-weight:700;">Crear primera cotización</a></p>
-    </div>
-
-    <div id="cotizaciones-container" class="list" style="display:none;"></div>
-  </div>
-
-  <!-- Supabase -->
-  <script src="../../lib/supabaseConfig.js"></script>
-  <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-  <script src="../../js/globalSupabase.js" defer></script>
-  <script src="../../js/categorias.js" defer></script>
-
-  <script>
-    let cotizacionesData = [];
-    let cotizacionesFiltradas = [];
-
-    if (!localStorage.getItem('byt_logged_in')) {
-      window.location.href = '../login/login.html';
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      cargarCotizaciones();
-    });
-
-    function mostrarEstado(estado) {
-      const loading = document.getElementById('loading-state');
-      const empty = document.getElementById('empty-state');
-      const container = document.getElementById('cotizaciones-container');
-      loading.style.display = estado === 'loading' ? 'block' : 'none';
-      empty.style.display = estado === 'empty' ? 'block' : 'none';
-      container.style.display = estado === 'data' ? 'flex' : 'none';
-    }
-
-    async function cargarCotizaciones() {
-      mostrarEstado('loading');
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const resultado = await window.supabaseClient.obtenerCotizaciones();
-        if (!resultado.success) throw new Error(resultado.error);
-        cotizacionesData = resultado.data || [];
-        cotizacionesFiltradas = [...cotizacionesData];
-        if (cotizacionesData.length === 0) {
-          mostrarEstado('empty');
-        } else {
-          ordenarCotizaciones(); // incluye mostrarCotizaciones
-        }
-      } catch (error) {
-        console.error('Error al cargar cotizaciones:', error);
-        window.utils?.mostrarNotificacion?.('Error al cargar cotizaciones: ' + (error.message || String(error)), 'error');
-        mostrarEstado('empty');
-      }
-    }
-
-    function getClienteNombre(c) {
-      if (!c) return 'N/A';
-      if (typeof c === 'string') return c;
-      if (typeof c === 'object') {
-        return c.nombre || c.nombre_proyecto || c.razon_social || JSON.stringify(c);
-      }
-      return String(c);
-    }
-
-    function filtrarCotizaciones() {
-      const filtro = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
-      if (!filtro) {
-        cotizacionesFiltradas = [...cotizacionesData];
-      } else {
-        cotizacionesFiltradas = cotizacionesData.filter(c => {
-          const proj = (c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || '').toLowerCase();
-          const cli  = (getClienteNombre(c.cliente || c.data?.cliente) || '').toLowerCase();
-          const notas = (c.notas || '').toLowerCase();
-          return proj.includes(filtro) || cli.includes(filtro) || notas.includes(filtro);
-        });
-      }
-      ordenarCotizaciones();
-    }
-
-    function ordenarCotizaciones() {
-      const orden = document.getElementById('filtro-orden').value;
-      cotizacionesFiltradas.sort((a, b) => {
-        switch(orden) {
-          case 'fecha_asc':  return new Date(a.created_at) - new Date(b.created_at);
-          case 'fecha_desc': return new Date(b.created_at) - new Date(a.created_at);
-          case 'cliente_asc': {
-            const ca = getClienteNombre(a.cliente || a.data?.cliente);
-            const cb = getClienteNombre(b.cliente || b.data?.cliente);
-            return ca.localeCompare(cb);
-          }
-          case 'cliente_desc': {
-            const ca = getClienteNombre(a.cliente || a.data?.cliente);
-            const cb = getClienteNombre(b.cliente || b.data?.cliente);
-            return cb.localeCompare(ca);
-          }
-          case 'total_asc':  return (a.total_proyecto || a.total || 0) - (b.total_proyecto || b.total || 0);
-          case 'total_desc': return (b.total_proyecto || b.total || 0) - (a.total_proyecto || a.total || 0);
-          default: return new Date(b.created_at) - new Date(a.created_at);
-        }
-      });
-      mostrarCotizaciones();
-    }
-
-    function mostrarCotizaciones() {
-      const container = document.getElementById('cotizaciones-container');
-      if (!cotizacionesFiltradas.length) {
-        container.innerHTML = `
-          <div class="card state">
-            <div class="state-icon">🔎</div>
-            <h3 style="margin:6px 0 4px; color: var(--text);">No se encontraron resultados</h3>
-            <p style="margin:0; color: var(--muted);">Intente con otros criterios de búsqueda</p>
-          </div>`;
-        mostrarEstado('data');
-        return;
-      }
-
-      const html = cotizacionesFiltradas.map(c => {
-        const nombreProyecto = c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || 'Sin nombre';
-        const clienteNombre = getClienteNombre(c.cliente || c.data?.cliente);
-        const fecha = c.created_at ? new Date(c.created_at).toLocaleDateString('es-CL') : '-';
-        const totalNum = c.total_proyecto || c.total || 0;
-        const totalFmt = window.categorias?.formatearPrecio ? window.categorias.formatearPrecio(totalNum) : totalNum;
-
-        return `
-          <div class="card quote-card cotizacion-item" data-id="${c.id}">
-            <div class="quote-head">
-              <div>
-                <h4 class="quote-title">
-                  <a href="detalle.html?id=${c.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
-                </h4>
-                <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</p>
-                <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
-              </div>
-              <div class="quote-actions">
-                <button class="btn btn-ver" onclick="verDetalle('${c.id}')" title="Ver">
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M3.5 12s3.5-6 8.5-6 8.5 6 8.5 6-3.5 6-8.5 6-8.5-6-8.5-6Z"/></svg>
-                  Ver
-                </button>
-                <button class="btn btn-editar" onclick="editarCotizacion('${c.id}')" title="Editar">
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17.5 17.5 4a1.41 1.41 0 0 1 2 2L6 19.5 4 20z"/><path d="M14.5 6.5 17.5 9.5"/></svg>
-                  Editar
-                </button>
-                <button class="btn btn-duplicar" onclick="duplicarCotizacion('${c.id}')" title="Duplicar">
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v12H7z"/><path d="M5 5h10v12"/></svg>
-                  Duplicar
-                </button>
-                <button class="btn btn-eliminar" onclick="eliminarCotizacion('${c.id}', this)" title="Eliminar">
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 7h12"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M9 11v6M12 11v6M15 11v6"/><path d="M6 7v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7"/></svg>
-                  Eliminar
-                </button>
-              </div>
+        <!-- Bloque de archivos -->
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0 0 4px;">Archivos de la cotización</h3>
+              <p style="margin:0; color:#6c7380; font-size:13px;">Imágenes hasta 10MB, PDF hasta 20MB, videos MP4 hasta 50MB. Guarda la cotización antes de subir.</p>
+              <p id="file-hint" style="margin:2px 0 0; color:#d9534f; font-size:12px; display:none;">Primero guarda la cotización para habilitar la subida.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <label class="btn" style="cursor:pointer; font-weight:700;">
+                Subir archivo
+                <input id="file-input" type="file" accept="image/*,application/pdf,video/mp4" multiple style="display:none;">
+              </label>
+              <label class="btn" style="cursor:pointer; font-weight:700;">
+                Tomar foto
+                <input id="photo-input" type="file" accept="image/*" capture="environment" multiple style="display:none;">
+              </label>
             </div>
           </div>
-        `;
-      }).join('');
 
-      container.innerHTML = html;
-      mostrarEstado('data');
-    }
+          <div id="dropzone" style="
+            margin-top:12px; border:1px dashed #dfe3e6; border-radius:12px; padding:18px;
+            text-align:center; color:#6c7380; background:#f9fafb;">
+            Arrastra archivos aquí o usa los botones para subir/tomar foto.
+          </div>
 
-    function verDetalle(id) {
-      window.location.href = `detalle.html?id=${id}`;
-    }
-    function editarCotizacion(id) {
-      window.location.href = `nueva.html?id=${id}`;
-    }
-    function duplicarCotizacion(id) {
-      window.location.href = `nueva.html?duplicate=${id}`;
-    }
+          <div id="file-list" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
 
-    async function eliminarCotizacion(id, btnEl) {
-      if (!confirm('¿Está seguro de que desea eliminar esta cotización? Esta acción no se puede deshacer.')) return;
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const resultado = await window.supabaseClient.eliminarCotizacion(id);
-        if (!resultado.success) throw new Error(resultado.error);
+        <!-- Bloque de archivos CAD/3D -->
+        <div class="card" style="margin-top:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0 0 4px;">Archivos CAD / 3D (SKP, DWG, 3ds, etc.)</h3>
+              <p style="margin:0; color:#6c7380; font-size:13px;">Hasta 100MB. Guarda la cotización antes de subir. Se permiten formatos CAD/3D y comprimidos relacionados.</p>
+              <p id="file-hint-cad" style="margin:2px 0 0; color:#d9534f; font-size:12px; display:none;">Primero guarda la cotización para habilitar la subida.</p>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <label class="btn" style="cursor:pointer; font-weight:700;">
+                Subir archivo CAD/3D
+                <input id="file-input-cad" type="file" accept=".skp,.3ds,.max,.dwg,.dxf,.fbx,.obj,.stl,.rvt,.step,.stp,.iges,.igs,.ifc,.blend,.zip,.rar,.7z" multiple style="display:none;">
+              </label>
+            </div>
+          </div>
 
-        // Remueve del DOM
-        try { btnEl?.closest('.cotizacion-item')?.remove(); } catch (_) {}
+          <div id="dropzone-cad" style="
+            margin-top:12px; border:1px dashed #dfe3e6; border-radius:12px; padding:18px;
+            text-align:center; color:#6c7380; background:#f9fafb;">
+            Arrastra archivos CAD/3D aquí o usa el botón para subir.
+          </div>
 
-        cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
-        cotizacionesFiltradas = (cotizacionesFiltradas || []).filter(c => c.id !== id);
-        mostrarCotizaciones();
+          <div id="file-list-cad" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
 
-        window.utils?.mostrarNotificacion?.('Cotización eliminada exitosamente', 'success');
-      } catch (error) {
-        console.error('Error al eliminar cotización:', error);
-        window.utils?.mostrarNotificacion?.('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
+        <!-- Botones de Navegación -->
+        <div class="card" style="text-align: right; margin-top: 18px; display:flex; justify-content:flex-end; gap:10px;">
+            <button type="button" class="btn btn-secondary" id="btn-anterior" onclick="anteriorPaso()">← Atrás</button>
+            <button type="button" class="btn btn-primary" id="btn-siguiente" onclick="siguientePaso()">Siguiente →</button>
+        </div>
+    </div>
+
+    <!-- Config Supabase: URL y ANON key -->
+    <script src="../../lib/supabaseConfig.js"></script>
+    <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+    <script src="../../js/globalSupabase.js" defer></script>
+    <script src="../../js/categorias_reales.js" defer></script>
+    <script src="../../js/wizard.js" defer></script>
+
+    <script>
+        if (!localStorage.getItem('byt_logged_in')) {
+            window.location.href = '../login/login.html';
+        }
+        window.addEventListener('load', async () => {
+            try {
+                if (window.supabaseClient && typeof window.supabaseClient.validarConexion === 'function') {
+                    const ok = await window.supabaseClient.validarConexion();
+                    if (!ok) {
+                        console.warn('Conexión Supabase no disponible - offline');
+                        window.utils?.mostrarNotificacion?.('Trabajando en modo offline', 'warning');
+                    }
+                }
+            } catch (e) { console.warn('Error validando conexión Supabase:', e); }
+        });
+    </script>
+
+    <!-- Guardar rápido paso 1: llama directo a saveCotizacionSupabase -->
+    <script>
+      async function guardarCotizacionPaso1() {
+        try {
+          await window.bytWizard.saveCotizacionSupabase();
+          alert('Guardado');
+        } catch (e) {
+          console.error(e);
+          alert('Error al guardar');
+        }
       }
-    }
+    </script>
 
-    function escapeHtml(str) {
-      if (str === undefined || str === null) return '';
-      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    <!-- Redirigir botón Finalizar (paso 10) al menú principal -->
+    <script>
+      const MENU_PRINCIPAL_URL = "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/menu_principal.html";
+      document.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('#btn-finalizar, button[data-role="finalizar"], button[data-action="finalizar"]');
+        if (btn) {
+          ev.preventDefault();
+          window.location.href = MENU_PRINCIPAL_URL;
+        }
+      });
+    </script>
+
+    <!-- Carga en modo edición o duplicado -->
+    <script>
+      document.addEventListener('DOMContentLoaded', async () => {
+        const params = new URLSearchParams(window.location.search);
+        const editId = params.get('id');
+        const duplicateId = params.get('duplicate');
+        const targetId = duplicateId || editId;
+        if (!targetId) return;
+
+        try {
+          if (window.supabaseClient?.init) await window.supabaseClient.init();
+          if (window.bytWizard?._ensureSupabase) await window.bytWizard._ensureSupabase(5000);
+          if (window.bytWizard?.loadCotizacionSupabase) {
+            const res = await window.bytWizard.loadCotizacionSupabase(targetId);
+            if (!res?.ok) throw new Error(res?.error || 'No se pudo cargar');
+            if (duplicateId) {
+              const d = window.bytWizard.datos || {};
+              d._id = null;
+              d.numero = 'COT-' + Date.now();
+              if (d.cliente) {
+                const base = d.cliente.nombre_proyecto || d.cliente.nombre || 'Proyecto';
+                d.cliente.nombre_proyecto = `${base} (Copia)`;
+              }
+              window.bytWizard.mostrarPaso(1);
+              window.bytWizard.actualizarBarraSuperior?.();
+            }
+          } else {
+            console.warn('loadCotizacionSupabase no disponible en bytWizard');
+          }
+        } catch (e) {
+          console.error('Error cargando cotización (ed/dup)', e);
+          alert('No se pudo cargar la cotización. Intenta de nuevo.');
+        }
+      });
+    </script>
+
+    <!-- Menú de pasos: construcción y hook con wizard + actualiza barra -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const steps = [
+        '1. Datos del Cliente','2. Quincallería','3. Tableros','4. Tapacantos',
+        '5. Tableros de Madera','6. LED y Electricidad','7. Otras compras',
+        '8. Valores Traspasados','9. Factor General','10. Resumen'
+      ];
+      const totalSteps = 10;
+      const nav = document.getElementById('step-nav');
+      const bar = document.getElementById('progreso-barra');
+      const info = document.getElementById('progreso-texto');
+
+      if (nav) {
+        nav.innerHTML = steps.map((t,i)=>`<button class="step-chip" data-step="${i+1}">${t}</button>`).join('');
+        nav.addEventListener('click',(e)=>{
+          const btn = e.target.closest('.step-chip');
+          if (!btn) return;
+          const step = Number(btn.dataset.step || 1);
+          if (window.bytWizard?.mostrarPaso) window.bytWizard.mostrarPaso(step);
+        });
+      }
+
+      function updateStepNav(step) {
+        if (nav) {
+          nav.querySelectorAll('.step-chip').forEach(chip=>{
+            chip.classList.toggle('active', Number(chip.dataset.step)===Number(step));
+          });
+        }
+        if (bar) {
+          const pct = Math.max(0, Math.min(100, (step-1)/(totalSteps-1)*100));
+          bar.style.width = `${pct}%`;
+        }
+        if (info) {
+          const label = steps[step-1] || '';
+          info.innerHTML = `<span>Paso ${step} de ${totalSteps}</span><span><strong>${label.replace(/^\d+\.\s*/, '')}</strong></span>`;
+        }
+      }
+
+      const hook = setInterval(()=>{
+        if (window.bytWizard?.mostrarPaso && !window.bytWizard.__patchedNav) {
+          const orig = window.bytWizard.mostrarPaso.bind(window.bytWizard);
+          window.bytWizard.mostrarPaso = function(n){
+            const r = orig(n);
+            updateStepNav(n);
+            return r;
+          };
+          window.bytWizard.__patchedNav = true;
+          updateStepNav(window.bytWizard.pasoActual || 1);
+        }
+      },200);
+      setTimeout(()=>clearInterval(hook),4000);
+    });
+    </script>
+
+    <!-- Archivos: subida/listado/ver/eliminar (Supabase) -->
+    <script>
+      (function(){
+        const BUCKET = 'cotizaciones';
+        const MAX_IMG_MB = 10;
+        const MAX_PDF_MB = 20;
+        const MAX_VIDEO_MB = 50;
+        const ALLOWED = ['image/', 'application/pdf', 'video/mp4'];
+
+        const drop = document.getElementById('dropzone');
+        const input = document.getElementById('file-input');
+        const photo = document.getElementById('photo-input');
+        const listEl = document.getElementById('file-list');
+        const hint = document.getElementById('file-hint');
+
+        function getCotizacionId() {
+          return window.bytWizard?.datos?._id || window.bytWizard?.datos?.id || null;
+        }
+
+        function sanitizeName(name) {
+          return name.normalize("NFD").replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9._-]/g, '_');
+        }
+
+        function canUpload() {
+          const id = getCotizacionId();
+          const ok = !!(id && window.supabaseClient);
+          if (hint) hint.style.display = ok ? 'none' : 'block';
+          return ok;
+        }
+
+        function maxFor(file) {
+          if (file.type === 'video/mp4') return MAX_VIDEO_MB;
+          if (file.type === 'application/pdf') return MAX_PDF_MB;
+          return MAX_IMG_MB; // imágenes
+        }
+
+        async function uploadFile(file, nota = '') {
+          if (!canUpload()) throw new Error('Guarda primero la cotización');
+          const id = getCotizacionId();
+          if (!id) throw new Error('Sin ID de cotización');
+
+          const max = maxFor(file);
+          if (file.size > max * 1024 * 1024) throw new Error(`Máx ${max} MB para este tipo`);
+
+          const okType = ALLOWED.some(p => file.type.startsWith(p));
+          if (!okType) throw new Error('Solo imágenes, PDF o MP4');
+
+          const ts = Date.now();
+          const rand = Math.random().toString(36).slice(2, 7);
+          const safe = sanitizeName(file.name || 'archivo');
+          const path = `${id}/${ts}-${rand}-${safe}`;
+
+          const { error } = await supabaseClient.storage.from(BUCKET).upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || undefined
+          });
+          if (error) throw error;
+
+          if (supabaseClient.from) {
+            await supabaseClient
+              .from('cotizacion_files')
+              .insert({
+                cotizacion_id: id,
+                path,
+                filename: safe,
+                content_type: file.type || null,
+                size: file.size,
+                nota: nota || null
+              });
+          }
+          return { path, filename: safe, size: file.size, content_type: file.type, nota };
+        }
+
+        async function listFiles() {
+          if (!canUpload()) return [];
+          const id = getCotizacionId();
+          if (!id) return [];
+          const { data, error } = await supabaseClient
+            .from('cotizacion_files')
+            .select('id,path,filename,size,created_at,content_type,nota')
+            .eq('cotizacion_id', id)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          return data || [];
+        }
+
+        async function getFileUrl(path) {
+          const { data, error } = await supabaseClient.storage.from(BUCKET).createSignedUrl(path, 3600);
+          if (error) throw error;
+          return data.signedUrl;
+        }
+
+        async function removeFile(path) {
+          const { error } = await supabaseClient.storage.from(BUCKET).remove([path]);
+          if (error) throw error;
+          if (supabaseClient.from) {
+            await supabaseClient.from('cotizacion_files').delete().eq('path', path);
+          }
+        }
+
+        function renderList(items) {
+          if (!listEl) return;
+          listEl.innerHTML = '';
+          if (!items || !items.length) {
+            listEl.innerHTML = '<div style="color:#6c7380;">Sin archivos aún.</div>';
+            return;
+          }
+          items.forEach(item => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.alignItems = 'center';
+            row.style.gap = '8px';
+            row.style.border = '1px solid #e4e7eb';
+            row.style.borderRadius = '10px';
+            row.style.padding = '8px 10px';
+            const sizeMB = item.size ? (item.size/1024/1024).toFixed(2) : '';
+            row.innerHTML = `
+              <div style="display:flex; flex-direction:column;">
+                <strong style="font-size:14px;">${item.filename || 'archivo'} ${item.nota ? '💬' : ''}</strong>
+                <span style="color:#6c7380; font-size:12px;">${sizeMB ? sizeMB + ' MB' : ''}</span>
+                ${item.nota ? `<span style="color:#35564c; font-size:12px; margin-top:2px;">${item.nota}</span>` : ''}
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" data-action="view" data-path="${item.path}" data-nota="${item.nota || ''}">Ver</button>
+                <button class="btn btn-secondary btn-sm" data-action="delete" data-path="${item.path}">Eliminar</button>
+              </div>
+            `;
+            listEl.appendChild(row);
+          });
+        }
+
+        async function refreshList() {
+          try {
+            const items = await listFiles();
+            renderList(items);
+          } catch(e) {
+            console.error(e);
+            alert('No se pudo listar archivos');
+          }
+        }
+
+        async function handleFiles(files) {
+          if (!files?.length) return;
+          for (const f of files) {
+            try {
+              const nota = prompt(`Comentario para "${f.name}" (opcional):`, '') || '';
+              await uploadFile(f, nota);
+            } catch (e) { console.error(e); alert(e.message || 'Error subiendo archivo'); }
+          }
+          refreshList();
+        }
+
+        if (drop) {
+          drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.background = '#eef1f3'; });
+          drop.addEventListener('dragleave', e => { drop.style.background = '#f9fafb'; });
+          drop.addEventListener('drop', e => {
+            e.preventDefault();
+            drop.style.background = '#f9fafb';
+            handleFiles(e.dataTransfer.files);
+          });
+        }
+        if (input) input.addEventListener('change', e => handleFiles(e.target.files));
+        if (photo) photo.addEventListener('change', e => handleFiles(e.target.files));
+
+        listEl?.addEventListener('click', async (e)=>{
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const path = btn.dataset.path;
+          if (!path) return;
+          if (action === 'view') {
+            try {
+              const url = await getFileUrl(path);
+              window.open(url, '_blank');
+            } catch (err) {
+              console.error(err);
+              alert('No se pudo abrir el archivo');
+            }
+          } else if (action === 'delete') {
+            if (!confirm('¿Eliminar este archivo?')) return;
+            try {
+              await removeFile(path);
+              refreshList();
+            } catch (err) {
+              console.error(err);
+              alert('No se pudo eliminar');
+            }
+          }
+        });
+
+        // Cargar listado al entrar (si hay ID)
+        setTimeout(() => {
+          canUpload();
+          refreshList();
+        }, 800);
+      })();
+    </script>
+
+    <!-- Archivos CAD/3D: subida/listado/ver/eliminar (Supabase) -->
+    <script>
+      (function(){
+        const BUCKET = 'cotizaciones';
+        const MAX_MB = 100;
+        // Permitimos extensiones comunes CAD/3D y contenedores
+        const EXT_ALLOW = ['skp','3ds','max','dwg','dxf','fbx','obj','stl','rvt','step','stp','iges','igs','ifc','blend','zip','rar','7z','cad'];
+        const drop = document.getElementById('dropzone-cad');
+        const input = document.getElementById('file-input-cad');
+        const listEl = document.getElementById('file-list-cad');
+        const hint = document.getElementById('file-hint-cad');
+
+        function getCotizacionId() {
+          return window.bytWizard?.datos?._id || window.bytWizard?.datos?.id || null;
+        }
+
+        function sanitizeName(name) {
+          return name.normalize("NFD").replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9._-]/g, '_');
+        }
+
+        function canUpload() {
+          const id = getCotizacionId();
+          const ok = !!(id && window.supabaseClient);
+          if (hint) hint.style.display = ok ? 'none' : 'block';
+          return ok;
+        }
+
+        function extOf(file) {
+          const parts = (file.name || '').toLowerCase().split('.');
+          return parts.length > 1 ? parts.pop() : '';
+        }
+
+        async function uploadFile(file, nota = '') {
+          if (!canUpload()) throw new Error('Guarda primero la cotización');
+          const id = getCotizacionId();
+          if (!id) throw new Error('Sin ID de cotización');
+
+          if (file.size > MAX_MB * 1024 * 1024) throw new Error(`Máx ${MAX_MB} MB para CAD/3D`);
+
+          const ext = extOf(file);
+          if (!EXT_ALLOW.includes(ext)) {
+            throw new Error('Extensión no permitida para CAD/3D');
+          }
+
+          const ts = Date.now();
+          const rand = Math.random().toString(36).slice(2, 7);
+          const safe = sanitizeName(file.name || 'archivo');
+          const path = `${id}/cad/${ts}-${rand}-${safe}`;
+
+          const { error } = await supabaseClient.storage.from(BUCKET).upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || 'application/octet-stream'
+          });
+          if (error) throw error;
+
+          if (supabaseClient.from) {
+            await supabaseClient
+              .from('cotizacion_files')
+              .insert({
+                cotizacion_id: id,
+                path,
+                filename: safe,
+                content_type: file.type || null,
+                size: file.size,
+                nota: nota || 'CAD/3D'
+              });
+          }
+          return { path, filename: safe, size: file.size, content_type: file.type, nota };
+        }
+
+        async function listFiles() {
+          if (!canUpload()) return [];
+          const id = getCotizacionId();
+          if (!id) return [];
+          // Filtramos por prefijo cad/ en el path
+          const { data, error } = await supabaseClient
+            .from('cotizacion_files')
+            .select('id,path,filename,size,created_at,content_type,nota')
+            .eq('cotizacion_id', id)
+            .like('path', `${id}/cad/%`)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          return data || [];
+        }
+
+        async function getFileUrl(path) {
+          const { data, error } = await supabaseClient.storage.from(BUCKET).createSignedUrl(path, 3600);
+          if (error) throw error;
+          return data.signedUrl;
+        }
+
+        async function removeFile(path) {
+          const { error } = await supabaseClient.storage.from(BUCKET).remove([path]);
+          if (error) throw error;
+          if (supabaseClient.from) {
+            await supabaseClient.from('cotizacion_files').delete().eq('path', path);
+          }
+        }
+
+        function renderList(items) {
+          if (!listEl) return;
+          listEl.innerHTML = '';
+          if (!items || !items.length) {
+            listEl.innerHTML = '<div style="color:#6c7380;">Sin archivos CAD/3D aún.</div>';
+            return;
+          }
+          items.forEach(item => {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.alignItems = 'center';
+            row.style.gap = '8px';
+            row.style.border = '1px solid #e4e7eb';
+            row.style.borderRadius = '10px';
+            row.style.padding = '8px 10px';
+            const sizeMB = item.size ? (item.size/1024/1024).toFixed(2) : '';
+            row.innerHTML = `
+              <div style="display:flex; flex-direction:column;">
+                <strong style="font-size:14px;">${item.filename || 'archivo'}</strong>
+                <span style="color:#6c7380; font-size:12px;">${sizeMB ? sizeMB + ' MB' : ''}</span>
+                ${item.nota ? `<span style="color:#35564c; font-size:12px; margin-top:2px;">${item.nota}</span>` : ''}
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-secondary btn-sm" data-action="view" data-path="${item.path}">Descargar</button>
+                <button class="btn btn-secondary btn-sm" data-action="delete" data-path="${item.path}">Eliminar</button>
+              </div>
+            `;
+            listEl.appendChild(row);
+          });
+        }
+
+        async function refreshList() {
+          try {
+            const items = await listFiles();
+            renderList(items);
+          } catch(e) {
+            console.error(e);
+            alert('No se pudo listar archivos CAD/3D');
+          }
+        }
+
+        async function handleFiles(files) {
+          if (!files?.length) return;
+          for (const f of files) {
+            try {
+              const nota = prompt(`Comentario para "${f.name}" (opcional):`, 'CAD/3D') || 'CAD/3D';
+              await uploadFile(f, nota);
+            } catch (e) { console.error(e); alert(e.message || 'Error subiendo archivo'); }
+          }
+          refreshList();
+        }
+
+        if (drop) {
+          drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.background = '#eef1f3'; });
+          drop.addEventListener('dragleave', e => { drop.style.background = '#f9fafb'; });
+          drop.addEventListener('drop', e => {
+            e.preventDefault();
+            drop.style.background = '#f9fafb';
+            handleFiles(e.dataTransfer.files);
+          });
+        }
+        if (input) input.addEventListener('change', e => handleFiles(e.target.files));
+
+        listEl?.addEventListener('click', async (e)=>{
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.dataset.action;
+          const path = btn.dataset.path;
+          if (!path) return;
+          if (action === 'view') {
+            try {
+              const url = await getFileUrl(path);
+              window.open(url, '_blank');
+            } catch (err) {
+              console.error(err);
+              alert('No se pudo descargar el archivo');
+            }
+          } else if (action === 'delete') {
+            if (!confirm('¿Eliminar este archivo CAD/3D?')) return;
+            try {
+              await removeFile(path);
+              refreshList();
+            } catch (err) {
+              console.error(err);
+              alert('No se pudo eliminar');
+            }
+          }
+        });
+
+        // Cargar listado al entrar (si hay ID)
+        setTimeout(() => {
+          canUpload();
+          refreshList();
+        }, 800);
+      })();
+    </script>
+
+<!-- Loader inline + retardo 2.5s -->
+<script>
+(function() {
+  const overlayId = 'byt-loader-overlay';
+  const GIF_SRC = "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/assets/Cargando.gif";
+
+  function ensureOverlay() {
+    let ov = document.getElementById(overlayId);
+    if (ov) return ov;
+    ov = document.createElement('div');
+    ov.id = overlayId;
+    ov.className = 'byt-loader-overlay hidden';
+    ov.innerHTML = `
+      <div class="byt-loader-card">
+        <div class="byt-loader-animation">
+          <img src="${GIF_SRC}" alt="Cargando..." style="width:160px;height:120px;object-fit:contain;" />
+        </div>
+        <div class="byt-loader-text">Cargando...</div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    return ov;
+  }
+
+  const Loader = {
+    show() {
+      const ov = ensureOverlay();
+      ov.classList.remove('hidden');
+      ov.style.display = 'flex';
+    },
+    hide() {
+      const ov = document.getElementById(overlayId);
+      if (!ov) return;
+      ov.classList.add('hidden');
+      ov.style.display = 'none';
     }
-  </script>
+  };
+
+  window.BYTLoader = Loader;
+})();
+
+// Mantén visible el loader 2.5 s al cargar esta página
+window.addEventListener('load', () => {
+  setTimeout(() => BYTLoader?.hide(), 2500);
+});
+</script>
+
 </body>
 </html>
