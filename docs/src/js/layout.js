@@ -90,20 +90,5 @@
   }
   markActive();
 
-  // BYTLoader: si existe, mostrará/ocultará al navegar
-   //function attachLoader(el) {
-   //  if (!el) return;
-   //  el.addEventListener('click', (e) => {
-    //   if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-     //  e.preventDefault();
-     //  const href = el.getAttribute('href');
-     //  if (!href) return;
-     //  window.BYTLoader?.show?.();
-     //  setTimeout(() => { window.location.href = href; }, 200);
-   //  });
- //  }
- //  document.querySelectorAll('a.nav-item[href], .submenu a[href]').forEach(attachLoader);
-
-  // Oculta loader al cargar
- //  window.addEventListener('load', () => window.BYTLoader?.hide?.());
+  // Loader eliminado: no attachLoader, no BYTLoader.show/hide
 })();
