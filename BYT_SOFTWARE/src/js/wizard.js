@@ -1,15 +1,14 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL + Persistencia Robusta =====
 //
-// Versión completa y actualizada del wizard.js
-// - Espera robusta por la inicialización de Supabase (evento + polling).
-// - Uso de window.supabase o window.globalSupabase.client.
-// - Autosave silencioso cada 20s con notificación "AutoSave aplicado".
-// - CRUD completo: save (insert/update), load, list, delete, duplicate.
-// - Mantiene toda la lógica BYT original (pasos, cálculo, impresión).
-// - Añadido: gestión de Partidas en Paso 1 (mínimo 1, con IDs estables y validación).
-// - Añadido: Quincallería Extra en Paso 2 (bloque separado, subtotal propio, suma al total de quincallería).
+// Cambios relevantes:
+// - Extras por categoría en pasos 2,3,4,5,6 (quincallería, tableros, tapacantos, tableros de madera, LED y electricidad).
+// - Paso 8 (Valores traspasados) admite extras por categoría de traspaso (doer, eplum, cuarzo, almuerzo, transporte).
+// - Los extras suman al subtotal de su categoría y al total general.
+// - Se persisten en Supabase (data.datos) y se duplican con IDs nuevos.
+// - En impresión se listan junto a su categoría (ya se veían para quincallería; ahora para todas).
 //
-// Reemplaza BYT_SOFTWARE/src/js/wizard.js por este contenido. Haz backup antes.
+// Nota: Paso 7 “Otras compras” NO tiene extras nuevos (ya tiene su flujo).
+// Haz backup antes de reemplazar.
 
 class WizardCotizacion {
     constructor() {
@@ -45,8 +44,20 @@ class WizardCotizacion {
                 led_electricidad: {},
                 otras_compras: {}
             },
-            // Nuevos: items extra de quincallería (libres, no guiados)
+            // Extras por categoría de materiales
             quincalleriaExtras: [],
+            tablerosExtras: [],
+            tapacantosExtras: [],
+            tablerosMaderaExtras: [],
+            ledElectricidadExtras: [],
+            // Extras por categoría de traspasados
+            valoresTraspasadosExtras: {
+                doer: [],
+                eplum: [],
+                cuarzo: [],
+                almuerzo: [],
+                transporte: []
+            },
             valoresTraspasados: {
                 doer: { 
                     nombre: 'Estructuras de fierro',
@@ -115,6 +126,16 @@ class WizardCotizacion {
             { numero: 10, titulo: 'Resumen Final', categoria: 'resumen', tipo: 'resumen' }
         ];
 
+        // Mapa de extras por categoría de materiales
+        this.extraConfig = {
+            quincalleria: { key: 'quincalleriaExtras', label: 'Quincallería extra' },
+            tableros: { key: 'tablerosExtras', label: 'Tableros extra' },
+            tapacantos: { key: 'tapacantosExtras', label: 'Tapacantos extra' },
+            tableros_madera: { key: 'tablerosMaderaExtras', label: 'Tableros de Madera extra' },
+            led_electricidad: { key: 'ledElectricidadExtras', label: 'LED y Electricidad extra' }
+            // otras_compras no lleva extras
+        };
+
         // Inicializar
         this.init();
     }
@@ -123,7 +144,8 @@ class WizardCotizacion {
     init() {
         try {
             this._ensurePartidasInit();
-            this._ensureQuincalleriaExtrasInit();
+            this._ensureExtrasInitAll();
+            this._ensureTraspasoExtrasInit();
             this.actualizarProgreso();
             this.mostrarPaso(1);
             this.actualizarBarraSuperior();
@@ -145,7 +167,6 @@ class WizardCotizacion {
     }
 
     // ------------- Supabase helpers -------------
-    // initSupabase: intenta tomar cliente si ya existe; no espera.
     initSupabase() {
         try {
             if (this._supabase && typeof this._supabase.from === 'function') return this._supabase;
@@ -155,13 +176,11 @@ class WizardCotizacion {
                 return this._supabase;
             }
 
-            // Si hay un globalSupabase con client (algunos proyectos lo definen así)
             if (window.globalSupabase && window.globalSupabase.client && typeof window.globalSupabase.client.from === 'function') {
                 this._supabase = window.globalSupabase.client;
                 return this._supabase;
             }
 
-            // No está listo aún (no advertimos fuertemente aquí; lo maneja _ensureSupabase)
             return null;
         } catch (e) {
             console.error('initSupabase error', e);
@@ -169,12 +188,10 @@ class WizardCotizacion {
         }
     }
 
-    // _ensureSupabase: espera (polling + evento) hasta waitMs por un cliente válido.
     async _ensureSupabase(waitMs = 5000) {
         try {
             if (this._supabase && typeof this._supabase.from === 'function') return this._supabase;
 
-            // Comprobaciones rápidas
             if (window.supabase && typeof window.supabase.from === 'function') {
                 this._supabase = window.supabase;
                 return this._supabase;
@@ -184,7 +201,6 @@ class WizardCotizacion {
                 return this._supabase;
             }
 
-            // Escuchar evento 'supabase:ready' si lo despacha el initializer
             let resolved = false;
             const onReady = () => {
                 if (window.supabase && typeof window.supabase.from === 'function') {
@@ -197,7 +213,6 @@ class WizardCotizacion {
             };
             window.addEventListener('supabase:ready', onReady);
 
-            // Polling con timeout
             const start = Date.now();
             while (!resolved && (Date.now() - start) < waitMs) {
                 if (window.supabase && typeof window.supabase.from === 'function') {
@@ -256,7 +271,6 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- fillProviderSelects (robusta) -------------
     fillProviderSelects() {
         try {
             const list = Array.isArray(this.proveedores) && this.proveedores.length
@@ -265,12 +279,9 @@ class WizardCotizacion {
 
             const selects = document.querySelectorAll('select.lugar-select');
             selects.forEach(select => {
-                // valor guardado (puede venir como id o como nombre)
                 const rawCurrent = select.getAttribute('data-current') ?? select.value ?? '';
                 const currentVal = rawCurrent !== null && rawCurrent !== undefined ? String(rawCurrent).trim() : '';
 
-                // reconstruir opciones pero sin tocar atributos externos del select
-                // guardamos el tabindex, name, id y data-* existentes
                 const preserved = {
                     id: select.id || '',
                     name: select.name || '',
@@ -278,7 +289,6 @@ class WizardCotizacion {
                     dataset: { ...select.dataset }
                 };
 
-                // Limpiamos las opciones y re-poblamos
                 select.innerHTML = '';
                 const ph = document.createElement('option');
                 ph.value = '';
@@ -287,21 +297,17 @@ class WizardCotizacion {
 
                 list.forEach(p => {
                     const opt = document.createElement('option');
-                    // siempre usar strings para value
                     const val = (p.id !== undefined && p.id !== null) ? String(p.id) : String(p.name);
                     opt.value = val;
                     opt.textContent = String(p.name ?? val);
-                    // dejar el nombre también en dataset para comparar por nombre si fuera necesario
                     opt.dataset.name = String(p.name ?? '');
                     select.appendChild(opt);
                 });
 
-                // Restaurar dataset si existía (para no perder identificadores)
                 Object.keys(preserved.dataset || {}).forEach(k => {
                     try { select.dataset[k] = preserved.dataset[k]; } catch (e) {}
                 });
 
-                // seleccionar la opción correspondiente (comparar por value, texto o data-name)
                 if (currentVal) {
                     let matched = false;
                     for (let i = 0; i < select.options.length; i++) {
@@ -315,7 +321,6 @@ class WizardCotizacion {
                             break;
                         }
                     }
-                    // si no matchea con ninguna opción, agregamos una opción con ese valor (para no perder la info)
                     if (!matched) {
                         const extra = document.createElement('option');
                         extra.value = currentVal;
@@ -325,7 +330,6 @@ class WizardCotizacion {
                         select.appendChild(extra);
                     }
                 } else {
-                    // asegurar que quede en la opción placeholder
                     select.value = '';
                 }
             });
@@ -334,11 +338,9 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- onProveedorChange (sin re-render) -------------
     onProveedorChange(categoria, materialId, providerValue) {
         try {
             const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
-            // Buscar nombre en la lista de proveedores (puede venir id o nombre)
             let providerName = valueStr;
             if (Array.isArray(this.proveedores) && this.proveedores.length) {
                 const p = this.proveedores.find(x => {
@@ -351,20 +353,14 @@ class WizardCotizacion {
 
             if (!this.datos.materiales[categoria] || !this.datos.materiales[categoria][materialId]) return;
 
-            // Actualizar datos en memoria (no re-renderizar toda la tabla)
-            this.datos.materiales[categoria][materialId].lugar_id = valueStr; // guardamos el id/valor tal cual (string)
+            this.datos.materiales[categoria][materialId].lugar_id = valueStr;
             this.datos.materiales[categoria][materialId].lugar = providerName || '';
 
-            // Aseguramos que el select tenga la opción correcta y actualizar subtotales/barra superior
-            // Preferimos dejar el DOM del select intacto; solo re-poblamos options si providers cambian
             this.actualizarSubtotalCategoria(categoria);
             this.actualizarBarraSuperior();
 
-            // Si la opción seleccionada no está en la lista actual, forzamos fillProviderSelects para agregarla
-            // Esto no reconstruye filas, solo repuebla opciones dentro de cada select existente.
             const currentSelect = document.querySelector(`select.lugar-select[data-current="${this.escapeAttr(valueStr)}"]`);
             if (!currentSelect) {
-                // actualizamos data-current del select que disparó el cambio (si se puede identificar)
                 const byMaterial = document.querySelector(`select.lugar-select[data-material-id="${this.escapeAttr(materialId)}"]`);
                 if (byMaterial) {
                     byMaterial.setAttribute('data-current', valueStr);
@@ -372,7 +368,6 @@ class WizardCotizacion {
                 }
                 this.fillProviderSelects();
             } else {
-                // asegurar que el select correspondiente tenga el value seleccionado
                 try { currentSelect.value = valueStr; } catch (e) {}
             }
 
@@ -381,7 +376,6 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- onProveedorChangeTraspasado (sin re-render) -------------
     onProveedorChangeTraspasado(categoriaKey, materialKey, providerValue) {
         try {
             const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
@@ -397,14 +391,11 @@ class WizardCotizacion {
 
             if (!this.datos.valoresTraspasados[categoriaKey] || !this.datos.valoresTraspasados[categoriaKey].materiales[materialKey]) return;
 
-            // Actualizar datos en memoria
             this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar_id = valueStr;
             this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar = providerName || '';
 
-            // Refrescar solo lo necesario: repoblar opciones si hace falta y recalcular totales visibles
             this.fillProviderSelects();
 
-            // Actualizar totales visibles del paso 8 (si están renderizados)
             const totalEl = document.getElementById(`total_traspaso_${categoriaKey}`);
             const cobroEl = document.getElementById(`cobro_traspaso_${categoriaKey}`);
             if (totalEl && cobroEl) {
@@ -412,11 +403,13 @@ class WizardCotizacion {
                 Object.values(this.datos.valoresTraspasados[categoriaKey].materiales).forEach(m => {
                     totalTraspaso += (m.cantidad || 0) * (m.precio || 0);
                 });
+                // sumar extras
+                const extraList = (this.datos.valoresTraspasadosExtras?.[categoriaKey] || []);
+                extraList.forEach(x => { totalTraspaso += (x.cantidad || 0) * (x.precio || 0); });
                 const cobro = totalTraspaso * (this.datos.valoresTraspasados[categoriaKey].factor || 0);
                 totalEl.textContent = `$${totalTraspaso.toLocaleString()}`;
                 cobroEl.textContent = `$${cobro.toLocaleString()}`;
             } else {
-                // fallback: si no están los elementos, regeneramos el paso (caso extremo)
                 const paso8 = document.getElementById('paso-8');
                 if (paso8) this.generarPasoTraspasados(paso8);
             }
@@ -427,7 +420,6 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- UI / Progreso -------------
     actualizarProgreso() {
         const progreso = (this.pasoActual / this.totalPasos) * 100;
         const barraProgreso = document.getElementById('progreso-barra');
@@ -452,7 +444,6 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- Métodos de navegación (se añaden para evitar TypeError) -------------
     anteriorPaso() {
         if (this.pasoActual > 1) {
             this.pasoActual--;
@@ -467,7 +458,6 @@ class WizardCotizacion {
             this.actualizarProgreso();
             this.mostrarPaso(this.pasoActual);
         } else {
-            // finalizar: intentar guardar
             try { this.saveCotizacionSupabase(); } catch (e) { console.error('Error al finalizar/siguientePaso:', e); }
         }
     }
@@ -509,10 +499,11 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- PASOS (completos) -------------generarPasoCliente
+    // ------------- PASO 1: Cliente / Partidas -------------
     generarPasoCliente(container) {
         this._ensurePartidasInit();
-        this._ensureQuincalleriaExtrasInit();
+        this._ensureExtrasInitAll();
+        this._ensureTraspasoExtrasInit();
 
         container.innerHTML = `
             <div class="card">
@@ -633,7 +624,6 @@ class WizardCotizacion {
             listEl.appendChild(row);
         });
 
-        // Bind inputs
         listEl.querySelectorAll('input[data-partida-id]').forEach(inp => {
             inp.oninput = () => {
                 const id = inp.getAttribute('data-partida-id');
@@ -650,7 +640,6 @@ class WizardCotizacion {
 
     _ensurePartidasInit() {
         if (!Array.isArray(this.datos.partidas)) this.datos.partidas = [];
-        // asegurar IDs y mínimo 1
         this.datos.partidas = this.datos.partidas.map(p => ({
             id: p.id || this._genPartidaId(),
             nombre: p.nombre || ''
@@ -694,20 +683,21 @@ class WizardCotizacion {
         }
     }
 
-    // --- Quincallería Extra helpers ---
-    _ensureQuincalleriaExtrasInit() {
-        if (!Array.isArray(this.datos.quincalleriaExtras)) {
-            this.datos.quincalleriaExtras = [];
-        }
-        this.datos.quincalleriaExtras = this.datos.quincalleriaExtras.map(x => ({
-            id: x.id || this._genExtraId(),
-            nombre: x.nombre || '',
-            descripcion: x.descripcion || '',
-            proveedor: x.proveedor || '',
-            cantidad: Number(x.cantidad || 0),
-            valor_unitario: Number(x.valor_unitario || 0),
-            total: Number(x.total || ((x.cantidad || 0) * (x.valor_unitario || 0))) || 0
-        }));
+    // ------------- Extras helpers (materiales) -------------
+    _ensureExtrasInitAll() {
+        Object.values(this.extraConfig).forEach(cfg => {
+            const key = cfg.key;
+            if (!Array.isArray(this.datos[key])) this.datos[key] = [];
+            this.datos[key] = this.datos[key].map(x => ({
+                id: x.id || this._genExtraId(),
+                nombre: x.nombre || '',
+                descripcion: x.descripcion || '',
+                proveedor: x.proveedor || '',
+                cantidad: Number(x.cantidad || 0),
+                valor_unitario: Number(x.valor_unitario || 0),
+                total: Number(x.total || ((x.cantidad || 0) * (x.valor_unitario || 0))) || 0
+            }));
+        });
     }
 
     _genExtraId() {
@@ -715,9 +705,11 @@ class WizardCotizacion {
         return 'extra-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
     }
 
-    addQuincalleriaExtra() {
-        this._ensureQuincalleriaExtrasInit();
-        this.datos.quincalleriaExtras.push({
+    _addExtra(categoria) {
+        const cfg = this.extraConfig[categoria];
+        if (!cfg) return;
+        this._ensureExtrasInitAll();
+        this.datos[cfg.key].push({
             id: this._genExtraId(),
             nombre: '',
             descripcion: '',
@@ -726,23 +718,27 @@ class WizardCotizacion {
             valor_unitario: 0,
             total: 0
         });
-        this._renderQuincalleriaExtras();
-        this.actualizarSubtotalCategoria('quincalleria');
+        this._renderExtras(categoria);
+        this.actualizarSubtotalCategoria(categoria);
         this.actualizarBarraSuperior();
     }
 
-    removeQuincalleriaExtra(idx) {
-        this._ensureQuincalleriaExtrasInit();
-        if (idx < 0 || idx >= this.datos.quincalleriaExtras.length) return;
-        this.datos.quincalleriaExtras.splice(idx, 1);
-        this._renderQuincalleriaExtras();
-        this.actualizarSubtotalCategoria('quincalleria');
+    _removeExtra(categoria, idx) {
+        const cfg = this.extraConfig[categoria];
+        if (!cfg) return;
+        this._ensureExtrasInitAll();
+        if (idx < 0 || idx >= this.datos[cfg.key].length) return;
+        this.datos[cfg.key].splice(idx, 1);
+        this._renderExtras(categoria);
+        this.actualizarSubtotalCategoria(categoria);
         this.actualizarBarraSuperior();
     }
 
-    actualizarQuincalleriaExtra(idx, campo, valor) {
-        this._ensureQuincalleriaExtrasInit();
-        const item = this.datos.quincalleriaExtras[idx];
+    _updateExtra(categoria, idx, campo, valor) {
+        const cfg = this.extraConfig[categoria];
+        if (!cfg) return;
+        this._ensureExtrasInitAll();
+        const item = this.datos[cfg.key][idx];
         if (!item) return;
         if (campo === 'cantidad' || campo === 'valor_unitario') {
             const num = parseFloat(valor) || 0;
@@ -751,43 +747,140 @@ class WizardCotizacion {
             item[campo] = valor;
         }
         item.total = (parseFloat(item.cantidad || 0) * parseFloat(item.valor_unitario || 0)) || 0;
-        this._renderQuincalleriaExtras();
-        this.actualizarSubtotalCategoria('quincalleria');
+        this._renderExtras(categoria);
+        this.actualizarSubtotalCategoria(categoria);
         this.actualizarBarraSuperior();
     }
 
-    _renderQuincalleriaExtras() {
-        const list = document.getElementById('q-extra-list');
+    _renderExtras(categoria) {
+        const cfg = this.extraConfig[categoria];
+        if (!cfg) return;
+        const list = document.getElementById(`extra-list-${categoria}`);
         if (!list) return;
-        this._ensureQuincalleriaExtrasInit();
-        const extras = this.datos.quincalleriaExtras;
+        this._ensureExtrasInitAll();
+        const extras = this.datos[cfg.key];
         if (!extras.length) {
-            list.innerHTML = '<div style="color:#6c7380;">Sin quincallería extra.</div>';
+            list.innerHTML = '<div style="color:#6c7380;">Sin extras.</div>';
         } else {
             list.innerHTML = extras.map((item, idx) => `
                 <div class="card" style="padding:8px; display:grid; grid-template-columns: 1fr 1fr 1fr 100px 140px 90px; gap:6px; align-items:center;">
                     <input data-x="nombre" data-idx="${idx}" placeholder="Nombre (obligatorio)" value="${this.escapeAttr(item.nombre)}"
-                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'nombre', this.value)">
+                           onchange="window.bytWizard._updateExtra('${categoria}', ${idx}, 'nombre', this.value)">
                     <input data-x="descripcion" data-idx="${idx}" placeholder="Descripción opcional" value="${this.escapeAttr(item.descripcion)}"
-                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'descripcion', this.value)">
+                           onchange="window.bytWizard._updateExtra('${categoria}', ${idx}, 'descripcion', this.value)">
                     <input data-x="proveedor" data-idx="${idx}" placeholder="Proveedor" value="${this.escapeAttr(item.proveedor)}"
-                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'proveedor', this.value)">
+                           onchange="window.bytWizard._updateExtra('${categoria}', ${idx}, 'proveedor', this.value)">
                     <input data-x="cantidad" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.cantidad}"
-                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'cantidad', this.value)">
+                           onchange="window.bytWizard._updateExtra('${categoria}', ${idx}, 'cantidad', this.value)">
                     <input data-x="valor_unitario" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.valor_unitario}"
-                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'valor_unitario', this.value)">
+                           onchange="window.bytWizard._updateExtra('${categoria}', ${idx}, 'valor_unitario', this.value)">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
                         <strong>$${(item.total || 0).toLocaleString()}</strong>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard.removeQuincalleriaExtra(${idx})">🗑</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._removeExtra('${categoria}', ${idx})">🗑</button>
                     </div>
                 </div>
             `).join('');
         }
-        const extraSubtotal = this.datos.quincalleriaExtras.reduce((s, x) => s + (x.total || 0), 0);
-        const extraEl = document.getElementById('subtotal_quincalleria_extra');
+        const extraSubtotal = extras.reduce((s, x) => s + (x.total || 0), 0);
+        const extraEl = document.getElementById(`subtotal_extra_${categoria}`);
         if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
     }
 
+    // ------------- Extras Traspasados -------------
+    _ensureTraspasoExtrasInit() {
+        if (!this.datos.valoresTraspasadosExtras || typeof this.datos.valoresTraspasadosExtras !== 'object') {
+            this.datos.valoresTraspasadosExtras = { doer: [], eplum: [], cuarzo: [], almuerzo: [], transporte: [] };
+        }
+        ['doer','eplum','cuarzo','almuerzo','transporte'].forEach(k => {
+            if (!Array.isArray(this.datos.valoresTraspasadosExtras[k])) this.datos.valoresTraspasadosExtras[k] = [];
+            this.datos.valoresTraspasadosExtras[k] = this.datos.valoresTraspasadosExtras[k].map(x => ({
+                id: x.id || this._genExtraId(),
+                nombre: x.nombre || '',
+                descripcion: x.descripcion || '',
+                lugar: x.lugar || '',
+                cantidad: Number(x.cantidad || 0),
+                precio: Number(x.precio || 0),
+                total: Number(x.total || ((x.cantidad || 0) * (x.precio || 0))) || 0
+            }));
+        });
+    }
+
+    _addTraspasoExtra(catKey) {
+        this._ensureTraspasoExtrasInit();
+        if (!this.datos.valoresTraspasadosExtras[catKey]) this.datos.valoresTraspasadosExtras[catKey] = [];
+        this.datos.valoresTraspasadosExtras[catKey].push({
+            id: this._genExtraId(),
+            nombre: '',
+            descripcion: '',
+            lugar: '',
+            cantidad: 0,
+            precio: 0,
+            total: 0
+        });
+        this._renderTraspasoExtras(catKey);
+        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
+        this.actualizarBarraSuperior();
+    }
+
+    _removeTraspasoExtra(catKey, idx) {
+        this._ensureTraspasoExtrasInit();
+        const arr = this.datos.valoresTraspasadosExtras[catKey] || [];
+        if (idx < 0 || idx >= arr.length) return;
+        arr.splice(idx,1);
+        this._renderTraspasoExtras(catKey);
+        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
+        this.actualizarBarraSuperior();
+    }
+
+    _updateTraspasoExtra(catKey, idx, campo, valor) {
+        this._ensureTraspasoExtrasInit();
+        const arr = this.datos.valoresTraspasadosExtras[catKey] || [];
+        const item = arr[idx];
+        if (!item) return;
+        if (campo === 'cantidad' || campo === 'precio') {
+            item[campo] = parseFloat(valor) || 0;
+        } else {
+            item[campo] = valor;
+        }
+        item.total = (parseFloat(item.cantidad || 0) * parseFloat(item.precio || 0)) || 0;
+        this._renderTraspasoExtras(catKey);
+        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
+        this.actualizarBarraSuperior();
+    }
+
+    _renderTraspasoExtras(catKey) {
+        const list = document.getElementById(`trasp-extra-list-${catKey}`);
+        if (!list) return;
+        this._ensureTraspasoExtrasInit();
+        const extras = this.datos.valoresTraspasadosExtras[catKey] || [];
+        if (!extras.length) {
+            list.innerHTML = '<div style="color:#6c7380;">Sin extras.</div>';
+        } else {
+            list.innerHTML = extras.map((item, idx) => `
+                <div class="card" style="padding:8px; display:grid; grid-template-columns: 1fr 1fr 1fr 100px 140px 90px; gap:6px; align-items:center;">
+                    <input data-x="nombre" data-idx="${idx}" placeholder="Nombre (obligatorio)" value="${this.escapeAttr(item.nombre)}"
+                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'nombre', this.value)">
+                    <input data-x="descripcion" data-idx="${idx}" placeholder="Descripción opcional" value="${this.escapeAttr(item.descripcion)}"
+                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'descripcion', this.value)">
+                    <input data-x="lugar" data-idx="${idx}" placeholder="Lugar de compra" value="${this.escapeAttr(item.lugar)}"
+                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'lugar', this.value)">
+                    <input data-x="cantidad" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.cantidad}"
+                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'cantidad', this.value)">
+                    <input data-x="precio" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.precio}"
+                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'precio', this.value)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                        <strong>$${(item.total || 0).toLocaleString()}</strong>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._removeTraspasoExtra('${catKey}', ${idx})">🗑</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        const extraSubtotal = extras.reduce((s, x) => s + (x.total || 0), 0);
+        const extraEl = document.getElementById(`subtotal_trasp_extra_${catKey}`);
+        if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
+    }
+
+    // ------------- PASOS DE MATERIALES -------------
     generarPasoMaterial(container, categoria) {
         const estructurasBYT = {
             quincalleria: {
@@ -883,7 +976,6 @@ class WizardCotizacion {
         const estructura = estructurasBYT[categoria];
         if (!estructura) return;
 
-        // Inicializar materiales si no existen
         if (!this.datos.materiales[categoria] || Object.keys(this.datos.materiales[categoria]).length === 0) {
             estructura.materiales.forEach((material, index) => {
                 const id = `${categoria}_${index}`;
@@ -897,8 +989,9 @@ class WizardCotizacion {
             });
         }
 
-        // Asegurar extras para quincallería
-        if (categoria === 'quincalleria') this._ensureQuincalleriaExtrasInit();
+        if (categoria === 'quincalleria' || categoria === 'tableros' || categoria === 'tapacantos' || categoria === 'tableros_madera' || categoria === 'led_electricidad') {
+            this._ensureExtrasInitAll();
+        }
 
         container.innerHTML = `
             <div class="card">
@@ -928,15 +1021,15 @@ class WizardCotizacion {
                     </button>
                 </div>` : ''}
 
-                ${categoria === 'quincalleria' ? `
-                <div id="q-extra" class="card" style="margin-top:14px; padding:12px;">
+                ${this.extraConfig[categoria] ? `
+                <div id="extra-${categoria}" class="card" style="margin-top:14px; padding:12px;">
                   <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                    <h4 style="margin:0;">Quincallería extra</h4>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard.addQuincalleriaExtra()">+ Agregar quincallería</button>
+                    <h4 style="margin:0;">${this.extraConfig[categoria].label}</h4>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._addExtra('${categoria}')">+ Agregar</button>
                   </div>
-                  <div id="q-extra-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+                  <div id="extra-list-${categoria}" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
                   <div style="text-align:right; margin-top:8px;">
-                    <strong>Subtotal quincallería extra: <span id="subtotal_quincalleria_extra">$0</span></strong>
+                    <strong>Subtotal ${this.extraConfig[categoria].label.toLowerCase()}: <span id="subtotal_extra_${categoria}">$0</span></strong>
                   </div>
                 </div>` : ''}
 
@@ -951,7 +1044,7 @@ class WizardCotizacion {
         `;
 
         this.cargarMaterialesCategoria(categoria);
-        if (categoria === 'quincalleria') this._renderQuincalleriaExtras();
+        if (this.extraConfig[categoria]) this._renderExtras(categoria);
     }
 
     cargarMaterialesCategoria(categoria) {
@@ -990,7 +1083,6 @@ class WizardCotizacion {
         });
 
         tbody.innerHTML = html;
-        // rellenar selects de lugar de compra con proveedores cargados (si ya están)
         this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
     }
@@ -1018,7 +1110,7 @@ class WizardCotizacion {
             this.datos.materiales[categoria][materialId][campo] = valor;
         }
         this.cargarMaterialesCategoria(categoria);
-        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
+        this.actualizarBarraSuperior();
     }
 
     eliminarMaterial(categoria, materialId) {
@@ -1036,13 +1128,12 @@ class WizardCotizacion {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
         });
 
-        // Sumar extras de quincallería
-        if (categoria === 'quincalleria') {
-            this._ensureQuincalleriaExtrasInit();
-            const extraSub = this.datos.quincalleriaExtras.reduce((s, x) => s + (x.total || 0), 0);
-            this.subtotalQuincalleriaExtras = extraSub;
+        if (this.extraConfig[categoria]) {
+            this._ensureExtrasInitAll();
+            const extrasKey = this.extraConfig[categoria].key;
+            const extraSub = (this.datos[extrasKey] || []).reduce((s, x) => s + (x.total || 0), 0);
             subtotal += extraSub;
-            const extraEl = document.getElementById('subtotal_quincalleria_extra');
+            const extraEl = document.getElementById(`subtotal_extra_${categoria}`);
             if (extraEl) extraEl.textContent = '$' + extraSub.toLocaleString();
         }
 
@@ -1052,13 +1143,16 @@ class WizardCotizacion {
         }
     }
 
+    // ------------- Paso 8: Valores Traspasados con extras -------------
     generarPasoTraspasados(container) {
+        this._ensureTraspasoExtrasInit();
+
         let html = `
             <div class="card">
                 <h3 class="card-title">💰 Valores Traspasados</h3>
                 <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                     <strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
-                    <code>Total = Suma Materiales + (Suma Materiales × Factor 0.1)</code>
+                    <code>Total = Suma Materiales + (Suma Materiales × Factor)</code>
                 </p>
         `;
 
@@ -1120,18 +1214,35 @@ class WizardCotizacion {
                 `;
             });
 
-            // Calcular total traspaso
-            let totalTraspaso = 0;
-            Object.values(categoria.materiales).forEach(material => {
-                totalTraspaso += material.cantidad * material.precio;
-            });
-            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
-
+            // Extras de traspaso para esta categoría
+            const extras = this.datos.valoresTraspasadosExtras?.[key] || [];
+            const extraSubtotal = extras.reduce((s,x)=>s+(x.total||0),0);
             html += `
                             </tbody>
                         </table>
                     </div>
 
+                    <div id="trasp-extra-${key}" class="card" style="margin-top:12px; padding:10px;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                        <h5 style="margin:0;">Extras ${this.escapeHtml(categoria.nombre)}</h5>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._addTraspasoExtra('${key}')">+ Agregar extra</button>
+                      </div>
+                      <div id="trasp-extra-list-${key}" style="margin-top:8px; display:flex; flex-direction:column; gap:8px;"></div>
+                      <div style="text-align:right; margin-top:6px;">
+                        <strong>Subtotal extras: <span id="subtotal_trasp_extra_${key}">$${extraSubtotal.toLocaleString()}</span></strong>
+                      </div>
+                    </div>
+            `;
+
+            // Calcular total traspaso (incluye extras)
+            let totalTraspaso = 0;
+            Object.values(categoria.materiales).forEach(material => {
+                totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
+            });
+            extras.forEach(x => { totalTraspaso += (x.cantidad || 0) * (x.precio || 0); });
+            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
+
+            html += `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px;">
                         <div>
                             <strong>Total Traspaso: <span id="total_traspaso_${key}">$${totalTraspaso.toLocaleString()}</span></strong>
@@ -1149,8 +1260,8 @@ class WizardCotizacion {
         html += `</div>`;
         container.innerHTML = html;
 
-        // rellenar selects de lugar de compra dentro de traspasados si proveedores ya cargados
         this.fillProviderSelects();
+        Object.keys(this.datos.valoresTraspasadosExtras || {}).forEach(key => this._renderTraspasoExtras(key));
     }
 
     generarOpcionesFactor(factorActual) {
@@ -1168,7 +1279,7 @@ class WizardCotizacion {
         this.datos.valoresTraspasados[categoria].factor = parseFloat(nuevoFactor) || 0;
         const paso8 = document.getElementById('paso-8');
         if (paso8) this.generarPasoTraspasados(paso8);
-        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
+        this.actualizarBarraSuperior();
     }
 
     actualizarMaterialTraspasado(categoria, materialKey, campo, valor) {
@@ -1177,9 +1288,10 @@ class WizardCotizacion {
         else this.datos.valoresTraspasados[categoria].materiales[materialKey][campo] = valor;
         const paso8 = document.getElementById('paso-8');
         if (paso8) this.generarPasoTraspasados(paso8);
-        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
+        this.actualizarBarraSuperior();
     }
 
+    // ------------- Paso 9 Factor -------------
     generarPasoFactor(container) {
         container.innerHTML = `
             <div class="card">
@@ -1218,7 +1330,7 @@ class WizardCotizacion {
 
     actualizarFactor(valor) {
         this.datos.factorGeneral = parseFloat(valor) || 2;
-        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
+        this.actualizarBarraSuperior();
     }
 
     establecerFactor(factor) {
@@ -1239,11 +1351,14 @@ class WizardCotizacion {
             });
         });
 
-        // Sumar quincallería extra
-        this._ensureQuincalleriaExtrasInit();
-        const subtotalQuincalleriaExtras = (this.datos.quincalleriaExtras || []).reduce((s, x) => s + (x.total || 0), 0);
-        totalMateriales += subtotalQuincalleriaExtras;
+        // Sumar extras de materiales
+        this._ensureExtrasInitAll();
+        Object.values(this.extraConfig).forEach(cfg => {
+            totalMateriales += (this.datos[cfg.key] || []).reduce((s, x) => s + (x.total || 0), 0);
+        });
 
+        // Traspasados
+        this._ensureTraspasoExtrasInit();
         let totalTraspasos = 0;
         let totalTraspasosFactor = 0;
         let detalleTraspasados = {};
@@ -1254,6 +1369,9 @@ class WizardCotizacion {
             Object.values(categoria.materiales).forEach(material => {
                 subtotalCategoria += (material.cantidad || 0) * (material.precio || 0);
             });
+            const extras = (this.datos.valoresTraspasadosExtras?.[categoriaKey] || []);
+            extras.forEach(x => { subtotalCategoria += (x.cantidad || 0) * (x.precio || 0); });
+
             const cobroFactor = subtotalCategoria * (categoria.factor || 0);
 
             detalleTraspasados[categoriaKey] = {
@@ -1481,7 +1599,6 @@ class WizardCotizacion {
                 return { ok:false, error:'no-supabase' };
             }
 
-            // Obtener user id si hay sesión
             let user_id = null;
             try {
                 const userResp = await supa.auth.getUser();
@@ -1566,7 +1683,8 @@ class WizardCotizacion {
             this.datos._updated_at = data.updated_at;
 
             this._ensurePartidasInit();
-            this._ensureQuincalleriaExtrasInit();
+            this._ensureExtrasInitAll();
+            this._ensureTraspasoExtrasInit();
             this.actualizarBarraSuperior();
             this.mostrarPaso(1);
             this._showToast('Cotización cargada');
@@ -1586,7 +1704,6 @@ class WizardCotizacion {
             const userResp = await supa.auth.getUser();
             const user_id = userResp?.data?.user?.id || null;
 
-            // Supabase range uses start,end inclusive
             const start = offset;
             const end = Math.max(offset, offset + limit - 1);
 
@@ -1612,9 +1729,17 @@ class WizardCotizacion {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, quincalleriaExtras: [], valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 2, partidas: [] };
+                this.datos = { 
+                    cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, 
+                    materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, 
+                    quincalleriaExtras: [], tablerosExtras: [], tapacantosExtras: [], tablerosMaderaExtras: [], ledElectricidadExtras: [],
+                    valoresTraspasadosExtras: { doer:[], eplum:[], cuarzo:[], almuerzo:[], transporte:[] },
+                    valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), 
+                    factorGeneral: 2, partidas: [] 
+                };
                 this._ensurePartidasInit();
-                this._ensureQuincalleriaExtrasInit();
+                this._ensureExtrasInitAll();
+                this._ensureTraspasoExtrasInit();
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
@@ -1637,21 +1762,28 @@ class WizardCotizacion {
             cloned._updated_at = null;
             cloned.version = 1;
 
-            // Regenerar IDs de partidas manteniendo nombres
             if (Array.isArray(cloned.partidas)) {
                 cloned.partidas = cloned.partidas.map(p => ({ id: this._genPartidaId(), nombre: p.nombre || '' }));
             } else {
                 cloned.partidas = [{ id: this._genPartidaId(), nombre: '' }];
             }
 
-            // Asegurar arreglo de quincallería extra con IDs nuevos
-            if (Array.isArray(cloned.quincalleriaExtras)) {
-                cloned.quincalleriaExtras = cloned.quincalleriaExtras.map(x => ({
-                    ...x,
-                    id: this._genExtraId()
-                }));
-            } else {
-                cloned.quincalleriaExtras = [];
+            // Regenerar IDs de extras materiales
+            this._ensureExtrasInitAll();
+            Object.values(this.extraConfig).forEach(cfg => {
+                if (Array.isArray(cloned[cfg.key])) {
+                    cloned[cfg.key] = cloned[cfg.key].map(x => ({ ...x, id: this._genExtraId() }));
+                }
+            });
+
+            // Regenerar IDs de extras traspasados
+            this._ensureTraspasoExtrasInit();
+            if (cloned.valoresTraspasadosExtras && typeof cloned.valoresTraspasadosExtras === 'object') {
+                Object.keys(cloned.valoresTraspasadosExtras).forEach(k => {
+                    if (Array.isArray(cloned.valoresTraspasadosExtras[k])) {
+                        cloned.valoresTraspasadosExtras[k] = cloned.valoresTraspasadosExtras[k].map(x => ({ ...x, id: this._genExtraId() }));
+                    }
+                });
             }
 
             const prev = this.datos;
@@ -1664,7 +1796,7 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- Autosave 20s -------------
+    // ------------- Autosave -------------
     startAutosave() {
         try {
             if (this._autosaveInterval) clearInterval(this._autosaveInterval);
@@ -1733,7 +1865,6 @@ class WizardCotizacion {
             const fecha = new Date().toLocaleDateString('es-CL');
             const numero = this.datos.numero || ('COT-' + Date.now());
 
-            // Generar HTML completo (incluye estilos)
             const html = this.generarHTMLImpresion(totales, fecha, numero);
             const ventanaImpresion = window.open('', '_blank');
             if (!ventanaImpresion) { alert('No se pudo abrir ventana de impresión (popup bloqueado)'); return; }
@@ -1856,20 +1987,19 @@ class WizardCotizacion {
     }
 
     generarHTMLImpresion(totales, fecha, numero) {
-        // Generar detalle de materiales
         let detalleMateriales = '';
         Object.keys(this.datos.materiales).forEach(categoria => {
             const materiales = this.datos.materiales[categoria] || {};
             let filasCategoria = '';
             Object.values(materiales).forEach(material => {
-                if ((material.cantidad || 0) > 0) {
+                if ((material.cantidad || 0) > 0 || (material.precio || 0) > 0 || (material.descripcion || '').trim()) {
                     const subtotal = (material.cantidad || 0) * (material.precio || 0);
                     filasCategoria += `
                         <tr>
                             <td>${this.escapeHtml(material.nombre)}</td>
                             <td>${this.escapeHtml(material.descripcion || '-')}</td>
                             <td>${this.escapeHtml(material.lugar || '-')}</td>
-                            <td style="text-align: center;">${material.cantidad}</td>
+                            <td style="text-align: center;">${material.cantidad || 0}</td>
                             <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
                             <td style="text-align: right; font-weight: bold;">$${subtotal.toLocaleString()}</td>
                         </tr>
@@ -1877,14 +2007,15 @@ class WizardCotizacion {
                 }
             });
 
-            // Incluir quincallería extra como parte de la categoría
-            if (categoria === 'quincalleria' && Array.isArray(this.datos.quincalleriaExtras)) {
-                this.datos.quincalleriaExtras.forEach(x => {
+            // Extras de materiales
+            const cfg = this.extraConfig[categoria];
+            if (cfg && Array.isArray(this.datos[cfg.key])) {
+                this.datos[cfg.key].forEach(x => {
                     if ((x.cantidad || 0) > 0 || (x.valor_unitario || 0) > 0 || (x.nombre || '').trim()) {
                         const subtotal = (x.total !== undefined) ? x.total : (x.cantidad || 0) * (x.valor_unitario || 0);
                         filasCategoria += `
                             <tr>
-                                <td>${this.escapeHtml(x.nombre || 'Quincallería extra')}</td>
+                                <td>${this.escapeHtml(x.nombre || `${cfg.label}`)}</td>
                                 <td>${this.escapeHtml(x.descripcion || '-')}</td>
                                 <td>${this.escapeHtml(x.proveedor || '-')}</td>
                                 <td style="text-align: center;">${x.cantidad || 0}</td>
@@ -1908,21 +2039,35 @@ class WizardCotizacion {
             }
         });
 
-        // Generar detalle de traspasados
         let detalleTraspasados = '';
         Object.keys(this.datos.valoresTraspasados).forEach(categoriaKey => {
             const categoria = this.datos.valoresTraspasados[categoriaKey];
             let filasCategoria = '';
             Object.values(categoria.materiales).forEach(material => {
-                if ((material.cantidad || 0) > 0) {
+                if ((material.cantidad || 0) > 0 || (material.precio || 0) > 0 || (material.descripcion || '').trim()) {
                     const subtotal = (material.cantidad || 0) * (material.precio || 0);
                     filasCategoria += `
                         <tr>
                             <td>${this.escapeHtml(material.nombre)}</td>
                             <td>${this.escapeHtml(material.descripcion || '-')}</td>
-                            <td style="text-align: center;">${material.cantidad}</td>
+                            <td style="text-align: center;">${material.cantidad || 0}</td>
                             <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
                             <td style="text-align: right;">$${subtotal.toLocaleString()}</td>
+                        </tr>
+                    `;
+                }
+            });
+            const extras = this.datos.valoresTraspasadosExtras?.[categoriaKey] || [];
+            extras.forEach(x => {
+                if ((x.cantidad || 0) > 0 || (x.precio || 0) > 0 || (x.nombre || '').trim()) {
+                    const subtotal = (x.total !== undefined) ? x.total : (x.cantidad || 0) * (x.precio || 0);
+                    filasCategoria += `
+                        <tr>
+                            <td>${this.escapeHtml(x.nombre || 'Extra')}</td>
+                            <td>${this.escapeHtml(x.descripcion || '-')}</td>
+                            <td style="text-align: center;">${x.cantidad || 0}</td>
+                            <td style="text-align: right;">$${(x.precio || 0).toLocaleString()}</td>
+                            <td style="text-align: right;">$${(subtotal || 0).toLocaleString()}</td>
                         </tr>
                     `;
                 }
@@ -2034,15 +2179,12 @@ class WizardCotizacion {
 let bytWizard = null;
 
 function anteriorPaso() {
-    // Candidates in preferred order
     const candidates = [window.bytWizard, window.wizard, window.__bytWizardProxy];
     for (const inst of candidates) {
         if (!inst) continue;
-        // If method exists use it
         if (typeof inst.anteriorPaso === 'function') {
             try { return inst.anteriorPaso(); } catch (e) { console.error('Error calling anteriorPaso on instance', e); return; }
         }
-        // Fallback: if mostrarPaso exists and pasoActual is numeric, decrement and call mostrarPaso
         if (typeof inst.mostrarPaso === 'function' && typeof inst.pasoActual !== 'undefined') {
             try {
                 inst.pasoActual = Math.max(1, Number(inst.pasoActual || 1) - 1);
@@ -2053,7 +2195,6 @@ function anteriorPaso() {
                 return;
             }
         }
-        // Last resort: mutate pasoActual if available
         if (typeof inst.pasoActual !== 'undefined') {
             try { inst.pasoActual = Math.max(1, Number(inst.pasoActual || 1) - 1); return; } catch (e) {}
         }
@@ -2068,7 +2209,6 @@ function siguientePaso() {
         if (typeof inst.siguientePaso === 'function') {
             try { return inst.siguientePaso(); } catch (e) { console.error('Error calling siguientePaso on instance', e); return; }
         }
-        // Fallback: if mostrarPaso exists and pasoActual is numeric, increment and call mostrarPaso
         if (typeof inst.mostrarPaso === 'function' && typeof inst.pasoActual !== 'undefined') {
             try {
                 const max = (typeof inst.totalPasos === 'number' && inst.totalPasos > 0) ? inst.totalPasos : 999;
@@ -2080,7 +2220,6 @@ function siguientePaso() {
                 return;
             }
         }
-        // Last resort: mutate pasoActual if available
         if (typeof inst.pasoActual !== 'undefined') {
             try { inst.pasoActual = Number(inst.pasoActual || 1) + 1; return; } catch (e) {}
         }
@@ -2091,16 +2230,12 @@ function siguientePaso() {
 document.addEventListener('DOMContentLoaded', function() {
     try {
         bytWizard = new WizardCotizacion();
-        // Exponer explicitamente la instancia en window.bytWizard
         window.bytWizard = bytWizard;
 
-        // Crear un proxy seguro que delegue a bytWizard y que se pueda usar si alguna parte del HTML llama a "wizard?.siguientePaso()"
-        // Solo creamos/reemplazamos window.wizard si NO existe un elemento DOM con id/name "wizard".
         try {
             const existing = Object.prototype.hasOwnProperty.call(window, 'wizard') ? window.wizard : undefined;
             const isDOM = (existing && (existing instanceof HTMLElement || existing instanceof Node));
             if (!isDOM) {
-                // build a lightweight proxy that forwards property access and binds methods to the instance
                 const proxy = new Proxy(bytWizard, {
                     get(target, prop) {
                         const val = target[prop];
@@ -2110,7 +2245,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         return val;
                     },
                     set(target, prop, value) {
-                        // allow writable properties on the instance
                         try {
                             target[prop] = value;
                             return true;
@@ -2120,17 +2254,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         return prop in target;
                     }
                 });
-                // keep a reference in window.__bytWizardProxy for the wrapper functions to try if needed
                 window.__bytWizardProxy = proxy;
-                // expose as window.wizard for compatibility (so inline onclick="wizard?.siguientePaso()" works)
                 window.wizard = proxy;
                 console.log('window.wizard set as proxy to window.bytWizard (no DOM conflict detected).');
             } else {
-                // si existe un elemento DOM llamado 'wizard', no lo sobrescribimos; se usa window.bytWizard explícitamente
                 console.warn('No sobrescribiendo window.wizard porque existe un elemento DOM con ese nombre/id. Usar window.bytWizard en su lugar.');
             }
         } catch (e) {
-            // fallback: exponer al menos window.bytWizard y la referencia proxy en __bytWizardProxy
             try {
                 const proxyFallback = new Proxy(bytWizard, {
                     get(target, prop) {
