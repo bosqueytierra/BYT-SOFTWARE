@@ -440,21 +440,19 @@ class WizardCotizacion {
 
     _highlightPasoNav() {
         try {
-            const chips = document.querySelectorAll('[data-paso-nav]');
+            this._ensurePasoNavStyles();
+            const chips = document.querySelectorAll('[data-paso-nav], [data-paso], [data-step], [data-step-index]');
             chips.forEach(chip => {
-                const n = Number(chip.dataset.pasoNav || chip.dataset.paso || chip.dataset.step);
+                const n = Number(
+                    chip.dataset.pasoNav ??
+                    chip.dataset.paso ??
+                    chip.dataset.step ??
+                    chip.dataset.stepIndex
+                );
                 if (n === this.pasoActual) {
                     chip.classList.add('paso-nav-activo');
-                    chip.style.backgroundColor = '#bfe7c7';
-                    chip.style.color = '#1b5e20';
-                    chip.style.fontWeight = '700';
-                    chip.style.border = '1px solid #7fbf90';
                 } else {
                     chip.classList.remove('paso-nav-activo');
-                    chip.style.backgroundColor = '';
-                    chip.style.color = '';
-                    chip.style.fontWeight = '';
-                    chip.style.border = '';
                 }
             });
         } catch (e) { /* no-op */ }
