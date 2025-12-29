@@ -289,27 +289,7 @@
     }
   </script>
 
-  <!-- Loader JS (ruta absoluta) -->
-  <script src="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/js/loader.js"></script>
-  <script>
-    const linkCrear = document.getElementById('link-crear-cot');
-    const linkAdmin = document.getElementById('link-admin-cot');
-
-    function attachLoader(el) {
-      if (!el) return;
-      el.addEventListener('click', (e) => {
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-        e.preventDefault();
-        const href = el.href;
-        BYTLoader?.show();
-        setTimeout(() => { window.location.href = href; }, 300);
-      });
-    }
-
-    attachLoader(linkCrear);
-    attachLoader(linkAdmin);
-
-    window.addEventListener('load', () => BYTLoader?.hide());
-  </script>
+  
 </body>
 </html>
+
