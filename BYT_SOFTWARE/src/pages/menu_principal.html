@@ -54,15 +54,24 @@
       box-shadow: 0 12px 30px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
     }
 
+    /* Logo sin recuadro y tamaño moderado */
     .brand {
-      width: 54px; height: 54px; border-radius: 16px;
-      background: var(--pill-bg); border: 1px solid var(--pill-border);
-      display: grid; place-items: center; overflow: hidden; margin: 0 auto;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.25);
-      transition: transform 0.2s ease;
+      width: auto;
+      height: auto;
+      padding: 4px 0;
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      margin: 0 auto;
+      display: grid;
+      place-items: center;
     }
-    .brand:hover { transform: translateY(-1px); }
-    .brand img { width: 30px; height: 30px; object-fit: contain; }
+    .brand img {
+      width: 52px;    /* ajusta a 48 si lo quieres un poco más pequeño */
+      max-height: 52px;
+      height: auto;
+      object-fit: contain;
+    }
 
     .nav-stack { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 8px; }
     .nav-group { display: flex; flex-direction: column; gap: 0; }
@@ -122,7 +131,7 @@
     .topbar {
       background: #ffffff; border-bottom: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.03);
       padding: 12px 18px; display: grid; grid-template-columns: 1fr 1.5fr 1fr; align-items: center; gap: 12px;
-      position: sticky; top: 0; z-index: 10;
+      position: sticky; top: 0; z-index: 20;
     }
     .topbar .left { display: flex; align-items: center; gap: 10px; }
     .topbar .right { display: flex; justify-content: flex-end; gap: 8px; }
@@ -281,33 +290,26 @@
   </script>
 
   <!-- Loader JS (ruta absoluta) -->
-<script src="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/js/loader.js"></script>
-<script>
-  const linkCrear = document.getElementById('link-crear-cot');
-  const linkAdmin = document.getElementById('link-admin-cot');
+  <script src="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/js/loader.js"></script>
+  <script>
+    const linkCrear = document.getElementById('link-crear-cot');
+    const linkAdmin = document.getElementById('link-admin-cot');
 
-  function attachLoader(el) {
-    if (!el) return;
-    el.addEventListener('click', (e) => {
-      // deja nuevas pestañas (Ctrl/Meta/Shift o botón != 0)
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-      e.preventDefault();
-      const href = el.href;
-      BYTLoader?.show();
-      // espera un poco antes de navegar para que se vea el overlay
-      setTimeout(() => { window.location.href = href; }, 300); // ajusta 150-300ms a gusto
-    });
-  }
+    function attachLoader(el) {
+      if (!el) return;
+      el.addEventListener('click', (e) => {
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        e.preventDefault();
+        const href = el.href;
+        BYTLoader?.show();
+        setTimeout(() => { window.location.href = href; }, 300);
+      });
+    }
 
-  attachLoader(linkCrear);
-  attachLoader(linkAdmin);
+    attachLoader(linkCrear);
+    attachLoader(linkAdmin);
 
-  // Oculta si recargas el menú
-  window.addEventListener('load', () => BYTLoader?.hide());
-</script>
+    window.addEventListener('load', () => BYTLoader?.hide());
+  </script>
 </body>
 </html>
-
-
-
-
