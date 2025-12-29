@@ -1,12 +1,14 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL + Persistencia Robusta =====
 //
-// Basado en tu V4 (~2283 líneas). Cambios solicitados:
-// - Paso 8: un solo bloque de “Valores Traspasados Extra” (global), cada línea con su propio factor.
-//   Se eliminan los “extras por categoría” de traspasos.
-// - Los extras globales de traspaso se suman al subtotal de traspasos y cada línea aplica su factor.
-// - En impresión, los extras globales aparecen bajo “Extras Traspasados (factor por línea)”.
-// - Resaltado del paso activo en la tira de pasos (chips con atributo data-paso-nav), color #dce9e4 / #2e5e4e.
-// - Se mantiene lo demás: extras en quincallería/materiales, autosave, CRUD, impresión.
+// Versión base: V8 (~2296 líneas) con ajustes solicitados:
+// - Paso 8: En el bloque de “Valores Traspasados Extra” se muestra claramente el campo “Factor” (input con etiqueta “Factor”).
+// - Barra de pasos (chips con data-paso-nav): color de resaltado más vivo (verde) para el paso activo.
+// - No se modifica ninguna otra lógica ni se eliminan funciones previas.
+//
+// Colores resaltado paso activo:
+//   fondo: #bfe7c7
+//   texto: #1b5e20
+//   borde: #7fbf90
 //
 // Haz backup antes de reemplazar.
 
@@ -99,12 +101,14 @@ class WizardCotizacion {
             partidas: []
         };
 
-        // Supabase client cache
+        // Supabase client cache (se inicializa con _ensureSupabase)
         this._supabase = null;
+
         // Autosave internals
         this._autosaveInterval = null;
         this._lastSavedSnapshot = null;
 
+        // Plan de pasos
         this.pasosPlan = [
             { numero: 1, titulo: 'Datos del Cliente', categoria: 'cliente', tipo: 'cliente' },
             { numero: 2, titulo: 'Quincallería', categoria: 'quincalleria', tipo: 'material' },
@@ -118,18 +122,21 @@ class WizardCotizacion {
             { numero: 10, titulo: 'Resumen Final', categoria: 'resumen', tipo: 'resumen' }
         ];
 
+        // Mapa de extras por categoría de materiales
         this.extraConfig = {
             quincalleria: { key: 'quincalleriaExtras', label: 'Quincallería extra' },
             tableros: { key: 'tablerosExtras', label: 'Tableros extra' },
             tapacantos: { key: 'tapacantosExtras', label: 'Tapacantos extra' },
             tableros_madera: { key: 'tablerosMaderaExtras', label: 'Tableros de Madera extra' },
             led_electricidad: { key: 'ledElectricidadExtras', label: 'LED y Electricidad extra' }
+            // otras_compras no lleva extras
         };
 
+        // Inicializar
         this.init();
     }
 
-    // ---------------- Init ----------------
+    // ------------- Init -------------
     init() {
         try {
             this._ensurePartidasInit();
@@ -138,15 +145,24 @@ class WizardCotizacion {
             this.actualizarProgreso();
             this.mostrarPaso(1);
             this.actualizarBarraSuperior();
-        } catch (e) { console.error('Error inicializando wizard:', e); }
+        } catch (e) {
+            console.error('Error inicializando wizard:', e);
+        }
 
+        // Intentar inicializar supabase en background (no bloqueante)
         this.initSupabase();
+
+        // Cargar proveedores (no bloquear UI)
         this.loadProviders().catch(() => {});
+
+        // Iniciar autosave silencioso cada 20s
         this.startAutosave();
+
+        // Preparar contenedor de toasts para autoreportes
         this._ensureAutosaveToastContainer();
     }
 
-    // ---------------- Supabase helpers ----------------
+    // ------------- Supabase helpers -------------
     initSupabase() {
         try {
             if (this._supabase && typeof this._supabase.from === 'function') return this._supabase;
@@ -219,7 +235,7 @@ class WizardCotizacion {
         }
     }
 
-    // ---------------- Providers ----------------
+    // ------------- Providers -------------
     async loadProviders() {
         try {
             if (Array.isArray(this.proveedores) && this.proveedores.length) return this.proveedores;
@@ -251,7 +267,6 @@ class WizardCotizacion {
         }
     }
 
-    // ---------------- fillProviderSelects ----------------
     fillProviderSelects() {
         try {
             const list = Array.isArray(this.proveedores) && this.proveedores.length
@@ -319,7 +334,6 @@ class WizardCotizacion {
         }
     }
 
-    // ---------------- onProveedorChange (material) ----------------
     onProveedorChange(categoria, materialId, providerValue) {
         try {
             const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
@@ -340,12 +354,12 @@ class WizardCotizacion {
 
             this.actualizarSubtotalCategoria(categoria);
             this.actualizarBarraSuperior();
+
         } catch (e) {
             console.error('onProveedorChange error', e);
         }
     }
 
-    // ---------------- onProveedorChange (traspasado) ----------------
     onProveedorChangeTraspasado(categoriaKey, materialKey, providerValue) {
         try {
             const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
@@ -387,7 +401,6 @@ class WizardCotizacion {
         }
     }
 
-    // ---------------- UI / Progreso ----------------
     actualizarProgreso() {
         const progreso = (this.pasoActual / this.totalPasos) * 100;
         const barraProgreso = document.getElementById('progreso-barra');
@@ -407,14 +420,16 @@ class WizardCotizacion {
                 const n = Number(chip.dataset.pasoNav || chip.dataset.paso || chip.dataset.step);
                 if (n === this.pasoActual) {
                     chip.classList.add('paso-nav-activo');
-                    chip.style.backgroundColor = '#dce9e4';
-                    chip.style.color = '#2e5e4e';
+                    chip.style.backgroundColor = '#bfe7c7';
+                    chip.style.color = '#1b5e20';
                     chip.style.fontWeight = '700';
+                    chip.style.border = '1px solid #7fbf90';
                 } else {
                     chip.classList.remove('paso-nav-activo');
                     chip.style.backgroundColor = '';
                     chip.style.color = '';
                     chip.style.fontWeight = '';
+                    chip.style.border = '';
                 }
             });
         } catch (e) { /* no-op */ }
@@ -433,7 +448,6 @@ class WizardCotizacion {
         }
     }
 
-    // ---------------- Métodos de navegación ----------------
     anteriorPaso() {
         if (this.pasoActual > 1) {
             this.pasoActual--;
@@ -490,7 +504,7 @@ class WizardCotizacion {
         }
     }
 
-    // ---------------- PASO 1: Cliente ----------------
+    // ------------- PASO 1: Cliente / Partidas -------------
     generarPasoCliente(container) {
         this._ensurePartidasInit();
         this._ensureExtrasInitAll();
@@ -676,7 +690,7 @@ class WizardCotizacion {
         }
     }
 
-    // --- Quincallería Extra helpers (materiales) ---
+    // ------------- Extras helpers (materiales) -------------
     _ensureExtrasInitAll() {
         Object.values(this.extraConfig).forEach(cfg => {
             const key = cfg.key;
@@ -779,11 +793,12 @@ class WizardCotizacion {
         if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
     }
 
-    // ------------- Paso Material -------------
+    // ------------- PASOS DE MATERIALES -------------
     generarPasoMaterial(container, categoria) {
         const estructurasBYT = {
             quincalleria: {
                 nombre: 'Quincallería',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Bisagras paquete Recta', cantidad: 0, precio: 0 },
                     { nombre: 'Bisagras paquete Curva', cantidad: 0, precio: 0 },
@@ -800,6 +815,7 @@ class WizardCotizacion {
             },
             tableros: {
                 nombre: 'Tableros',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor total',
                 materiales: [
                     { nombre: 'Melamina 18mm tipo 1', cantidad: 0, precio: 0 },
                     { nombre: 'Melamina 18mm tipo 2', cantidad: 0, precio: 0 },
@@ -813,6 +829,7 @@ class WizardCotizacion {
             },
             tapacantos: {
                 nombre: 'Tapacantos',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Metros de tapacanto delgado tipo 1', cantidad: 0, precio: 400 },
                     { nombre: 'Metros de tapacanto delgado tipo 2', cantidad: 0, precio: 400 },
@@ -824,6 +841,7 @@ class WizardCotizacion {
             },
             servicios_externos: {
                 nombre: 'Servicios Externo de corte',
+                descripcion: 'Esta conversa con tableros y tapacantos ya que depende de eso los metros y la cantidad de tableros',
                 materiales: [
                     { nombre: 'Servicio Corte tablero Ext o Int', cantidad: 0, precio: 7000 },
                     { nombre: 'Servicio pegado tapacanto delgado', cantidad: 0, precio: 450 },
@@ -833,6 +851,7 @@ class WizardCotizacion {
             },
             tableros_madera: {
                 nombre: 'Tableros de Madera',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Panel de madera 30 mm', cantidad: 0, precio: 0 },
                     { nombre: 'Panel de madera 18 mm', cantidad: 0, precio: 0 },
@@ -843,6 +862,7 @@ class WizardCotizacion {
             },
             led_electricidad: {
                 nombre: 'Led y electricidad',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Canaleta Led tipo 1', cantidad: 0, precio: 0 },
                     { nombre: 'Canaleta Led tipo 2', cantidad: 0, precio: 0 },
@@ -857,6 +877,7 @@ class WizardCotizacion {
             },
             otras_compras: {
                 nombre: 'Otras compras',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Extras a Considerar', cantidad: 0, precio: 0 },
                     { nombre: 'Vidrios', cantidad: 0, precio: 0 },
@@ -977,7 +998,6 @@ class WizardCotizacion {
         });
 
         tbody.innerHTML = html;
-        // rellenar selects de lugar de compra con proveedores cargados (si ya están)
         this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
     }
@@ -1103,7 +1123,7 @@ class WizardCotizacion {
             list.innerHTML = '<div style="color:#6c7380;">Sin valores traspasados extra.</div>';
         } else {
             list.innerHTML = extras.map((item, idx) => `
-                <div class="card" style="padding:8px; display:grid; grid-template-columns: 1fr 1fr 1fr 100px 120px 90px 90px; gap:6px; align-items:center;">
+                <div class="card" style="padding:8px; display:grid; grid-template-columns: 1fr 1fr 1fr 100px 120px 140px 90px; gap:6px; align-items:center;">
                     <input data-x="nombre" data-idx="${idx}" placeholder="Nombre (obligatorio)" value="${this.escapeAttr(item.nombre)}"
                            onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'nombre', this.value)">
                     <input data-x="descripcion" data-idx="${idx}" placeholder="Descripción opcional" value="${this.escapeAttr(item.descripcion)}"
@@ -1114,8 +1134,12 @@ class WizardCotizacion {
                            onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'cantidad', this.value)">
                     <input data-x="precio" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.precio}"
                            onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'precio', this.value)">
-                    <input data-x="factor" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.factor}"
-                           onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'factor', this.value)">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:12px; color:#444;">Factor</span>
+                        <input data-x="factor" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.factor}"
+                               style="width:90px;"
+                               onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'factor', this.value)">
+                    </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
                         <strong>$${(item.total || 0).toLocaleString()}</strong>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._removeTraspasoExtraGlobal(${idx})">🗑</button>
@@ -1779,7 +1803,7 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- Autosave 20s -------------
+    // ------------- Autosave -------------
     startAutosave() {
         try {
             if (this._autosaveInterval) clearInterval(this._autosaveInterval);
@@ -1848,7 +1872,6 @@ class WizardCotizacion {
             const fecha = new Date().toLocaleDateString('es-CL');
             const numero = this.datos.numero || ('COT-' + Date.now());
 
-            // Generar HTML completo (incluye estilos)
             const html = this.generarHTMLImpresion(totales, fecha, numero);
             const ventanaImpresion = window.open('', '_blank');
             if (!ventanaImpresion) { alert('No se pudo abrir ventana de impresión (popup bloqueado)'); return; }
@@ -2208,6 +2231,7 @@ function siguientePaso() {
     const candidates = [window.bytWizard, window.wizard, window.__bytWizardProxy];
     for (const inst of candidates) {
         if (!inst) continue;
+        // If method exists use it
         if (typeof inst.siguientePaso === 'function') {
             try { return inst.siguientePaso(); } catch (e) { console.error('Error calling siguientePaso on instance', e); return; }
         }
@@ -2234,16 +2258,15 @@ function siguientePaso() {
 document.addEventListener('DOMContentLoaded', function() {
     try {
         bytWizard = new WizardCotizacion();
+
         // Exponer explicitamente la instancia en window.bytWizard
         window.bytWizard = bytWizard;
 
-        // Crear un proxy seguro que delegue a bytWizard y que se pueda usar si alguna parte del HTML llama a "wizard?.siguientePaso()"
-        // Solo creamos/reemplazamos window.wizard si NO existe un elemento DOM con id/name "wizard".
+        // Crear un proxy seguro que delegue a bytWizard
         try {
             const existing = Object.prototype.hasOwnProperty.call(window, 'wizard') ? window.wizard : undefined;
             const isDOM = (existing && (existing instanceof HTMLElement || existing instanceof Node));
             if (!isDOM) {
-                // build a lightweight proxy that forwards property access and binds methods to the instance
                 const proxy = new Proxy(bytWizard, {
                     get(target, prop) {
                         const val = target[prop];
@@ -2253,7 +2276,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         return val;
                     },
                     set(target, prop, value) {
-                        // allow writable properties on the instance
                         try {
                             target[prop] = value;
                             return true;
@@ -2263,17 +2285,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         return prop in target;
                     }
                 });
-                // keep a reference in window.__bytWizardProxy for the wrapper functions to try if needed
                 window.__bytWizardProxy = proxy;
-                // expose as window.wizard for compatibility (so inline onclick="wizard?.siguientePaso()" works)
                 window.wizard = proxy;
                 console.log('window.wizard set as proxy to window.bytWizard (no DOM conflict detected).');
             } else {
-                // si existe un elemento DOM llamado 'wizard', no lo sobrescribimos; se usa window.bytWizard explícitamente
                 console.warn('No sobrescribiendo window.wizard porque existe un elemento DOM con ese nombre/id. Usar window.bytWizard en su lugar.');
             }
         } catch (e) {
-            // fallback: exponer al menos window.bytWizard y la referencia proxy en __bytWizardProxy
             try {
                 const proxyFallback = new Proxy(bytWizard, {
                     get(target, prop) {
