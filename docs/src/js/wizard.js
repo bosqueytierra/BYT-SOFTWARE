@@ -1,14 +1,14 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL + Persistencia Robusta =====
 //
-// Versión base: V8 (~2296 líneas) con ajustes solicitados:
-// - Paso 8: En el bloque de “Valores Traspasados Extra” se muestra claramente el campo “Factor” (input con etiqueta “Factor”).
-// - Barra de pasos (chips con data-paso-nav): color de resaltado más vivo (verde) para el paso activo.
-// - No se modifica ninguna otra lógica ni se eliminan funciones previas.
+// Versión base: V10 (~2314 líneas). Ajustes solicitados:
+// - Barra de pasos (chips con data-paso-nav): aseguramos que se resalte con color verde vivo y añadimos estilos inyectados (.paso-nav-activo).
+// - Barra de progreso: se asegura que avance de forma correlativa al paso actual, con fallback de IDs (progreso-barra/progreso-texto o progress-bar/progress-text).
+// - No se modifica la lógica funcional previa (extras, traspasos, autosave, etc.).
 //
 // Colores resaltado paso activo:
 //   fondo: #bfe7c7
 //   texto: #1b5e20
-//   borde: #7fbf90  
+//   borde: #7fbf90
 //
 // Haz backup antes de reemplazar.
 
@@ -142,6 +142,7 @@ class WizardCotizacion {
             this._ensurePartidasInit();
             this._ensureExtrasInitAll();
             this._ensureTraspasoExtrasInit();
+            this._ensurePasoNavStyles(); // inyecta estilos para resalte de chips
             this.actualizarProgreso();
             this.mostrarPaso(1);
             this.actualizarBarraSuperior();
@@ -160,6 +161,24 @@ class WizardCotizacion {
 
         // Preparar contenedor de toasts para autoreportes
         this._ensureAutosaveToastContainer();
+    }
+
+    // ------------- Estilos para chips activos -------------
+    _ensurePasoNavStyles() {
+        try {
+            if (document.getElementById('byt-paso-nav-style')) return;
+            const style = document.createElement('style');
+            style.id = 'byt-paso-nav-style';
+            style.textContent = `
+                .paso-nav-activo {
+                    background-color: #bfe7c7 !important;
+                    color: #1b5e20 !important;
+                    font-weight: 700 !important;
+                    border: 1px solid #7fbf90 !important;
+                }
+            `;
+            document.head.appendChild(style);
+        } catch (e) { console.warn('No se pudo inyectar estilos de pasos', e); }
     }
 
     // ------------- Supabase helpers -------------
@@ -401,14 +420,20 @@ class WizardCotizacion {
         }
     }
 
+    // ------------- UI / Progreso -------------
+    _getProgressElements() {
+        const barra = document.getElementById('progreso-barra') || document.getElementById('progress-bar');
+        const texto = document.getElementById('progreso-texto') || document.getElementById('progress-text');
+        return { barra, texto };
+    }
+
     actualizarProgreso() {
         const progreso = (this.pasoActual / this.totalPasos) * 100;
-        const barraProgreso = document.getElementById('progreso-barra');
-        const textoProgreso = document.getElementById('progreso-texto');
-        if (barraProgreso) barraProgreso.style.width = `${progreso}%`;
-        if (textoProgreso) {
+        const { barra, texto } = this._getProgressElements();
+        if (barra) barra.style.width = `${progreso}%`;
+        if (texto) {
             const pasoInfo = this.pasosPlan[this.pasoActual - 1];
-            textoProgreso.textContent = `Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'}`;
+            texto.textContent = `Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'}`;
         }
         this._highlightPasoNav();
     }
@@ -451,7 +476,6 @@ class WizardCotizacion {
     anteriorPaso() {
         if (this.pasoActual > 1) {
             this.pasoActual--;
-            this.actualizarProgreso();
             this.mostrarPaso(this.pasoActual);
         }
     }
@@ -459,7 +483,6 @@ class WizardCotizacion {
     siguientePaso() {
         if (this.pasoActual < this.totalPasos) {
             this.pasoActual++;
-            this.actualizarProgreso();
             this.mostrarPaso(this.pasoActual);
         } else {
             try { this.saveCotizacionSupabase(); } catch (e) { console.error('Error al finalizar/siguientePaso:', e); }
@@ -476,7 +499,7 @@ class WizardCotizacion {
         if (pasoActivo) pasoActivo.style.display = 'block';
         try { this.generarContenidoPaso(this.pasoActual); } catch (e) { console.error('generarContenidoPaso error', e); }
         try { this.actualizarBotonesNavegacion(); } catch (e) {}
-        this._highlightPasoNav();
+        this.actualizarProgreso(); // asegurar progreso y chips al final
     }
 
     generarContenidoPaso(paso) {
@@ -2312,4 +2335,3 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
-
