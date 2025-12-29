@@ -7,6 +7,7 @@
 // - CRUD completo: save (insert/update), load, list, delete, duplicate.
 // - Mantiene toda la lógica BYT original (pasos, cálculo, impresión).
 // - Añadido: gestión de Partidas en Paso 1 (mínimo 1, con IDs estables y validación).
+// - Añadido: Quincallería Extra en Paso 2 (bloque separado, subtotal propio, suma al total de quincallería).
 //
 // Reemplaza BYT_SOFTWARE/src/js/wizard.js por este contenido. Haz backup antes.
 
@@ -44,6 +45,8 @@ class WizardCotizacion {
                 led_electricidad: {},
                 otras_compras: {}
             },
+            // Nuevos: items extra de quincallería (libres, no guiados)
+            quincalleriaExtras: [],
             valoresTraspasados: {
                 doer: { 
                     nombre: 'Estructuras de fierro',
@@ -57,17 +60,17 @@ class WizardCotizacion {
                     nombre: 'Puertas de Aluminio, vidrios',
                     factor: 0.1,
                     materiales: {
-                        'puertas_eplum_1': { nombre: 'Puertas vidrio 1', cantidad: 0, precio: 0, lugar: '' },
-                        'puertas_eplum_2': { nombre: 'Puertas vidrio 2', cantidad: 0, precio: 0, lugar: '' },
-                        'puertas_eplum_3': { nombre: 'Puertas vidrio 3', cantidad: 0, precio: 0, lugar: '' }
+                        'puertas_eplum_1': { nombre: 'Puertas vidrio 1', cantidad: 0, precio: 0 },
+                        'puertas_eplum_2': { nombre: 'Puertas vidrio 2', cantidad: 0, precio: 0 },
+                        'puertas_eplum_3': { nombre: 'Puertas vidrio 3', cantidad: 0, precio: 0 }
                     }
                 },
                 cuarzo: { 
                     nombre: 'Piedras, granitos y ultracompactos',
                     factor: 0.1,
                     materiales: {
-                        'estructuras_cuarzo_1': { nombre: 'Estructuras Cuarzo 1', cantidad: 0, precio: 0, lugar: '' },
-                        'estructuras_cuarzo_2': { nombre: 'Estructuras Cuarzo 2', cantidad: 0, precio: 0, lugar: '' }
+                        'estructuras_cuarzo_1': { nombre: 'Estructuras Cuarzo 1', cantidad: 0, precio: 0 },
+                        'estructuras_cuarzo_2': { nombre: 'Estructuras Cuarzo 2', cantidad: 0, precio: 0 }
                     }
                 },
                 almuerzo: { 
@@ -120,6 +123,7 @@ class WizardCotizacion {
     init() {
         try {
             this._ensurePartidasInit();
+            this._ensureQuincalleriaExtrasInit();
             this.actualizarProgreso();
             this.mostrarPaso(1);
             this.actualizarBarraSuperior();
@@ -508,6 +512,7 @@ class WizardCotizacion {
     // ------------- PASOS (completos) -------------generarPasoCliente
     generarPasoCliente(container) {
         this._ensurePartidasInit();
+        this._ensureQuincalleriaExtrasInit();
 
         container.innerHTML = `
             <div class="card">
@@ -689,6 +694,100 @@ class WizardCotizacion {
         }
     }
 
+    // --- Quincallería Extra helpers ---
+    _ensureQuincalleriaExtrasInit() {
+        if (!Array.isArray(this.datos.quincalleriaExtras)) {
+            this.datos.quincalleriaExtras = [];
+        }
+        this.datos.quincalleriaExtras = this.datos.quincalleriaExtras.map(x => ({
+            id: x.id || this._genExtraId(),
+            nombre: x.nombre || '',
+            descripcion: x.descripcion || '',
+            proveedor: x.proveedor || '',
+            cantidad: Number(x.cantidad || 0),
+            valor_unitario: Number(x.valor_unitario || 0),
+            total: Number(x.total || ((x.cantidad || 0) * (x.valor_unitario || 0))) || 0
+        }));
+    }
+
+    _genExtraId() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+        return 'extra-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
+    }
+
+    addQuincalleriaExtra() {
+        this._ensureQuincalleriaExtrasInit();
+        this.datos.quincalleriaExtras.push({
+            id: this._genExtraId(),
+            nombre: '',
+            descripcion: '',
+            proveedor: '',
+            cantidad: 0,
+            valor_unitario: 0,
+            total: 0
+        });
+        this._renderQuincalleriaExtras();
+        this.actualizarSubtotalCategoria('quincalleria');
+        this.actualizarBarraSuperior();
+    }
+
+    removeQuincalleriaExtra(idx) {
+        this._ensureQuincalleriaExtrasInit();
+        if (idx < 0 || idx >= this.datos.quincalleriaExtras.length) return;
+        this.datos.quincalleriaExtras.splice(idx, 1);
+        this._renderQuincalleriaExtras();
+        this.actualizarSubtotalCategoria('quincalleria');
+        this.actualizarBarraSuperior();
+    }
+
+    actualizarQuincalleriaExtra(idx, campo, valor) {
+        this._ensureQuincalleriaExtrasInit();
+        const item = this.datos.quincalleriaExtras[idx];
+        if (!item) return;
+        if (campo === 'cantidad' || campo === 'valor_unitario') {
+            const num = parseFloat(valor) || 0;
+            item[campo] = num;
+        } else {
+            item[campo] = valor;
+        }
+        item.total = (parseFloat(item.cantidad || 0) * parseFloat(item.valor_unitario || 0)) || 0;
+        this._renderQuincalleriaExtras();
+        this.actualizarSubtotalCategoria('quincalleria');
+        this.actualizarBarraSuperior();
+    }
+
+    _renderQuincalleriaExtras() {
+        const list = document.getElementById('q-extra-list');
+        if (!list) return;
+        this._ensureQuincalleriaExtrasInit();
+        const extras = this.datos.quincalleriaExtras;
+        if (!extras.length) {
+            list.innerHTML = '<div style="color:#6c7380;">Sin quincallería extra.</div>';
+        } else {
+            list.innerHTML = extras.map((item, idx) => `
+                <div class="card" style="padding:8px; display:grid; grid-template-columns: 1fr 1fr 1fr 100px 140px 90px; gap:6px; align-items:center;">
+                    <input data-x="nombre" data-idx="${idx}" placeholder="Nombre (obligatorio)" value="${this.escapeAttr(item.nombre)}"
+                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'nombre', this.value)">
+                    <input data-x="descripcion" data-idx="${idx}" placeholder="Descripción opcional" value="${this.escapeAttr(item.descripcion)}"
+                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'descripcion', this.value)">
+                    <input data-x="proveedor" data-idx="${idx}" placeholder="Proveedor" value="${this.escapeAttr(item.proveedor)}"
+                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'proveedor', this.value)">
+                    <input data-x="cantidad" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.cantidad}"
+                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'cantidad', this.value)">
+                    <input data-x="valor_unitario" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.valor_unitario}"
+                           onchange="window.bytWizard.actualizarQuincalleriaExtra(${idx}, 'valor_unitario', this.value)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                        <strong>$${(item.total || 0).toLocaleString()}</strong>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard.removeQuincalleriaExtra(${idx})">🗑</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        const extraSubtotal = this.datos.quincalleriaExtras.reduce((s, x) => s + (x.total || 0), 0);
+        const extraEl = document.getElementById('subtotal_quincalleria_extra');
+        if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
+    }
+
     generarPasoMaterial(container, categoria) {
         const estructurasBYT = {
             quincalleria: {
@@ -798,6 +897,9 @@ class WizardCotizacion {
             });
         }
 
+        // Asegurar extras para quincallería
+        if (categoria === 'quincalleria') this._ensureQuincalleriaExtrasInit();
+
         container.innerHTML = `
             <div class="card">
                 <h3 class="card-title">${estructura.nombre}</h3>
@@ -826,6 +928,18 @@ class WizardCotizacion {
                     </button>
                 </div>` : ''}
 
+                ${categoria === 'quincalleria' ? `
+                <div id="q-extra" class="card" style="margin-top:14px; padding:12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <h4 style="margin:0;">Quincallería extra</h4>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard.addQuincalleriaExtra()">+ Agregar quincallería</button>
+                  </div>
+                  <div id="q-extra-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+                  <div style="text-align:right; margin-top:8px;">
+                    <strong>Subtotal quincallería extra: <span id="subtotal_quincalleria_extra">$0</span></strong>
+                  </div>
+                </div>` : ''}
+
                 <div style="text-align: right; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 2px solid #4CAF50;">
                     <strong style="font-size: 18px;">SUBTOTAL ${estructura.nombre.toUpperCase()}: 
                         <span id="subtotal_${categoria}" style="color: #2e7d32; font-size: 20px; font-weight: bold;">
@@ -837,6 +951,7 @@ class WizardCotizacion {
         `;
 
         this.cargarMaterialesCategoria(categoria);
+        if (categoria === 'quincalleria') this._renderQuincalleriaExtras();
     }
 
     cargarMaterialesCategoria(categoria) {
@@ -920,6 +1035,16 @@ class WizardCotizacion {
         Object.values(materiales).forEach(material => {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
         });
+
+        // Sumar extras de quincallería
+        if (categoria === 'quincalleria') {
+            this._ensureQuincalleriaExtrasInit();
+            const extraSub = this.datos.quincalleriaExtras.reduce((s, x) => s + (x.total || 0), 0);
+            this.subtotalQuincalleriaExtras = extraSub;
+            subtotal += extraSub;
+            const extraEl = document.getElementById('subtotal_quincalleria_extra');
+            if (extraEl) extraEl.textContent = '$' + extraSub.toLocaleString();
+        }
 
         const elemento = document.getElementById(`subtotal_${categoria}`);
         if (elemento) {
@@ -1113,6 +1238,11 @@ class WizardCotizacion {
                 totalMateriales += (material.cantidad || 0) * (material.precio || 0);
             });
         });
+
+        // Sumar quincallería extra
+        this._ensureQuincalleriaExtrasInit();
+        const subtotalQuincalleriaExtras = (this.datos.quincalleriaExtras || []).reduce((s, x) => s + (x.total || 0), 0);
+        totalMateriales += subtotalQuincalleriaExtras;
 
         let totalTraspasos = 0;
         let totalTraspasosFactor = 0;
@@ -1436,6 +1566,7 @@ class WizardCotizacion {
             this.datos._updated_at = data.updated_at;
 
             this._ensurePartidasInit();
+            this._ensureQuincalleriaExtrasInit();
             this.actualizarBarraSuperior();
             this.mostrarPaso(1);
             this._showToast('Cotización cargada');
@@ -1481,8 +1612,9 @@ class WizardCotizacion {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 2, partidas: [] };
+                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, quincalleriaExtras: [], valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 2, partidas: [] };
                 this._ensurePartidasInit();
+                this._ensureQuincalleriaExtrasInit();
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
@@ -1510,6 +1642,16 @@ class WizardCotizacion {
                 cloned.partidas = cloned.partidas.map(p => ({ id: this._genPartidaId(), nombre: p.nombre || '' }));
             } else {
                 cloned.partidas = [{ id: this._genPartidaId(), nombre: '' }];
+            }
+
+            // Asegurar arreglo de quincallería extra con IDs nuevos
+            if (Array.isArray(cloned.quincalleriaExtras)) {
+                cloned.quincalleriaExtras = cloned.quincalleriaExtras.map(x => ({
+                    ...x,
+                    id: this._genExtraId()
+                }));
+            } else {
+                cloned.quincalleriaExtras = [];
             }
 
             const prev = this.datos;
@@ -1734,6 +1876,25 @@ class WizardCotizacion {
                     `;
                 }
             });
+
+            // Incluir quincallería extra como parte de la categoría
+            if (categoria === 'quincalleria' && Array.isArray(this.datos.quincalleriaExtras)) {
+                this.datos.quincalleriaExtras.forEach(x => {
+                    if ((x.cantidad || 0) > 0 || (x.valor_unitario || 0) > 0 || (x.nombre || '').trim()) {
+                        const subtotal = (x.total !== undefined) ? x.total : (x.cantidad || 0) * (x.valor_unitario || 0);
+                        filasCategoria += `
+                            <tr>
+                                <td>${this.escapeHtml(x.nombre || 'Quincallería extra')}</td>
+                                <td>${this.escapeHtml(x.descripcion || '-')}</td>
+                                <td>${this.escapeHtml(x.proveedor || '-')}</td>
+                                <td style="text-align: center;">${x.cantidad || 0}</td>
+                                <td style="text-align: right;">$${(x.valor_unitario || 0).toLocaleString()}</td>
+                                <td style="text-align: right; font-weight: bold;">$${(subtotal || 0).toLocaleString()}</td>
+                            </tr>
+                        `;
+                    }
+                });
+            }
 
             if (filasCategoria) {
                 detalleMateriales += `
