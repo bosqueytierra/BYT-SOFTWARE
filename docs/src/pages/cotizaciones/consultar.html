@@ -197,6 +197,23 @@
       pointer-events: none;
       transition: width 0.1s linear;
     }
+
+    /* Quitar subrayado en links del sidebar */
+    .sidebar a,
+    .sidebar .nav-item,
+    .sidebar .nav-item .nav-label,
+    .sidebar .submenu a {
+      text-decoration: none !important;
+    }
+    .sidebar a:hover,
+    .sidebar .nav-item:hover,
+    .sidebar .nav-item:focus,
+    .sidebar .nav-item:active,
+    .sidebar .submenu a:hover,
+    .sidebar .submenu a:focus,
+    .sidebar .submenu a:active {
+      text-decoration: none !important;
+    }
   </style>
 </head>
 <body>
