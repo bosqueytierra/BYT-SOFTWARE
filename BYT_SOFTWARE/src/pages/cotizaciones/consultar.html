@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Consultar Cotizaciones - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
-  <link rel="stylesheet" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css">
   <style>
     :root {
       --bg: #f6f7f8;
@@ -159,21 +158,6 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    a.btn-back {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 12px;
-      padding: 8px 10px;
-      border-radius: 10px;
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 700;
-      background: #e8efeb;
-      border: 1px solid rgba(46,94,78,0.25);
-    }
-    a.btn-back:hover { background: #dce7e1; }
-
     /* Modal de confirmación */
     .modal-backdrop {
       position: fixed;
@@ -216,78 +200,81 @@
   </style>
 </head>
 <body>
-  <div class="page">
-    <a href="../menu_principal.html" class="btn-back">← Atrás</a>
-
-    <div class="header-card">
-      <div class="logo-row">
-        <img class="logo" src="../../assets/logo_byt.png" alt="BYT">
-        <div>
-          <h1 class="header-title">Consultar Cotizaciones</h1>
-          <p class="header-subtitle">Historial de Proyectos · Bosque y Tierra</p>
+  <div id="page-content">
+    <div class="page">
+      <div class="header-card">
+        <div class="logo-row">
+          <img class="logo" src="../../assets/logo_byt.png" alt="BYT">
+          <div>
+            <h1 class="header-title">Consultar Cotizaciones</h1>
+            <p class="header-subtitle">Historial de Proyectos · Bosque y Tierra</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost" onclick="cargarCotizaciones()" title="Actualizar">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 9 9"/><path d="M3 16v-4h4"/></svg>
+            Actualizar
+          </button>
+          <a class="btn btn-primary" href="nueva.html">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
+            Nueva Cotización
+          </a>
         </div>
       </div>
-      <div class="actions">
-        <button class="btn btn-ghost" onclick="cargarCotizaciones()" title="Actualizar">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 9 9"/><path d="M3 16v-4h4"/></svg>
-          Actualizar
-        </button>
-        <a class="btn btn-primary" href="nueva.html">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
-          Nueva Cotización
-        </a>
-      </div>
-    </div>
 
-    <div class="card">
-      <h3 style="margin:0 0 12px;">Filtros de Búsqueda</h3>
-      <div class="filters">
-        <div>
-          <label>Buscar por Proyecto o Cliente</label>
-          <input id="filtro-busqueda" type="text" placeholder="Escriba el nombre del proyecto o cliente..." oninput="filtrarCotizaciones()">
-        </div>
-        <div>
-          <label>Ordenar por</label>
-          <select id="filtro-orden" onchange="ordenarCotizaciones()">
-            <option value="fecha_desc">Fecha (Más reciente)</option>
-            <option value="fecha_asc">Fecha (Más antigua)</option>
-            <option value="cliente_asc">Cliente (A-Z)</option>
-            <option value="cliente_desc">Cliente (Z-A)</option>
-            <option value="total_desc">Total (Mayor a menor)</option>
-            <option value="total_asc">Total (Menor a mayor)</option>
-          </select>
+      <div class="card">
+        <h3 style="margin:0 0 12px;">Filtros de Búsqueda</h3>
+        <div class="filters">
+          <div>
+            <label>Buscar por Proyecto o Cliente</label>
+            <input id="filtro-busqueda" type="text" placeholder="Escriba el nombre del proyecto o cliente..." oninput="filtrarCotizaciones()">
+          </div>
+          <div>
+            <label>Ordenar por</label>
+            <select id="filtro-orden" onchange="ordenarCotizaciones()">
+              <option value="fecha_desc">Fecha (Más reciente)</option>
+              <option value="fecha_asc">Fecha (Más antigua)</option>
+              <option value="cliente_asc">Cliente (A-Z)</option>
+              <option value="cliente_desc">Cliente (Z-A)</option>
+              <option value="total_desc">Total (Mayor a menor)</option>
+              <option value="total_asc">Total (Menor a mayor)</option>
+            </select>
+          </div>
         </div>
       </div>
+
+      <div id="loading-state" class="card state" style="display:none;">
+        <div class="loading-spinner"></div>
+        <div>Cargando cotizaciones...</div>
+      </div>
+
+      <div id="empty-state" class="card state" style="display:none;">
+        <div class="state-icon">📁</div>
+        <h3 style="margin:6px 0 4px; color: var(--text);">No hay cotizaciones</h3>
+        <p style="margin:0; color: var(--muted);">Aún no se han creado cotizaciones. <a href="nueva.html" style="color:var(--primary); font-weight:700;">Crear primera cotización</a></p>
+      </div>
+
+      <div id="cotizaciones-container" class="list" style="display:none;"></div>
     </div>
 
-    <div id="loading-state" class="card state" style="display:none;">
-      <div class="loading-spinner"></div>
-      <div>Cargando cotizaciones...</div>
+    <!-- Modal de confirmación -->
+    <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
+      <div class="modal">
+        <h3>Eliminar cotización</h3>
+        <p>¿Seguro que deseas eliminar esta cotización? Mantén el botón 9 segundos para confirmar.</p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="delete-cancel">Cancelar</button>
+          <button class="btn btn-primary hold-btn" id="delete-hold-btn">
+            <span id="delete-hold-text">Mantén 9s para eliminar</span>
+            <div class="hold-fill" id="delete-hold-fill"></div>
+          </button>
+        </div>
+      </div>
     </div>
-
-    <div id="empty-state" class="card state" style="display:none;">
-      <div class="state-icon">📁</div>
-      <h3 style="margin:6px 0 4px; color: var(--text);">No hay cotizaciones</h3>
-      <p style="margin:0; color: var(--muted);">Aún no se han creado cotizaciones. <a href="nueva.html" style="color:var(--primary); font-weight:700;">Crear primera cotización</a></p>
-    </div>
-
-    <div id="cotizaciones-container" class="list" style="display:none;"></div>
   </div>
 
-  <!-- Modal de confirmación -->
-  <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
-    <div class="modal">
-      <h3>Eliminar cotización</h3>
-      <p>¿Seguro que deseas eliminar esta cotización? Mantén el botón 9 segundos para confirmar.</p>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" id="delete-cancel">Cancelar</button>
-        <button class="btn btn-primary hold-btn" id="delete-hold-btn">
-          <span id="delete-hold-text">Mantén 9s para eliminar</span>
-          <div class="hold-fill" id="delete-hold-fill"></div>
-        </button>
-      </div>
-    </div>
-  </div>
+  <!-- Shell / layout -->
+  <script src="../../js/layout.js"></script>
 
   <!-- Supabase -->
   <script src="../../lib/supabaseConfig.js"></script>
@@ -523,7 +510,6 @@
 
     async function eliminarCotizacion(id, btnEl, opts = {}) {
       const silentRemove = !!opts.silentRemove;
-      // Si se llamó sin el flujo de hold, pedimos confirm simple
       if (!silentRemove) {
         const ok = confirm('Para eliminar, confirma y luego mantén el botón en el modal.');
         if (!ok) return;
@@ -535,7 +521,6 @@
         const resultado = await window.supabaseClient.eliminarCotizacion(id);
         if (!resultado.success) throw new Error(resultado.error);
 
-        // Remueve del DOM localmente
         try { btnEl?.closest('.cotizacion-item')?.remove(); } catch (_) {}
 
         cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
