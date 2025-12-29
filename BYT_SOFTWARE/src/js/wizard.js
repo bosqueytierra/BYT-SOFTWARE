@@ -1,13 +1,13 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL + Persistencia Robusta =====
 //
-// Cambios relevantes:
-// - Extras por categoría en pasos 2,3,4,5,6 (quincallería, tableros, tapacantos, tableros de madera, LED y electricidad).
-// - Paso 8 (Valores traspasados) admite extras por categoría de traspaso (doer, eplum, cuarzo, almuerzo, transporte).
-// - Los extras suman al subtotal de su categoría y al total general.
-// - Se persisten en Supabase (data.datos) y se duplican con IDs nuevos.
-// - En impresión se listan junto a su categoría (ya se veían para quincallería; ahora para todas).
+// Basado en tu V4 (~2283 líneas). Cambios solicitados:
+// - Paso 8: un solo bloque de “Valores Traspasados Extra” (global), cada línea con su propio factor.
+//   Se eliminan los “extras por categoría” de traspasos.
+// - Los extras globales de traspaso se suman al subtotal de traspasos y cada línea aplica su factor.
+// - En impresión, los extras globales aparecen bajo “Extras Traspasados (factor por línea)”.
+// - Resaltado del paso activo en la tira de pasos (chips con atributo data-paso-nav), color #dce9e4 / #2e5e4e.
+// - Se mantiene lo demás: extras en quincallería/materiales, autosave, CRUD, impresión.
 //
-// Nota: Paso 7 “Otras compras” NO tiene extras nuevos (ya tiene su flujo).
 // Haz backup antes de reemplazar.
 
 class WizardCotizacion {
@@ -50,14 +50,8 @@ class WizardCotizacion {
             tapacantosExtras: [],
             tablerosMaderaExtras: [],
             ledElectricidadExtras: [],
-            // Extras por categoría de traspasados
-            valoresTraspasadosExtras: {
-                doer: [],
-                eplum: [],
-                cuarzo: [],
-                almuerzo: [],
-                transporte: []
-            },
+            // Extras globales de traspaso (no por categoría)
+            traspasosExtras: [],
             valoresTraspasados: {
                 doer: { 
                     nombre: 'Estructuras de fierro',
@@ -102,17 +96,15 @@ class WizardCotizacion {
                 }
             },
             factorGeneral: 2,
-            partidas: [] // nuevo: arreglo de partidas {id, nombre}
+            partidas: []
         };
 
-        // Supabase client cache (se inicializa con _ensureSupabase)
+        // Supabase client cache
         this._supabase = null;
-
         // Autosave internals
         this._autosaveInterval = null;
         this._lastSavedSnapshot = null;
 
-        // Plan de pasos
         this.pasosPlan = [
             { numero: 1, titulo: 'Datos del Cliente', categoria: 'cliente', tipo: 'cliente' },
             { numero: 2, titulo: 'Quincallería', categoria: 'quincalleria', tipo: 'material' },
@@ -126,21 +118,18 @@ class WizardCotizacion {
             { numero: 10, titulo: 'Resumen Final', categoria: 'resumen', tipo: 'resumen' }
         ];
 
-        // Mapa de extras por categoría de materiales
         this.extraConfig = {
             quincalleria: { key: 'quincalleriaExtras', label: 'Quincallería extra' },
             tableros: { key: 'tablerosExtras', label: 'Tableros extra' },
             tapacantos: { key: 'tapacantosExtras', label: 'Tapacantos extra' },
             tableros_madera: { key: 'tablerosMaderaExtras', label: 'Tableros de Madera extra' },
             led_electricidad: { key: 'ledElectricidadExtras', label: 'LED y Electricidad extra' }
-            // otras_compras no lleva extras
         };
 
-        // Inicializar
         this.init();
     }
 
-    // ------------- Init -------------
+    // ---------------- Init ----------------
     init() {
         try {
             this._ensurePartidasInit();
@@ -149,24 +138,15 @@ class WizardCotizacion {
             this.actualizarProgreso();
             this.mostrarPaso(1);
             this.actualizarBarraSuperior();
-        } catch (e) {
-            console.error('Error inicializando wizard:', e);
-        }
+        } catch (e) { console.error('Error inicializando wizard:', e); }
 
-        // Intentar inicializar supabase en background (no bloqueante)
         this.initSupabase();
-
-        // Cargar proveedores (no bloquear UI)
         this.loadProviders().catch(() => {});
-
-        // Iniciar autosave silencioso cada 20s
         this.startAutosave();
-
-        // Preparar contenedor de toasts para autoreportes
         this._ensureAutosaveToastContainer();
     }
 
-    // ------------- Supabase helpers -------------
+    // ---------------- Supabase helpers ----------------
     initSupabase() {
         try {
             if (this._supabase && typeof this._supabase.from === 'function') return this._supabase;
@@ -239,7 +219,7 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- Providers -------------
+    // ---------------- Providers ----------------
     async loadProviders() {
         try {
             if (Array.isArray(this.proveedores) && this.proveedores.length) return this.proveedores;
@@ -271,6 +251,7 @@ class WizardCotizacion {
         }
     }
 
+    // ---------------- fillProviderSelects ----------------
     fillProviderSelects() {
         try {
             const list = Array.isArray(this.proveedores) && this.proveedores.length
@@ -338,6 +319,7 @@ class WizardCotizacion {
         }
     }
 
+    // ---------------- onProveedorChange (material) ----------------
     onProveedorChange(categoria, materialId, providerValue) {
         try {
             const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
@@ -358,24 +340,12 @@ class WizardCotizacion {
 
             this.actualizarSubtotalCategoria(categoria);
             this.actualizarBarraSuperior();
-
-            const currentSelect = document.querySelector(`select.lugar-select[data-current="${this.escapeAttr(valueStr)}"]`);
-            if (!currentSelect) {
-                const byMaterial = document.querySelector(`select.lugar-select[data-material-id="${this.escapeAttr(materialId)}"]`);
-                if (byMaterial) {
-                    byMaterial.setAttribute('data-current', valueStr);
-                    try { byMaterial.value = valueStr; } catch (e) {}
-                }
-                this.fillProviderSelects();
-            } else {
-                try { currentSelect.value = valueStr; } catch (e) {}
-            }
-
         } catch (e) {
             console.error('onProveedorChange error', e);
         }
     }
 
+    // ---------------- onProveedorChange (traspasado) ----------------
     onProveedorChangeTraspasado(categoriaKey, materialKey, providerValue) {
         try {
             const valueStr = providerValue !== undefined && providerValue !== null ? String(providerValue).trim() : '';
@@ -403,9 +373,6 @@ class WizardCotizacion {
                 Object.values(this.datos.valoresTraspasados[categoriaKey].materiales).forEach(m => {
                     totalTraspaso += (m.cantidad || 0) * (m.precio || 0);
                 });
-                // sumar extras
-                const extraList = (this.datos.valoresTraspasadosExtras?.[categoriaKey] || []);
-                extraList.forEach(x => { totalTraspaso += (x.cantidad || 0) * (x.precio || 0); });
                 const cobro = totalTraspaso * (this.datos.valoresTraspasados[categoriaKey].factor || 0);
                 totalEl.textContent = `$${totalTraspaso.toLocaleString()}`;
                 cobroEl.textContent = `$${cobro.toLocaleString()}`;
@@ -420,6 +387,7 @@ class WizardCotizacion {
         }
     }
 
+    // ---------------- UI / Progreso ----------------
     actualizarProgreso() {
         const progreso = (this.pasoActual / this.totalPasos) * 100;
         const barraProgreso = document.getElementById('progreso-barra');
@@ -429,6 +397,27 @@ class WizardCotizacion {
             const pasoInfo = this.pasosPlan[this.pasoActual - 1];
             textoProgreso.textContent = `Paso ${this.pasoActual} de ${this.totalPasos}: ${pasoInfo ? pasoInfo.titulo : 'Cargando...'}`;
         }
+        this._highlightPasoNav();
+    }
+
+    _highlightPasoNav() {
+        try {
+            const chips = document.querySelectorAll('[data-paso-nav]');
+            chips.forEach(chip => {
+                const n = Number(chip.dataset.pasoNav || chip.dataset.paso || chip.dataset.step);
+                if (n === this.pasoActual) {
+                    chip.classList.add('paso-nav-activo');
+                    chip.style.backgroundColor = '#dce9e4';
+                    chip.style.color = '#2e5e4e';
+                    chip.style.fontWeight = '700';
+                } else {
+                    chip.classList.remove('paso-nav-activo');
+                    chip.style.backgroundColor = '';
+                    chip.style.color = '';
+                    chip.style.fontWeight = '';
+                }
+            });
+        } catch (e) { /* no-op */ }
     }
 
     actualizarBotonesNavegacion() {
@@ -444,6 +433,7 @@ class WizardCotizacion {
         }
     }
 
+    // ---------------- Métodos de navegación ----------------
     anteriorPaso() {
         if (this.pasoActual > 1) {
             this.pasoActual--;
@@ -472,6 +462,7 @@ class WizardCotizacion {
         if (pasoActivo) pasoActivo.style.display = 'block';
         try { this.generarContenidoPaso(this.pasoActual); } catch (e) { console.error('generarContenidoPaso error', e); }
         try { this.actualizarBotonesNavegacion(); } catch (e) {}
+        this._highlightPasoNav();
     }
 
     generarContenidoPaso(paso) {
@@ -499,7 +490,7 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- PASO 1: Cliente / Partidas -------------
+    // ---------------- PASO 1: Cliente ----------------
     generarPasoCliente(container) {
         this._ensurePartidasInit();
         this._ensureExtrasInitAll();
@@ -624,6 +615,7 @@ class WizardCotizacion {
             listEl.appendChild(row);
         });
 
+        // Bind inputs
         listEl.querySelectorAll('input[data-partida-id]').forEach(inp => {
             inp.oninput = () => {
                 const id = inp.getAttribute('data-partida-id');
@@ -640,6 +632,7 @@ class WizardCotizacion {
 
     _ensurePartidasInit() {
         if (!Array.isArray(this.datos.partidas)) this.datos.partidas = [];
+        // asegurar IDs y mínimo 1
         this.datos.partidas = this.datos.partidas.map(p => ({
             id: p.id || this._genPartidaId(),
             nombre: p.nombre || ''
@@ -683,7 +676,7 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- Extras helpers (materiales) -------------
+    // --- Quincallería Extra helpers (materiales) ---
     _ensureExtrasInitAll() {
         Object.values(this.extraConfig).forEach(cfg => {
             const key = cfg.key;
@@ -786,106 +779,11 @@ class WizardCotizacion {
         if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
     }
 
-    // ------------- Extras Traspasados -------------
-    _ensureTraspasoExtrasInit() {
-        if (!this.datos.valoresTraspasadosExtras || typeof this.datos.valoresTraspasadosExtras !== 'object') {
-            this.datos.valoresTraspasadosExtras = { doer: [], eplum: [], cuarzo: [], almuerzo: [], transporte: [] };
-        }
-        ['doer','eplum','cuarzo','almuerzo','transporte'].forEach(k => {
-            if (!Array.isArray(this.datos.valoresTraspasadosExtras[k])) this.datos.valoresTraspasadosExtras[k] = [];
-            this.datos.valoresTraspasadosExtras[k] = this.datos.valoresTraspasadosExtras[k].map(x => ({
-                id: x.id || this._genExtraId(),
-                nombre: x.nombre || '',
-                descripcion: x.descripcion || '',
-                lugar: x.lugar || '',
-                cantidad: Number(x.cantidad || 0),
-                precio: Number(x.precio || 0),
-                total: Number(x.total || ((x.cantidad || 0) * (x.precio || 0))) || 0
-            }));
-        });
-    }
-
-    _addTraspasoExtra(catKey) {
-        this._ensureTraspasoExtrasInit();
-        if (!this.datos.valoresTraspasadosExtras[catKey]) this.datos.valoresTraspasadosExtras[catKey] = [];
-        this.datos.valoresTraspasadosExtras[catKey].push({
-            id: this._genExtraId(),
-            nombre: '',
-            descripcion: '',
-            lugar: '',
-            cantidad: 0,
-            precio: 0,
-            total: 0
-        });
-        this._renderTraspasoExtras(catKey);
-        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
-        this.actualizarBarraSuperior();
-    }
-
-    _removeTraspasoExtra(catKey, idx) {
-        this._ensureTraspasoExtrasInit();
-        const arr = this.datos.valoresTraspasadosExtras[catKey] || [];
-        if (idx < 0 || idx >= arr.length) return;
-        arr.splice(idx,1);
-        this._renderTraspasoExtras(catKey);
-        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
-        this.actualizarBarraSuperior();
-    }
-
-    _updateTraspasoExtra(catKey, idx, campo, valor) {
-        this._ensureTraspasoExtrasInit();
-        const arr = this.datos.valoresTraspasadosExtras[catKey] || [];
-        const item = arr[idx];
-        if (!item) return;
-        if (campo === 'cantidad' || campo === 'precio') {
-            item[campo] = parseFloat(valor) || 0;
-        } else {
-            item[campo] = valor;
-        }
-        item.total = (parseFloat(item.cantidad || 0) * parseFloat(item.precio || 0)) || 0;
-        this._renderTraspasoExtras(catKey);
-        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
-        this.actualizarBarraSuperior();
-    }
-
-    _renderTraspasoExtras(catKey) {
-        const list = document.getElementById(`trasp-extra-list-${catKey}`);
-        if (!list) return;
-        this._ensureTraspasoExtrasInit();
-        const extras = this.datos.valoresTraspasadosExtras[catKey] || [];
-        if (!extras.length) {
-            list.innerHTML = '<div style="color:#6c7380;">Sin extras.</div>';
-        } else {
-            list.innerHTML = extras.map((item, idx) => `
-                <div class="card" style="padding:8px; display:grid; grid-template-columns: 1fr 1fr 1fr 100px 140px 90px; gap:6px; align-items:center;">
-                    <input data-x="nombre" data-idx="${idx}" placeholder="Nombre (obligatorio)" value="${this.escapeAttr(item.nombre)}"
-                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'nombre', this.value)">
-                    <input data-x="descripcion" data-idx="${idx}" placeholder="Descripción opcional" value="${this.escapeAttr(item.descripcion)}"
-                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'descripcion', this.value)">
-                    <input data-x="lugar" data-idx="${idx}" placeholder="Lugar de compra" value="${this.escapeAttr(item.lugar)}"
-                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'lugar', this.value)">
-                    <input data-x="cantidad" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.cantidad}"
-                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'cantidad', this.value)">
-                    <input data-x="precio" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.precio}"
-                           onchange="window.bytWizard._updateTraspasoExtra('${catKey}', ${idx}, 'precio', this.value)">
-                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                        <strong>$${(item.total || 0).toLocaleString()}</strong>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._removeTraspasoExtra('${catKey}', ${idx})">🗑</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        const extraSubtotal = extras.reduce((s, x) => s + (x.total || 0), 0);
-        const extraEl = document.getElementById(`subtotal_trasp_extra_${catKey}`);
-        if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
-    }
-
-    // ------------- PASOS DE MATERIALES -------------
+    // ------------- Paso Material -------------
     generarPasoMaterial(container, categoria) {
         const estructurasBYT = {
             quincalleria: {
                 nombre: 'Quincallería',
-                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Bisagras paquete Recta', cantidad: 0, precio: 0 },
                     { nombre: 'Bisagras paquete Curva', cantidad: 0, precio: 0 },
@@ -902,7 +800,6 @@ class WizardCotizacion {
             },
             tableros: {
                 nombre: 'Tableros',
-                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor total',
                 materiales: [
                     { nombre: 'Melamina 18mm tipo 1', cantidad: 0, precio: 0 },
                     { nombre: 'Melamina 18mm tipo 2', cantidad: 0, precio: 0 },
@@ -916,7 +813,6 @@ class WizardCotizacion {
             },
             tapacantos: {
                 nombre: 'Tapacantos',
-                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Metros de tapacanto delgado tipo 1', cantidad: 0, precio: 400 },
                     { nombre: 'Metros de tapacanto delgado tipo 2', cantidad: 0, precio: 400 },
@@ -928,7 +824,6 @@ class WizardCotizacion {
             },
             servicios_externos: {
                 nombre: 'Servicios Externo de corte',
-                descripcion: 'Esta conversa con tableros y tapacantos ya que depende de eso los metros y la cantidad de tableros',
                 materiales: [
                     { nombre: 'Servicio Corte tablero Ext o Int', cantidad: 0, precio: 7000 },
                     { nombre: 'Servicio pegado tapacanto delgado', cantidad: 0, precio: 450 },
@@ -938,7 +833,6 @@ class WizardCotizacion {
             },
             tableros_madera: {
                 nombre: 'Tableros de Madera',
-                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Panel de madera 30 mm', cantidad: 0, precio: 0 },
                     { nombre: 'Panel de madera 18 mm', cantidad: 0, precio: 0 },
@@ -949,7 +843,6 @@ class WizardCotizacion {
             },
             led_electricidad: {
                 nombre: 'Led y electricidad',
-                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Canaleta Led tipo 1', cantidad: 0, precio: 0 },
                     { nombre: 'Canaleta Led tipo 2', cantidad: 0, precio: 0 },
@@ -964,7 +857,6 @@ class WizardCotizacion {
             },
             otras_compras: {
                 nombre: 'Otras compras',
-                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
                 materiales: [
                     { nombre: 'Extras a Considerar', cantidad: 0, precio: 0 },
                     { nombre: 'Vidrios', cantidad: 0, precio: 0 },
@@ -976,6 +868,7 @@ class WizardCotizacion {
         const estructura = estructurasBYT[categoria];
         if (!estructura) return;
 
+        // Inicializar materiales si no existen
         if (!this.datos.materiales[categoria] || Object.keys(this.datos.materiales[categoria]).length === 0) {
             estructura.materiales.forEach((material, index) => {
                 const id = `${categoria}_${index}`;
@@ -989,6 +882,7 @@ class WizardCotizacion {
             });
         }
 
+        // Asegurar extras para categorías con extras
         if (categoria === 'quincalleria' || categoria === 'tableros' || categoria === 'tapacantos' || categoria === 'tableros_madera' || categoria === 'led_electricidad') {
             this._ensureExtrasInitAll();
         }
@@ -1044,7 +938,7 @@ class WizardCotizacion {
         `;
 
         this.cargarMaterialesCategoria(categoria);
-        if (this.extraConfig[categoria]) this._renderExtras(categoria);
+        if (categoria === 'quincalleria' || categoria === 'tableros' || categoria === 'tapacantos' || categoria === 'tableros_madera' || categoria === 'led_electricidad') this._renderExtras(categoria);
     }
 
     cargarMaterialesCategoria(categoria) {
@@ -1083,6 +977,7 @@ class WizardCotizacion {
         });
 
         tbody.innerHTML = html;
+        // rellenar selects de lugar de compra con proveedores cargados (si ya están)
         this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
     }
@@ -1110,7 +1005,7 @@ class WizardCotizacion {
             this.datos.materiales[categoria][materialId][campo] = valor;
         }
         this.cargarMaterialesCategoria(categoria);
-        this.actualizarBarraSuperior();
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
     eliminarMaterial(categoria, materialId) {
@@ -1128,10 +1023,10 @@ class WizardCotizacion {
             subtotal += (material.cantidad || 0) * (material.precio || 0);
         });
 
+        // Sumar extras de categoría (quincallería, etc.)
         if (this.extraConfig[categoria]) {
             this._ensureExtrasInitAll();
-            const extrasKey = this.extraConfig[categoria].key;
-            const extraSub = (this.datos[extrasKey] || []).reduce((s, x) => s + (x.total || 0), 0);
+            const extraSub = (this.datos[this.extraConfig[categoria].key] || []).reduce((s, x) => s + (x.total || 0), 0);
             subtotal += extraSub;
             const extraEl = document.getElementById(`subtotal_extra_${categoria}`);
             if (extraEl) extraEl.textContent = '$' + extraSub.toLocaleString();
@@ -1143,7 +1038,99 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- Paso 8: Valores Traspasados con extras -------------
+    // ------------- Paso 8: Traspasados (con bloque extra global) -------------
+    _ensureTraspasoExtrasInit() {
+        if (!Array.isArray(this.datos.traspasosExtras)) this.datos.traspasosExtras = [];
+        this.datos.traspasosExtras = this.datos.traspasosExtras.map(x => ({
+            id: x.id || this._genExtraId(),
+            nombre: x.nombre || '',
+            descripcion: x.descripcion || '',
+            lugar: x.lugar || '',
+            cantidad: Number(x.cantidad || 0),
+            precio: Number(x.precio || 0),
+            factor: Number(x.factor || 0),
+            total: Number(x.total || ((x.cantidad || 0) * (x.precio || 0))) || 0
+        }));
+    }
+
+    _addTraspasoExtraGlobal() {
+        this._ensureTraspasoExtrasInit();
+        this.datos.traspasosExtras.push({
+            id: this._genExtraId(),
+            nombre: '',
+            descripcion: '',
+            lugar: '',
+            cantidad: 0,
+            precio: 0,
+            factor: 0.1,
+            total: 0
+        });
+        this._renderTraspasosExtrasGlobal();
+        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
+        this.actualizarBarraSuperior();
+    }
+
+    _removeTraspasoExtraGlobal(idx) {
+        this._ensureTraspasoExtrasInit();
+        if (idx < 0 || idx >= this.datos.traspasosExtras.length) return;
+        this.datos.traspasosExtras.splice(idx, 1);
+        this._renderTraspasosExtrasGlobal();
+        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
+        this.actualizarBarraSuperior();
+    }
+
+    _updateTraspasoExtraGlobal(idx, campo, valor) {
+        this._ensureTraspasoExtrasInit();
+        const item = this.datos.traspasosExtras[idx];
+        if (!item) return;
+        if (campo === 'cantidad' || campo === 'precio' || campo === 'factor') {
+            item[campo] = parseFloat(valor) || 0;
+        } else {
+            item[campo] = valor;
+        }
+        item.total = (parseFloat(item.cantidad || 0) * parseFloat(item.precio || 0)) || 0;
+        this._renderTraspasosExtrasGlobal();
+        this.generarPasoTraspasados(document.getElementById('paso-8') || { innerHTML: '' });
+        this.actualizarBarraSuperior();
+    }
+
+    _renderTraspasosExtrasGlobal() {
+        const list = document.getElementById('trasp-extras-global-list');
+        if (!list) return;
+        this._ensureTraspasoExtrasInit();
+        const extras = this.datos.traspasosExtras;
+        if (!extras.length) {
+            list.innerHTML = '<div style="color:#6c7380;">Sin valores traspasados extra.</div>';
+        } else {
+            list.innerHTML = extras.map((item, idx) => `
+                <div class="card" style="padding:8px; display:grid; grid-template-columns: 1fr 1fr 1fr 100px 120px 90px 90px; gap:6px; align-items:center;">
+                    <input data-x="nombre" data-idx="${idx}" placeholder="Nombre (obligatorio)" value="${this.escapeAttr(item.nombre)}"
+                           onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'nombre', this.value)">
+                    <input data-x="descripcion" data-idx="${idx}" placeholder="Descripción opcional" value="${this.escapeAttr(item.descripcion)}"
+                           onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'descripcion', this.value)">
+                    <input data-x="lugar" data-idx="${idx}" placeholder="Lugar de compra" value="${this.escapeAttr(item.lugar)}"
+                           onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'lugar', this.value)">
+                    <input data-x="cantidad" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.cantidad}"
+                           onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'cantidad', this.value)">
+                    <input data-x="precio" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.precio}"
+                           onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'precio', this.value)">
+                    <input data-x="factor" data-idx="${idx}" type="number" min="0" step="0.01" value="${item.factor}"
+                           onchange="window.bytWizard._updateTraspasoExtraGlobal(${idx}, 'factor', this.value)">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                        <strong>$${(item.total || 0).toLocaleString()}</strong>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._removeTraspasoExtraGlobal(${idx})">🗑</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        const extraSubtotal = extras.reduce((s, x) => s + (x.total || 0), 0);
+        const extraFactorSubtotal = extras.reduce((s, x) => s + ((x.total || 0) * (x.factor || 0)), 0);
+        const extraEl = document.getElementById('trasp-extras-global-subtotal');
+        if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
+        const extraFactorEl = document.getElementById('trasp-extras-global-factor');
+        if (extraFactorEl) extraFactorEl.textContent = '$' + extraFactorSubtotal.toLocaleString();
+    }
+
     generarPasoTraspasados(container) {
         this._ensureTraspasoExtrasInit();
 
@@ -1151,7 +1138,7 @@ class WizardCotizacion {
             <div class="card">
                 <h3 class="card-title">💰 Valores Traspasados</h3>
                 <p style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor 0.1 (10%) sobre el total traspaso<br>
+                    <strong>ℹ️ Estructura BYT:</strong> Cada categoría tiene factor sobre el total traspaso<br>
                     <code>Total = Suma Materiales + (Suma Materiales × Factor)</code>
                 </p>
         `;
@@ -1214,35 +1201,18 @@ class WizardCotizacion {
                 `;
             });
 
-            // Extras de traspaso para esta categoría
-            const extras = this.datos.valoresTraspasadosExtras?.[key] || [];
-            const extraSubtotal = extras.reduce((s,x)=>s+(x.total||0),0);
+            // Calcular total traspaso
+            let totalTraspaso = 0;
+            Object.values(categoria.materiales).forEach(material => {
+                totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
+            });
+            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
+
             html += `
                             </tbody>
                         </table>
                     </div>
 
-                    <div id="trasp-extra-${key}" class="card" style="margin-top:12px; padding:10px;">
-                      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                        <h5 style="margin:0;">Extras ${this.escapeHtml(categoria.nombre)}</h5>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._addTraspasoExtra('${key}')">+ Agregar extra</button>
-                      </div>
-                      <div id="trasp-extra-list-${key}" style="margin-top:8px; display:flex; flex-direction:column; gap:8px;"></div>
-                      <div style="text-align:right; margin-top:6px;">
-                        <strong>Subtotal extras: <span id="subtotal_trasp_extra_${key}">$${extraSubtotal.toLocaleString()}</span></strong>
-                      </div>
-                    </div>
-            `;
-
-            // Calcular total traspaso (incluye extras)
-            let totalTraspaso = 0;
-            Object.values(categoria.materiales).forEach(material => {
-                totalTraspaso += (material.cantidad || 0) * (material.precio || 0);
-            });
-            extras.forEach(x => { totalTraspaso += (x.cantidad || 0) * (x.precio || 0); });
-            const cobroPorTraspaso = totalTraspaso * (categoria.factor || 0);
-
-            html += `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px;">
                         <div>
                             <strong>Total Traspaso: <span id="total_traspaso_${key}">$${totalTraspaso.toLocaleString()}</span></strong>
@@ -1257,11 +1227,27 @@ class WizardCotizacion {
             `;
         });
 
+        // Bloque global de traspasos extra
+        html += `
+            <div class="card" style="margin-top:18px; padding:14px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                <h4 style="margin:0;">Valores Traspasados Extra</h4>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.bytWizard._addTraspasoExtraGlobal()">+ Agregar traspaso extra</button>
+              </div>
+              <div id="trasp-extras-global-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+              <div style="display:flex; justify-content:flex-end; gap:16px; margin-top:10px; font-weight:bold;">
+                <span>Subtotal extras: <span id="trasp-extras-global-subtotal">$0</span></span>
+                <span>Factores extras: <span id="trasp-extras-global-factor">$0</span></span>
+              </div>
+            </div>
+        `;
+
         html += `</div>`;
         container.innerHTML = html;
 
+        // rellenar selects de lugar de compra dentro de traspasados si proveedores ya cargados
         this.fillProviderSelects();
-        Object.keys(this.datos.valoresTraspasadosExtras || {}).forEach(key => this._renderTraspasoExtras(key));
+        this._renderTraspasosExtrasGlobal();
     }
 
     generarOpcionesFactor(factorActual) {
@@ -1279,7 +1265,7 @@ class WizardCotizacion {
         this.datos.valoresTraspasados[categoria].factor = parseFloat(nuevoFactor) || 0;
         const paso8 = document.getElementById('paso-8');
         if (paso8) this.generarPasoTraspasados(paso8);
-        this.actualizarBarraSuperior();
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
     actualizarMaterialTraspasado(categoria, materialKey, campo, valor) {
@@ -1288,10 +1274,9 @@ class WizardCotizacion {
         else this.datos.valoresTraspasados[categoria].materiales[materialKey][campo] = valor;
         const paso8 = document.getElementById('paso-8');
         if (paso8) this.generarPasoTraspasados(paso8);
-        this.actualizarBarraSuperior();
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
-    // ------------- Paso 9 Factor -------------
     generarPasoFactor(container) {
         container.innerHTML = `
             <div class="card">
@@ -1330,7 +1315,7 @@ class WizardCotizacion {
 
     actualizarFactor(valor) {
         this.datos.factorGeneral = parseFloat(valor) || 2;
-        this.actualizarBarraSuperior();
+        this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
     establecerFactor(factor) {
@@ -1369,9 +1354,6 @@ class WizardCotizacion {
             Object.values(categoria.materiales).forEach(material => {
                 subtotalCategoria += (material.cantidad || 0) * (material.precio || 0);
             });
-            const extras = (this.datos.valoresTraspasadosExtras?.[categoriaKey] || []);
-            extras.forEach(x => { subtotalCategoria += (x.cantidad || 0) * (x.precio || 0); });
-
             const cobroFactor = subtotalCategoria * (categoria.factor || 0);
 
             detalleTraspasados[categoriaKey] = {
@@ -1384,6 +1366,13 @@ class WizardCotizacion {
             totalTraspasos += subtotalCategoria;
             totalTraspasosFactor += cobroFactor;
         });
+
+        // Extras globales de traspaso (factor por línea)
+        const subtotalExtrasTraspaso = (this.datos.traspasosExtras || []).reduce((s, x) => s + (x.total || 0), 0);
+        const subtotalExtrasTraspasoFactor = (this.datos.traspasosExtras || []).reduce((s, x) => s + ((x.total || 0) * (x.factor || 0)), 0);
+
+        totalTraspasos += subtotalExtrasTraspaso;
+        totalTraspasosFactor += subtotalExtrasTraspasoFactor;
 
         const materialesConFactor = totalMateriales * this.datos.factorGeneral;
         const subtotalSinIVA = materialesConFactor + totalTraspasos + totalTraspasosFactor;
@@ -1599,6 +1588,7 @@ class WizardCotizacion {
                 return { ok:false, error:'no-supabase' };
             }
 
+            // Obtener user id si hay sesión
             let user_id = null;
             try {
                 const userResp = await supa.auth.getUser();
@@ -1704,6 +1694,7 @@ class WizardCotizacion {
             const userResp = await supa.auth.getUser();
             const user_id = userResp?.data?.user?.id || null;
 
+            // Supabase range uses start,end inclusive
             const start = offset;
             const end = Math.max(offset, offset + limit - 1);
 
@@ -1729,14 +1720,7 @@ class WizardCotizacion {
             const { data, error } = await supa.from('cotizaciones').delete().eq('id', id).select().single();
             if (error) throw error;
             if (this.datos._id === id) {
-                this.datos = { 
-                    cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, 
-                    materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, 
-                    quincalleriaExtras: [], tablerosExtras: [], tapacantosExtras: [], tablerosMaderaExtras: [], ledElectricidadExtras: [],
-                    valoresTraspasadosExtras: { doer:[], eplum:[], cuarzo:[], almuerzo:[], transporte:[] },
-                    valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), 
-                    factorGeneral: 2, partidas: [] 
-                };
+                this.datos = { cliente: { nombre_proyecto:'', nombre:'', direccion:'', comuna:'', correo:'', telefono:'', encargado:'', notas:'' }, materiales: { quincalleria:{}, tableros:{}, tapacantos:{}, servicios_externos:{}, tableros_madera:{}, led_electricidad:{}, otras_compras:{} }, traspasosExtras: [], valoresTraspasados: JSON.parse(JSON.stringify(this.datos.valoresTraspasados || {})), factorGeneral: 2, partidas: [] };
                 this._ensurePartidasInit();
                 this._ensureExtrasInitAll();
                 this._ensureTraspasoExtrasInit();
@@ -1762,13 +1746,14 @@ class WizardCotizacion {
             cloned._updated_at = null;
             cloned.version = 1;
 
+            // Regenerar IDs de partidas manteniendo nombres
             if (Array.isArray(cloned.partidas)) {
                 cloned.partidas = cloned.partidas.map(p => ({ id: this._genPartidaId(), nombre: p.nombre || '' }));
             } else {
                 cloned.partidas = [{ id: this._genPartidaId(), nombre: '' }];
             }
 
-            // Regenerar IDs de extras materiales
+            // Regenerar IDs de extras de materiales
             this._ensureExtrasInitAll();
             Object.values(this.extraConfig).forEach(cfg => {
                 if (Array.isArray(cloned[cfg.key])) {
@@ -1776,14 +1761,12 @@ class WizardCotizacion {
                 }
             });
 
-            // Regenerar IDs de extras traspasados
+            // Regenerar IDs de traspasos extra globales
             this._ensureTraspasoExtrasInit();
-            if (cloned.valoresTraspasadosExtras && typeof cloned.valoresTraspasadosExtras === 'object') {
-                Object.keys(cloned.valoresTraspasadosExtras).forEach(k => {
-                    if (Array.isArray(cloned.valoresTraspasadosExtras[k])) {
-                        cloned.valoresTraspasadosExtras[k] = cloned.valoresTraspasadosExtras[k].map(x => ({ ...x, id: this._genExtraId() }));
-                    }
-                });
+            if (Array.isArray(cloned.traspasosExtras)) {
+                cloned.traspasosExtras = cloned.traspasosExtras.map(x => ({ ...x, id: this._genExtraId() }));
+            } else {
+                cloned.traspasosExtras = [];
             }
 
             const prev = this.datos;
@@ -1796,7 +1779,7 @@ class WizardCotizacion {
         }
     }
 
-    // ------------- Autosave -------------
+    // ------------- Autosave 20s -------------
     startAutosave() {
         try {
             if (this._autosaveInterval) clearInterval(this._autosaveInterval);
@@ -1865,6 +1848,7 @@ class WizardCotizacion {
             const fecha = new Date().toLocaleDateString('es-CL');
             const numero = this.datos.numero || ('COT-' + Date.now());
 
+            // Generar HTML completo (incluye estilos)
             const html = this.generarHTMLImpresion(totales, fecha, numero);
             const ventanaImpresion = window.open('', '_blank');
             if (!ventanaImpresion) { alert('No se pudo abrir ventana de impresión (popup bloqueado)'); return; }
@@ -1987,19 +1971,20 @@ class WizardCotizacion {
     }
 
     generarHTMLImpresion(totales, fecha, numero) {
+        // Generar detalle de materiales
         let detalleMateriales = '';
         Object.keys(this.datos.materiales).forEach(categoria => {
             const materiales = this.datos.materiales[categoria] || {};
             let filasCategoria = '';
             Object.values(materiales).forEach(material => {
-                if ((material.cantidad || 0) > 0 || (material.precio || 0) > 0 || (material.descripcion || '').trim()) {
+                if ((material.cantidad || 0) > 0) {
                     const subtotal = (material.cantidad || 0) * (material.precio || 0);
                     filasCategoria += `
                         <tr>
                             <td>${this.escapeHtml(material.nombre)}</td>
                             <td>${this.escapeHtml(material.descripcion || '-')}</td>
                             <td>${this.escapeHtml(material.lugar || '-')}</td>
-                            <td style="text-align: center;">${material.cantidad || 0}</td>
+                            <td style="text-align: center;">${material.cantidad}</td>
                             <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
                             <td style="text-align: right; font-weight: bold;">$${subtotal.toLocaleString()}</td>
                         </tr>
@@ -2015,7 +2000,7 @@ class WizardCotizacion {
                         const subtotal = (x.total !== undefined) ? x.total : (x.cantidad || 0) * (x.valor_unitario || 0);
                         filasCategoria += `
                             <tr>
-                                <td>${this.escapeHtml(x.nombre || `${cfg.label}`)}</td>
+                                <td>${this.escapeHtml(x.nombre || 'Extra')}</td>
                                 <td>${this.escapeHtml(x.descripcion || '-')}</td>
                                 <td>${this.escapeHtml(x.proveedor || '-')}</td>
                                 <td style="text-align: center;">${x.cantidad || 0}</td>
@@ -2039,35 +2024,21 @@ class WizardCotizacion {
             }
         });
 
+        // Generar detalle de traspasados base
         let detalleTraspasados = '';
         Object.keys(this.datos.valoresTraspasados).forEach(categoriaKey => {
             const categoria = this.datos.valoresTraspasados[categoriaKey];
             let filasCategoria = '';
             Object.values(categoria.materiales).forEach(material => {
-                if ((material.cantidad || 0) > 0 || (material.precio || 0) > 0 || (material.descripcion || '').trim()) {
+                if ((material.cantidad || 0) > 0) {
                     const subtotal = (material.cantidad || 0) * (material.precio || 0);
                     filasCategoria += `
                         <tr>
                             <td>${this.escapeHtml(material.nombre)}</td>
                             <td>${this.escapeHtml(material.descripcion || '-')}</td>
-                            <td style="text-align: center;">${material.cantidad || 0}</td>
+                            <td style="text-align: center;">${material.cantidad}</td>
                             <td style="text-align: right;">$${(material.precio || 0).toLocaleString()}</td>
                             <td style="text-align: right;">$${subtotal.toLocaleString()}</td>
-                        </tr>
-                    `;
-                }
-            });
-            const extras = this.datos.valoresTraspasadosExtras?.[categoriaKey] || [];
-            extras.forEach(x => {
-                if ((x.cantidad || 0) > 0 || (x.precio || 0) > 0 || (x.nombre || '').trim()) {
-                    const subtotal = (x.total !== undefined) ? x.total : (x.cantidad || 0) * (x.precio || 0);
-                    filasCategoria += `
-                        <tr>
-                            <td>${this.escapeHtml(x.nombre || 'Extra')}</td>
-                            <td>${this.escapeHtml(x.descripcion || '-')}</td>
-                            <td style="text-align: center;">${x.cantidad || 0}</td>
-                            <td style="text-align: right;">$${(x.precio || 0).toLocaleString()}</td>
-                            <td style="text-align: right;">$${(subtotal || 0).toLocaleString()}</td>
                         </tr>
                     `;
                 }
@@ -2084,6 +2055,32 @@ class WizardCotizacion {
                 `;
             }
         });
+
+        // Detalle de traspasos extras globales
+        let detalleExtrasTraspaso = '';
+        if (Array.isArray(this.datos.traspasosExtras) && this.datos.traspasosExtras.length) {
+            detalleExtrasTraspaso += `
+                <tr style="background: #ede7ff;">
+                    <td colspan="5" style="font-weight: bold; color: #5a2ea6; text-transform: uppercase;">
+                        Extras Traspasados (factor por línea)
+                    </td>
+                </tr>
+            `;
+            this.datos.traspasosExtras.forEach(x => {
+                if ((x.cantidad || 0) > 0 || (x.precio || 0) > 0 || (x.nombre || '').trim()) {
+                    const subtotal = (x.total !== undefined) ? x.total : (x.cantidad || 0) * (x.precio || 0);
+                    detalleExtrasTraspaso += `
+                        <tr>
+                            <td>${this.escapeHtml(x.nombre || 'Extra')}</td>
+                            <td>${this.escapeHtml(x.descripcion || '-')}</td>
+                            <td style="text-align: center;">${x.cantidad || 0}</td>
+                            <td style="text-align: right;">$${(x.precio || 0).toLocaleString()}</td>
+                            <td style="text-align: right;">$${(subtotal || 0).toLocaleString()} (f: ${(x.factor || 0).toFixed(2)})</td>
+                        </tr>
+                    `;
+                }
+            });
+        }
 
         return `
             <!DOCTYPE html>
@@ -2134,7 +2131,7 @@ class WizardCotizacion {
                     </table>
                 </div>` : ''}
 
-                ${detalleTraspasados ? `
+                ${(detalleTraspasados || detalleExtrasTraspaso) ? `
                 <div class="section">
                     <div class="section-title">🏢 SERVICIOS TRASPASADOS</div>
                     <table class="table">
@@ -2149,6 +2146,7 @@ class WizardCotizacion {
                         </thead>
                         <tbody>
                             ${detalleTraspasados}
+                            ${detalleExtrasTraspaso}
                         </tbody>
                     </table>
                 </div>` : ''}
@@ -2179,12 +2177,15 @@ class WizardCotizacion {
 let bytWizard = null;
 
 function anteriorPaso() {
+    // Candidates in preferred order
     const candidates = [window.bytWizard, window.wizard, window.__bytWizardProxy];
     for (const inst of candidates) {
         if (!inst) continue;
+        // If method exists use it
         if (typeof inst.anteriorPaso === 'function') {
             try { return inst.anteriorPaso(); } catch (e) { console.error('Error calling anteriorPaso on instance', e); return; }
         }
+        // Fallback: if mostrarPaso exists and pasoActual is numeric, decrement and call mostrarPaso
         if (typeof inst.mostrarPaso === 'function' && typeof inst.pasoActual !== 'undefined') {
             try {
                 inst.pasoActual = Math.max(1, Number(inst.pasoActual || 1) - 1);
@@ -2195,6 +2196,7 @@ function anteriorPaso() {
                 return;
             }
         }
+        // Last resort: mutate pasoActual if available
         if (typeof inst.pasoActual !== 'undefined') {
             try { inst.pasoActual = Math.max(1, Number(inst.pasoActual || 1) - 1); return; } catch (e) {}
         }
@@ -2209,6 +2211,7 @@ function siguientePaso() {
         if (typeof inst.siguientePaso === 'function') {
             try { return inst.siguientePaso(); } catch (e) { console.error('Error calling siguientePaso on instance', e); return; }
         }
+        // Fallback: if mostrarPaso exists and pasoActual is numeric, increment and call mostrarPaso
         if (typeof inst.mostrarPaso === 'function' && typeof inst.pasoActual !== 'undefined') {
             try {
                 const max = (typeof inst.totalPasos === 'number' && inst.totalPasos > 0) ? inst.totalPasos : 999;
@@ -2220,6 +2223,7 @@ function siguientePaso() {
                 return;
             }
         }
+        // Last resort: mutate pasoActual if available
         if (typeof inst.pasoActual !== 'undefined') {
             try { inst.pasoActual = Number(inst.pasoActual || 1) + 1; return; } catch (e) {}
         }
@@ -2230,12 +2234,16 @@ function siguientePaso() {
 document.addEventListener('DOMContentLoaded', function() {
     try {
         bytWizard = new WizardCotizacion();
+        // Exponer explicitamente la instancia en window.bytWizard
         window.bytWizard = bytWizard;
 
+        // Crear un proxy seguro que delegue a bytWizard y que se pueda usar si alguna parte del HTML llama a "wizard?.siguientePaso()"
+        // Solo creamos/reemplazamos window.wizard si NO existe un elemento DOM con id/name "wizard".
         try {
             const existing = Object.prototype.hasOwnProperty.call(window, 'wizard') ? window.wizard : undefined;
             const isDOM = (existing && (existing instanceof HTMLElement || existing instanceof Node));
             if (!isDOM) {
+                // build a lightweight proxy that forwards property access and binds methods to the instance
                 const proxy = new Proxy(bytWizard, {
                     get(target, prop) {
                         const val = target[prop];
@@ -2245,6 +2253,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         return val;
                     },
                     set(target, prop, value) {
+                        // allow writable properties on the instance
                         try {
                             target[prop] = value;
                             return true;
@@ -2254,13 +2263,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         return prop in target;
                     }
                 });
+                // keep a reference in window.__bytWizardProxy for the wrapper functions to try if needed
                 window.__bytWizardProxy = proxy;
+                // expose as window.wizard for compatibility (so inline onclick="wizard?.siguientePaso()" works)
                 window.wizard = proxy;
                 console.log('window.wizard set as proxy to window.bytWizard (no DOM conflict detected).');
             } else {
+                // si existe un elemento DOM llamado 'wizard', no lo sobrescribimos; se usa window.bytWizard explícitamente
                 console.warn('No sobrescribiendo window.wizard porque existe un elemento DOM con ese nombre/id. Usar window.bytWizard en su lugar.');
             }
         } catch (e) {
+            // fallback: exponer al menos window.bytWizard y la referencia proxy en __bytWizardProxy
             try {
                 const proxyFallback = new Proxy(bytWizard, {
                     get(target, prop) {
