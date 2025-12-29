@@ -8,7 +8,7 @@
 // Colores resaltado paso activo:
 //   fondo: #bfe7c7
 //   texto: #1b5e20
-//   borde: #7fbf90
+//   borde: #7fbf90  
 //
 // Haz backup antes de reemplazar.
 
@@ -2312,3 +2312,4 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
