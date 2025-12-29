@@ -374,17 +374,28 @@
     </script>
 
     <!-- Guardar rápido paso 1: llama directo a saveCotizacionSupabase -->
+   
+    
+    
     <script>
-      async function guardarCotizacionPaso1() {
-        try {
-          await window.bytWizard.saveCotizacionSupabase();
-          alert('Guardado');
-        } catch (e) {
-          console.error(e);
-          alert('Error al guardar');
-        }
-      }
-    </script>
+  // Guardar rápido paso 1: llama directo a saveCotizacionSupabase
+  async function guardarCotizacionPaso1() {
+    try {
+      const res = await window.bytWizard.saveCotizacionSupabase();
+      // Si la validación o el guardado fallan, no muestres éxito
+      if (!res || res.success === false) return;
+      window.utils?.mostrarNotificacion?.('Guardado', 'success');
+    } catch (e) {
+      console.error(e);
+      window.utils?.mostrarNotificacion?.('Error al guardar: ' + (e.message || e), 'error');
+    }
+  }
+</script>
+
+
+
+
+    
 
     <!-- Redirigir botón Finalizar (paso 10) al menú principal -->
     <script>
@@ -897,6 +908,7 @@
   <script src="../../js/layout.js"></script>
 </body>
 </html>
+
 
 
 
