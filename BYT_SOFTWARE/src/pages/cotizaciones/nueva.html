@@ -359,20 +359,25 @@
   const subEl   = document.querySelector('[data-wizard-subtitle]');
   if (!titleEl || !subEl) return;
 
-  // Inputs que queremos escuchar
+  // Selectores amplios
   const selectors = [
     'input[name="nombre_proyecto"]',
+    'input[id="nombre_proyecto"]',
+    'input[name*="proyecto"]',
+    'input[id*="proyecto"]',
     '[data-partida-nombre]',
     '.partida-item input',
     'input[name="partidas[]"]',
-    'input.partida-nombre'
+    'input.partida-nombre',
+    'input[name*="partida"]',
+    'input[id*="partida"]'
   ].join(', ');
 
   const getNombreProyecto = () => {
     const d = window.bytWizard?.datos || {};
     const fromDatos = (d.cliente?.nombre_proyecto || '').trim();
     if (fromDatos) return fromDatos;
-    const inp = document.querySelector('input[name="nombre_proyecto"]');
+    const inp = document.querySelector(selectors);
     return (inp?.value || '').trim();
   };
 
@@ -391,47 +396,46 @@
     subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
   };
 
-  // Eventos en vivo sobre el documento (capture para inputs recién montados)
+  // Eventos en vivo
   const handler = (e) => {
     if (e.target.matches(selectors)) requestAnimationFrame(refreshHeader);
   };
   document.addEventListener('input', handler, { capture: true });
   document.addEventListener('keyup', handler, { capture: true });
 
-  // Hook sobre bytWizard para refrescar tras renders/cambios de datos
+  // Observer por si el wizard re-renderiza inputs
+  const mo = new MutationObserver(() => requestAnimationFrame(refreshHeader));
+  mo.observe(document.body, { childList: true, subtree: true });
+
+  // Hook básico sobre wizard
   const hookWizard = () => {
     const wiz = window.bytWizard;
     if (!wiz || wiz.__headerHooked) return;
-    // wrap mostrarPaso
-    if (typeof wiz.mostrarPaso === 'function') {
-      const orig = wiz.mostrarPaso.bind(wiz);
-      wiz.mostrarPaso = function(n) { const r = orig(n); requestAnimationFrame(refreshHeader); return r; };
-    }
-    // wrap agregarPartida / eliminarPartida / actualizarPartidaNombre si existen
-    ['agregarPartida','eliminarPartida','actualizarPartidaNombre','_actualizarPartidaNombre']
+    ['mostrarPaso','agregarPartida','eliminarPartida','actualizarPartidaNombre','_actualizarPartidaNombre','setDato','setCliente']
       .forEach(m => {
         if (typeof wiz[m] === 'function') {
           const orig = wiz[m].bind(wiz);
           wiz[m] = function(...args){ const r = orig(...args); requestAnimationFrame(refreshHeader); return r; };
         }
       });
-    // wrap setDato / setCliente si existen
-    ['setDato','setCliente'].forEach(m => {
-      if (typeof wiz[m] === 'function') {
-        const orig = wiz[m].bind(wiz);
-        wiz[m] = function(...args){ const r = orig(...args); requestAnimationFrame(refreshHeader); return r; };
-      }
-    });
     wiz.__headerHooked = true;
   };
 
-  // Refresco inicial + espera a que exista bytWizard para enganchar hooks
-  const wait = setInterval(() => {
-    refreshHeader();
+  // Refresco inicial + polling corto por si tarda en montar
+  const poll = setInterval(() => {
     hookWizard();
-    if (window.bytWizard) clearInterval(wait);
+    refreshHeader();
+    if (window.bytWizard) clearInterval(poll); // corta si ya existe wizard
   }, 200);
 
+  // Limpieza opcional al descargar
+  window.addEventListener('beforeunload', () => {
+    mo.disconnect();
+    clearInterval(poll);
+  });
+
+  // Primer render
+  refreshHeader();
 })();
 </script>
 
@@ -1047,4 +1051,5 @@
   </div>
 </body>
 </html>
+
 
