@@ -313,6 +313,17 @@
     .valores-table th:nth-child(6),
     .valores-table td:nth-child(6) { width: 18%; text-align: right; }
 
+    /* Evitar cortes dentro de tarjetas y tablas en PDF */
+    .card,
+    .table-container,
+    table,
+    tr,
+    td,
+    th {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
     @media (max-width: 640px) {
       .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
     }
@@ -1109,12 +1120,12 @@
           if (!element) throw new Error('No hay contenido para exportar');
 
           const opt = {
-            margin:       [10, 10, 10, 10], // top, left, bottom, right (pt)
+            margin:       [10, 10, 10, 10],
             filename:     `cotizacion-${cotizacionId || 'detalle'}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
             jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: ['css', 'legacy'] }
+            pagebreak:    { mode: ['avoid-all', 'css'] }
           };
 
           await html2pdf().set(opt).from(element).save();
