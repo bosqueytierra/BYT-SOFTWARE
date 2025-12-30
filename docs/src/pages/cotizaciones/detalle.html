@@ -259,7 +259,7 @@
       font-size: 20px;
     }
 
-    /* Valores traspasados más suaves y encabezado compacto */
+    /* Valores traspasados: encabezado ancho completo, verde claro, texto negro */
     .valores-block {
       margin-bottom: 18px;
       border: 1px solid #e2e8f0;
@@ -268,17 +268,14 @@
       box-shadow: 0 10px 24px rgba(0,0,0,0.04);
     }
     .valores-head {
-      display: inline-flex;
-      align-items: center;
-      background: #4f806c;
-      color: #fff;
-      padding: 10px 14px;
+      display: block;
+      width: 100%;
+      background: #dfeae4; /* verde más claro */
+      color: #1f2430;       /* texto negro */
+      padding: 12px 14px;
       font-weight: 800;
-      gap: 8px;
       border-radius: 12px 12px 0 0;
-      margin: 0 0 8px 0;
-      min-width: 240px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+      border-bottom: 1px solid #c9d7cf;
     }
     .valores-body {
       background: #fff;
@@ -642,12 +639,14 @@
         if (!container) return;
         const data = getDataSafe();
         const c = data.cliente || {};
+        const partidas = (data.partidas || []).map(p => (p?.nombre || p || '').trim()).filter(Boolean);
+
         const items = [
           { label: 'Nombre del Proyecto', value: c.nombre_proyecto || 'N/A' },
           { label: 'Cliente', value: c.nombre || 'N/A' },
           { label: 'Dirección', value: c.direccion || 'N/A' },
           { label: 'Comuna', value: c.comuna || 'N/A' },
-          // se ocultan correo, teléfono, encargado, id, fecha
+          ...(partidas.length ? [{ label: 'Partidas', value: partidas.join(' | ') }] : []),
         ];
 
         let html = '';
