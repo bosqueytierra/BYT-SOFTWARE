@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Configuración - Proveedores</title>
+
+  <!-- Estilos propios de la página -->
   <style>
     :root {
       --byt-bg: #f5f7f8;
@@ -28,10 +30,13 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 24px;
       font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
       background: var(--byt-bg);
       color: var(--byt-text);
+    }
+
+    #page-content {
+      padding: 24px;
     }
 
     .page {
@@ -303,108 +308,114 @@
   </style>
 </head>
 <body>
-  <div class="page">
-    <h2>Configuración — Proveedores</h2>
+  <div id="page-content">
+    <div class="page">
+      <h2>Configuración — Proveedores</h2>
 
-    <div class="card">
-      <div id="banner-container" aria-live="polite"></div>
+      <div class="card">
+        <div id="banner-container" aria-live="polite"></div>
 
-      <div class="toolbar">
+        <div class="toolbar">
+          <div>
+            <button id="btnNew" class="btn-primary">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3v10M3 8h10"/>
+              </svg>
+              Nuevo proveedor
+            </button>
+            <button id="btnReload" class="btn-ghost">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3.5 8a4.5 4.5 0 0 1 7.64-3.18L13 2.5v4h-4l1.86-1.86A3 3 0 0 0 4.5 8a3.5 3.5 0 0 0 6.2 2.3l1.3 1.5A5.5 5.5 0 0 1 3.5 8Z"/>
+              </svg>
+              Recargar
+            </button>
+            <button id="btnDemo" class="btn-ghost" title="Activar modo demo/local" style="display:none">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9.5 8 4l5 5.5M8 4v8"/>
+              </svg>
+              Modo Demo
+            </button>
+          </div>
+          <div class="grow status-text">
+            <span id="statusText" class="muted small"></span>
+          </div>
+        </div>
+
+        <div id="connectArea" class="connect-form" style="display:none;">
+          <div class="muted small">No se detectó una conexión con Supabase. Pega credenciales temporales (solo pruebas) o usa Modo Demo.</div>
+          <div class="input-group" style="margin-top:8px;">
+            <div class="field">
+              <label>Supabase URL</label>
+              <input id="connUrl" type="url" placeholder="https://xyz.supabase.co" />
+            </div>
+            <div class="field">
+              <label>ANON KEY</label>
+              <input id="connKey" type="password" placeholder="eyJhbGciOi..." />
+            </div>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button id="btnConnect" class="btn-green-soft">Conectar</button>
+            <button id="btnUseDemo" class="btn-ghost">Modo Demo</button>
+            <button id="btnCancelConnect" class="btn-gray">Cancelar</button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto; border:1px solid var(--byt-border); border-radius: 12px;">
+          <table id="providersTable" aria-label="Proveedores">
+            <thead>
+              <tr>
+                <th style="width:28%;">Nombre</th>
+                <th style="width:28%;">Website</th>
+                <th style="width:18%;">Teléfono</th>
+                <th style="width:14%;">Creado</th>
+                <th style="width:12%; text-align:left;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-backdrop" id="providerModalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title" id="modalTitle">Nuevo proveedor</div>
+          <button id="btnCloseModal" class="btn-ghost" aria-label="Cerrar">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4l8 8M12 4l-8 8"/>
+            </svg>
+          </button>
+        </div>
         <div>
-          <button id="btnNew" class="btn-primary">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M8 3v10M3 8h10"/>
-            </svg>
-            Nuevo proveedor
-          </button>
-          <button id="btnReload" class="btn-ghost">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3.5 8a4.5 4.5 0 0 1 7.64-3.18L13 2.5v4h-4l1.86-1.86A3 3 0 0 0 4.5 8a3.5 3.5 0 0 0 6.2 2.3l1.3 1.5A5.5 5.5 0 0 1 3.5 8Z"/>
-            </svg>
-            Recargar
-          </button>
-          <button id="btnDemo" class="btn-ghost" title="Activar modo demo/local" style="display:none">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 9.5 8 4l5 5.5M8 4v8"/>
-            </svg>
-            Modo Demo
-          </button>
+          <label>Nombre</label>
+          <input type="text" id="modalName" placeholder="Nombre del proveedor" />
         </div>
-        <div class="grow status-text">
-          <span id="statusText" class="muted small"></span>
+        <div style="margin-top:10px;">
+          <label>Website</label>
+          <input type="url" id="modalWebsite" placeholder="https://proveedor.com" />
         </div>
-      </div>
-
-      <div id="connectArea" class="connect-form" style="display:none;">
-        <div class="muted small">No se detectó una conexión con Supabase. Pega credenciales temporales (solo pruebas) o usa Modo Demo.</div>
-        <div class="input-group" style="margin-top:8px;">
-          <div class="field">
-            <label>Supabase URL</label>
-            <input id="connUrl" type="url" placeholder="https://xyz.supabase.co" />
-          </div>
-          <div class="field">
-            <label>ANON KEY</label>
-            <input id="connKey" type="password" placeholder="eyJhbGciOi..." />
-          </div>
+        <div style="margin-top:10px;">
+          <label>Teléfono</label>
+          <input type="text" id="modalPhone" placeholder="+54 11 ..." />
         </div>
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button id="btnConnect" class="btn-green-soft">Conectar</button>
-          <button id="btnUseDemo" class="btn-ghost">Modo Demo</button>
-          <button id="btnCancelConnect" class="btn-gray">Cancelar</button>
+        <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" id="modalActive" />
+          <label for="modalActive" style="margin:0; font-size:14px; color:var(--byt-text);">Activo</label>
         </div>
-      </div>
-
-      <div style="overflow-x:auto; border:1px solid var(--byt-border); border-radius: 12px;">
-        <table id="providersTable" aria-label="Proveedores">
-          <thead>
-            <tr>
-              <th style="width:28%;">Nombre</th>
-              <th style="width:28%;">Website</th>
-              <th style="width:18%;">Teléfono</th>
-              <th style="width:14%;">Creado</th>
-              <th style="width:12%; text-align:left;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="modal-footer">
+          <button id="btnCancelModal" class="btn-gray">Cancelar</button>
+          <button id="btnSaveModal" class="btn-primary">Guardar</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal -->
-  <div class="modal-backdrop" id="providerModalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal">
-      <div class="modal-header">
-        <div class="modal-title" id="modalTitle">Nuevo proveedor</div>
-        <button id="btnCloseModal" class="btn-ghost" aria-label="Cerrar">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 4l8 8M12 4l-8 8"/>
-          </svg>
-        </button>
-      </div>
-      <div>
-        <label>Nombre</label>
-        <input type="text" id="modalName" placeholder="Nombre del proveedor" />
-      </div>
-      <div style="margin-top:10px;">
-        <label>Website</label>
-        <input type="url" id="modalWebsite" placeholder="https://proveedor.com" />
-      </div>
-      <div style="margin-top:10px;">
-        <label>Teléfono</label>
-        <input type="text" id="modalPhone" placeholder="+54 11 ..." />
-      </div>
-      <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
-        <input type="checkbox" id="modalActive" />
-        <label for="modalActive" style="margin:0; font-size:14px; color:var(--byt-text);">Activo</label>
-      </div>
-      <div class="modal-footer">
-        <button id="btnCancelModal" class="btn-gray">Cancelar</button>
-        <button id="btnSaveModal" class="btn-primary">Guardar</button>
-      </div>
-    </div>
-  </div>
+  <!-- Layout global (sidebar/topbar) -->
+  <script src="../../js/layout.js"></script>
 
+  <!-- Scripts originales (mantener después de layout.js) -->
   <script type="module">
     import * as apiModule from '../../lib/providersApi.js';
     import { ensureSupabase, initializeSupabase } from '../../js/supabaseBrowserClient.js';
