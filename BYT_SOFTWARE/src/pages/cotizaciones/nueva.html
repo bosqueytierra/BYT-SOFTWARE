@@ -359,25 +359,32 @@
   const subEl   = document.querySelector('[data-wizard-subtitle]');
   if (!titleEl || !subEl) return;
 
-  // Selectores amplios
-  const selectors = [
+  // Selectores separados
+  const nameSelectors = [
     'input[name="nombre_proyecto"]',
     'input[id="nombre_proyecto"]',
     'input[name*="proyecto"]',
     'input[id*="proyecto"]',
+    'input[placeholder*="Proyecto"]',
+    'input[aria-label*="Proyecto"]'
+  ].join(', ');
+
+  const partidaSelectors = [
     '[data-partida-nombre]',
     '.partida-item input',
     'input[name="partidas[]"]',
     'input.partida-nombre',
     'input[name*="partida"]',
-    'input[id*="partida"]'
+    'input[id*="partida"]',
+    'input[placeholder*="partida"]',
+    'input[aria-label*="partida"]'
   ].join(', ');
 
   const getNombreProyecto = () => {
     const d = window.bytWizard?.datos || {};
     const fromDatos = (d.cliente?.nombre_proyecto || '').trim();
     if (fromDatos) return fromDatos;
-    const inp = document.querySelector(selectors);
+    const inp = document.querySelector(nameSelectors);
     return (inp?.value || '').trim();
   };
 
@@ -385,7 +392,7 @@
     const d = window.bytWizard?.datos || {};
     const arr = (d.partidas || []).map(p => (p?.nombre || '').trim()).filter(Boolean);
     if (arr.length) return arr;
-    return Array.from(document.querySelectorAll(selectors))
+    return Array.from(document.querySelectorAll(partidaSelectors))
       .map(el => (el.value || '').trim())
       .filter(Boolean);
   };
@@ -396,9 +403,11 @@
     subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
   };
 
-  // Eventos en vivo
+  // Eventos en vivo: solo inputs de proyecto o partidas
   const handler = (e) => {
-    if (e.target.matches(selectors)) requestAnimationFrame(refreshHeader);
+    if (e.target.matches(nameSelectors) || e.target.matches(partidaSelectors)) {
+      requestAnimationFrame(refreshHeader);
+    }
   };
   document.addEventListener('input', handler, { capture: true });
   document.addEventListener('keyup', handler, { capture: true });
@@ -407,7 +416,7 @@
   const mo = new MutationObserver(() => requestAnimationFrame(refreshHeader));
   mo.observe(document.body, { childList: true, subtree: true });
 
-  // Hook básico sobre wizard
+  // Hook sobre wizard para refrescar después de sus métodos
   const hookWizard = () => {
     const wiz = window.bytWizard;
     if (!wiz || wiz.__headerHooked) return;
@@ -421,24 +430,21 @@
     wiz.__headerHooked = true;
   };
 
-  // Refresco inicial + polling corto por si tarda en montar
+  // Refresco inicial + polling corto hasta que exista bytWizard
   const poll = setInterval(() => {
     hookWizard();
     refreshHeader();
-    if (window.bytWizard) clearInterval(poll); // corta si ya existe wizard
+    if (window.bytWizard) clearInterval(poll);
   }, 200);
 
-  // Limpieza opcional al descargar
   window.addEventListener('beforeunload', () => {
     mo.disconnect();
     clearInterval(poll);
   });
 
-  // Primer render
   refreshHeader();
 })();
 </script>
-
 
 
 
@@ -1051,5 +1057,6 @@
   </div>
 </body>
 </html>
+
 
 
