@@ -397,7 +397,11 @@ class WizardCotizacion {
             this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar_id = valueStr;
             this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar = providerName || '';
 
-            this.fillProviderSelects();
+            // Actualiza el select actual para que conserve la selección tras rellenar opciones
+const sel = document.querySelector(`select.lugar-select[data-material-id="${materialKey}"]`);
+if (sel) { sel.setAttribute('data-current', valueStr); sel.value = valueStr; }
+
+this.fillProviderSelects();
 
             const totalEl = document.getElementById(`total_traspaso_${categoriaKey}`);
             const cobroEl = document.getElementById(`cobro_traspaso_${categoriaKey}`);
@@ -2333,3 +2337,4 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
