@@ -1,1 +1,1132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Detalle Cotización - BYT SOFTWARE</title>
+
+  <!-- Estilos base (se mantienen) -->
+  <link rel="stylesheet" href="../../styles/global.css" />
+
+  <style>
+    :root {
+      --bg: #f3f5f7;
+      --card: #ffffff;
+      --border: #e4e7eb;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --primary: #2e5e4e;
+      --primary-soft: #3f705d;
+      --accent: #bfe7c7;
+      --accent-strong: #1b5e20;
+      --chip-border: #7fbf90;
+      --viewer-scale: 1;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page-content {
+      padding: 18px 22px 32px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
+    .btn-ghost { background: #f0f3f5; color: var(--text); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid #e9edef;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    }
+    .card-title {
+      margin: 0 0 10px 0;
+      color: var(--primary);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    /* Ocultamos la barra KPI superior tachada */
+    #topbar-kpis { display: none !important; }
+
+    /* Info / detalle */
+    .detalle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .detalle-item {
+      padding: 12px;
+      background: #f8faf9;
+      border-radius: 10px;
+      border-left: 4px solid var(--primary);
+    }
+    .detalle-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .detalle-value {
+      font-size: 15px;
+      color: var(--text);
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    /* Resumen financiero compacto tipo mock */
+    .fin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    @media (min-width: 1024px) {
+      .fin-grid {
+        grid-template-areas:
+          "factor ganancia"
+          "matBase matFactor"
+          "trasBase trasFactor"
+          "subtotal iva"
+          "totalTrasp totalProyecto";
+      }
+      .fin-card.area-factor { grid-area: factor; }
+      .fin-card.area-ganancia { grid-area: ganancia; }
+      .fin-card.area-matBase { grid-area: matBase; }
+      .fin-card.area-matFactor { grid-area: matFactor; }
+      .fin-card.area-trasBase { grid-area: trasBase; }
+      .fin-card.area-trasFactor { grid-area: trasFactor; }
+      .fin-card.area-subtotal { grid-area: subtotal; }
+      .fin-card.area-iva { grid-area: iva; }
+      .fin-card.area-totalTrasp { grid-area: totalTrasp; }
+      .fin-card.area-totalProyecto { grid-area: totalProyecto; }
+    }
+    .fin-card {
+      background: #f8faf9;
+      border: 1px solid #e4e9ec;
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.04);
+    }
+    .fin-card h4 {
+      margin: 0 0 6px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--muted);
+    }
+    .fin-card .fin-value {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .fin-card.highlight {
+      background: #2f5f4c;
+      color: #fff;
+      border-color: #2f5f4c;
+    }
+    .fin-card.highlight h4 { color: rgba(255,255,255,0.82); }
+    .fin-card.highlight .fin-value { color: #fff; }
+
+    .no-data { color:#666; text-align:center; padding:18px; }
+
+    /* Archivos */
+    .files-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+    .file-card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .file-preview {
+      background: #f4f6f7;
+      display: grid;
+      place-items: center;
+      min-height: 180px;
+    }
+    .file-preview img {
+      max-width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      display: block;
+    }
+    .file-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .file-name { font-weight: 700; color: var(--text); margin: 0; }
+    .file-meta { color: var(--muted); font-size: 12px; }
+    .file-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+
+    /* Visor */
+    .viewer-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .viewer-overlay.active { display: flex; }
+    .viewer-inner {
+      position: relative;
+      background: #0f1114;
+      max-width: 96vw;
+      max-height: 92vh;
+      width: 96vw;
+      height: 92vh;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .viewer-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      color: #fff;
+      font-weight: 700;
+      background: rgba(255,255,255,0.06);
+    }
+    .viewer-counter { font-size: 14px; color: #cfd4da; }
+    .viewer-close { background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+    .viewer-body { flex: 1; display: grid; place-items: center; background: #0f1114; padding: 16px; }
+    .viewer-body img, .viewer-body iframe {
+      max-width: 95vw;
+      max-height: 80vh;
+      object-fit: contain;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.3);
+      transform: scale(var(--viewer-scale));
+      transform-origin: center;
+    }
+    .viewer-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      width: 100%;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+    .viewer-btn {
+      pointer-events: all;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      width: 44px; height: 44px;
+      display: grid; place-items: center;
+      cursor: pointer;
+      margin: 0 10px;
+      font-size: 20px;
+    }
+
+    /* Valores traspasados: encabezado al ancho del contenido, verde un poco más oscuro y texto negro */
+    .valores-block {
+      margin-bottom: 18px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.04);
+      position: relative;
+    }
+    .valores-head {
+      display: block;
+      background: #cfded6; /* verde ligeramente más oscuro */
+      color: #1f2430;
+      padding: 12px 14px;
+      font-weight: 800;
+      border-radius: 12px 12px 0 0;
+      border-bottom: 1px solid #c1d0c7;
+      margin: 0 -14px -1px -14px; /* se extiende al borde, alineado con la tabla */
+    }
+    .valores-body {
+      background: #fff;
+      padding: 14px;
+    }
+    .valores-footer {
+      background: #f5f9f6;
+      color: #1f3b2e;
+      padding: 10px 14px;
+      font-weight: 700;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .table-container { overflow-x:auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #e6efe9; }
+    th { background: #f5f7f6; color: #2e6b57; font-weight: 800; text-align: left; }
+    .subtotal-row { background: rgba(46,94,78,0.06); font-weight: 700; }
+
+    /* Traspasados: columnas fijas */
+    .valores-table { table-layout: fixed; width: 100%; }
+    .valores-table th:nth-child(1),
+    .valores-table td:nth-child(1) { width: 22%; }
+    .valores-table th:nth-child(2),
+    .valores-table td:nth-child(2) { width: 22%; }
+    .valores-table th:nth-child(3),
+    .valores-table td:nth-child(3) { width: 14%; }
+    .valores-table th:nth-child(4),
+    .valores-table td:nth-child(4) { width: 8%; text-align: center; }
+    .valores-table th:nth-child(5),
+    .valores-table td:nth-child(5) { width: 16%; text-align: right; }
+    .valores-table th:nth-child(6),
+    .valores-table td:nth-child(6) { width: 18%; text-align: right; }
+
+    @media (max-width: 640px) {
+      .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white !important; }
+      .page-content { padding: 0 12px; }
+      .card { box-shadow: none !important; border: 1px solid #ddd; }
+      .topbar { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+
+  <!-- pdf.js para previsualizar PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window['pdfjsLib']) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+</head>
+
+<body>
+  <div id="page-content" class="page-content">
+    <!-- Botonera -->
+    <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+      <button class="btn btn-secondary" onclick="window.print()">Imprimir</button>
+      <button class="btn btn-ghost" onclick="exportarPDF()">Exportar PDF</button>
+    </div>
+
+    <!-- KPIs (ocultos por CSS) -->
+    <div class="card topbar" id="topbar-kpis">
+      <div class="kpi">
+        <div class="kpi-label">Total Materiales</div>
+        <div class="kpi-value" id="kpi-total-materiales">$0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Factor</div>
+        <div class="kpi-value" id="kpi-factor">2x</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Neto</div>
+        <div class="kpi-value" id="kpi-neto">$0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">IVA (19%)</div>
+        <div class="kpi-value" id="kpi-iva">$0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Total Proyecto</div>
+        <div class="kpi-value" id="kpi-total-proyecto">$0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Ganancia</div>
+        <div class="kpi-value" id="kpi-ganancia">$0</div>
+      </div>
+    </div>
+
+    <div id="loading-state" class="card text-center">
+      <div class="loading-spinner" style="margin: 20px auto;"></div>
+      <p>Cargando cotización...</p>
+    </div>
+
+    <div id="detalle-content" style="display: none;">
+      <div class="card section">
+        <h3 class="card-title">Información del Proyecto</h3>
+        <div class="detalle-grid" id="info-proyecto"></div>
+      </div>
+
+      <div class="card section">
+        <h3 class="card-title">Resumen Financiero</h3>
+        <div class="fin-grid" id="resumen-financiero"></div>
+      </div>
+
+      <div class="card section">
+        <h3 class="card-title">Materiales</h3>
+        <div id="materiales-detalle"></div>
+      </div>
+
+      <div class="card section">
+        <h3 class="card-title">Valores Traspasados</h3>
+        <div id="valores-detalle"></div>
+      </div>
+
+      <div class="card section" style="text-align: center; margin-top: 20px;">
+        <h4 style="color: var(--primary); margin-bottom: 6px;">Bosque y Tierra</h4>
+        <p style="color: #666; margin: 5px 0;">Diseño y Fabricación de Muebles Personalizados</p>
+        <p style="color: #666; margin: 5px 0;">Fecha de cotización: <span id="fecha-cotizacion"></span></p>
+        <p style="color: #666; margin: 5px 0; font-size: 12px;">© 2025 BYT SOFTWARE - Sistema Interno de Gestión</p>
+      </div>
+    </div>
+
+    <div id="error-state" class="card text-center" style="display: none;">
+      <div style="font-size: 64px; color: #f44336; margin: 20px 0;">❌</div>
+      <h3 style="color: #f44336;">Error al cargar cotización</h3>
+      <p style="color: #999;" id="error-message">No se pudo cargar la información de la cotización.</p>
+      <button class="btn" onclick="cargarCotizacion()">Reintentar</button>
+    </div>
+  </div>
+
+  <!-- Visor -->
+  <div id="file-viewer" class="viewer-overlay">
+    <div class="viewer-inner">
+      <div class="viewer-top">
+        <div class="viewer-counter" id="viewer-counter">1 / 1</div>
+        <button class="viewer-close" onclick="closeViewer()">×</button>
+      </div>
+      <div class="viewer-body" id="viewer-body"></div>
+      <div class="viewer-nav">
+        <button class="viewer-btn" onclick="prevViewer()">‹</button>
+        <button class="viewer-btn" onclick="nextViewer()">›</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout global: inyecta sidebar y topbar -->
+  <script src="../../js/layout.js"></script>
+
+  <!-- Supabase y scripts existentes (se mantienen después de layout.js) -->
+  <script src="../../lib/supabaseConfig.js"></script>
+  <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+  <script src="../../js/globalSupabase.js" defer></script>
+  <script src="../../js/categorias.js" defer></script>
+
+  <script>
+    (function () {
+      let cotizacionActual = null;
+      let cotizacionId = null;
+      const BUCKET = 'cotizaciones';
+      let viewerItems = [];
+      let viewerIndex = 0;
+
+      const q = (id) => document.getElementById(id);
+
+      if (!localStorage.getItem('byt_logged_in')) {
+        window.location.href = '../login/login.html';
+        return;
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      cotizacionId = urlParams.get('id');
+
+      function formatPrecio(n) {
+        const num = Number(n || 0);
+        return '$' + num.toLocaleString('es-CL');
+      }
+      function escapeHtml(str) {
+        if (str === undefined || str === null) return '';
+        return String(str).replace(/[&<>"']/g, (s) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]);
+      }
+
+      function updateViewerScale() {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        if (vw < 768) {
+          const base = Math.min(vw / 360, vh / 640);
+          const scale = Math.max(1, Math.min(1.0, base * 1.1));
+          document.documentElement.style.setProperty('--viewer-scale', scale.toString());
+        } else {
+          const base = Math.min(vw / 1400, vh / 900);
+          const scale = Math.max(0.55, Math.min(0.7, base));
+          document.documentElement.style.setProperty('--viewer-scale', scale.toString());
+        }
+      }
+      window.addEventListener('resize', updateViewerScale);
+
+      async function start() {
+        if (!cotizacionId) {
+          mostrarError('ID de cotización no proporcionado');
+          return;
+        }
+        try {
+          if (window.supabaseClient && typeof window.supabaseClient.init === 'function') {
+            await window.supabaseClient.init();
+          } else {
+            await new Promise(res => {
+              let resolved = false;
+              const onReady = () => { if (!resolved) { resolved = true; window.removeEventListener('supabase:ready', onReady); res(); } };
+              window.addEventListener('supabase:ready', onReady);
+              setTimeout(() => { if (!resolved) { resolved = true; window.removeEventListener('supabase:ready', onReady); res(); } }, 3000);
+            });
+          }
+        } catch (e) {
+          console.warn('Error inicializando supabaseClient desde detalle:', e);
+        }
+        updateViewerScale();
+        cargarCotizacion();
+      }
+
+      function mostrarEstado(estado) {
+        const loading = q('loading-state');
+        const content = q('detalle-content');
+        const error = q('error-state');
+        if (loading) loading.style.display = estado === 'loading' ? 'block' : 'none';
+        if (content) content.style.display = estado === 'content' ? 'block' : 'none';
+        if (error) error.style.display = estado === 'error' ? 'block' : 'none';
+      }
+
+      function mostrarError(mensaje) {
+        mostrarEstado('error');
+        const msgEl = q('error-message');
+        if (msgEl) msgEl.textContent = mensaje;
+      }
+
+      async function cargarCotizacion() {
+        mostrarEstado('loading');
+        try {
+          if (!window.supabaseClient || typeof window.supabaseClient.obtenerCotizacionPorId !== 'function') {
+            throw new Error('supabaseClient no disponible');
+          }
+          const resultado = await window.supabaseClient.obtenerCotizacionPorId(cotizacionId);
+          if (resultado.success && resultado.data) {
+            cotizacionActual = resultado.data;
+            mostrarDetalle();
+            await cargarArchivos();
+          } else {
+            throw new Error(resultado.error || 'Cotización no encontrada');
+          }
+        } catch (error) {
+          console.error('Error al cargar cotización:', error);
+          mostrarError('Error al cargar cotización: ' + (error.message || String(error)));
+        }
+      }
+
+      function getDataSafe() {
+        return cotizacionActual?.data ? cotizacionActual.data : cotizacionActual || {};
+      }
+
+      function calcularTotales() {
+        const data = getDataSafe();
+        const factorGeneral = Number(data.factorGeneral || data.factor || 2);
+        let totalMateriales = 0;
+        const mats = data.materiales || {};
+        Object.keys(mats).forEach(cat => {
+          Object.values(mats[cat] || {}).forEach(mat => {
+            totalMateriales += (Number(mat.cantidad || 0) * Number(mat.precio || 0));
+          });
+        });
+        const extraMap = {
+          quincalleriaExtras: true,
+          tablerosExtras: true,
+          tapacantosExtras: true,
+          tablerosMaderaExtras: true,
+          ledElectricidadExtras: true,
+        };
+        Object.keys(extraMap).forEach(key => {
+          (data[key] || []).forEach(x => {
+            totalMateriales += Number(x.total || ((x.cantidad || 0) * (x.valor_unitario || 0)) || 0);
+          });
+        });
+
+        let totalTraspasosBase = 0;
+        let totalTraspasosFactor = 0;
+        const vals = data.valoresTraspasados || {};
+        Object.keys(vals).forEach(k => {
+          const cat = vals[k] || {};
+          const factor = Number(cat.factor || 0);
+          let sub = 0;
+          Object.values(cat.materiales || {}).forEach(m => {
+            sub += (Number(m.cantidad || 0) * Number(m.precio || 0));
+          });
+          totalTraspasosBase += sub;
+          totalTraspasosFactor += sub * factor;
+        });
+        (data.traspasosExtras || []).forEach(x => {
+          const base = Number(x.total || ((x.cantidad || 0) * (x.precio || 0)) || 0);
+          const factor = Number(x.factor || 0);
+          totalTraspasosBase += base;
+          totalTraspasosFactor += base * factor;
+        });
+
+        const materialesConFactor = totalMateriales * factorGeneral;
+        const subtotalSinIVA = materialesConFactor + totalTraspasosBase + totalTraspasosFactor;
+        const iva = subtotalSinIVA * 0.19;
+        const totalConIVA = subtotalSinIVA + iva;
+        const ganancia = subtotalSinIVA - totalMateriales - totalTraspasosBase;
+
+        return {
+          totalMateriales,
+          factorGeneral,
+          materialesConFactor,
+          totalTraspasosBase,
+          totalTraspasosFactor,
+          subtotalSinIVA,
+          iva,
+          totalConIVA,
+          ganancia,
+          totalTraspasados: totalTraspasosBase + totalTraspasosFactor,
+        };
+      }
+
+      function mostrarDetalle() {
+        mostrarEstado('content');
+        mostrarInfoProyecto();
+        mostrarKPIs();
+        mostrarResumenFinanciero();
+        mostrarMateriales();
+        mostrarValoresTraspasados();
+        const fecha = new Date(cotizacionActual?.created_at || cotizacionActual?._created_at || Date.now()).toLocaleDateString('es-CL', {
+          year: 'numeric', month: 'long', day: 'numeric'
+        });
+        const fechaSpan = q('fecha-cotizacion');
+        if (fechaSpan) fechaSpan.textContent = fecha;
+      }
+
+      function mostrarKPIs() {
+        const t = calcularTotales();
+        const map = {
+          'kpi-total-materiales': formatPrecio(t.totalMateriales),
+          'kpi-factor': `${t.factorGeneral}x`,
+          'kpi-neto': formatPrecio(t.subtotalSinIVA),
+          'kpi-iva': formatPrecio(t.iva),
+          'kpi-total-proyecto': formatPrecio(t.totalConIVA),
+          'kpi-ganancia': formatPrecio(t.ganancia)
+        };
+        Object.entries(map).forEach(([id, val]) => {
+          const el = q(id);
+          if (el) el.textContent = val;
+        });
+      }
+
+      function mostrarInfoProyecto() {
+        const container = q('info-proyecto');
+        if (!container) return;
+        const data = getDataSafe();
+        const c = data.cliente || {};
+        const partidas = (data.partidas || []).map(p => (p?.nombre || p || '').trim()).filter(Boolean);
+
+        const items = [
+          { label: 'Nombre del Proyecto', value: c.nombre_proyecto || 'N/A' },
+          { label: 'Cliente', value: c.nombre || 'N/A' },
+          { label: 'Dirección', value: c.direccion || 'N/A' },
+          { label: 'Comuna', value: c.comuna || 'N/A' },
+          ...(partidas.length ? [{ label: 'Partidas', value: partidas.join(' | ') }] : []),
+        ];
+
+        let html = '';
+        items.forEach(item => {
+          html += `
+            <div class="detalle-item">
+              <div class="detalle-label">${item.label}</div>
+              <div class="detalle-value">${escapeHtml(item.value)}</div>
+            </div>
+          `;
+        });
+        if (c.notas) {
+          html += `
+            <div class="detalle-item" style="grid-column: 1 / -1;">
+              <div class="detalle-label">Notas del Proyecto</div>
+              <div class="detalle-value">${escapeHtml(c.notas)}</div>
+            </div>
+          `;
+        }
+        container.innerHTML = html;
+      }
+
+      function mostrarResumenFinanciero() {
+        const container = q('resumen-financiero');
+        if (!container) return;
+        const t = calcularTotales();
+
+        const items = [
+          { key: 'factor', label: 'Factor General BYT', value: `${t.factorGeneral}x`, area: 'factor' },
+          { key: 'ganancia', label: 'Ganancia Estimada', value: formatPrecio(t.ganancia), area: 'ganancia' },
+          { key: 'matBase', label: 'Total Materiales Base', value: formatPrecio(t.totalMateriales), area: 'matBase' },
+          { key: 'matFactor', label: 'Materiales con Factor', value: formatPrecio(t.materialesConFactor), area: 'matFactor' },
+          { key: 'trasBase', label: 'Traspasados Base', value: formatPrecio(t.totalTraspasosBase), area: 'trasBase' },
+          { key: 'trasFactor', label: 'Factores Traspasados', value: formatPrecio(t.totalTraspasosFactor), area: 'trasFactor' },
+          { key: 'subtotal', label: 'Subtotal (sin IVA)', value: formatPrecio(t.subtotalSinIVA), area: 'subtotal' },
+          { key: 'iva', label: 'IVA (19%)', value: formatPrecio(t.iva), area: 'iva' },
+          { key: 'totalTrasp', label: 'Total Traspasados', value: formatPrecio(t.totalTraspasados), area: 'totalTrasp' },
+          { key: 'totalProyecto', label: 'TOTAL PROYECTO', value: formatPrecio(t.totalConIVA), area: 'totalProyecto', highlight: true },
+        ];
+
+        container.innerHTML = items.map(it => `
+          <div class="fin-card area-${it.area || ''} ${it.highlight ? 'highlight' : ''}">
+            <h4>${it.label}</h4>
+            <p class="fin-value">${it.value}</p>
+          </div>
+        `).join('');
+      }
+
+      function mostrarMateriales() {
+        const container = q('materiales-detalle');
+        if (!container) return;
+        const data = getDataSafe();
+        const mats = data.materiales || {};
+        const extrasMap = {
+          quincalleria: data.quincalleriaExtras || [],
+          tableros: data.tablerosExtras || [],
+          tapacantos: data.tapacantosExtras || [],
+          tableros_madera: data.tablerosMaderaExtras || [],
+          led_electricidad: data.ledElectricidadExtras || [],
+        };
+        const friendly = {
+          quincalleria: 'Quincallería',
+          tableros: 'Tableros',
+          tapacantos: 'Tapacantos',
+          servicios_externos: 'Servicios externos de corte',
+          tableros_madera: 'Tableros de madera',
+          led_electricidad: 'LED y electricidad',
+          otras_compras: 'Otras compras',
+        };
+        let html = '';
+        let found = false;
+
+        Object.keys(mats).forEach(cat => {
+          const materiales = mats[cat] || {};
+          let filas = '';
+          let subtotal = 0;
+
+          Object.values(materiales).forEach(mat => {
+            const cantidad = Number(mat.cantidad || 0);
+            const precio = Number(mat.precio || 0);
+            const total = cantidad * precio;
+            if (cantidad > 0 || precio > 0) {
+              subtotal += total;
+              filas += `
+                <tr>
+                  <td>${escapeHtml(mat.nombre || mat.descripcion || 'Ítem')}</td>
+                  <td style="text-align:center;">${cantidad}</td>
+                  <td style="text-align:right;">${formatPrecio(precio)}</td>
+                  <td style="text-align:right;font-weight:600;">${formatPrecio(total)}</td>
+                </tr>
+              `;
+            }
+          });
+
+          if (extrasMap[cat]) {
+            extrasMap[cat].forEach(x => {
+              const total = x.total !== undefined ? Number(x.total || 0) : (Number(x.cantidad || 0) * Number(x.valor_unitario || 0));
+              if ((x.cantidad || x.valor_unitario || x.nombre)) {
+                subtotal += total;
+                filas += `
+                  <tr>
+                    <td>${escapeHtml(x.nombre || 'Extra')}</td>
+                    <td style="text-align:center;">${x.cantidad || 0}</td>
+                    <td style="text-align:right;">${formatPrecio(x.valor_unitario || 0)}</td>
+                    <td style="text-align:right;font-weight:600;">${formatPrecio(total)}</td>
+                  </tr>
+                `;
+              }
+            });
+          }
+
+          if (filas) {
+            found = true;
+            html += `
+              <div style="margin-bottom:20px;">
+                <h4 style="color:var(--primary); margin-bottom:12px;">${escapeHtml(friendly[cat] || cat)}</h4>
+                <div class="table-container">
+                  <table class="table">
+                    <thead>
+                      <tr><th>Material</th><th style="width:100px;text-align:center;">Cant.</th><th style="width:140px;text-align:right;">V.Unit.</th><th style="width:160px;text-align:right;">Subtotal</th></tr>
+                    </thead>
+                    <tbody>
+                      ${filas}
+                      <tr class="subtotal-row">
+                        <td colspan="3" style="text-align:right;">Subtotal ${escapeHtml(friendly[cat] || cat)}:</td>
+                        <td style="text-align:right; color:var(--primary);">${formatPrecio(subtotal)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            `;
+          }
+        });
+
+        if (!found) {
+          html = '<p class="no-data">No se registraron materiales para este proyecto.</p>';
+        }
+        container.innerHTML = html;
+      }
+
+      function mostrarValoresTraspasados() {
+        const container = q('valores-detalle');
+        if (!container) return;
+        const data = getDataSafe();
+        const trasp = data.valoresTraspasados || {};
+        const extras = data.traspasosExtras || [];
+        const keys = Object.keys(trasp).filter(k => trasp[k] && trasp[k].materiales && Object.keys(trasp[k].materiales).length);
+        let html = '';
+
+        if (!keys.length && !extras.length) {
+          container.innerHTML = '<p class="no-data">No se registraron valores traspasados.</p>';
+          return;
+        }
+
+        const colgroup = `
+          <colgroup>
+            <col style="width:22%;">
+            <col style="width:22%;">
+            <col style="width:14%;">
+            <col style="width:8%;">
+            <col style="width:16%;">
+            <col style="width:18%;">
+          </colgroup>
+        `;
+
+        keys.forEach(sec => {
+          const cat = trasp[sec] || {};
+          const factor = Number(cat.factor || 0);
+          const items = cat.materiales || {};
+          let filas = '';
+          let totalBase = 0;
+
+          Object.keys(items).forEach(k => {
+            const it = items[k] || {};
+            const sub = (Number(it.cantidad || 0) * Number(it.precio || 0)) || 0;
+            totalBase += sub;
+            filas += `
+              <tr>
+                <td>${escapeHtml(it.nombre || k)}</td>
+                <td>${escapeHtml(it.descripcion || '')}</td>
+                <td>${escapeHtml(it.lugar || '')}</td>
+                <td style="text-align:center;">${Number(it.cantidad || 0)}</td>
+                <td style="text-align:right;">${formatPrecio(it.precio || 0)}</td>
+                <td style="font-weight:600; text-align:right;">${formatPrecio(sub)}</td>
+              </tr>
+            `;
+          });
+
+          const totalFactor = totalBase * factor;
+          html += `
+            <div class="valores-block">
+              <div class="valores-head">
+                <span>${escapeHtml(cat.nombre || sec)}${factor ? ` (Factor ${factor.toFixed(2)})` : ''}</span>
+              </div>
+              <div class="valores-body">
+                <div class="table-container">
+                  <table class="table valores-table">
+                    ${colgroup}
+                    <thead>
+                      <tr>
+                        <th>Servicio</th>
+                        <th>Descripción</th>
+                        <th>Lugar</th>
+                        <th>Cant.</th>
+                        <th>Valor Unit.</th>
+                        <th>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${filas || '<tr><td colspan="6" class="no-data">Sin datos</td></tr>'}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="valores-footer">
+                <span>Total base: ${formatPrecio(totalBase)}</span>
+                <span>Factor (${factor.toFixed(2)}): ${formatPrecio(totalFactor)}</span>
+                <span>Total con factor: ${formatPrecio(totalBase + totalFactor)}</span>
+              </div>
+            </div>
+          `;
+        });
+
+        if (extras.length) {
+          let filas = '';
+          let sub = 0;
+          let subFactor = 0;
+          extras.forEach(x => {
+            const base = Number(x.total || ((x.cantidad || 0) * (x.precio || 0)) || 0);
+            const fac = Number(x.factor || 0);
+            sub += base;
+            subFactor += base * fac;
+            filas += `
+              <tr>
+                <td>${escapeHtml(x.nombre || 'Extra')}</td>
+                <td>${escapeHtml(x.descripcion || '')}</td>
+                <td>${escapeHtml(x.lugar || '')}</td>
+                <td style="text-align:center;">${Number(x.cantidad || 0)}</td>
+                <td style="text-align:right;">${formatPrecio(x.precio || 0)}</td>
+                <td style="text-align:right;font-weight:600;">${formatPrecio(base)}</td>
+              </tr>
+            `;
+          });
+          html += `
+            <div class="valores-block">
+              <div class="valores-head">
+                <span>Valores Traspasados Extra</span>
+              </div>
+              <div class="valores-body">
+                <div class="table-container">
+                  <table class="table valores-table">
+                    ${colgroup}
+                    <thead>
+                      <tr>
+                        <th>Servicio</th>
+                        <th>Descripción</th>
+                        <th>Lugar</th>
+                        <th>Cant.</th>
+                        <th>Valor Unit.</th>
+                        <th>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${filas}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="valores-footer">
+                <span>Total extras: ${formatPrecio(sub)}</span>
+                <span>Factores extras: ${formatPrecio(subFactor)}</span>
+                <span>Total con factor: ${formatPrecio(sub + subFactor)}</span>
+              </div>
+            </div>
+          `;
+        }
+
+        container.innerHTML = html;
+      }
+
+      // ========= ARCHIVOS =========
+      async function cargarArchivos() {
+        const cont = q('archivos-detalle');
+        if (!cont) return;
+        cont.innerHTML = '<div class="no-data">Cargando archivos...</div>';
+        if (!window.supabase) {
+          cont.innerHTML = '<div class="no-data">No se pudo inicializar Supabase para cargar archivos.</div>';
+          return;
+        }
+        try {
+          const { data, error } = await window.supabase
+            .from('cotizacion_files')
+            .select('id,path,filename,size,created_at,content_type,nota')
+            .eq('cotizacion_id', cotizacionId)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          const files = data || [];
+          if (!files.length) {
+            cont.innerHTML = '<div class="no-data">No hay archivos para esta cotización.</div>';
+            return;
+          }
+          const items = await Promise.all(files.map(async f => {
+            const { data: signed } = await window.supabase
+              .storage.from(BUCKET)
+              .createSignedUrl(f.path, 3600);
+            const url = signed?.signedUrl || null;
+            return { ...f, signedUrl: url };
+          }));
+          viewerItems = items;
+          renderArchivos(items);
+        } catch (e) {
+          console.error('Archivos error:', e);
+          cont.innerHTML = '<div class="no-data">No se pudieron cargar los archivos.</div>';
+        }
+      }
+
+      function renderArchivos(items) {
+        const cont = q('archivos-detalle');
+        if (!cont) return;
+        const html = items.map((item, idx) => renderFileCard(item, idx)).join('');
+        cont.innerHTML = `<div class="files-grid">${html}</div>`;
+        items.forEach(item => {
+          if (isPdf(item.content_type || item.filename)) {
+            renderPdfPreview(item);
+          }
+        });
+      }
+
+      function renderFileCard(file, idx) {
+        const isImg = isImage(file.content_type || file.filename);
+        const isPdfFile = isPdf(file.content_type || file.filename);
+        const name = file.filename || file.path || 'archivo';
+        const sizeMB = file.size ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : '';
+        const hasNote = !!file.nota;
+        const preview = isImg
+          ? `<img src="${file.signedUrl || ''}" alt="${escapeHtml(name)}">`
+          : (isPdfFile
+            ? `<canvas id="pdf-canvas-${file.id}" style="max-width:100%;"></canvas>`
+            : `<div style="padding:24px; color:var(--muted);">Sin preview</div>`);
+        return `
+          <div class="file-card">
+            <div class="file-preview">${preview}</div>
+            <div class="file-body">
+              <p class="file-name">${escapeHtml(name)} ${hasNote ? '💬' : ''}</p>
+              <div class="file-meta">${escapeHtml(file.content_type || '')} ${sizeMB ? '· ' + sizeMB : ''}</div>
+              ${hasNote ? `<div class="file-meta" style="color:#35564c;">${escapeHtml(file.nota)}</div>` : ''}
+              <div class="file-actions">
+                <button class="btn btn-secondary" onclick="openViewer(${idx})">Ver</button>
+                <a class="btn btn-secondary" href="${file.signedUrl || '#'}" target="_blank" rel="noopener" download>Descargar</a>
+                <button class="btn btn-primary" onclick="imprimirArchivo('${file.signedUrl || ''}')">Imprimir</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      function isImage(ct) {
+        const c = (ct || '').toLowerCase();
+        return /^image\//i.test(c) || /\.(png|jpe?g|gif|webp|bmp)$/i.test(c);
+      }
+      function isPdf(ct) {
+        const c = (ct || '').toLowerCase();
+        return /pdf$/i.test(c) || /\.pdf$/i.test(c);
+      }
+
+      async function renderPdfPreview(file) {
+        if (!file.signedUrl || !window['pdfjsLib']) return;
+        const canvas = q(`pdf-canvas-${file.id}`);
+        if (!canvas) return;
+        try {
+          const loadingTask = pdfjsLib.getDocument(file.signedUrl);
+          const pdf = await loadingTask.promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({ scale: 1.0 });
+          const scale = Math.min(1.4, 400 / viewport.width);
+          const scaled = page.getViewport({ scale });
+          const context = canvas.getContext('2d');
+          canvas.width = scaled.width;
+          canvas.height = scaled.height;
+          await page.render({ canvasContext: context, viewport: scaled }).promise;
+        } catch (e) {
+          console.warn('No se pudo renderizar PDF', e);
+        }
+      }
+
+      // Visor (lightbox)
+      window.openViewer = function(idx) {
+        if (!viewerItems.length) return;
+        viewerIndex = Math.max(0, Math.min(viewerItems.length - 1, idx));
+        renderViewer();
+        const overlay = q('file-viewer');
+        if (overlay) {
+          overlay.classList.add('active');
+          document.body.style.overflow = 'hidden';
+        }
+      };
+      window.closeViewer = function() {
+        const overlay = q('file-viewer');
+        if (overlay) overlay.classList.remove('active');
+        const body = q('viewer-body');
+        if (body) body.innerHTML = '';
+        document.body.style.overflow = '';
+      };
+      window.nextViewer = function() {
+        if (!viewerItems.length) return;
+        viewerIndex = (viewerIndex + 1) % viewerItems.length;
+        renderViewer();
+      };
+      window.prevViewer = function() {
+        if (!viewerItems.length) return;
+        viewerIndex = (viewerIndex - 1 + viewerItems.length) % viewerItems.length;
+        renderViewer();
+      };
+      function renderViewer() {
+        const body = q('viewer-body');
+        const counter = q('viewer-counter');
+        if (!body || !counter || !viewerItems.length) return;
+        const item = viewerItems[viewerIndex];
+        const name = item.filename || item.path || 'archivo';
+        counter.textContent = `${viewerIndex + 1} / ${viewerItems.length}`;
+        let inner = '';
+        if (isImage(item.content_type || name)) {
+          inner = `<img src="${item.signedUrl}" alt="${escapeHtml(name)}">`;
+        } else if (isPdf(item.content_type || name)) {
+          inner = `<iframe src="${item.signedUrl}" style="border:0; width:100%; height:100%; background:#fff;"></iframe>`;
+        } else {
+          inner = `<div style="color:#fff; padding:20px;">No hay vista previa para este tipo de archivo.</div>`;
+        }
+        body.innerHTML = `
+          <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; gap:8px;">
+            <div style="flex:1; display:grid; place-items:center; width:100%; height:100%;">${inner}</div>
+            ${item.nota ? `<div style="color:#cfd4da; font-size:14px; width:100%; text-align:left;">💬 ${escapeHtml(item.nota)}</div>` : ''}
+          </div>
+        `;
+      }
+      document.addEventListener('keydown', (e) => {
+        const overlay = q('file-viewer');
+        if (!overlay?.classList.contains('active')) return;
+        if (e.key === 'Escape') closeViewer();
+        if (e.key === 'ArrowRight') nextViewer();
+        if (e.key === 'ArrowLeft') prevViewer();
+      });
+      const fv = q('file-viewer');
+      if (fv) {
+        fv.addEventListener('click', (e) => {
+          if (e.target.id === 'file-viewer') closeViewer();
+        });
+      }
+
+      function exportarPDF() {
+        if (window.utils && typeof window.utils.mostrarNotificacion === 'function') {
+          window.utils.mostrarNotificacion('Función de exportación PDF en desarrollo', 'info');
+        } else {
+          alert('Función de exportación PDF en desarrollo');
+        }
+      }
+
+      window.imprimirArchivo = function(url) {
+        if (!url) return;
+        const w = window.open(url, '_blank');
+        if (!w) return;
+        const checkLoaded = setInterval(() => {
+          if (w.document?.readyState === 'complete') {
+            clearInterval(checkLoaded);
+            w.focus();
+            w.print();
+          }
+        }, 300);
+      };
+
+      window.cargarCotizacion = cargarCotizacion;
+      window.exportarPDF = exportarPDF;
+      window.mostrarError = mostrarError;
+
+      document.addEventListener('DOMContentLoaded', function() {
+        start();
+      });
+    })();
+  </script>
+</body>
+</html>
 
