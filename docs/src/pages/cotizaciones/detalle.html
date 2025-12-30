@@ -71,25 +71,10 @@
       font-weight: 800;
     }
 
-    .topbar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 10px;
-    }
-    .kpi {
-      background: #f8faf9;
-      border: 1px solid #e3e8ea;
-      border-radius: 12px;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .kpi-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .kpi-value { font-size: 20px; font-weight: 800; color: var(--text); }
+    /* Ocultamos la barra KPI superior tachada */
+    #topbar-kpis { display: none !important; }
 
-    .section { display: flex; flex-direction: column; gap: 12px; }
-
+    /* Info / detalle */
     .detalle-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -115,57 +100,59 @@
       word-break: break-word;
     }
 
-    .table-container { overflow-x:auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; border: 1px solid #e6efe9; }
-    th { background: #f5f7f6; color: #2e6b57; font-weight: 800; text-align: left; }
-    .subtotal-row { background: rgba(46,94,78,0.06); font-weight: 700; }
-
-    /* Bloques de traspasados, más separados */
-    .valores-block {
-      margin-bottom: 18px;
-      border: 1px solid #e2e8f0;
+    /* Resumen financiero compacto tipo mock */
+    .fin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    @media (min-width: 1024px) {
+      .fin-grid {
+        grid-template-areas:
+          "factor ganancia"
+          "matBase matFactor"
+          "trasBase trasFactor"
+          "subtotal iva"
+          "totalTrasp totalProyecto";
+      }
+      .fin-card.area-factor { grid-area: factor; }
+      .fin-card.area-ganancia { grid-area: ganancia; }
+      .fin-card.area-matBase { grid-area: matBase; }
+      .fin-card.area-matFactor { grid-area: matFactor; }
+      .fin-card.area-trasBase { grid-area: trasBase; }
+      .fin-card.area-trasFactor { grid-area: trasFactor; }
+      .fin-card.area-subtotal { grid-area: subtotal; }
+      .fin-card.area-iva { grid-area: iva; }
+      .fin-card.area-totalTrasp { grid-area: totalTrasp; }
+      .fin-card.area-totalProyecto { grid-area: totalProyecto; }
+    }
+    .fin-card {
+      background: #f8faf9;
+      border: 1px solid #e4e9ec;
       border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.04);
+      padding: 12px;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.04);
     }
-    .valores-head {
-      background: #1f3b2e;
-      color: #fff;
-      padding: 12px 14px;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .valores-body {
-      background: #fff;
-      padding: 14px;
-    }
-    .valores-footer {
-      background: #f5f9f6;
-      color: #1f3b2e;
-      padding: 10px 14px;
-      font-weight: 700;
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid #dbe3e6;
-      background: #f7fafc;
-      color: #4d5b63;
-      font-weight: 700;
+    .fin-card h4 {
+      margin: 0 0 6px;
       font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--muted);
     }
+    .fin-card .fin-value {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .fin-card.highlight {
+      background: #2f5f4c;
+      color: #fff;
+      border-color: #2f5f4c;
+    }
+    .fin-card.highlight h4 { color: rgba(255,255,255,0.82); }
+    .fin-card.highlight .fin-value { color: #fff; }
 
     .no-data { color:#666; text-align:center; padding:18px; }
 
@@ -272,6 +259,44 @@
       font-size: 20px;
     }
 
+    /* Valores traspasados más suaves */
+    .valores-block {
+      margin-bottom: 18px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.04);
+    }
+    .valores-head {
+      background: #3f705d; /* más claro */
+      color: #fff;
+      padding: 12px 14px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start; /* sin chip a la derecha */
+      gap: 8px;
+    }
+    .valores-body {
+      background: #fff;
+      padding: 14px;
+    }
+    .valores-footer {
+      background: #f5f9f6;
+      color: #1f3b2e;
+      padding: 10px 14px;
+      font-weight: 700;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .table-container { overflow-x:auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #e6efe9; }
+    th { background: #f5f7f6; color: #2e6b57; font-weight: 800; text-align: left; }
+    .subtotal-row { background: rgba(46,94,78,0.06); font-weight: 700; }
+
     @media (max-width: 640px) {
       .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
     }
@@ -302,7 +327,7 @@
       <button class="btn btn-ghost" onclick="exportarPDF()">Exportar PDF</button>
     </div>
 
-    <!-- KPIs -->
+    <!-- KPIs (ocultos por CSS) -->
     <div class="card topbar" id="topbar-kpis">
       <div class="kpi">
         <div class="kpi-label">Total Materiales</div>
@@ -343,7 +368,7 @@
 
       <div class="card section">
         <h3 class="card-title">Resumen Financiero</h3>
-        <div class="detalle-grid" id="resumen-financiero"></div>
+        <div class="fin-grid" id="resumen-financiero"></div>
       </div>
 
       <div class="card section">
@@ -354,11 +379,6 @@
       <div class="card section">
         <h3 class="card-title">Valores Traspasados</h3>
         <div id="valores-detalle"></div>
-      </div>
-
-      <div class="card section">
-        <h3 class="card-title">Archivos</h3>
-        <div id="archivos-detalle"></div>
       </div>
 
       <div class="card section" style="text-align: center; margin-top: 20px;">
@@ -632,29 +652,26 @@
       function mostrarResumenFinanciero() {
         const container = document.getElementById('resumen-financiero');
         const t = calcularTotales();
+
         const items = [
-          { label: 'Total Materiales Base', value: formatPrecio(t.totalMateriales) },
-          { label: 'Factor General BYT', value: `${t.factorGeneral}x` },
-          { label: 'Materiales con Factor', value: formatPrecio(t.materialesConFactor) },
-          { label: 'Traspasados Base', value: formatPrecio(t.totalTraspasosBase) },
-          { label: 'Factores Traspasados', value: formatPrecio(t.totalTraspasosFactor) },
-          { label: 'Total Traspasados', value: formatPrecio(t.totalTraspasados) },
-          { label: 'Subtotal (sin IVA)', value: formatPrecio(t.subtotalSinIVA) },
-          { label: 'IVA (19%)', value: formatPrecio(t.iva) },
-          { label: 'TOTAL PROYECTO', value: formatPrecio(t.totalConIVA), destacado: true },
-          { label: 'Ganancia Estimada', value: formatPrecio(t.ganancia) },
+          { key: 'factor', label: 'Factor General BYT', value: `${t.factorGeneral}x`, area: 'factor' },
+          { key: 'ganancia', label: 'Ganancia Estimada', value: formatPrecio(t.ganancia), area: 'ganancia' },
+          { key: 'matBase', label: 'Total Materiales Base', value: formatPrecio(t.totalMateriales), area: 'matBase' },
+          { key: 'matFactor', label: 'Materiales con Factor', value: formatPrecio(t.materialesConFactor), area: 'matFactor' },
+          { key: 'trasBase', label: 'Traspasados Base', value: formatPrecio(t.totalTraspasosBase), area: 'trasBase' },
+          { key: 'trasFactor', label: 'Factores Traspasados', value: formatPrecio(t.totalTraspasosFactor), area: 'trasFactor' },
+          { key: 'subtotal', label: 'Subtotal (sin IVA)', value: formatPrecio(t.subtotalSinIVA), area: 'subtotal' },
+          { key: 'iva', label: 'IVA (19%)', value: formatPrecio(t.iva), area: 'iva' },
+          { key: 'totalTrasp', label: 'Total Traspasados', value: formatPrecio(t.totalTraspasados), area: 'totalTrasp' },
+          { key: 'totalProyecto', label: 'TOTAL PROYECTO', value: formatPrecio(t.totalConIVA), area: 'totalProyecto', highlight: true },
         ];
-        let html = '';
-        items.forEach(item => {
-          const estilo = item.destacado ? 'background: var(--primary); color: white; font-weight: 700;' : '';
-          html += `
-            <div class="detalle-item" style="${estilo}">
-              <div class="detalle-label" style="${item.destacado ? 'color: rgba(255,255,255,0.85);' : ''}">${item.label}</div>
-              <div class="detalle-value" style="${item.destacado ? 'color: white; font-size: 18px;' : ''}">${item.value}</div>
-            </div>
-          `;
-        });
-        container.innerHTML = html;
+
+        container.innerHTML = items.map(it => `
+          <div class="fin-card area-${it.area || ''} ${it.highlight ? 'highlight' : ''}">
+            <h4>${it.label}</h4>
+            <p class="fin-value">${it.value}</p>
+          </div>
+        `).join('');
       }
 
       function mostrarMateriales() {
@@ -791,7 +808,6 @@
             <div class="valores-block">
               <div class="valores-head">
                 <span>${escapeHtml(cat.nombre || sec)}${factor ? ` (Factor ${factor.toFixed(2)})` : ''}</span>
-                <span class="chip">Base: ${formatPrecio(totalBase)} · Factor: ${formatPrecio(totalFactor)} · Total: ${formatPrecio(totalBase + totalFactor)}</span>
               </div>
               <div class="valores-body">
                 <div class="table-container">
@@ -845,7 +861,6 @@
             <div class="valores-block">
               <div class="valores-head">
                 <span>Valores Traspasados Extra</span>
-                <span class="chip">Base: ${formatPrecio(sub)} · Factores: ${formatPrecio(subFactor)} · Total: ${formatPrecio(sub + subFactor)}</span>
               </div>
               <div class="valores-body">
                 <div class="table-container">
