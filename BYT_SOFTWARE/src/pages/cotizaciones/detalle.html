@@ -334,26 +334,10 @@
     }
   </script>
 
-
-
-
-  
-
-
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-
-
-
-
-
-
-
-
-
-  
+  <!-- Captura HTML a imagen -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Generar PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
 <body>
@@ -1118,73 +1102,81 @@
         });
       }
 
+      // ===== Exportar PDF paginado =====
+      async function exportarPDF() {
+        const btn = document.getElementById('btn-exportar-pdf');
+        if (btn) btn.disabled = true;
+        try {
+          const cont = document.getElementById('page-content'); // todo el contenido visible
+          if (!cont) throw new Error('No hay contenido para exportar');
+          if (!window.html2canvas || !window.jspdf) throw new Error('Dependencias PDF no cargadas');
 
+          const { jsPDF } = window.jspdf;
+          const pdf = new jsPDF('p', 'pt', 'a4');
+          const pageWidth = pdf.internal.pageSize.getWidth();
+          const pageHeight = pdf.internal.pageSize.getHeight();
 
+          const canvas = await html2canvas(cont, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            scrollX: -window.scrollX,
+            scrollY: -window.scrollY,
+            windowWidth: document.documentElement.scrollWidth,
+            windowHeight: document.documentElement.scrollHeight
+          });
 
-      
- async function exportarPDF() {
-  const btn = document.getElementById('btn-exportar-pdf');
-  if (btn) btn.disabled = true;
-  try {
-    const cont = document.getElementById('page-content'); // usa todo el contenido visible
-    if (!cont) throw new Error('No hay contenido para exportar');
-    if (!window.html2canvas || !window.jspdf) throw new Error('Dependencias PDF no cargadas');
+          const imgWidth = pageWidth;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+          // Relación px/pt para cortar el canvas
+          const pxPerPt = canvas.width / pageWidth;
+          const sliceHeightPx = pageHeight * pxPerPt;
 
-    // Captura completa con scroll corregido
-    const canvas = await html2canvas(cont, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      scrollX: -window.scrollX,
-      scrollY: -window.scrollY,
-      windowWidth: document.documentElement.scrollWidth,
-      windowHeight: document.documentElement.scrollHeight
-    });
+          let renderedHeight = 0;
+          let pageIndex = 0;
 
-    const imgData = canvas.toDataURL('image/png');
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          while (renderedHeight < canvas.height) {
+            const pageCanvas = document.createElement('canvas');
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = Math.min(sliceHeightPx, canvas.height - renderedHeight);
+            const ctx = pageCanvas.getContext('2d');
 
-    let heightLeft = imgHeight;
-    let position = 0;
+            ctx.drawImage(
+              canvas,
+              0, renderedHeight,
+              canvas.width, pageCanvas.height,
+              0, 0,
+              canvas.width, pageCanvas.height
+            );
 
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
-    heightLeft -= pageHeight;
+            const imgData = pageCanvas.toDataURL('image/png');
+            if (pageIndex > 0) pdf.addPage();
+            pdf.addImage(
+              imgData,
+              'PNG',
+              0,
+              0,
+              imgWidth,
+              (pageCanvas.height / canvas.width) * imgWidth,
+              '',
+              'FAST'
+            );
 
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
-      heightLeft -= pageHeight;
-    }
+            renderedHeight += pageCanvas.height;
+            pageIndex++;
+          }
 
-    pdf.save(`cotizacion-${cotizacionId || 'detalle'}.pdf`);
-    window.utils?.mostrarNotificacion?.('PDF generado', 'success');
-  } catch (e) {
-    console.error(e);
-    window.utils?.mostrarNotificacion?.('No se pudo exportar: ' + (e.message || e), 'error');
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
+          pdf.save(`cotizacion-${cotizacionId || 'detalle'}.pdf`);
+          window.utils?.mostrarNotificacion?.('PDF generado', 'success');
+        } catch (e) {
+          console.error(e);
+          window.utils?.mostrarNotificacion?.('No se pudo exportar: ' + (e.message || e), 'error');
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-      
       window.imprimirArchivo = function(url) {
         if (!url) return;
         const w = window.open(url, '_blank');
@@ -1206,17 +1198,6 @@
         start();
       });
     })();
-
-
-    
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
