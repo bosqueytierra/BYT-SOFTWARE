@@ -488,15 +488,15 @@
         const loading = document.getElementById('loading-state');
         const content = document.getElementById('detalle-content');
         const error = document.getElementById('error-state');
-        loading.style.display = estado === 'loading' ? 'block' : 'none';
-        content.style.display = estado === 'content' ? 'block' : 'none';
-        error.style.display = estado === 'error' ? 'block' : 'none';
+        if (loading) loading.style.display = estado === 'loading' ? 'block' : 'none';
+        if (content) content.style.display = estado === 'content' ? 'block' : 'none';
+        if (error) error.style.display = estado === 'error' ? 'block' : 'none';
       }
 
       function mostrarError(mensaje) {
         mostrarEstado('error');
         const msgEl = document.getElementById('error-message');
-        msgEl.textContent = mensaje;
+        if (msgEl) msgEl.textContent = mensaje;
       }
 
       async function cargarCotizacion() {
@@ -597,24 +597,32 @@
         mostrarResumenFinanciero();
         mostrarMateriales();
         mostrarValoresTraspasados();
-        const fecha = new Date(cotizacionActual.created_at || cotizacionActual._created_at || Date.now()).toLocaleDateString('es-CL', {
+        const fecha = new Date(cotizacionActual?.created_at || cotizacionActual?._created_at || Date.now()).toLocaleDateString('es-CL', {
           year: 'numeric', month: 'long', day: 'numeric'
         });
-        document.getElementById('fecha-cotizacion').textContent = fecha;
+        const fechaSpan = document.getElementById('fecha-cotizacion');
+        if (fechaSpan) fechaSpan.textContent = fecha;
       }
 
       function mostrarKPIs() {
         const t = calcularTotales();
-        document.getElementById('kpi-total-materiales').textContent = formatPrecio(t.totalMateriales);
-        document.getElementById('kpi-factor').textContent = `${t.factorGeneral}x`;
-        document.getElementById('kpi-neto').textContent = formatPrecio(t.subtotalSinIVA);
-        document.getElementById('kpi-iva').textContent = formatPrecio(t.iva);
-        document.getElementById('kpi-total-proyecto').textContent = formatPrecio(t.totalConIVA);
-        document.getElementById('kpi-ganancia').textContent = formatPrecio(t.ganancia);
+        const map = {
+          'kpi-total-materiales': formatPrecio(t.totalMateriales),
+          'kpi-factor': `${t.factorGeneral}x`,
+          'kpi-neto': formatPrecio(t.subtotalSinIVA),
+          'kpi-iva': formatPrecio(t.iva),
+          'kpi-total-proyecto': formatPrecio(t.totalConIVA),
+          'kpi-ganancia': formatPrecio(t.ganancia)
+        };
+        Object.entries(map).forEach(([id, val]) => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = val;
+        });
       }
 
       function mostrarInfoProyecto() {
         const container = document.getElementById('info-proyecto');
+        if (!container) return;
         const data = getDataSafe();
         const c = data.cliente || {};
         const items = [
@@ -625,8 +633,8 @@
           { label: 'Correo', value: c.correo || 'N/A' },
           { label: 'Teléfono', value: c.telefono || 'N/A' },
           { label: 'Encargado', value: c.encargado || 'N/A' },
-          { label: 'ID Cotización', value: `#${cotizacionActual.id || (cotizacionActual._id || '')}` },
-          { label: 'Fecha de Creación', value: new Date(cotizacionActual.created_at || cotizacionActual._created_at || Date.now()).toLocaleDateString('es-CL') },
+          { label: 'ID Cotización', value: `#${cotizacionActual?.id || (cotizacionActual?._id || '')}` },
+          { label: 'Fecha de Creación', value: new Date(cotizacionActual?.created_at || cotizacionActual?._created_at || Date.now()).toLocaleDateString('es-CL') },
         ];
 
         let html = '';
@@ -651,6 +659,7 @@
 
       function mostrarResumenFinanciero() {
         const container = document.getElementById('resumen-financiero');
+        if (!container) return;
         const t = calcularTotales();
 
         const items = [
@@ -676,6 +685,7 @@
 
       function mostrarMateriales() {
         const container = document.getElementById('materiales-detalle');
+        if (!container) return;
         const data = getDataSafe();
         const mats = data.materiales || {};
         const extrasMap = {
@@ -769,6 +779,7 @@
 
       function mostrarValoresTraspasados() {
         const container = document.getElementById('valores-detalle');
+        if (!container) return;
         const data = getDataSafe();
         const trasp = data.valoresTraspasados || {};
         const extras = data.traspasosExtras || [];
@@ -896,6 +907,7 @@
       // ========= ARCHIVOS =========
       async function cargarArchivos() {
         const cont = document.getElementById('archivos-detalle');
+        if (!cont) return;
         cont.innerHTML = '<div class="no-data">Cargando archivos...</div>';
         if (!window.supabase) {
           cont.innerHTML = '<div class="no-data">No se pudo inicializar Supabase para cargar archivos.</div>';
@@ -930,6 +942,7 @@
 
       function renderArchivos(items) {
         const cont = document.getElementById('archivos-detalle');
+        if (!cont) return;
         const html = items.map((item, idx) => renderFileCard(item, idx)).join('');
         cont.innerHTML = `<div class="files-grid">${html}</div>`;
         items.forEach(item => {
@@ -1008,7 +1021,8 @@
       window.closeViewer = function() {
         const overlay = document.getElementById('file-viewer');
         overlay.classList.remove('active');
-        document.getElementById('viewer-body').innerHTML = '';
+        const body = document.getElementById('viewer-body');
+        if (body) body.innerHTML = '';
         document.body.style.overflow = '';
       };
       window.nextViewer = function() {
@@ -1024,6 +1038,7 @@
       function renderViewer() {
         const body = document.getElementById('viewer-body');
         const counter = document.getElementById('viewer-counter');
+        if (!body || !counter || !viewerItems.length) return;
         const item = viewerItems[viewerIndex];
         const name = item.filename || item.path || 'archivo';
         counter.textContent = `${viewerIndex + 1} / ${viewerItems.length}`;
@@ -1044,14 +1059,17 @@
       }
       document.addEventListener('keydown', (e) => {
         const overlay = document.getElementById('file-viewer');
-        if (!overlay.classList.contains('active')) return;
+        if (!overlay?.classList.contains('active')) return;
         if (e.key === 'Escape') closeViewer();
         if (e.key === 'ArrowRight') nextViewer();
         if (e.key === 'ArrowLeft') prevViewer();
       });
-      document.getElementById('file-viewer').addEventListener('click', (e) => {
-        if (e.target.id === 'file-viewer') closeViewer();
-      });
+      const fv = document.getElementById('file-viewer');
+      if (fv) {
+        fv.addEventListener('click', (e) => {
+          if (e.target.id === 'file-viewer') closeViewer();
+        });
+      }
 
       function exportarPDF() {
         if (window.utils && typeof window.utils.mostrarNotificacion === 'function') {
