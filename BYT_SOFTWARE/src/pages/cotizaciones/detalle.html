@@ -429,6 +429,9 @@
       let viewerItems = [];
       let viewerIndex = 0;
 
+      // Helper seguro
+      const q = (id) => document.getElementById(id);
+
       if (!localStorage.getItem('byt_logged_in')) {
         window.location.href = '../login/login.html';
         return;
@@ -485,9 +488,9 @@
       }
 
       function mostrarEstado(estado) {
-        const loading = document.getElementById('loading-state');
-        const content = document.getElementById('detalle-content');
-        const error = document.getElementById('error-state');
+        const loading = q('loading-state');
+        const content = q('detalle-content');
+        const error = q('error-state');
         if (loading) loading.style.display = estado === 'loading' ? 'block' : 'none';
         if (content) content.style.display = estado === 'content' ? 'block' : 'none';
         if (error) error.style.display = estado === 'error' ? 'block' : 'none';
@@ -495,7 +498,7 @@
 
       function mostrarError(mensaje) {
         mostrarEstado('error');
-        const msgEl = document.getElementById('error-message');
+        const msgEl = q('error-message');
         if (msgEl) msgEl.textContent = mensaje;
       }
 
@@ -526,7 +529,6 @@
       function calcularTotales() {
         const data = getDataSafe();
         const factorGeneral = Number(data.factorGeneral || data.factor || 2);
-        // Materiales + extras
         let totalMateriales = 0;
         const mats = data.materiales || {};
         Object.keys(mats).forEach(cat => {
@@ -534,7 +536,6 @@
             totalMateriales += (Number(mat.cantidad || 0) * Number(mat.precio || 0));
           });
         });
-        // Extras por categoría
         const extraMap = {
           quincalleriaExtras: true,
           tablerosExtras: true,
@@ -548,7 +549,6 @@
           });
         });
 
-        // Traspasados
         let totalTraspasosBase = 0;
         let totalTraspasosFactor = 0;
         const vals = data.valoresTraspasados || {};
@@ -562,7 +562,6 @@
           totalTraspasosBase += sub;
           totalTraspasosFactor += sub * factor;
         });
-        // Traspasos extras globales
         (data.traspasosExtras || []).forEach(x => {
           const base = Number(x.total || ((x.cantidad || 0) * (x.precio || 0)) || 0);
           const factor = Number(x.factor || 0);
@@ -600,7 +599,7 @@
         const fecha = new Date(cotizacionActual?.created_at || cotizacionActual?._created_at || Date.now()).toLocaleDateString('es-CL', {
           year: 'numeric', month: 'long', day: 'numeric'
         });
-        const fechaSpan = document.getElementById('fecha-cotizacion');
+        const fechaSpan = q('fecha-cotizacion');
         if (fechaSpan) fechaSpan.textContent = fecha;
       }
 
@@ -615,13 +614,13 @@
           'kpi-ganancia': formatPrecio(t.ganancia)
         };
         Object.entries(map).forEach(([id, val]) => {
-          const el = document.getElementById(id);
+          const el = q(id);
           if (el) el.textContent = val;
         });
       }
 
       function mostrarInfoProyecto() {
-        const container = document.getElementById('info-proyecto');
+        const container = q('info-proyecto');
         if (!container) return;
         const data = getDataSafe();
         const c = data.cliente || {};
@@ -658,7 +657,7 @@
       }
 
       function mostrarResumenFinanciero() {
-        const container = document.getElementById('resumen-financiero');
+        const container = q('resumen-financiero');
         if (!container) return;
         const t = calcularTotales();
 
@@ -684,7 +683,7 @@
       }
 
       function mostrarMateriales() {
-        const container = document.getElementById('materiales-detalle');
+        const container = q('materiales-detalle');
         if (!container) return;
         const data = getDataSafe();
         const mats = data.materiales || {};
@@ -729,7 +728,6 @@
             }
           });
 
-          // extras de la categoría
           if (extrasMap[cat]) {
             extrasMap[cat].forEach(x => {
               const total = x.total !== undefined ? Number(x.total || 0) : (Number(x.cantidad || 0) * Number(x.valor_unitario || 0));
@@ -778,7 +776,7 @@
       }
 
       function mostrarValoresTraspasados() {
-        const container = document.getElementById('valores-detalle');
+        const container = q('valores-detalle');
         if (!container) return;
         const data = getDataSafe();
         const trasp = data.valoresTraspasados || {};
@@ -906,7 +904,7 @@
 
       // ========= ARCHIVOS =========
       async function cargarArchivos() {
-        const cont = document.getElementById('archivos-detalle');
+        const cont = q('archivos-detalle');
         if (!cont) return;
         cont.innerHTML = '<div class="no-data">Cargando archivos...</div>';
         if (!window.supabase) {
@@ -941,7 +939,7 @@
       }
 
       function renderArchivos(items) {
-        const cont = document.getElementById('archivos-detalle');
+        const cont = q('archivos-detalle');
         if (!cont) return;
         const html = items.map((item, idx) => renderFileCard(item, idx)).join('');
         cont.innerHTML = `<div class="files-grid">${html}</div>`;
@@ -991,7 +989,7 @@
 
       async function renderPdfPreview(file) {
         if (!file.signedUrl || !window['pdfjsLib']) return;
-        const canvas = document.getElementById(`pdf-canvas-${file.id}`);
+        const canvas = q(`pdf-canvas-${file.id}`);
         if (!canvas) return;
         try {
           const loadingTask = pdfjsLib.getDocument(file.signedUrl);
@@ -1014,14 +1012,16 @@
         if (!viewerItems.length) return;
         viewerIndex = Math.max(0, Math.min(viewerItems.length - 1, idx));
         renderViewer();
-        const overlay = document.getElementById('file-viewer');
-        overlay.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        const overlay = q('file-viewer');
+        if (overlay) {
+          overlay.classList.add('active');
+          document.body.style.overflow = 'hidden';
+        }
       };
       window.closeViewer = function() {
-        const overlay = document.getElementById('file-viewer');
-        overlay.classList.remove('active');
-        const body = document.getElementById('viewer-body');
+        const overlay = q('file-viewer');
+        if (overlay) overlay.classList.remove('active');
+        const body = q('viewer-body');
         if (body) body.innerHTML = '';
         document.body.style.overflow = '';
       };
@@ -1036,8 +1036,8 @@
         renderViewer();
       };
       function renderViewer() {
-        const body = document.getElementById('viewer-body');
-        const counter = document.getElementById('viewer-counter');
+        const body = q('viewer-body');
+        const counter = q('viewer-counter');
         if (!body || !counter || !viewerItems.length) return;
         const item = viewerItems[viewerIndex];
         const name = item.filename || item.path || 'archivo';
@@ -1058,13 +1058,13 @@
         `;
       }
       document.addEventListener('keydown', (e) => {
-        const overlay = document.getElementById('file-viewer');
+        const overlay = q('file-viewer');
         if (!overlay?.classList.contains('active')) return;
         if (e.key === 'Escape') closeViewer();
         if (e.key === 'ArrowRight') nextViewer();
         if (e.key === 'ArrowLeft') prevViewer();
       });
-      const fv = document.getElementById('file-viewer');
+      const fv = q('file-viewer');
       if (fv) {
         fv.addEventListener('click', (e) => {
           if (e.target.id === 'file-viewer') closeViewer();
