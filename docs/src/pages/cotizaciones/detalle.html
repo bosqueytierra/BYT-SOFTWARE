@@ -324,6 +324,12 @@
       break-inside: avoid !important;
     }
 
+    /* Forzar salto de página antes de una sección (Materiales) */
+    .page-break {
+      page-break-before: always !important;
+      break-before: page !important;
+    }
+
     @media (max-width: 640px) {
       .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
     }
@@ -401,7 +407,8 @@
         <div class="fin-grid" id="resumen-financiero"></div>
       </div>
 
-      <div class="card section">
+      <!-- Materiales con salto de página forzado -->
+      <div class="card section page-break">
         <h3 class="card-title">Materiales</h3>
         <div id="materiales-detalle"></div>
       </div>
