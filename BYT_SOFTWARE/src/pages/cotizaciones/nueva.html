@@ -359,7 +359,14 @@
   const subEl   = document.querySelector('[data-wizard-subtitle]');
   if (!titleEl || !subEl) return;
 
-  const selectors = 'input[name="nombre_proyecto"], [data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre';
+  // Inputs que queremos escuchar
+  const selectors = [
+    'input[name="nombre_proyecto"]',
+    '[data-partida-nombre]',
+    '.partida-item input',
+    'input[name="partidas[]"]',
+    'input.partida-nombre'
+  ].join(', ');
 
   const getNombreProyecto = () => {
     const d = window.bytWizard?.datos || {};
@@ -384,18 +391,47 @@
     subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
   };
 
+  // Eventos en vivo sobre el documento (capture para inputs recién montados)
   const handler = (e) => {
     if (e.target.matches(selectors)) requestAnimationFrame(refreshHeader);
   };
-
   document.addEventListener('input', handler, { capture: true });
   document.addEventListener('keyup', handler, { capture: true });
 
-  // Refresco inicial y cuando se cargan datos (edición/duplicado)
+  // Hook sobre bytWizard para refrescar tras renders/cambios de datos
+  const hookWizard = () => {
+    const wiz = window.bytWizard;
+    if (!wiz || wiz.__headerHooked) return;
+    // wrap mostrarPaso
+    if (typeof wiz.mostrarPaso === 'function') {
+      const orig = wiz.mostrarPaso.bind(wiz);
+      wiz.mostrarPaso = function(n) { const r = orig(n); requestAnimationFrame(refreshHeader); return r; };
+    }
+    // wrap agregarPartida / eliminarPartida / actualizarPartidaNombre si existen
+    ['agregarPartida','eliminarPartida','actualizarPartidaNombre','_actualizarPartidaNombre']
+      .forEach(m => {
+        if (typeof wiz[m] === 'function') {
+          const orig = wiz[m].bind(wiz);
+          wiz[m] = function(...args){ const r = orig(...args); requestAnimationFrame(refreshHeader); return r; };
+        }
+      });
+    // wrap setDato / setCliente si existen
+    ['setDato','setCliente'].forEach(m => {
+      if (typeof wiz[m] === 'function') {
+        const orig = wiz[m].bind(wiz);
+        wiz[m] = function(...args){ const r = orig(...args); requestAnimationFrame(refreshHeader); return r; };
+      }
+    });
+    wiz.__headerHooked = true;
+  };
+
+  // Refresco inicial + espera a que exista bytWizard para enganchar hooks
   const wait = setInterval(() => {
     refreshHeader();
+    hookWizard();
     if (window.bytWizard) clearInterval(wait);
   }, 200);
+
 })();
 </script>
 
@@ -1011,3 +1047,4 @@
   </div>
 </body>
 </html>
+
