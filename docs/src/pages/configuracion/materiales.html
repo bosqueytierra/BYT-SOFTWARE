@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -154,237 +154,240 @@
     </style>
 </head>
 <body>
-    <a href="index.html" class="btn-back">← Atrás</a>
-
-    <div class="container">
-        <header class="header">
-            <div class="header-content">
-                <div class="logo-section">
-                    <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo" style="width:48px;height:48px;margin-right:12px;">
-                    <div>
-                        <h1 class="header-title">Gestión de Materiales</h1>
-                        <p class="header-subtitle">Administración de Materiales y Categorías</p>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <main>
-            <!-- Pestañas -->
-            <div class="tabs" role="tablist" aria-label="Gestión de materiales">
-                <button class="tab active" onclick="showTab('categorias')" role="tab" aria-selected="true">📁 Categorías</button>
-                <button class="tab" onclick="showTab('consultar')" role="tab">🔍 Consultar Materiales</button>
-                <button class="tab" onclick="showTab('crear')" role="tab">➕ Crear Material</button>
-                <button class="tab" onclick="showTab('editar')" role="tab">✏️ Editar Material</button>
-                <button class="tab" onclick="showTab('eliminar')" role="tab">🗑️ Eliminar Material</button>
-            </div>
-
-            <!-- Pestaña Categorías -->
-            <div id="categorias" class="tab-content active" role="tabpanel">
-                <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 class="card-title">📁 Gestión de Categorías</h2>
-                        <button class="btn" onclick="mostrarModalAgregarCategoria()">+ Nueva Categoría</button>
-                    </div>
-                    
-                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
-                        <p><strong>ℹ️ Información:</strong> En esta sección solo se gestionan las <strong>categorías</strong>. Los materiales se gestionan en las pestañas correspondientes.</p>
-                    </div>
-                    
-                    <div class="simple-table-container">
-                        <table class="simple-table" aria-describedby="tablaCategorias">
-                            <thead>
-                                <tr>
-                                    <th>Categoría</th>
-                                    <th>Cantidad de Materiales</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaCategorias">
-                                <!-- Las categorías se cargarán dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pestaña Consultar -->
-            <div id="consultar" class="tab-content" role="tabpanel">
-                <div class="search-section">
-                    <h3>🔍 Consultar Materiales (Solo Lectura)</h3>
-                    <div class="search-row">
-                        <div class="form-group">
-                            <label>Seleccionar Categoría *</label>
-                            <select id="consultarCategoria" onchange="consultarMaterialesPorCategoria()">
-                                <option value="">-- Seleccione una categoría --</option>
-                            </select>
+    <div id="page-content">
+        <div class="container">
+            <header class="header">
+                <div class="header-content">
+                    <div class="logo-section">
+                        <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo" style="width:48px;height:48px;margin-right:12px;">
+                        <div>
+                            <h1 class="header-title">Gestión de Materiales</h1>
+                            <p class="header-subtitle">Administración de Materiales y Categorías</p>
                         </div>
-                        <div class="form-group">
-                            <label>Buscar por nombre (opcional)</label>
-                            <input type="text" id="filtroNombre" placeholder="Filtrar por nombre..." onkeyup="filtrarMateriales()">
+                    </div>
+                </div>
+            </header>
+
+            <main>
+                <!-- Pestañas -->
+                <div class="tabs" role="tablist" aria-label="Gestión de materiales">
+                    <button class="tab active" onclick="showTab('categorias')" role="tab" aria-selected="true">📁 Categorías</button>
+                    <button class="tab" onclick="showTab('consultar')" role="tab">🔍 Consultar Materiales</button>
+                    <button class="tab" onclick="showTab('crear')" role="tab">➕ Crear Material</button>
+                    <button class="tab" onclick="showTab('editar')" role="tab">✏️ Editar Material</button>
+                    <button class="tab" onclick="showTab('eliminar')" role="tab">🗑️ Eliminar Material</button>
+                </div>
+
+                <!-- Pestaña Categorías -->
+                <div id="categorias" class="tab-content active" role="tabpanel">
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 class="card-title">📁 Gestión de Categorías</h2>
+                            <button class="btn" onclick="mostrarModalAgregarCategoria()">+ Nueva Categoría</button>
                         </div>
-                        <button class="btn" onclick="consultarTodosMateriales()">📋 Ver Todos</button>
-                        <button class="btn-secondary" onclick="limpiarConsulta()">🗑️ Limpiar</button>
+                        
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+                            <p><strong>ℹ️ Información:</strong> En esta sección solo se gestionan las <strong>categorías</strong>. Los materiales se gestionan en las pestañas correspondientes.</p>
+                        </div>
+                        
+                        <div class="simple-table-container">
+                            <table class="simple-table" aria-describedby="tablaCategorias">
+                                <thead>
+                                    <tr>
+                                        <th>Categoría</th>
+                                        <th>Cantidad de Materiales</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaCategorias">
+                                    <!-- Las categorías se cargarán dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
-                <div class="card">
-                    <div style="background: #e7f3ff; border: 1px solid #b3d7ff; border-radius: 5px; padding: 10px; margin-bottom: 15px;">
-                        <p style="margin: 0; color: #0066cc; font-size: 0.9em;"><strong>📖 Solo Consulta:</strong> Esta pestaña es únicamente para ver materiales. Para modificar use las pestañas correspondientes.</p>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h3 id="tituloResultados">Materiales por Categoría</h3>
-                        <div id="contadorMateriales" style="color: #666; font-size: 0.9em;"></div>
-                    </div>
-                    <div id="consultarResultados">
-                        <p style="color: #666; text-align: center; padding: 40px;">
-                            📦 Seleccione una categoría para ver sus materiales<br>
-                            <small>o haga clic en "Ver Todos" para consultar todos los materiales</small>
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pestaña Crear -->
-            <div id="crear" class="tab-content" role="tabpanel">
-                <div class="card">
-                    <h2 class="card-title">➕ Crear Nuevo Material</h2>
-                    
-                    <form id="crearMaterialForm">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Pestaña Consultar -->
+                <div id="consultar" class="tab-content" role="tabpanel">
+                    <div class="search-section">
+                        <h3>🔍 Consultar Materiales (Solo Lectura)</h3>
+                        <div class="search-row">
                             <div class="form-group">
-                                <label>Categoría *</label>
-                                <select id="crearCategoria" required>
-                                    <option value="">Seleccione una categoría</option>
+                                <label>Seleccionar Categoría *</label>
+                                <select id="consultarCategoria" onchange="consultarMaterialesPorCategoria()">
+                                    <option value="">-- Seleccione una categoría --</option>
                                 </select>
                             </div>
-                            
                             <div class="form-group">
-                                <label>Nombre del Material *</label>
-                                <input type="text" id="crearNombre" required placeholder="Ej: Melamina Blanca 18mm">
+                                <label>Buscar por nombre (opcional)</label>
+                                <input type="text" id="filtroNombre" placeholder="Filtrar por nombre..." onkeyup="filtrarMateriales()">
+                            </div>
+                            <button class="btn" onclick="consultarTodosMateriales()">📋 Ver Todos</button>
+                            <button class="btn-secondary" onclick="limpiarConsulta()">🗑️ Limpiar</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div style="background: #e7f3ff; border: 1px solid #b3d7ff; border-radius: 5px; padding: 10px; margin-bottom: 15px;">
+                            <p style="margin: 0; color: #0066cc; font-size: 0.9em;"><strong>📖 Solo Consulta:</strong> Esta pestaña es únicamente para ver materiales. Para modificar use las pestañas correspondientes.</p>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 id="tituloResultados">Materiales por Categoría</h3>
+                            <div id="contadorMateriales" style="color: #666; font-size: 0.9em;"></div>
+                        </div>
+                        <div id="consultarResultados">
+                            <p style="color: #666; text-align: center; padding: 40px;">
+                                📦 Seleccione una categoría para ver sus materiales<br>
+                                <small>o haga clic en "Ver Todos" para consultar todos los materiales</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pestaña Crear -->
+                <div id="crear" class="tab-content" role="tabpanel">
+                    <div class="card">
+                        <h2 class="card-title">➕ Crear Nuevo Material</h2>
+                        
+                        <form id="crearMaterialForm">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label>Categoría *</label>
+                                    <select id="crearCategoria" required>
+                                        <option value="">Seleccione una categoría</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Nombre del Material *</label>
+                                    <input type="text" id="crearNombre" required placeholder="Ej: Melamina Blanca 18mm">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Unidad de Medida</label>
+                                    <select id="crearUnidad">
+                                        <option value="pza">Pieza</option>
+                                        <option value="mt">Metro</option>
+                                        <option value="m2">Metro cuadrado</option>
+                                        <option value="kg">Kilogramo</option>
+                                        <option value="lt">Litro</option>
+                                        <option value="caja">Caja</option>
+                                        <option value="par">Par</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Descripción</label>
+                                    <textarea id="crearDescripcion" rows="3" placeholder="Descripción detallada del material..."></textarea>
+                                </div>
                             </div>
                             
+                            <div style="text-align: center; margin-top: 30px;">
+                                <button type="button" class="btn-secondary" onclick="limpiarFormularioCrear()">🗑️ Limpiar</button>
+                                <button type="submit" class="btn">✅ Crear Material</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Pestaña Editar -->
+                <div id="editar" class="tab-content" role="tabpanel">
+                    <div class="search-section">
+                        <h3>✏️ Buscar Material a Editar</h3>
+                        <div class="search-row">
                             <div class="form-group">
-                                <label>Unidad de Medida</label>
-                                <select id="crearUnidad">
-                                    <option value="pza">Pieza</option>
-                                    <option value="mt">Metro</option>
-                                    <option value="m2">Metro cuadrado</option>
-                                    <option value="kg">Kilogramo</option>
-                                    <option value="lt">Litro</option>
-                                    <option value="caja">Caja</option>
-                                    <option value="par">Par</option>
+                                <label>Categoría</label>
+                                <select id="editarBuscarCategoria" onchange="cargarMaterialesParaEditar()">
+                                    <option value="">-- Seleccione una categoría --</option>
                                 </select>
                             </div>
-                            
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label>Descripción</label>
-                                <textarea id="crearDescripcion" rows="3" placeholder="Descripción detallada del material..."></textarea>
+                            <div class="form-group">
+                                <label>Material</label>
+                                <select id="editarBuscarMaterial" onchange="cargarDatosMaterialEditar()">
+                                    <option value="">-- Primero seleccione una categoría --</option>
+                                </select>
                             </div>
+                            <button class="btn" onclick="cargarDatosMaterialEditar()">📝 Cargar para Editar</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="card-title">✏️ Editar Material</h2>
+                        
+                        <form id="editarMaterialForm">
+                            <input type="hidden" id="editarSelectedId" value="">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label>Categoría Original</label>
+                                    <input type="text" id="editarCategoriaOriginal" readonly style="background: #f5f5f5;">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Nombre Original</label>
+                                    <input type="text" id="editarNombreOriginal" readonly style="background: #f5f5f5;">
+                                </div>
+                                
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Nuevo Nombre *</label>
+                                    <input type="text" id="editarNuevoNombre" required placeholder="Nuevo nombre del material">
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: center; margin-top: 30px;">
+                                <button type="button" class="btn-secondary" onclick="limpiarFormularioEditar()">🗑️ Limpiar</button>
+                                <button type="submit" class="btn">✏️ Actualizar Material</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Pestaña Eliminar -->
+                <div id="eliminar" class="tab-content" role="tabpanel">
+                    <div class="search-section">
+                        <h3>🗑️ Buscar Material a Eliminar</h3>
+                        <div class="search-row">
+                            <div class="form-group">
+                                <label>Categoría</label>
+                                <select id="eliminarBuscarCategoria" onchange="cargarMaterialesParaEliminar()">
+                                    <option value="">-- Seleccione una categoría --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Material</label>
+                                <select id="eliminarBuscarMaterial">
+                                    <option value="">-- Primero seleccione una categoría --</option>
+                                </select>
+                            </div>
+                            <button class="btn-danger" onclick="eliminarMaterialSeleccionado()">🗑️ Eliminar Material</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>⚠️ Zona de Eliminación</h3>
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 20px; margin: 15px 0;">
+                            <p><strong>⚠️ Advertencia:</strong> La eliminación de materiales es <strong>permanente</strong> y no se puede deshacer.</p>
+                            <p>Asegúrese de seleccionar el material correcto antes de proceder con la eliminación.</p>
+                        </div>
+                        
+                        <div id="materialAEliminar" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                            <h4>Material seleccionado para eliminar:</h4>
+                            <div id="datosMaterialEliminar"></div>
                         </div>
                         
                         <div style="text-align: center; margin-top: 30px;">
-                            <button type="button" class="btn-secondary" onclick="limpiarFormularioCrear()">🗑️ Limpiar</button>
-                            <button type="submit" class="btn">✅ Crear Material</button>
+                            <p style="color: #666;">Seleccione una categoría y material arriba para proceder</p>
                         </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Pestaña Editar -->
-            <div id="editar" class="tab-content" role="tabpanel">
-                <div class="search-section">
-                    <h3>✏️ Buscar Material a Editar</h3>
-                    <div class="search-row">
-                        <div class="form-group">
-                            <label>Categoría</label>
-                            <select id="editarBuscarCategoria" onchange="cargarMaterialesParaEditar()">
-                                <option value="">-- Seleccione una categoría --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Material</label>
-                            <select id="editarBuscarMaterial" onchange="cargarDatosMaterialEditar()">
-                                <option value="">-- Primero seleccione una categoría --</option>
-                            </select>
-                        </div>
-                        <button class="btn" onclick="cargarDatosMaterialEditar()">📝 Cargar para Editar</button>
                     </div>
                 </div>
-
-                <div class="card">
-                    <h2 class="card-title">✏️ Editar Material</h2>
-                    
-                    <form id="editarMaterialForm">
-                        <input type="hidden" id="editarSelectedId" value="">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label>Categoría Original</label>
-                                <input type="text" id="editarCategoriaOriginal" readonly style="background: #f5f5f5;">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Nombre Original</label>
-                                <input type="text" id="editarNombreOriginal" readonly style="background: #f5f5f5;">
-                            </div>
-                            
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label>Nuevo Nombre *</label>
-                                <input type="text" id="editarNuevoNombre" required placeholder="Nuevo nombre del material">
-                            </div>
-                        </div>
-                        
-                        <div style="text-align: center; margin-top: 30px;">
-                            <button type="button" class="btn-secondary" onclick="limpiarFormularioEditar()">🗑️ Limpiar</button>
-                            <button type="submit" class="btn">✏️ Actualizar Material</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Pestaña Eliminar -->
-            <div id="eliminar" class="tab-content" role="tabpanel">
-                <div class="search-section">
-                    <h3>🗑️ Buscar Material a Eliminar</h3>
-                    <div class="search-row">
-                        <div class="form-group">
-                            <label>Categoría</label>
-                            <select id="eliminarBuscarCategoria" onchange="cargarMaterialesParaEliminar()">
-                                <option value="">-- Seleccione una categoría --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Material</label>
-                            <select id="eliminarBuscarMaterial">
-                                <option value="">-- Primero seleccione una categoría --</option>
-                            </select>
-                        </div>
-                        <button class="btn-danger" onclick="eliminarMaterialSeleccionado()">🗑️ Eliminar Material</button>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3>⚠️ Zona de Eliminación</h3>
-                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 20px; margin: 15px 0;">
-                        <p><strong>⚠️ Advertencia:</strong> La eliminación de materiales es <strong>permanente</strong> y no se puede deshacer.</p>
-                        <p>Asegúrese de seleccionar el material correcto antes de proceder con la eliminación.</p>
-                    </div>
-                    
-                    <div id="materialAEliminar" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                        <h4>Material seleccionado para eliminar:</h4>
-                        <div id="datosMaterialEliminar"></div>
-                    </div>
-                    
-                    <div style="text-align: center; margin-top: 30px;">
-                        <p style="color: #666;">Seleccione una categoría y material arriba para proceder</p>
-                    </div>
-                </div>
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 
     <!-- Keep local categories fallback script -->
     <script src="../../js/categorias_reales.js"></script>
+
+    <!-- Layout global: inyecta sidebar/topbar -->
+    <script src="../../js/layout.js"></script>
 
     <!-- Main logic: module to allow dynamic import of materialsApi -->
     <script type="module">
