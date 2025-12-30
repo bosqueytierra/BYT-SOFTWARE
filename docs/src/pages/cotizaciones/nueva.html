@@ -347,6 +347,67 @@
     <script src="../../js/categorias_reales.js" defer></script>
     <script src="../../js/wizard.js" defer></script>
 
+
+
+
+
+
+<!-- Header en vivo: título = nombre de proyecto, subtítulo = partidas -->
+<script>
+(function () {
+  const titleEl = document.querySelector('[data-wizard-title]');
+  const subEl   = document.querySelector('[data-wizard-subtitle]');
+  if (!titleEl || !subEl) return;
+
+  const selectors = 'input[name="nombre_proyecto"], [data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre';
+
+  const getNombreProyecto = () => {
+    const d = window.bytWizard?.datos || {};
+    const fromDatos = (d.cliente?.nombre_proyecto || '').trim();
+    if (fromDatos) return fromDatos;
+    const inp = document.querySelector('input[name="nombre_proyecto"]');
+    return (inp?.value || '').trim();
+  };
+
+  const getPartidas = () => {
+    const d = window.bytWizard?.datos || {};
+    const arr = (d.partidas || []).map(p => (p?.nombre || '').trim()).filter(Boolean);
+    if (arr.length) return arr;
+    return Array.from(document.querySelectorAll(selectors))
+      .map(el => (el.value || '').trim())
+      .filter(Boolean);
+  };
+
+  const refreshHeader = () => {
+    titleEl.textContent = getNombreProyecto() || 'Nueva Cotización';
+    const parts = getPartidas();
+    subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
+  };
+
+  const handler = (e) => {
+    if (e.target.matches(selectors)) requestAnimationFrame(refreshHeader);
+  };
+
+  document.addEventListener('input', handler, { capture: true });
+  document.addEventListener('keyup', handler, { capture: true });
+
+  // Refresco inicial y cuando se cargan datos (edición/duplicado)
+  const wait = setInterval(() => {
+    refreshHeader();
+    if (window.bytWizard) clearInterval(wait);
+  }, 200);
+})();
+</script>
+
+
+
+
+
+
+
+
+
+    
     <script>
       if (!localStorage.getItem('byt_logged_in')) {
         window.location.href = '../login/login.html';
