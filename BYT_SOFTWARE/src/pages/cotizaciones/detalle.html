@@ -259,7 +259,7 @@
       font-size: 20px;
     }
 
-    /* Valores traspasados más suaves */
+    /* Valores traspasados más suaves y encabezado compacto */
     .valores-block {
       margin-bottom: 18px;
       border: 1px solid #e2e8f0;
@@ -268,14 +268,17 @@
       box-shadow: 0 10px 24px rgba(0,0,0,0.04);
     }
     .valores-head {
-      background: #3f705d; /* más claro */
-      color: #fff;
-      padding: 12px 14px;
-      font-weight: 800;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      justify-content: flex-start; /* sin chip a la derecha */
+      background: #4f806c;
+      color: #fff;
+      padding: 10px 14px;
+      font-weight: 800;
       gap: 8px;
+      border-radius: 12px 12px 0 0;
+      margin: 0 0 8px 0;
+      min-width: 240px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.08);
     }
     .valores-body {
       background: #fff;
@@ -296,6 +299,21 @@
     th, td { padding: 10px; border: 1px solid #e6efe9; }
     th { background: #f5f7f6; color: #2e6b57; font-weight: 800; text-align: left; }
     .subtotal-row { background: rgba(46,94,78,0.06); font-weight: 700; }
+
+    /* Traspasados: columnas fijas */
+    .valores-table { table-layout: fixed; width: 100%; }
+    .valores-table th:nth-child(1),
+    .valores-table td:nth-child(1) { width: 22%; }
+    .valores-table th:nth-child(2),
+    .valores-table td:nth-child(2) { width: 22%; }
+    .valores-table th:nth-child(3),
+    .valores-table td:nth-child(3) { width: 14%; }
+    .valores-table th:nth-child(4),
+    .valores-table td:nth-child(4) { width: 8%; text-align: center; }
+    .valores-table th:nth-child(5),
+    .valores-table td:nth-child(5) { width: 16%; text-align: right; }
+    .valores-table th:nth-child(6),
+    .valores-table td:nth-child(6) { width: 18%; text-align: right; }
 
     @media (max-width: 640px) {
       .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
@@ -629,11 +647,7 @@
           { label: 'Cliente', value: c.nombre || 'N/A' },
           { label: 'Dirección', value: c.direccion || 'N/A' },
           { label: 'Comuna', value: c.comuna || 'N/A' },
-          { label: 'Correo', value: c.correo || 'N/A' },
-          { label: 'Teléfono', value: c.telefono || 'N/A' },
-          { label: 'Encargado', value: c.encargado || 'N/A' },
-          { label: 'ID Cotización', value: `#${cotizacionActual?.id || (cotizacionActual?._id || '')}` },
-          { label: 'Fecha de Creación', value: new Date(cotizacionActual?.created_at || cotizacionActual?._created_at || Date.now()).toLocaleDateString('es-CL') },
+          // se ocultan correo, teléfono, encargado, id, fecha
         ];
 
         let html = '';
@@ -789,6 +803,17 @@
           return;
         }
 
+        const colgroup = `
+          <colgroup>
+            <col style="width:22%;">
+            <col style="width:22%;">
+            <col style="width:14%;">
+            <col style="width:8%;">
+            <col style="width:16%;">
+            <col style="width:18%;">
+          </colgroup>
+        `;
+
         keys.forEach(sec => {
           const cat = trasp[sec] || {};
           const factor = Number(cat.factor || 0);
@@ -805,7 +830,7 @@
                 <td>${escapeHtml(it.nombre || k)}</td>
                 <td>${escapeHtml(it.descripcion || '')}</td>
                 <td>${escapeHtml(it.lugar || '')}</td>
-                <td>${Number(it.cantidad || 0)}</td>
+                <td style="text-align:center;">${Number(it.cantidad || 0)}</td>
                 <td style="text-align:right;">${formatPrecio(it.precio || 0)}</td>
                 <td style="font-weight:600; text-align:right;">${formatPrecio(sub)}</td>
               </tr>
@@ -820,7 +845,8 @@
               </div>
               <div class="valores-body">
                 <div class="table-container">
-                  <table class="table">
+                  <table class="table valores-table">
+                    ${colgroup}
                     <thead>
                       <tr>
                         <th>Servicio</th>
@@ -860,7 +886,7 @@
                 <td>${escapeHtml(x.nombre || 'Extra')}</td>
                 <td>${escapeHtml(x.descripcion || '')}</td>
                 <td>${escapeHtml(x.lugar || '')}</td>
-                <td>${Number(x.cantidad || 0)}</td>
+                <td style="text-align:center;">${Number(x.cantidad || 0)}</td>
                 <td style="text-align:right;">${formatPrecio(x.precio || 0)}</td>
                 <td style="text-align:right;font-weight:600;">${formatPrecio(base)}</td>
               </tr>
@@ -873,7 +899,8 @@
               </div>
               <div class="valores-body">
                 <div class="table-container">
-                  <table class="table">
+                  <table class="table valores-table">
+                    ${colgroup}
                     <thead>
                       <tr>
                         <th>Servicio</th>
