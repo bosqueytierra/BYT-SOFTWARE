@@ -29,15 +29,15 @@
     a { color: inherit; text-decoration: none; }
 
     /* Summary bar */
-.summary-bar {
-  background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.82) 100%);
-  backdrop-filter: blur(6px);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 14px;
-  position: sticky;
-  top: 60px;   /* súbelo o bájalo 4px si ves un pequeño solape/gap */
-  z-index: 5;  /* menor que el topbar, para que el topbar quede encima */
-}
+    .summary-bar {
+      background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.82) 100%);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      position: sticky;
+      top: 60px;
+      z-index: 5;
+    }
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
@@ -75,15 +75,7 @@
       gap: 12px;
       box-shadow: var(--shadow-soft);
     }
-    .logo-chip {
-      width: 38px; height: 38px;
-      border-radius: 12px;
-      background: #e9f0ec;
-      color: var(--primary);
-      display: grid; place-items: center;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-    }
+    .logo-chip { display: none !important; } /* ocultamos el chip BYT */
     .header-title { margin: 0; font-size: 18px; font-weight: 700; color: var(--text); }
     .header-subtitle { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
 
@@ -247,10 +239,9 @@
     <div class="container">
       <header class="header">
         <div class="wizard-header">
-          <div class="logo-chip">BYT</div>
-          <div>
-            <h1 class="header-title">Nueva Cotización</h1>
-            <p class="header-subtitle">Wizard de 10 pasos — Bosque y Tierra</p>
+          <div class="header-texts">
+            <h1 class="header-title" data-wizard-title>Nueva Cotización</h1>
+            <p class="header-subtitle" data-wizard-subtitle>Definir partidas</p>
           </div>
         </div>
       </header>
@@ -373,31 +364,21 @@
       });
     </script>
 
-    <!-- Guardar rápido paso 1: llama directo a saveCotizacionSupabase -->
-   
-    
-    
-  <script>
-  // Guardar rápido paso 1: llama directo a saveCotizacionSupabase
-  async function guardarCotizacionPaso1() {
-    try {
-      const res = await window.bytWizard.saveCotizacionSupabase();
-      // Si la validación o el guardado fallan, NO mostrar éxito
-      if (!res || res.success === false || res.ok === false) return;
-      window.utils?.mostrarNotificacion?.('Guardado', 'success');
-    } catch (e) {
-      console.error(e);
-      window.utils?.mostrarNotificacion?.('Error al guardar: ' + (e.message || e), 'error');
-    }
-  }
-</script>
+    <!-- Guardar rápido paso 1 -->
+    <script>
+      async function guardarCotizacionPaso1() {
+        try {
+          const res = await window.bytWizard.saveCotizacionSupabase();
+          if (!res || res.success === false || res.ok === false) return;
+          window.utils?.mostrarNotificacion?.('Guardado', 'success');
+        } catch (e) {
+          console.error(e);
+          window.utils?.mostrarNotificacion?.('Error al guardar: ' + (e.message || e), 'error');
+        }
+      }
+    </script>
 
-
-
-
-    
-
-    <!-- Redirigir botón Finalizar (paso 10) al menú principal -->
+    <!-- Redirigir Finalizar -->
     <script>
       const MENU_PRINCIPAL_URL = "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/menu_principal.html";
       document.addEventListener('click', (ev) => {
@@ -904,17 +885,68 @@
       })();
     </script>
    
+  <!-- Título/subtítulo dinámicos: proyecto y partidas -->
+  <script>
+    (function () {
+      const titleEl = document.querySelector('[data-wizard-title]');
+      const subEl   = document.querySelector('[data-wizard-subtitle]');
+      if (!titleEl || !subEl) return;
+
+      const getNombreProyecto = () => {
+        const d = window.bytWizard?.datos || {};
+        const fromDatos = (d.cliente?.nombre_proyecto || '').trim();
+        if (fromDatos) return fromDatos;
+        const inp = document.querySelector('input[name="nombre_proyecto"]');
+        return (inp?.value || '').trim();
+      };
+
+      const getPartidas = () => {
+        const d = window.bytWizard?.datos || {};
+        const arr = (d.partidas || []).map(p => (p?.nombre || '').trim()).filter(Boolean);
+        if (arr.length) return arr;
+
+        // fallback: lee inputs en DOM
+        return Array.from(document.querySelectorAll(
+          '[data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre'
+        ))
+        .map(el => (el.value || '').trim())
+        .filter(Boolean);
+      };
+
+      const refreshHeader = () => {
+        titleEl.textContent = getNombreProyecto() || 'Nueva Cotización';
+        const parts = getPartidas();
+        subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
+      };
+
+      const wireEvents = () => {
+        document.addEventListener('input', (e) => {
+          if (e.target.matches('input[name="nombre_proyecto"], [data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre')) {
+            refreshHeader();
+          }
+        });
+        const wiz = window.bytWizard;
+        if (wiz && wiz.mostrarPaso && !wiz.__headerPatched) {
+          const orig = wiz.mostrarPaso.bind(wiz);
+          wiz.mostrarPaso = function(n){
+            const r = orig(n);
+            setTimeout(refreshHeader, 0);
+            return r;
+          };
+          wiz.__headerPatched = true;
+        }
+      };
+
+      const wait = setInterval(() => {
+        refreshHeader();
+        wireEvents();
+        if (window.bytWizard) clearInterval(wait);
+      }, 400);
+    })();
+  </script>
+
   <!-- Inyecta shell (sidebar+topbar) -->
   <script src="../../js/layout.js"></script>
+  </div>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
