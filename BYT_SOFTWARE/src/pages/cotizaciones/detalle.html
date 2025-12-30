@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Detalle Cotización - BYT SOFTWARE</title>
 
+  <!-- Estilos base -->
   <link rel="stylesheet" href="../../styles/global.css" />
 
   <style>
@@ -19,6 +20,11 @@
       --accent: #bfe7c7;
       --accent-strong: #1b5e20;
       --chip-border: #7fbf90;
+      --sidebar-bg: #111827;
+      --sidebar-bg-2: #0f172a;
+      --sidebar-active: #1f2937;
+      --sidebar-text: #d1d5db;
+      --sidebar-text-active: #ffffff;
       --viewer-scale: 1;
     }
 
@@ -28,13 +34,59 @@
       font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
+      display: flex;
+      min-height: 100vh;
     }
 
     a { color: var(--primary); text-decoration: none; }
 
-    .container {
-      width: min(1200px, 95vw);
-      margin: 24px auto 40px auto;
+    /* Layout con sidebar */
+    .layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      width: 100%;
+      min-height: 100vh;
+    }
+    .sidebar {
+      background: linear-gradient(180deg, var(--sidebar-bg) 0%, var(--sidebar-bg-2) 100%);
+      color: var(--sidebar-text);
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-right: 1px solid #0b1220;
+    }
+    .sidebar .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 10px;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .sidebar .nav {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sidebar .nav a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: var(--sidebar-text);
+      font-weight: 600;
+    }
+    .sidebar .nav a.active,
+    .sidebar .nav a:hover {
+      background: var(--sidebar-active);
+      color: var(--sidebar-text-active);
+    }
+
+    .main {
+      padding: 18px 22px 32px 22px;
       display: flex;
       flex-direction: column;
       gap: 16px;
@@ -136,17 +188,36 @@
     th { background: #f5f7f6; color: #2e6b57; font-weight: 800; text-align: left; }
     .subtotal-row { background: rgba(46,94,78,0.06); font-weight: 700; }
 
-    .chip {
-      display: inline-flex;
+    .valores-block {
+      margin-bottom: 18px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.04);
+    }
+    .valores-head {
+      background: #1f3b2e;
+      color: #fff;
+      padding: 12px 14px;
+      font-weight: 800;
+      display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid #dbe3e6;
-      background: #f7fafc;
-      color: #4d5b63;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .valores-body {
+      background: #fff;
+      padding: 14px;
+    }
+    .valores-footer {
+      background: #f5f9f6;
+      color: #1f3b2e;
+      padding: 10px 14px;
       font-weight: 700;
-      font-size: 12px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
     }
 
     .no-data { color:#666; text-align:center; padding:18px; }
@@ -254,6 +325,14 @@
       font-size: 20px;
     }
 
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 72px 1fr; }
+      .sidebar { padding: 12px 8px; }
+      .sidebar .nav a { padding: 10px 10px; font-size: 13px; }
+      .sidebar .nav a span.label { display: none; }
+      .sidebar .logo span { display: none; }
+    }
+
     @media (max-width: 640px) {
       .header-top { flex-direction: column; align-items: flex-start; }
       .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
@@ -262,8 +341,10 @@
     @media print {
       .no-print { display: none !important; }
       body { background: white !important; }
+      .layout { display: block; }
+      .sidebar { display: none; }
+      .main { padding: 0 12px; }
       .card { box-shadow: none !important; border: 1px solid #ddd; }
-      .container { width: 100%; margin: 0; padding: 0 12px; }
       .topbar { grid-template-columns: repeat(3, 1fr); }
     }
   </style>
@@ -278,88 +359,108 @@
 </head>
 
 <body>
-  <div class="container">
-    <div class="header-top no-print">
-      <a href="consultar.html" class="btn-back">← Volver</a>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn btn-secondary" onclick="window.print()">Imprimir</button>
-        <button class="btn btn-ghost" onclick="exportarPDF()">Exportar PDF</button>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar no-print">
+      <div class="logo">
+        <img src="../../assets/logo_byt.png" alt="BYT" style="height:28px;">
+        <span>BYT SOFTWARE</span>
       </div>
-    </div>
+      <nav class="nav">
+        <a href="../proyectos/listar.html"><span>📁</span><span class="label">Proyectos</span></a>
+        <a href="../cotizaciones/consultar.html" class="active"><span>📑</span><span class="label">Cotizaciones</span></a>
+        <a href="../compras/listar.html"><span>🛒</span><span class="label">Compras</span></a>
+        <a href="../ventas/listar.html"><span>💳</span><span class="label">Ventas</span></a>
+        <a href="../finanzas/listar.html"><span>📊</span><span class="label">Finanzas</span></a>
+        <a href="../datos/index.html"><span>🗂️</span><span class="label">Datos</span></a>
+        <a href="../configuracion/index.html"><span>⚙️</span><span class="label">Configuración</span></a>
+      </nav>
+    </aside>
 
-    <!-- Barra superior de KPIs -->
-    <div class="card topbar" id="topbar-kpis">
-      <div class="kpi">
-        <div class="kpi-label">Total Materiales</div>
-        <div class="kpi-value" id="kpi-total-materiales">$0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Factor</div>
-        <div class="kpi-value" id="kpi-factor">2x</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Neto</div>
-        <div class="kpi-value" id="kpi-neto">$0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">IVA (19%)</div>
-        <div class="kpi-value" id="kpi-iva">$0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Total Proyecto</div>
-        <div class="kpi-value" id="kpi-total-proyecto">$0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Ganancia</div>
-        <div class="kpi-value" id="kpi-ganancia">$0</div>
-      </div>
-    </div>
-
-    <div id="loading-state" class="card text-center">
-      <div class="loading-spinner" style="margin: 20px auto;"></div>
-      <p>Cargando cotización...</p>
-    </div>
-
-    <div id="detalle-content" style="display: none;">
-      <div class="card section">
-        <h3 class="card-title">Información del Proyecto</h3>
-        <div class="detalle-grid" id="info-proyecto"></div>
+    <!-- Main -->
+    <main class="main">
+      <div class="header-top no-print">
+        <a href="consultar.html" class="btn-back">← Volver</a>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="window.print()">Imprimir</button>
+          <button class="btn btn-ghost" onclick="exportarPDF()">Exportar PDF</button>
+        </div>
       </div>
 
-      <div class="card section">
-        <h3 class="card-title">Resumen Financiero</h3>
-        <div class="detalle-grid" id="resumen-financiero"></div>
+      <!-- Barra superior de KPIs -->
+      <div class="card topbar" id="topbar-kpis">
+        <div class="kpi">
+          <div class="kpi-label">Total Materiales</div>
+          <div class="kpi-value" id="kpi-total-materiales">$0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Factor</div>
+          <div class="kpi-value" id="kpi-factor">2x</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Neto</div>
+          <div class="kpi-value" id="kpi-neto">$0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">IVA (19%)</div>
+          <div class="kpi-value" id="kpi-iva">$0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Total Proyecto</div>
+          <div class="kpi-value" id="kpi-total-proyecto">$0</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Ganancia</div>
+          <div class="kpi-value" id="kpi-ganancia">$0</div>
+        </div>
       </div>
 
-      <div class="card section">
-        <h3 class="card-title">Materiales</h3>
-        <div id="materiales-detalle"></div>
+      <div id="loading-state" class="card text-center">
+        <div class="loading-spinner" style="margin: 20px auto;"></div>
+        <p>Cargando cotización...</p>
       </div>
 
-      <div class="card section">
-        <h3 class="card-title">Valores Traspasados</h3>
-        <div id="valores-detalle"></div>
+      <div id="detalle-content" style="display: none;">
+        <div class="card section">
+          <h3 class="card-title">Información del Proyecto</h3>
+          <div class="detalle-grid" id="info-proyecto"></div>
+        </div>
+
+        <div class="card section">
+          <h3 class="card-title">Resumen Financiero</h3>
+          <div class="detalle-grid" id="resumen-financiero"></div>
+        </div>
+
+        <div class="card section">
+          <h3 class="card-title">Materiales</h3>
+          <div id="materiales-detalle"></div>
+        </div>
+
+        <div class="card section">
+          <h3 class="card-title">Valores Traspasados</h3>
+          <div id="valores-detalle"></div>
+        </div>
+
+        <div class="card section">
+          <h3 class="card-title">Archivos</h3>
+          <div id="archivos-detalle"></div>
+        </div>
+
+        <div class="card section" style="text-align: center; margin-top: 20px;">
+          <h4 style="color: var(--primary); margin-bottom: 6px;">Bosque y Tierra</h4>
+          <p style="color: #666; margin: 5px 0;">Diseño y Fabricación de Muebles Personalizados</p>
+          <p style="color: #666; margin: 5px 0;">Fecha de cotización: <span id="fecha-cotizacion"></span></p>
+          <p style="color: #666; margin: 5px 0; font-size: 12px;">© 2025 BYT SOFTWARE - Sistema Interno de Gestión</p>
+        </div>
       </div>
 
-      <div class="card section">
-        <h3 class="card-title">Archivos</h3>
-        <div id="archivos-detalle"></div>
+      <div id="error-state" class="card text-center" style="display: none;">
+        <div style="font-size: 64px; color: #f44336; margin: 20px 0;">❌</div>
+        <h3 style="color: #f44336;">Error al cargar cotización</h3>
+        <p style="color: #999;" id="error-message">No se pudo cargar la información de la cotización.</p>
+        <button class="btn" onclick="cargarCotizacion()">Reintentar</button>
       </div>
-
-      <div class="card section" style="text-align: center; margin-top: 20px;">
-        <h4 style="color: var(--primary); margin-bottom: 6px;">Bosque y Tierra</h4>
-        <p style="color: #666; margin: 5px 0;">Diseño y Fabricación de Muebles Personalizados</p>
-        <p style="color: #666; margin: 5px 0;">Fecha de cotización: <span id="fecha-cotizacion"></span></p>
-        <p style="color: #666; margin: 5px 0; font-size: 12px;">© 2025 BYT SOFTWARE - Sistema Interno de Gestión</p>
-      </div>
-    </div>
-
-    <div id="error-state" class="card text-center" style="display: none;">
-      <div style="font-size: 64px; color: #f44336; margin: 20px 0;">❌</div>
-      <h3 style="color: #f44336;">Error al cargar cotización</h3>
-      <p style="color: #999;" id="error-message">No se pudo cargar la información de la cotización.</p>
-      <button class="btn" onclick="cargarCotizacion()">Reintentar</button>
-    </div>
+    </main>
   </div>
 
   <!-- Visor -->
@@ -769,31 +870,34 @@
 
           const totalFactor = totalBase * factor;
           html += `
-            <div class="detalle-section">
-              <h4 style="margin: 0 0 10px 0; color: var(--primary); text-transform: uppercase;">
-                ${escapeHtml(cat.nombre || sec)} ${factor ? `(factor ${factor.toFixed(2)})` : ''}
-              </h4>
-              <div class="table-container">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Servicio</th>
-                      <th>Descripción</th>
-                      <th>Lugar</th>
-                      <th>Cant.</th>
-                      <th>Valor Unit.</th>
-                      <th>Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${filas || '<tr><td colspan="6" class="no-data">Sin datos</td></tr>'}
-                  </tbody>
-                </table>
+            <div class="valores-block">
+              <div class="valores-head">
+                <span>${escapeHtml(cat.nombre || sec)}${factor ? ` (Factor ${factor.toFixed(2)})` : ''}</span>
+                <span class="chip">Base: ${formatPrecio(totalBase)} · Factor: ${formatPrecio(totalFactor)} · Total: ${formatPrecio(totalBase + totalFactor)}</span>
               </div>
-              <div style="margin-top:10px; font-weight:700;">
-                Total base: ${formatPrecio(totalBase)} &nbsp; | &nbsp;
-                Factor (${factor.toFixed(2)}): ${formatPrecio(totalFactor)} &nbsp; | &nbsp;
-                Total con factor: ${formatPrecio(totalBase + totalFactor)}
+              <div class="valores-body">
+                <div class="table-container">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Servicio</th>
+                        <th>Descripción</th>
+                        <th>Lugar</th>
+                        <th>Cant.</th>
+                        <th>Valor Unit.</th>
+                        <th>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${filas || '<tr><td colspan="6" class="no-data">Sin datos</td></tr>'}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="valores-footer">
+                <span>Total base: ${formatPrecio(totalBase)}</span>
+                <span>Factor (${factor.toFixed(2)}): ${formatPrecio(totalFactor)}</span>
+                <span>Total con factor: ${formatPrecio(totalBase + totalFactor)}</span>
               </div>
             </div>
           `;
@@ -820,29 +924,34 @@
             `;
           });
           html += `
-            <div class="detalle-section">
-              <h4 style="margin: 0 0 10px 0; color: var(--primary); text-transform: uppercase;">Valores Traspasados Extra</h4>
-              <div class="table-container">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Servicio</th>
-                      <th>Descripción</th>
-                      <th>Lugar</th>
-                      <th>Cant.</th>
-                      <th>Valor Unit.</th>
-                      <th>Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${filas}
-                  </tbody>
-                </table>
+            <div class="valores-block">
+              <div class="valores-head">
+                <span>Valores Traspasados Extra</span>
+                <span class="chip">Base: ${formatPrecio(sub)} · Factores: ${formatPrecio(subFactor)} · Total: ${formatPrecio(sub + subFactor)}</span>
               </div>
-              <div style="margin-top:10px; font-weight:700;">
-                Total extras: ${formatPrecio(sub)} &nbsp; | &nbsp;
-                Factores extras: ${formatPrecio(subFactor)} &nbsp; | &nbsp;
-                Total con factor: ${formatPrecio(sub + subFactor)}
+              <div class="valores-body">
+                <div class="table-container">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Servicio</th>
+                        <th>Descripción</th>
+                        <th>Lugar</th>
+                        <th>Cant.</th>
+                        <th>Valor Unit.</th>
+                        <th>Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${filas}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="valores-footer">
+                <span>Total extras: ${formatPrecio(sub)}</span>
+                <span>Factores extras: ${formatPrecio(subFactor)}</span>
+                <span>Total con factor: ${formatPrecio(sub + subFactor)}</span>
               </div>
             </div>
           `;
