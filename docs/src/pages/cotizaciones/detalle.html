@@ -1126,33 +1126,37 @@
     if (!cont || cont.style.display === 'none') throw new Error('No hay contenido para exportar');
     if (!window.html2canvas || !window.jspdf) throw new Error('Dependencias PDF no cargadas');
 
-    // Forzar scroll al inicio para capturar todo
-    window.scrollTo(0, 0);
-
+    // Captura con más escala y tomando todo el scroll
     const canvas = await html2canvas(cont, {
-      scale: 2,
+      scale: 3,
       useCORS: true,
-      backgroundColor: '#ffffff'
+      backgroundColor: '#ffffff',
+      windowWidth: cont.scrollWidth,
+      windowHeight: cont.scrollHeight
     });
 
     const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const margin = 16; // margen en pt
+    const pageWidth = pdf.internal.pageSize.getWidth() - margin * 2;
+    const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
+
+    const imgProps = pdf.getImageProperties(imgData);
     const imgWidth = pageWidth;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
+    const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
 
+    let position = margin;
     let heightLeft = imgHeight;
-    let position = 0;
 
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
+    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, '', 'FAST');
     heightLeft -= pageHeight;
 
     while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
+      position = margin - (imgHeight - heightLeft);
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
+      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, '', 'FAST');
       heightLeft -= pageHeight;
     }
 
@@ -1193,6 +1197,7 @@
   </script>
 </body>
 </html>
+
 
 
 
