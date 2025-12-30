@@ -1126,53 +1126,41 @@
   const btn = document.getElementById('btn-exportar-pdf');
   if (btn) btn.disabled = true;
   try {
-    const cont = document.getElementById('detalle-content');
-    if (!cont || cont.style.display === 'none') throw new Error('No hay contenido para exportar');
+    const cont = document.getElementById('page-content'); // usa todo el contenido visible
+    if (!cont) throw new Error('No hay contenido para exportar');
     if (!window.html2canvas || !window.jspdf) throw new Error('Dependencias PDF no cargadas');
 
     const { jsPDF } = window.jspdf;
-    // Captura con escala moderada
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    // Captura completa con scroll corregido
     const canvas = await html2canvas(cont, {
       scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
-      windowWidth: cont.scrollWidth,
-      windowHeight: cont.scrollHeight
+      scrollX: -window.scrollX,
+      scrollY: -window.scrollY,
+      windowWidth: document.documentElement.scrollWidth,
+      windowHeight: document.documentElement.scrollHeight
     });
 
-    const pdf = new jsPDF('p', 'pt', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgData = canvas.toDataURL('image/png');
     const imgWidth = pageWidth;
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Altura visible por página en px (equivalente a pageHeight en proporción)
-    const pxPerPt = canvas.width / pageWidth;
-    const pageCanvasHeight = pageHeight * pxPerPt;
+    let heightLeft = imgHeight;
+    let position = 0;
 
-    let renderedHeight = 0;
-    let page = 0;
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
+    heightLeft -= pageHeight;
 
-    while (renderedHeight < canvas.height) {
-      const pageCanvas = document.createElement('canvas');
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = Math.min(pageCanvasHeight, canvas.height - renderedHeight);
-      const ctx = pageCanvas.getContext('2d');
-
-      ctx.drawImage(
-        canvas,
-        0, renderedHeight,
-        canvas.width, pageCanvas.height,
-        0, 0,
-        canvas.width, pageCanvas.height
-      );
-
-      const imgData = pageCanvas.toDataURL('image/png');
-      if (page > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, (pageCanvas.height / canvas.width) * imgWidth, '', 'FAST');
-
-      renderedHeight += pageCanvasHeight;
-      page++;
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
+      heightLeft -= pageHeight;
     }
 
     pdf.save(`cotizacion-${cotizacionId || 'detalle'}.pdf`);
@@ -1224,6 +1212,7 @@
   </script>
 </body>
 </html>
+
 
 
 
