@@ -1118,7 +1118,11 @@
         });
       }
 
-   async function exportarPDF() {
+
+
+
+      
+ async function exportarPDF() {
   const btn = document.getElementById('btn-exportar-pdf');
   if (btn) btn.disabled = true;
   try {
@@ -1126,38 +1130,49 @@
     if (!cont || cont.style.display === 'none') throw new Error('No hay contenido para exportar');
     if (!window.html2canvas || !window.jspdf) throw new Error('Dependencias PDF no cargadas');
 
-    // Captura con más escala y tomando todo el scroll
+    const { jsPDF } = window.jspdf;
+    // Captura con escala moderada
     const canvas = await html2canvas(cont, {
-      scale: 3,
+      scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
       windowWidth: cont.scrollWidth,
       windowHeight: cont.scrollHeight
     });
 
-    const imgData = canvas.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('p', 'pt', 'a4');
-
-    const margin = 16; // margen en pt
-    const pageWidth = pdf.internal.pageSize.getWidth() - margin * 2;
-    const pageHeight = pdf.internal.pageSize.getHeight() - margin * 2;
-
-    const imgProps = pdf.getImageProperties(imgData);
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
     const imgWidth = pageWidth;
-    const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    let position = margin;
-    let heightLeft = imgHeight;
+    // Altura visible por página en px (equivalente a pageHeight en proporción)
+    const pxPerPt = canvas.width / pageWidth;
+    const pageCanvasHeight = pageHeight * pxPerPt;
 
-    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, '', 'FAST');
-    heightLeft -= pageHeight;
+    let renderedHeight = 0;
+    let page = 0;
 
-    while (heightLeft > 0) {
-      position = margin - (imgHeight - heightLeft);
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight, '', 'FAST');
-      heightLeft -= pageHeight;
+    while (renderedHeight < canvas.height) {
+      const pageCanvas = document.createElement('canvas');
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = Math.min(pageCanvasHeight, canvas.height - renderedHeight);
+      const ctx = pageCanvas.getContext('2d');
+
+      ctx.drawImage(
+        canvas,
+        0, renderedHeight,
+        canvas.width, pageCanvas.height,
+        0, 0,
+        canvas.width, pageCanvas.height
+      );
+
+      const imgData = pageCanvas.toDataURL('image/png');
+      if (page > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, (pageCanvas.height / canvas.width) * imgWidth, '', 'FAST');
+
+      renderedHeight += pageCanvasHeight;
+      page++;
     }
 
     pdf.save(`cotizacion-${cotizacionId || 'detalle'}.pdf`);
@@ -1170,6 +1185,18 @@
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+      
       window.imprimirArchivo = function(url) {
         if (!url) return;
         const w = window.open(url, '_blank');
@@ -1197,6 +1224,7 @@
   </script>
 </body>
 </html>
+
 
 
 
