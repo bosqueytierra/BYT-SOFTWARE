@@ -838,20 +838,49 @@ this.fillProviderSelects();
                     { nombre: 'Perfil tubular redondo', cantidad: 0, precio: 0 }
                 ]
             },
+
+
+
+
+            
             tableros: {
-                nombre: 'Tableros',
-                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor total',
-                materiales: [
-                    { nombre: 'Melamina 18mm tipo 1', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 18mm tipo 2', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 18mm tipo 3', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 15mm tipo 1', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 15mm tipo 2', cantidad: 0, precio: 0 },
-                    { nombre: 'Melamina 15mm tipo 3', cantidad: 0, precio: 0 },
-                    { nombre: 'Durolac', cantidad: 0, precio: 0 },
-                    { nombre: 'MDF', cantidad: 0, precio: 0 }
-                ]
-            },
+  nombre: 'Tableros',
+  descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor total',
+  materiales: [
+    { nombre: 'Melamina 18mm tipo 1', cantidad: 0, precio: 0 },
+    { nombre: 'Melamina 18mm tipo 2', cantidad: 0, precio: 0 },
+    { nombre: 'Melamina 18mm tipo 3', cantidad: 0, precio: 0 },
+    { nombre: 'Melamina 15mm tipo 1', cantidad: 0, precio: 0 },
+    { nombre: 'Melamina 15mm tipo 2', cantidad: 0, precio: 0 },
+    { nombre: 'Melamina 15mm tipo 3', cantidad: 0, precio: 0 },
+    { nombre: 'Durolac', cantidad: 0, precio: 0 },
+    { nombre: 'MDF', cantidad: 0, precio: 0 }
+  ],
+
+  // Nuevos campos para servicio de corte
+  corteExternoValorMelaminaUnit: 7000,
+  corteExternoPlanchasMelamina: 0,
+  corteExternoTotalMelaminas: 0,
+  corteExternoProveedorMelamina: '',
+
+  corteExternoValorDurolacUnit: 3000,
+  corteExternoPlanchasDurolac: 0,
+  corteExternoTotalDurolac: 0,
+  corteExternoProveedorDurolac: ''
+}
+
+
+
+
+
+
+
+
+
+
+
+
+                
             tapacantos: {
                 nombre: 'Tapacantos',
                 descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
@@ -2337,4 +2366,5 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
