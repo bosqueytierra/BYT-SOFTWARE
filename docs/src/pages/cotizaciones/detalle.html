@@ -324,11 +324,8 @@
       break-inside: avoid !important;
     }
 
-    /* Salto antes de Materiales */
-    .page-break {
-      page-break-before: always !important;
-      break-before: page !important;
-    }
+    /* Quitamos el salto forzado: dejamos fluir y que html2pdf pagine evitando cortes internos */
+    /* .page-break { ... } eliminado */
 
     @media (max-width: 640px) {
       .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
@@ -407,8 +404,7 @@
         <div class="fin-grid" id="resumen-financiero"></div>
       </div>
 
-      <!-- Materiales: nueva página -->
-      <div class="card section page-break">
+      <div class="card section">
         <h3 class="card-title">Materiales</h3>
         <div id="materiales-detalle"></div>
       </div>
@@ -1130,7 +1126,7 @@
             margin:       [10, 10, 10, 10],
             filename:     `cotizacion-${cotizacionId || 'detalle'}.pdf`,
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 1, useCORS: true, backgroundColor: '#ffffff' },
+            html2canvas:  { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' },
             jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' },
             pagebreak:    { mode: ['avoid-all', 'css'] }
           };
