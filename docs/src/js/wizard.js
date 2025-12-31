@@ -748,6 +748,27 @@ this.fillProviderSelects();
         });
     }
 
+
+
+_ensureCorteTablerosInit() {
+    if (!this.datos.tablerosCorte) {
+        this.datos.tablerosCorte = {};
+    }
+    const d = this.datos.tablerosCorte;
+    d.corteExternoValorMelaminaUnit = Number(d.corteExternoValorMelaminaUnit || 7000);
+    d.corteExternoPlanchasMelamina = Number(d.corteExternoPlanchasMelamina || 0);
+    d.corteExternoTotalMelaminas  = Number(d.corteExternoTotalMelaminas || 0);
+    d.corteExternoProveedorMelamina = d.corteExternoProveedorMelamina || '';
+
+    d.corteExternoValorDurolacUnit = Number(d.corteExternoValorDurolacUnit || 3000);
+    d.corteExternoPlanchasDurolac = Number(d.corteExternoPlanchasDurolac || 0);
+    d.corteExternoTotalDurolac    = Number(d.corteExternoTotalDurolac || 0);
+    d.corteExternoProveedorDurolac = d.corteExternoProveedorDurolac || '';
+}
+
+
+
+    
     _genExtraId() {
         if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
         return 'extra-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
@@ -2382,6 +2403,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
 
