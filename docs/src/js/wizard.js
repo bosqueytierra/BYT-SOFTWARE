@@ -37,6 +37,22 @@ class WizardCotizacion {
                 encargado: '',
                 notas: ''
             },
+
+
+            
+tablerosCorte: {
+    corteExternoValorMelaminaUnit: 7000,
+    corteExternoPlanchasMelamina: 0,
+    corteExternoTotalMelaminas: 0,
+    corteExternoProveedorMelamina: '',
+
+    corteExternoValorDurolacUnit: 3000,
+    corteExternoPlanchasDurolac: 0,
+    corteExternoTotalDurolac: 0,
+    corteExternoProveedorDurolac: ''
+},
+
+            
             materiales: {
                 quincalleria: {},
                 tableros: {},
@@ -2366,5 +2382,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
+
 
 
