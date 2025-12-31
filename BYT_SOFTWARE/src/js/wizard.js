@@ -3,7 +3,10 @@
 // Versión base: V10 (~2314 líneas). Ajustes solicitados:
 // - Barra de pasos (chips con data-paso-nav): aseguramos que se resalte con color verde vivo y añadimos estilos inyectados (.paso-nav-activo).
 // - Barra de progreso: se asegura que avance de forma correlativa al paso actual, con fallback de IDs (progreso-barra/progreso-texto o progress-bar/progress-text).
-// - No se modifica la lógica funcional previa (extras, traspasos, autosave, etc.).
+// - Servicio de corte (melaminas / durolac) en Tableros, con proveedor y valor unitario editables:
+//   * Se suman al total de materiales antes de factor/IVA.
+//   * Se guardan en this.datos.tablerosCorte.
+//   * Se muestran en Paso 3 y en impresión (texto/vector).
 //
 // Colores resaltado paso activo:
 //   fondo: #bfe7c7
@@ -37,22 +40,6 @@ class WizardCotizacion {
                 encargado: '',
                 notas: ''
             },
-
-
-            
-tablerosCorte: {
-    corteExternoValorMelaminaUnit: 7000,
-    corteExternoPlanchasMelamina: 0,
-    corteExternoTotalMelaminas: 0,
-    corteExternoProveedorMelamina: '',
-
-    corteExternoValorDurolacUnit: 3000,
-    corteExternoPlanchasDurolac: 0,
-    corteExternoTotalDurolac: 0,
-    corteExternoProveedorDurolac: ''
-},
-
-            
             materiales: {
                 quincalleria: {},
                 tableros: {},
@@ -114,7 +101,20 @@ tablerosCorte: {
                 }
             },
             factorGeneral: 2,
-            partidas: []
+            partidas: [],
+
+            // Servicio de corte tableros
+            tablerosCorte: {
+                corteExternoValorMelaminaUnit: 7000,
+                corteExternoPlanchasMelamina: 0,
+                corteExternoTotalMelaminas: 0,
+                corteExternoProveedorMelamina: '',
+
+                corteExternoValorDurolacUnit: 3000,
+                corteExternoPlanchasDurolac: 0,
+                corteExternoTotalDurolac: 0,
+                corteExternoProveedorDurolac: ''
+            }
         };
 
         // Supabase client cache (se inicializa con _ensureSupabase)
@@ -158,6 +158,7 @@ tablerosCorte: {
             this._ensurePartidasInit();
             this._ensureExtrasInitAll();
             this._ensureTraspasoExtrasInit();
+            this._ensureCorteTablerosInit();
             this._ensurePasoNavStyles(); // inyecta estilos para resalte de chips
             this.actualizarProgreso();
             this.mostrarPaso(1);
@@ -364,6 +365,50 @@ tablerosCorte: {
                     select.value = '';
                 }
             });
+
+            // Selects de servicio de corte
+            const corteSelects = document.querySelectorAll('select.corte-proveedor-select');
+            corteSelects.forEach(select => {
+                const currentVal = (select.getAttribute('data-current') ?? '').toString().trim();
+                select.innerHTML = '';
+                const ph = document.createElement('option');
+                ph.value = '';
+                ph.textContent = '-- Selecciona proveedor --';
+                select.appendChild(ph);
+
+                list.forEach(p => {
+                    const opt = document.createElement('option');
+                    const val = (p.id !== undefined && p.id !== null) ? String(p.id) : String(p.name);
+                    opt.value = val;
+                    opt.textContent = String(p.name ?? val);
+                    opt.dataset.name = String(p.name ?? '');
+                    select.appendChild(opt);
+                });
+
+                if (currentVal) {
+                    let matched = false;
+                    for (let i = 0; i < select.options.length; i++) {
+                        const o = select.options[i];
+                        const oVal = (o.value || '').trim();
+                        const oText = (o.textContent || '').trim();
+                        const oName = (o.dataset && o.dataset.name) ? String(o.dataset.name).trim() : '';
+                        if (oVal === currentVal || oText === currentVal || oName === currentVal) {
+                            select.selectedIndex = i; matched = true; break;
+                        }
+                    }
+                    if (!matched) {
+                        const extra = document.createElement('option');
+                        extra.value = currentVal;
+                        extra.textContent = currentVal;
+                        extra.dataset.name = currentVal;
+                        extra.selected = true;
+                        select.appendChild(extra);
+                    }
+                } else {
+                    select.value = '';
+                }
+            });
+
         } catch (e) {
             console.error('fillProviderSelects error', e);
         }
@@ -550,6 +595,7 @@ this.fillProviderSelects();
         this._ensurePartidasInit();
         this._ensureExtrasInitAll();
         this._ensureTraspasoExtrasInit();
+        this._ensureCorteTablerosInit();
 
         container.innerHTML = `
             <div class="card">
@@ -748,27 +794,6 @@ this.fillProviderSelects();
         });
     }
 
-
-
-_ensureCorteTablerosInit() {
-    if (!this.datos.tablerosCorte) {
-        this.datos.tablerosCorte = {};
-    }
-    const d = this.datos.tablerosCorte;
-    d.corteExternoValorMelaminaUnit = Number(d.corteExternoValorMelaminaUnit || 7000);
-    d.corteExternoPlanchasMelamina = Number(d.corteExternoPlanchasMelamina || 0);
-    d.corteExternoTotalMelaminas  = Number(d.corteExternoTotalMelaminas || 0);
-    d.corteExternoProveedorMelamina = d.corteExternoProveedorMelamina || '';
-
-    d.corteExternoValorDurolacUnit = Number(d.corteExternoValorDurolacUnit || 3000);
-    d.corteExternoPlanchasDurolac = Number(d.corteExternoPlanchasDurolac || 0);
-    d.corteExternoTotalDurolac    = Number(d.corteExternoTotalDurolac || 0);
-    d.corteExternoProveedorDurolac = d.corteExternoProveedorDurolac || '';
-}
-
-
-
-    
     _genExtraId() {
         if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
         return 'extra-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
@@ -855,6 +880,77 @@ _ensureCorteTablerosInit() {
         if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
     }
 
+    // ------------- Servicio de corte (tableros) -------------
+    _ensureCorteTablerosInit() {
+        if (!this.datos.tablerosCorte) {
+            this.datos.tablerosCorte = {};
+        }
+        const d = this.datos.tablerosCorte;
+        d.corteExternoValorMelaminaUnit = Number(d.corteExternoValorMelaminaUnit || 7000);
+        d.corteExternoPlanchasMelamina = Number(d.corteExternoPlanchasMelamina || 0);
+        d.corteExternoTotalMelaminas  = Number(d.corteExternoTotalMelaminas || 0);
+        d.corteExternoProveedorMelamina = d.corteExternoProveedorMelamina || '';
+
+        d.corteExternoValorDurolacUnit = Number(d.corteExternoValorDurolacUnit || 3000);
+        d.corteExternoPlanchasDurolac = Number(d.corteExternoPlanchasDurolac || 0);
+        d.corteExternoTotalDurolac    = Number(d.corteExternoTotalDurolac || 0);
+        d.corteExternoProveedorDurolac = d.corteExternoProveedorDurolac || '';
+    }
+
+    _recalcularServicioCorteTableros() {
+        this._ensureCorteTablerosInit();
+        const d = this.datos.tablerosCorte;
+        const mats = this.datos.materiales.tableros || {};
+
+        let mel = 0, duo = 0;
+        Object.values(mats).forEach(m => {
+            const cant = Number(m.cantidad || 0);
+            const name = (m.nombre || '').toLowerCase();
+            if (name.includes('melamina')) mel += cant;
+            if (name.includes('durolac'))  duo += cant;
+        });
+
+        d.corteExternoPlanchasMelamina = mel;
+        d.corteExternoPlanchasDurolac  = duo;
+
+        d.corteExternoTotalMelaminas = mel * Number(d.corteExternoValorMelaminaUnit || 0);
+        d.corteExternoTotalDurolac   = duo * Number(d.corteExternoValorDurolacUnit || 0);
+
+        const cm = document.getElementById('corte_melamina_cant');
+        const cd = document.getElementById('corte_durolac_cant');
+        const tm = document.getElementById('corte_melamina_total');
+        const td = document.getElementById('corte_durolac_total');
+        if (cm) cm.textContent = mel;
+        if (cd) cd.textContent = duo;
+        if (tm) tm.textContent = '$' + (d.corteExternoTotalMelaminas || 0).toLocaleString();
+        if (td) td.textContent = '$' + (d.corteExternoTotalDurolac || 0).toLocaleString();
+
+        return (d.corteExternoTotalMelaminas || 0) + (d.corteExternoTotalDurolac || 0);
+    }
+
+    _getCorteTotals() {
+        return this._recalcularServicioCorteTableros();
+    }
+
+    setCorteValorUnit(tipo, valor) {
+        this._ensureCorteTablerosInit();
+        const d = this.datos.tablerosCorte;
+        const v = Number(valor || 0);
+        if (tipo === 'melamina') d.corteExternoValorMelaminaUnit = v;
+        if (tipo === 'durolac')  d.corteExternoValorDurolacUnit = v;
+        this._recalcularServicioCorteTableros();
+        this.actualizarSubtotalCategoria('tableros');
+        this.actualizarBarraSuperior();
+    }
+
+    setCorteProveedor(tipo, providerValue) {
+        this._ensureCorteTablerosInit();
+        const d = this.datos.tablerosCorte;
+        if (tipo === 'melamina') d.corteExternoProveedorMelamina = providerValue || '';
+        if (tipo === 'durolac')  d.corteExternoProveedorDurolac  = providerValue || '';
+        this._recalcularServicioCorteTableros();
+    }
+
     // ------------- PASOS DE MATERIALES -------------
     generarPasoMaterial(container, categoria) {
         const estructurasBYT = {
@@ -875,49 +971,20 @@ _ensureCorteTablerosInit() {
                     { nombre: 'Perfil tubular redondo', cantidad: 0, precio: 0 }
                 ]
             },
-
-
-
-
-            
             tableros: {
-  nombre: 'Tableros',
-  descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor total',
-  materiales: [
-    { nombre: 'Melamina 18mm tipo 1', cantidad: 0, precio: 0 },
-    { nombre: 'Melamina 18mm tipo 2', cantidad: 0, precio: 0 },
-    { nombre: 'Melamina 18mm tipo 3', cantidad: 0, precio: 0 },
-    { nombre: 'Melamina 15mm tipo 1', cantidad: 0, precio: 0 },
-    { nombre: 'Melamina 15mm tipo 2', cantidad: 0, precio: 0 },
-    { nombre: 'Melamina 15mm tipo 3', cantidad: 0, precio: 0 },
-    { nombre: 'Durolac', cantidad: 0, precio: 0 },
-    { nombre: 'MDF', cantidad: 0, precio: 0 }
-  ],
-
-  // Nuevos campos para servicio de corte
-  corteExternoValorMelaminaUnit: 7000,
-  corteExternoPlanchasMelamina: 0,
-  corteExternoTotalMelaminas: 0,
-  corteExternoProveedorMelamina: '',
-
-  corteExternoValorDurolacUnit: 3000,
-  corteExternoPlanchasDurolac: 0,
-  corteExternoTotalDurolac: 0,
-  corteExternoProveedorDurolac: ''
-}
-
-
-
-
-
-
-
-
-
-
-
-
-                
+                nombre: 'Tableros',
+                descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor total',
+                materiales: [
+                    { nombre: 'Melamina 18mm tipo 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 18mm tipo 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 18mm tipo 3', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm tipo 1', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm tipo 2', cantidad: 0, precio: 0 },
+                    { nombre: 'Melamina 15mm tipo 3', cantidad: 0, precio: 0 },
+                    { nombre: 'Durolac', cantidad: 0, precio: 0 },
+                    { nombre: 'MDF', cantidad: 0, precio: 0 }
+                ]
+            },
             tapacantos: {
                 nombre: 'Tapacantos',
                 descripcion: 'Materiales | Descripción | Lugar de compra | Cantidad | Valor unitario | Valor total',
@@ -998,6 +1065,10 @@ _ensureCorteTablerosInit() {
         if (categoria === 'quincalleria' || categoria === 'tableros' || categoria === 'tapacantos' || categoria === 'tableros_madera' || categoria === 'led_electricidad') {
             this._ensureExtrasInitAll();
         }
+        // Asegurar servicio de corte inicializado
+        if (categoria === 'tableros') {
+            this._ensureCorteTablerosInit();
+        }
 
         container.innerHTML = `
             <div class="card">
@@ -1038,6 +1109,63 @@ _ensureCorteTablerosInit() {
                     <strong>Subtotal ${this.extraConfig[categoria].label.toLowerCase()}: <span id="subtotal_extra_${categoria}">$0</span></strong>
                   </div>
                 </div>` : ''}
+
+                ${categoria === 'tableros' ? `
+                <div class="card" style="margin-top:14px; padding:12px;">
+                  <h4 style="margin:0 0 8px;">Servicio de corte</h4>
+                  <div style="overflow-x:auto;">
+                    <table class="table" style="min-width:620px;">
+                      <thead>
+                        <tr>
+                          <th style="width:28%;">Servicio</th>
+                          <th style="width:14%;">Cantidad</th>
+                          <th style="width:22%;">Proveedor</th>
+                          <th style="width:18%;">Valor unitario</th>
+                          <th style="width:18%;">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Cortes de Melaminas</td>
+                          <td id="corte_melamina_cant">0</td>
+                          <td>
+                            <select class="form-control corte-proveedor-select"
+                              data-corte-type="melamina"
+                              data-current="${this.escapeAttr(this.datos.tablerosCorte.corteExternoProveedorMelamina || '')}"
+                              onchange="window.bytWizard.setCorteProveedor('melamina', this.value)">
+                              <option value="">-- Selecciona proveedor --</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input type="number" class="form-control"
+                              value="${Number(this.datos.tablerosCorte.corteExternoValorMelaminaUnit || 0)}"
+                              onchange="window.bytWizard.setCorteValorUnit('melamina', this.value)">
+                          </td>
+                          <td id="corte_melamina_total" style="font-weight:bold;">$0</td>
+                        </tr>
+                        <tr>
+                          <td>Cortes de Durolac</td>
+                          <td id="corte_durolac_cant">0</td>
+                          <td>
+                            <select class="form-control corte-proveedor-select"
+                              data-corte-type="durolac"
+                              data-current="${this.escapeAttr(this.datos.tablerosCorte.corteExternoProveedorDurolac || '')}"
+                              onchange="window.bytWizard.setCorteProveedor('durolac', this.value)">
+                              <option value="">-- Selecciona proveedor --</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input type="number" class="form-control"
+                              value="${Number(this.datos.tablerosCorte.corteExternoValorDurolacUnit || 0)}"
+                              onchange="window.bytWizard.setCorteValorUnit('durolac', this.value)">
+                          </td>
+                          <td id="corte_durolac_total" style="font-weight:bold;">$0</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                ` : ''}
 
                 <div style="text-align: right; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 2px solid #4CAF50;">
                     <strong style="font-size: 18px;">SUBTOTAL ${estructura.nombre.toUpperCase()}: 
@@ -1091,6 +1219,7 @@ _ensureCorteTablerosInit() {
         tbody.innerHTML = html;
         this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
+        if (categoria === 'tableros') this._recalcularServicioCorteTableros();
     }
 
     agregarMaterial(categoria) {
@@ -1116,6 +1245,7 @@ _ensureCorteTablerosInit() {
             this.datos.materiales[categoria][materialId][campo] = valor;
         }
         this.cargarMaterialesCategoria(categoria);
+        if (categoria === 'tableros') this._recalcularServicioCorteTableros();
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
@@ -1141,6 +1271,12 @@ _ensureCorteTablerosInit() {
             subtotal += extraSub;
             const extraEl = document.getElementById(`subtotal_extra_${categoria}`);
             if (extraEl) extraEl.textContent = '$' + extraSub.toLocaleString();
+        }
+
+        // Servicio de corte tableros
+        if (categoria === 'tableros') {
+            const totalCorte = this._recalcularServicioCorteTableros();
+            subtotal += totalCorte;
         }
 
         const elemento = document.getElementById(`subtotal_${categoria}`);
@@ -1444,6 +1580,7 @@ _ensureCorteTablerosInit() {
 
     // ------------- Cálculos BYT -------------
     calcularTotalesBYT() {
+        this._ensureCorteTablerosInit();
         let totalMateriales = 0;
         Object.keys(this.datos.materiales).forEach(categoria => {
             Object.values(this.datos.materiales[categoria]).forEach(material => {
@@ -1456,6 +1593,10 @@ _ensureCorteTablerosInit() {
         Object.values(this.extraConfig).forEach(cfg => {
             totalMateriales += (this.datos[cfg.key] || []).reduce((s, x) => s + (x.total || 0), 0);
         });
+
+        // Servicio de corte tableros
+        const totalCorte = this._getCorteTotals();
+        totalMateriales += totalCorte;
 
         // Traspasados
         this._ensureTraspasoExtrasInit();
@@ -1790,6 +1931,7 @@ _ensureCorteTablerosInit() {
             this._ensurePartidasInit();
             this._ensureExtrasInitAll();
             this._ensureTraspasoExtrasInit();
+            this._ensureCorteTablerosInit();
             this.actualizarBarraSuperior();
             this.mostrarPaso(1);
             this._showToast('Cotización cargada');
@@ -1839,6 +1981,7 @@ _ensureCorteTablerosInit() {
                 this._ensurePartidasInit();
                 this._ensureExtrasInitAll();
                 this._ensureTraspasoExtrasInit();
+                this._ensureCorteTablerosInit();
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
@@ -2126,6 +2269,29 @@ _ensureCorteTablerosInit() {
                 });
             }
 
+            // Servicio de corte para tableros
+            if (categoria === 'tableros') {
+                const d = this.datos.tablerosCorte || {};
+                filasCategoria += `
+                    <tr>
+                        <td>Servicio de corte - Melaminas</td>
+                        <td>-</td>
+                        <td>${this.escapeHtml(d.corteExternoProveedorMelamina || '-')}</td>
+                        <td style="text-align: center;">${d.corteExternoPlanchasMelamina || 0}</td>
+                        <td style="text-align: right;">$${(d.corteExternoValorMelaminaUnit || 0).toLocaleString()}</td>
+                        <td style="text-align: right; font-weight: bold;">$${(d.corteExternoTotalMelaminas || 0).toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td>Servicio de corte - Durolac</td>
+                        <td>-</td>
+                        <td>${this.escapeHtml(d.corteExternoProveedorDurolac || '-')}</td>
+                        <td style="text-align: center;">${d.corteExternoPlanchasDurolac || 0}</td>
+                        <td style="text-align: right;">$${(d.corteExternoValorDurolacUnit || 0).toLocaleString()}</td>
+                        <td style="text-align: right; font-weight: bold;">$${(d.corteExternoTotalDurolac || 0).toLocaleString()}</td>
+                    </tr>
+                `;
+            }
+
             if (filasCategoria) {
                 detalleMateriales += `
                     <tr style="background: #e8f5e8;">
@@ -2403,7 +2569,3 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error inicializando WizardCotizacion:', e);
     }
 });
-
-
-
-
