@@ -270,13 +270,13 @@
     }
     .valores-head {
       display: block;
-      background: #cfded6; /* verde ligeramente más oscuro */
+      background: #cfded6;
       color: #1f2430;
       padding: 12px 14px;
       font-weight: 800;
       border-radius: 12px 12px 0 0;
       border-bottom: 1px solid #c1d0c7;
-      margin: 0 -14px -1px -14px; /* se extiende al borde, alineado con la tabla */
+      margin: 0 -14px -1px -14px;
     }
     .valores-body {
       background: #fff;
@@ -324,8 +324,11 @@
       break-inside: avoid !important;
     }
 
-    /* Quitamos el salto forzado: dejamos fluir y que html2pdf pagine evitando cortes internos */
-    /* .page-break { ... } eliminado */
+    /* Salto antes de Materiales */
+    .page-break {
+      page-break-before: always !important;
+      break-before: page !important;
+    }
 
     @media (max-width: 640px) {
       .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
@@ -347,9 +350,6 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
   </script>
-
-  <!-- Captura y PDF todo en uno (html2canvas + jsPDF) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
@@ -357,7 +357,7 @@
     <!-- Botonera -->
     <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
       <button class="btn btn-secondary" onclick="window.print()">Imprimir</button>
-      <button class="btn btn-ghost" id="btn-exportar-pdf" onclick="exportarPDF()">Exportar PDF</button>
+      <button class="btn btn-ghost" onclick="window.print()">Exportar PDF</button>
     </div>
 
     <!-- KPIs (ocultos por CSS) -->
@@ -404,7 +404,8 @@
         <div class="fin-grid" id="resumen-financiero"></div>
       </div>
 
-      <div class="card section">
+      <!-- Materiales en nueva página al imprimir -->
+      <div class="card section page-break">
         <h3 class="card-title">Materiales</h3>
         <div id="materiales-detalle"></div>
       </div>
@@ -1114,32 +1115,10 @@
         });
       }
 
-      // ===== Exportar PDF con paginado automático =====
-      async function exportarPDF() {
-        const btn = document.getElementById('btn-exportar-pdf');
-        if (btn) btn.disabled = true;
-        try {
-          const element = document.getElementById('page-content');
-          if (!element) throw new Error('No hay contenido para exportar');
-
-          const opt = {
-            margin:       [10, 10, 10, 10],
-            filename:     `cotizacion-${cotizacionId || 'detalle'}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' },
-            jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: ['avoid-all', 'css'] }
-          };
-
-          await html2pdf().set(opt).from(element).save();
-          window.utils?.mostrarNotificacion?.('PDF generado', 'success');
-        } catch (e) {
-          console.error(e);
-          window.utils?.mostrarNotificacion?.('No se pudo exportar: ' + (e.message || e), 'error');
-        } finally {
-          if (btn) btn.disabled = false;
-        }
-      }
+      // Exportar PDF usando impresión nativa (vectorial, 100% según visor)
+      window.exportarPDF = function() {
+        window.print();
+      };
 
       window.imprimirArchivo = function(url) {
         if (!url) return;
@@ -1155,7 +1134,6 @@
       };
 
       window.cargarCotizacion = cargarCotizacion;
-      window.exportarPDF = exportarPDF;
       window.mostrarError = mostrarError;
 
       document.addEventListener('DOMContentLoaded', function() {
