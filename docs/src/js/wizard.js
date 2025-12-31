@@ -1,12 +1,10 @@
 // ===== WIZARD DE COTIZACIONES BYT - VERSION FUNCIONAL + Persistencia Robusta =====
 //
-// Versión base: V10 (~2314 líneas). Ajustes solicitados:
-// - Barra de pasos (chips con data-paso-nav): aseguramos que se resalte con color verde vivo y añadimos estilos inyectados (.paso-nav-activo).
-// - Barra de progreso: se asegura que avance de forma correlativa al paso actual, con fallback de IDs (progreso-barra/progreso-texto o progress-bar/progress-text).
-// - Servicio de corte (melaminas / durolac) en Tableros, con proveedor y valor unitario editables:
-//   * Se suman al total de materiales antes de factor/IVA.
-//   * Se guardan en this.datos.tablerosCorte.
-//   * Se muestran en Paso 3 y en impresión (texto/vector).
+// Versión base: V13 (con servicio de corte en Tableros y pegado de cantos en Tapacantos).
+// Cambios:
+// - Servicio de corte (melaminas/durolac) en Tableros, con proveedor y valor unitario editables. Se suma a materiales antes de factor/IVA. Se imprime en texto.
+// - Servicio de pegado de tapacantos (delgado/grueso) en Tapacantos, con proveedor y valor unitario editables. Se suma a materiales antes de factor/IVA. Se imprime en texto.
+// - Se mantienen estilos de chips, progreso, autosave, etc.
 //
 // Colores resaltado paso activo:
 //   fondo: #bfe7c7
@@ -114,6 +112,19 @@ class WizardCotizacion {
                 corteExternoPlanchasDurolac: 0,
                 corteExternoTotalDurolac: 0,
                 corteExternoProveedorDurolac: ''
+            },
+
+            // Servicio de pegado de tapacantos
+            tapacantosCorte: {
+                pegadoValorDelgadoUnit: 450,
+                pegadoPlanchasDelgado: 0,
+                pegadoTotalDelgado: 0,
+                pegadoProveedorDelgado: '',
+
+                pegadoValorGruesoUnit: 700,
+                pegadoPlanchasGrueso: 0,
+                pegadoTotalGrueso: 0,
+                pegadoProveedorGrueso: ''
             }
         };
 
@@ -159,6 +170,7 @@ class WizardCotizacion {
             this._ensureExtrasInitAll();
             this._ensureTraspasoExtrasInit();
             this._ensureCorteTablerosInit();
+            this._ensureCorteTapacantosInit();
             this._ensurePasoNavStyles(); // inyecta estilos para resalte de chips
             this.actualizarProgreso();
             this.mostrarPaso(1);
@@ -366,8 +378,8 @@ class WizardCotizacion {
                 }
             });
 
-            // Selects de servicio de corte
-            const corteSelects = document.querySelectorAll('select.corte-proveedor-select');
+            // Selects de servicio de corte/pegado
+            const corteSelects = document.querySelectorAll('select.corte-proveedor-select, select.tapacanto-proveedor-select');
             corteSelects.forEach(select => {
                 const currentVal = (select.getAttribute('data-current') ?? '').toString().trim();
                 select.innerHTML = '';
@@ -459,10 +471,10 @@ class WizardCotizacion {
             this.datos.valoresTraspasados[categoriaKey].materiales[materialKey].lugar = providerName || '';
 
             // Actualiza el select actual para que conserve la selección tras rellenar opciones
-const sel = document.querySelector(`select.lugar-select[data-material-id="${materialKey}"]`);
-if (sel) { sel.setAttribute('data-current', valueStr); sel.value = valueStr; }
+            const sel = document.querySelector(`select.lugar-select[data-material-id="${materialKey}"]`);
+            if (sel) { sel.setAttribute('data-current', valueStr); sel.value = valueStr; }
 
-this.fillProviderSelects();
+            this.fillProviderSelects();
 
             const totalEl = document.getElementById(`total_traspaso_${categoriaKey}`);
             const cobroEl = document.getElementById(`cobro_traspaso_${categoriaKey}`);
@@ -596,6 +608,7 @@ this.fillProviderSelects();
         this._ensureExtrasInitAll();
         this._ensureTraspasoExtrasInit();
         this._ensureCorteTablerosInit();
+        this._ensureCorteTapacantosInit();
 
         container.innerHTML = `
             <div class="card">
@@ -880,7 +893,7 @@ this.fillProviderSelects();
         if (extraEl) extraEl.textContent = '$' + extraSubtotal.toLocaleString();
     }
 
-    // ------------- Servicio de corte (tableros) -------------
+    // ------------- Servicio de corte tableros -------------
     _ensureCorteTablerosInit() {
         if (!this.datos.tablerosCorte) {
             this.datos.tablerosCorte = {};
@@ -949,6 +962,75 @@ this.fillProviderSelects();
         if (tipo === 'melamina') d.corteExternoProveedorMelamina = providerValue || '';
         if (tipo === 'durolac')  d.corteExternoProveedorDurolac  = providerValue || '';
         this._recalcularServicioCorteTableros();
+    }
+
+    // ------------- Servicio de pegado de tapacantos -------------
+    _ensureCorteTapacantosInit() {
+        if (!this.datos.tapacantosCorte) this.datos.tapacantosCorte = {};
+        const d = this.datos.tapacantosCorte;
+        d.pegadoValorDelgadoUnit = Number(d.pegadoValorDelgadoUnit || 450);
+        d.pegadoPlanchasDelgado  = Number(d.pegadoPlanchasDelgado || 0);
+        d.pegadoTotalDelgado     = Number(d.pegadoTotalDelgado || 0);
+        d.pegadoProveedorDelgado = d.pegadoProveedorDelgado || '';
+
+        d.pegadoValorGruesoUnit = Number(d.pegadoValorGruesoUnit || 700);
+        d.pegadoPlanchasGrueso  = Number(d.pegadoPlanchasGrueso || 0);
+        d.pegadoTotalGrueso     = Number(d.pegadoTotalGrueso || 0);
+        d.pegadoProveedorGrueso = d.pegadoProveedorGrueso || '';
+    }
+
+    _recalcularServicioTapacantos() {
+        this._ensureCorteTapacantosInit();
+        const d = this.datos.tapacantosCorte;
+        const mats = this.datos.materiales.tapacantos || {};
+
+        let delgado = 0, grueso = 0;
+        Object.values(mats).forEach(m => {
+            const cant = Number(m.cantidad || 0);
+            const name = (m.nombre || '').toLowerCase();
+            if (name.includes('delgado')) delgado += cant;
+            if (name.includes('grueso'))  grueso  += cant;
+        });
+
+        d.pegadoPlanchasDelgado = delgado;
+        d.pegadoPlanchasGrueso  = grueso;
+
+        d.pegadoTotalDelgado = delgado * Number(d.pegadoValorDelgadoUnit || 0);
+        d.pegadoTotalGrueso  = grueso  * Number(d.pegadoValorGruesoUnit || 0);
+
+        const cd = document.getElementById('tapacanto_delgado_cant');
+        const cg = document.getElementById('tapacanto_grueso_cant');
+        const td = document.getElementById('tapacanto_delgado_total');
+        const tg = document.getElementById('tapacanto_grueso_total');
+        if (cd) cd.textContent = delgado;
+        if (cg) cg.textContent = grueso;
+        if (td) td.textContent = '$' + (d.pegadoTotalDelgado || 0).toLocaleString();
+        if (tg) tg.textContent = '$' + (d.pegadoTotalGrueso || 0).toLocaleString();
+
+        return (d.pegadoTotalDelgado || 0) + (d.pegadoTotalGrueso || 0);
+    }
+
+    _getTapacantoTotals() {
+        return this._recalcularServicioTapacantos();
+    }
+
+    setTapacantoValorUnit(tipo, valor) {
+        this._ensureCorteTapacantosInit();
+        const d = this.datos.tapacantosCorte;
+        const v = Number(valor || 0);
+        if (tipo === 'delgado') d.pegadoValorDelgadoUnit = v;
+        if (tipo === 'grueso')  d.pegadoValorGruesoUnit  = v;
+        this._recalcularServicioTapacantos();
+        this.actualizarSubtotalCategoria('tapacantos');
+        this.actualizarBarraSuperior();
+    }
+
+    setTapacantoProveedor(tipo, providerValue) {
+        this._ensureCorteTapacantosInit();
+        const d = this.datos.tapacantosCorte;
+        if (tipo === 'delgado') d.pegadoProveedorDelgado = providerValue || '';
+        if (tipo === 'grueso')  d.pegadoProveedorGrueso  = providerValue || '';
+        this._recalcularServicioTapacantos();
     }
 
     // ------------- PASOS DE MATERIALES -------------
@@ -1065,10 +1147,8 @@ this.fillProviderSelects();
         if (categoria === 'quincalleria' || categoria === 'tableros' || categoria === 'tapacantos' || categoria === 'tableros_madera' || categoria === 'led_electricidad') {
             this._ensureExtrasInitAll();
         }
-        // Asegurar servicio de corte inicializado
-        if (categoria === 'tableros') {
-            this._ensureCorteTablerosInit();
-        }
+        if (categoria === 'tableros') this._ensureCorteTablerosInit();
+        if (categoria === 'tapacantos') this._ensureCorteTapacantosInit();
 
         container.innerHTML = `
             <div class="card">
@@ -1167,6 +1247,63 @@ this.fillProviderSelects();
                 </div>
                 ` : ''}
 
+                ${categoria === 'tapacantos' ? `
+                <div class="card" style="margin-top:14px; padding:12px;">
+                  <h4 style="margin:0 0 8px;">Servicio de pegado de tapacantos</h4>
+                  <div style="overflow-x:auto;">
+                    <table class="table" style="min-width:620px;">
+                      <thead>
+                        <tr>
+                          <th style="width:28%;">Servicio</th>
+                          <th style="width:14%;">Cantidad</th>
+                          <th style="width:22%;">Proveedor</th>
+                          <th style="width:18%;">Valor unitario</th>
+                          <th style="width:18%;">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Pegado tapacanto delgado</td>
+                          <td id="tapacanto_delgado_cant">0</td>
+                          <td>
+                            <select class="form-control tapacanto-proveedor-select"
+                              data-tapacanto-type="delgado"
+                              data-current="${this.escapeAttr(this.datos.tapacantosCorte.pegadoProveedorDelgado || '')}"
+                              onchange="window.bytWizard.setTapacantoProveedor('delgado', this.value)">
+                              <option value="">-- Selecciona proveedor --</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input type="number" class="form-control"
+                              value="${Number(this.datos.tapacantosCorte.pegadoValorDelgadoUnit || 0)}"
+                              onchange="window.bytWizard.setTapacantoValorUnit('delgado', this.value)">
+                          </td>
+                          <td id="tapacanto_delgado_total" style="font-weight:bold;">$0</td>
+                        </tr>
+                        <tr>
+                          <td>Pegado tapacanto grueso</td>
+                          <td id="tapacanto_grueso_cant">0</td>
+                          <td>
+                            <select class="form-control tapacanto-proveedor-select"
+                              data-tapacanto-type="grueso"
+                              data-current="${this.escapeAttr(this.datos.tapacantosCorte.pegadoProveedorGrueso || '')}"
+                              onchange="window.bytWizard.setTapacantoProveedor('grueso', this.value)">
+                              <option value="">-- Selecciona proveedor --</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input type="number" class="form-control"
+                              value="${Number(this.datos.tapacantosCorte.pegadoValorGruesoUnit || 0)}"
+                              onchange="window.bytWizard.setTapacantoValorUnit('grueso', this.value)">
+                          </td>
+                          <td id="tapacanto_grueso_total" style="font-weight:bold;">$0</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                ` : ''}
+
                 <div style="text-align: right; margin-top: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 2px solid #4CAF50;">
                     <strong style="font-size: 18px;">SUBTOTAL ${estructura.nombre.toUpperCase()}: 
                         <span id="subtotal_${categoria}" style="color: #2e7d32; font-size: 20px; font-weight: bold;">
@@ -1220,6 +1357,7 @@ this.fillProviderSelects();
         this.fillProviderSelects();
         this.actualizarSubtotalCategoria(categoria);
         if (categoria === 'tableros') this._recalcularServicioCorteTableros();
+        if (categoria === 'tapacantos') this._recalcularServicioTapacantos();
     }
 
     agregarMaterial(categoria) {
@@ -1246,6 +1384,7 @@ this.fillProviderSelects();
         }
         this.cargarMaterialesCategoria(categoria);
         if (categoria === 'tableros') this._recalcularServicioCorteTableros();
+        if (categoria === 'tapacantos') this._recalcularServicioTapacantos();
         this.actualizarBarraSuperior(); // ⚡ Actualización en tiempo real
     }
 
@@ -1277,6 +1416,11 @@ this.fillProviderSelects();
         if (categoria === 'tableros') {
             const totalCorte = this._recalcularServicioCorteTableros();
             subtotal += totalCorte;
+        }
+        // Servicio de pegado tapacantos
+        if (categoria === 'tapacantos') {
+            const totalPegado = this._recalcularServicioTapacantos();
+            subtotal += totalPegado;
         }
 
         const elemento = document.getElementById(`subtotal_${categoria}`);
@@ -1581,6 +1725,7 @@ this.fillProviderSelects();
     // ------------- Cálculos BYT -------------
     calcularTotalesBYT() {
         this._ensureCorteTablerosInit();
+        this._ensureCorteTapacantosInit();
         let totalMateriales = 0;
         Object.keys(this.datos.materiales).forEach(categoria => {
             Object.values(this.datos.materiales[categoria]).forEach(material => {
@@ -1594,9 +1739,10 @@ this.fillProviderSelects();
             totalMateriales += (this.datos[cfg.key] || []).reduce((s, x) => s + (x.total || 0), 0);
         });
 
-        // Servicio de corte tableros
-        const totalCorte = this._getCorteTotals();
-        totalMateriales += totalCorte;
+        // Servicios de corte y pegado
+        const totalCorteTableros = this._getCorteTotals();
+        const totalPegadoTapacantos = this._getTapacantoTotals();
+        totalMateriales += totalCorteTableros + totalPegadoTapacantos;
 
         // Traspasados
         this._ensureTraspasoExtrasInit();
@@ -1932,6 +2078,7 @@ this.fillProviderSelects();
             this._ensureExtrasInitAll();
             this._ensureTraspasoExtrasInit();
             this._ensureCorteTablerosInit();
+            this._ensureCorteTapacantosInit();
             this.actualizarBarraSuperior();
             this.mostrarPaso(1);
             this._showToast('Cotización cargada');
@@ -1982,6 +2129,7 @@ this.fillProviderSelects();
                 this._ensureExtrasInitAll();
                 this._ensureTraspasoExtrasInit();
                 this._ensureCorteTablerosInit();
+                this._ensureCorteTapacantosInit();
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
@@ -2288,6 +2436,29 @@ this.fillProviderSelects();
                         <td style="text-align: center;">${d.corteExternoPlanchasDurolac || 0}</td>
                         <td style="text-align: right;">$${(d.corteExternoValorDurolacUnit || 0).toLocaleString()}</td>
                         <td style="text-align: right; font-weight: bold;">$${(d.corteExternoTotalDurolac || 0).toLocaleString()}</td>
+                    </tr>
+                `;
+            }
+
+            // Servicio de pegado tapacantos
+            if (categoria === 'tapacantos') {
+                const d = this.datos.tapacantosCorte || {};
+                filasCategoria += `
+                    <tr>
+                        <td>Pegado tapacanto delgado</td>
+                        <td>-</td>
+                        <td>${this.escapeHtml(d.pegadoProveedorDelgado || '-')}</td>
+                        <td style="text-align: center;">${d.pegadoPlanchasDelgado || 0}</td>
+                        <td style="text-align: right;">$${(d.pegadoValorDelgadoUnit || 0).toLocaleString()}</td>
+                        <td style="text-align: right; font-weight: bold;">$${(d.pegadoTotalDelgado || 0).toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                        <td>Pegado tapacanto grueso</td>
+                        <td>-</td>
+                        <td>${this.escapeHtml(d.pegadoProveedorGrueso || '-')}</td>
+                        <td style="text-align: center;">${d.pegadoPlanchasGrueso || 0}</td>
+                        <td style="text-align: right;">$${(d.pegadoValorGruesoUnit || 0).toLocaleString()}</td>
+                        <td style="text-align: right; font-weight: bold;">$${(d.pegadoTotalGrueso || 0).toLocaleString()}</td>
                     </tr>
                 `;
             }
