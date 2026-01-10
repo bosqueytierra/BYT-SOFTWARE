@@ -67,7 +67,7 @@
       place-items: center;
     }
     .brand img {
-      width: 52px;    /* ajusta a 48 si lo quieres un poco más pequeño */
+      width: 52px;
       max-height: 52px;
       height: auto;
       object-fit: contain;
@@ -190,7 +190,7 @@
 
         <div class="nav-group">
           <div class="nav-item" title="Compras">
-            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 7h11l-1 11h-9l-1-11Z"/><path d="M9 7V5.5a3 3 0 1 1 6 0V7"/><circle cx="10" cy="19.5" r="1"/><circle cx="15" cy="19.5" r="1"/></svg></span>
+            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 7h11l-1 11h-9l-1-11Z"/><path d="M9 7V5.5a3 3 0 1 1 6 0v2"/><circle cx="10" cy="19.5" r="1"/><circle cx="15" cy="19.5" r="1"/></svg></span>
             <span class="nav-label">Compras</span>
           </div>
         </div>
@@ -199,6 +199,10 @@
           <div class="nav-item" title="Ventas">
             <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16l-2 10H6L4 7Z"/><path d="M9 7V5a3 3 0 1 1 6 0v2"/><circle cx="10" cy="18.5" r="1"/><circle cx="15" cy="18.5" r="1"/></svg></span>
             <span class="nav-label">Ventas</span>
+          </div>
+          <div class="submenu">
+            <a href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/ventas/index.html">Lista de ventas</a>
+            <a href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/ventas/dashboard.html">Dashboard ventas</a>
           </div>
         </div>
 
@@ -288,8 +292,5 @@
       sidebar.addEventListener('mouseleave', () => appShell.classList.remove('expanded'));
     }
   </script>
-
-  
 </body>
 </html>
-
