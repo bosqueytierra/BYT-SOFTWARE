@@ -41,11 +41,7 @@
       gap: 14px;
       align-items: center;
     }
-    .logo-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
+    .logo-row { display: flex; align-items: center; gap: 12px; }
     .logo {
       width: 44px;
       height: 44px;
@@ -128,10 +124,27 @@
       align-items: flex-start;
       flex-wrap: wrap;
     }
-    .quote-title { margin: 0; font-size: 16px; font-weight: 800; color: var(--text); }
+    .quote-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      max-width: 640px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
     .quote-meta { margin: 6px 0; color: var(--muted); font-size: 13px; }
     .quote-total { margin: 4px 0 0; font-weight: 700; color: var(--primary); }
-    .quote-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .quote-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      flex-shrink: 0;
+    }
     .quote-status {
       min-width: 160px;
       padding: 9px 10px;
@@ -140,6 +153,7 @@
       background: #fdfdfd;
       font-size: 14px;
       color: var(--text);
+      flex-shrink: 0;
     }
 
     .state {
@@ -219,6 +233,18 @@
     .sidebar .submenu a:focus,
     .sidebar .submenu a:active {
       text-decoration: none !important;
+    }
+
+    @media (max-width: 768px) {
+      .quote-head {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .quote-actions {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
     }
   </style>
 </head>
@@ -584,4 +610,3 @@
   </script>
 </body>
 </html>
-
