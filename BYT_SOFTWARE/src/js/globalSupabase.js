@@ -8,15 +8,12 @@ let supabaseClient = null;
 // Inicializa usando el cliente ya existente (creado por supabaseBrowserClient.js). No crea uno nuevo.
 async function initSupabase() {
     try {
-        // 1) Si ya hay cliente global
         if (window.supabase && typeof window.supabase.from === 'function') {
             supabaseClient = window.supabase;
             window.globalSupabase = window.globalSupabase || {};
             window.globalSupabase.client = supabaseClient;
             return true;
         }
-
-        // 2) Si ya lo teníamos en este módulo
         if (supabaseClient && typeof supabaseClient.from === 'function') {
             window.supabase = supabaseClient;
             window.globalSupabase = window.globalSupabase || {};
@@ -24,7 +21,6 @@ async function initSupabase() {
             return true;
         }
 
-        // 3) Esperar brevemente a que supabaseBrowserClient.js despache supabase:ready
         const waitMs = 1500;
         const start = Date.now();
         let resolved = false;
@@ -52,7 +48,6 @@ async function initSupabase() {
 
         if (resolved) return true;
 
-        // Si no hay cliente, fallar con mensaje controlado
         console.warn('Supabase no inicializado: no se encontró cliente en window.supabase');
         return false;
     } catch (error) {
@@ -95,6 +90,7 @@ async function guardarCotizacion(datosCompletos) {
                 iva: datosCompletos.totales.iva,
                 total_proyecto: datosCompletos.totales.totalProyecto,
                 ganancia: datosCompletos.totales.ganancia,
+                estado: 'borrador', // nuevo: default al crear
                 created_at: new Date().toISOString()
             }]);
 
@@ -164,6 +160,27 @@ async function actualizarCotizacion(id, datosActualizados) {
         return { success: true, data };
     } catch (error) {
         console.error('Error al actualizar cotización:', error);
+        return { success: false, error: error.message || String(error) };
+    }
+}
+
+// Nuevo: actualizar solo el estado de la cotización
+async function actualizarEstadoCotizacion(id, estado) {
+    try {
+        if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
+        }
+
+        const { error } = await supabaseClient
+            .from('cotizaciones')
+            .update({ estado })
+            .eq('id', id);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error al actualizar estado de cotización:', error);
         return { success: false, error: error.message || String(error) };
     }
 }
@@ -241,11 +258,9 @@ window.supabaseClient = {
     obtenerCotizaciones,
     obtenerCotizacionPorId,
     actualizarCotizacion,
+    actualizarEstadoCotizacion, // nuevo
     eliminarCotizacion,
     validarConexion: validarConexionSupabase
 };
 
-window.utils = {
-    mostrarNotificacion
-};
-
+window.utils = { mostrarNotificacion };
