@@ -223,9 +223,7 @@
     .sidebar .submenu a:active { text-decoration: none !important; }
 
     @media (max-width: 900px) {
-      .quote-head {
-        grid-template-columns: 1fr;
-      }
+      .quote-head { grid-template-columns: 1fr; }
       .quote-actions { justify-content: flex-start; }
       .quote-status { width: 100%; }
     }
@@ -270,6 +268,17 @@
               <option value="cliente_desc">Cliente (Z-A)</option>
               <option value="total_desc">Total (Mayor a menor)</option>
               <option value="total_asc">Total (Menor a mayor)</option>
+            </select>
+          </div>
+          <div>
+            <label>Estado</label>
+            <select id="filtro-estado" onchange="filtrarCotizaciones()">
+              <option value="todos">Todos</option>
+              <option value="borrador">Borrador</option>
+              <option value="enviada">Enviada</option>
+              <option value="en_revision_cliente">En revisión cliente</option>
+              <option value="aprobada">Aprobada</option>
+              <option value="rechazada">Rechazada</option>
             </select>
           </div>
         </div>
@@ -365,17 +374,24 @@
     }
 
     function filtrarCotizaciones() {
-      const filtro = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
-      if (!filtro) {
-        cotizacionesFiltradas = [...cotizacionesData];
-      } else {
-        cotizacionesFiltradas = cotizacionesData.filter(c => {
+      const filtroTexto = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
+      const filtroEstado = document.getElementById('filtro-estado').value;
+      let base = [...cotizacionesData];
+
+      if (filtroTexto) {
+        base = base.filter(c => {
           const proj = (c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || '').toLowerCase();
           const cli  = (getClienteNombre(c.cliente || c.data?.cliente) || '').toLowerCase();
           const notas = (c.notas || '').toLowerCase();
-          return proj.includes(filtro) || cli.includes(filtro) || notas.includes(filtro);
+          return proj.includes(filtroTexto) || cli.includes(filtroTexto) || notas.includes(filtroTexto);
         });
       }
+
+      if (filtroEstado !== 'todos') {
+        base = base.filter(c => (c.estado || 'borrador') === filtroEstado);
+      }
+
+      cotizacionesFiltradas = base;
       ordenarCotizaciones();
     }
 
