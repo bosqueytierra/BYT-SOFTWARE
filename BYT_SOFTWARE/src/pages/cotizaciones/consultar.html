@@ -593,15 +593,32 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
+
+
+    
     async function handleEstadoChange(selectEl, id) {
-      const nuevoEstado = selectEl.value;
-      console.log('Estado seleccionado', { id, nuevoEstado });
-      window.utils?.mostrarNotificacion?.('Estado seleccionado: ' + nuevoEstado + ' (falta guardar en backend)', 'info');
-      // TODO siguiente paso:
-      // supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado)
-      // crear/actualizar venta al aprobar
-      // cancelar/activar venta según cambio de estado
-    }
+  const nuevoEstado = selectEl.value;
+  try {
+    if (window.supabaseClient?.init) await window.supabaseClient.init();
+    const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
+    if (!res.success) throw new Error(res.error);
+
+    // Refrescar en memoria para que filtros/orden sigan mostrando el estado correcto
+    cotizacionesData = cotizacionesData.map(c =>
+      c.id === id ? { ...c, estado: nuevoEstado } : c
+    );
+    filtrarCotizaciones();
+
+    window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
+  } catch (err) {
+    console.error(err);
+    window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
+    // Revertir selector si falla
+    const prev = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
+    selectEl.value = prev;
+  }
+}
   </script>
 </body>
 </html>
+
