@@ -131,7 +131,16 @@
     .quote-title { margin: 0; font-size: 16px; font-weight: 800; color: var(--text); }
     .quote-meta { margin: 6px 0; color: var(--muted); font-size: 13px; }
     .quote-total { margin: 4px 0 0; font-weight: 700; color: var(--primary); }
-    .quote-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .quote-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .quote-status {
+      min-width: 160px;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fdfdfd;
+      font-size: 14px;
+      color: var(--text);
+    }
 
     .state {
       text-align: center;
@@ -185,10 +194,7 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-    .hold-btn {
-      position: relative;
-      overflow: hidden;
-    }
+    .hold-btn { position: relative; overflow: hidden; }
     .hold-fill {
       position: absolute;
       inset: 0;
@@ -411,6 +417,7 @@
         const fecha = c.created_at ? new Date(c.created_at).toLocaleDateString('es-CL') : '-';
         const totalNum = c.total_proyecto || c.total || 0;
         const totalFmt = window.categorias?.formatearPrecio ? window.categorias.formatearPrecio(totalNum) : totalNum;
+        const estado = c.estado || 'borrador';
 
         return `
           <div class="card quote-card cotizacion-item" data-id="${c.id}">
@@ -423,6 +430,13 @@
                 <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
               </div>
               <div class="quote-actions">
+                <select class="quote-status" onchange="handleEstadoChange(this, '${c.id}')">
+                  <option value="borrador" ${estado==='borrador'?'selected':''}>Borrador</option>
+                  <option value="enviada" ${estado==='enviada'?'selected':''}>Enviada</option>
+                  <option value="en_revision_cliente" ${estado==='en_revision_cliente'?'selected':''}>En revisión cliente</option>
+                  <option value="aprobada" ${estado==='aprobada'?'selected':''}>Aprobada</option>
+                  <option value="rechazada" ${estado==='rechazada'?'selected':''}>Rechazada</option>
+                </select>
                 <button class="btn btn-ver" onclick="verDetalle('${c.id}')" title="Ver">
                   <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M3.5 12s3.5-6 8.5-6 8.5 6 8.5 6-3.5 6-8.5 6-8.5-6-8.5-6Z"/></svg>
                   Ver
@@ -555,6 +569,19 @@
       if (str === undefined || str === null) return '';
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
+
+    // Stub: cambio de estado (solo UI por ahora). Conectaremos Supabase/ventas en el siguiente paso.
+    async function handleEstadoChange(selectEl, id) {
+      const nuevoEstado = selectEl.value;
+      console.log('Estado seleccionado', { id, nuevoEstado });
+      window.utils?.mostrarNotificacion?.('Estado seleccionado: ' + nuevoEstado + ' (falta guardar en backend)', 'info');
+      // TODO (paso siguiente):
+      // 1) supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado)
+      // 2) Si nuevoEstado === 'aprobada' => crear/actualizar venta (estado en_ejecucion)
+      // 3) Si pasa de aprobada a rechazada/en_revision_cliente => marcar venta cancelada
+      // 4) Si vuelve a aprobada => reactivar venta en_ejecucion
+    }
   </script>
 </body>
 </html>
+
