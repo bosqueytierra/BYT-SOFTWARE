@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ventas - BYT SOFTWARE</title>
+  <link rel="stylesheet" href="../../styles/global.css">
+  <style>
+    :root {
+      --bg: #f6f7f8;
+      --card: #ffffff;
+      --border: #e4e7eb;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --primary: #2e5e4e;
+      --primary-soft: #3f705d;
+      --danger: #c0392b;
+      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+    .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+    .card + .card { margin-top: 14px; }
+    .header-card { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .filters { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; align-items:end; }
+    label { font-size:13px; color:var(--muted); font-weight:600; margin-bottom:6px; display:block; }
+    input, select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+      background: #fdfdfd; font-family: inherit; font-size: 14px;
+    }
+    .list { display:flex; flex-direction:column; gap:12px; }
+    .sale-card { padding:14px; border-radius:12px; border:1px solid var(--border); box-shadow: var(--shadow); background:var(--card); }
+    .sale-head { display:grid; grid-template-columns: 1fr minmax(300px, 420px); gap:10px; align-items:flex-start; }
+    .sale-title { margin:0; font-size:16px; font-weight:800; color:var(--text); word-break:break-word; }
+    .sale-meta { margin:6px 0; color:var(--muted); font-size:13px; }
+    .money { font-weight:700; color:var(--primary); margin:4px 0 0; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:8px; }
+    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
+    .btn-primary { background: var(--primary); color:#fff; border-color: var(--primary); }
+    .btn-ghost { background: #f0f3f5; }
+    .state-badge { padding:6px 10px; border-radius:10px; font-weight:700; font-size:12px; display:inline-block; }
+    .state-en_ejecucion { background:#e6f4ef; color:#1e7d57; }
+    .state-completada { background:#e8f1ff; color:#2c4f9e; }
+    .state-cancelada { background:#fbeaea; color:#b23b3b; text-decoration: line-through; opacity:0.7; }
+    .state-postventa { background:#fff3e0; color:#b66a00; }
+    .tachado { text-decoration: line-through; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card header-card">
+      <div>
+        <h2 style="margin:0;">Ventas</h2>
+        <p style="margin:2px 0 0; color:var(--muted); font-size:13px;">Seguimiento de ventas asociadas a cotizaciones aprobadas</p>
+      </div>
+      <div class="actions">
+        <a class="btn btn-primary" href="dashboard.html">Ir a Dashboard</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px;">Filtros</h3>
+      <div class="filters">
+        <div>
+          <label>Buscar por proyecto o partida</label>
+          <input id="filtro-texto" type="text" placeholder="Proyecto o partida..." oninput="aplicarFiltros()">
+        </div>
+        <div>
+          <label>Estado</label>
+          <select id="filtro-estado" onchange="aplicarFiltros()">
+            <option value="todos">Todos</option>
+            <option value="en_ejecucion">En ejecución</option>
+            <option value="completada">Completada</option>
+            <option value="cancelada">Cancelada</option>
+            <option value="postventa">Postventa</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="ventas-container" class="list"></div>
+  </div>
+
+  <script src="../../js/layout.js"></script>
+  <script src="../../lib/supabaseConfig.js"></script>
+  <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+  <script src="../../js/globalSupabase.js" defer></script>
+
+  <script>
+    let ventasData = [];
+    let ventasFiltradas = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await cargarVentas();
+    });
+
+    async function cargarVentas() {
+      const cont = document.getElementById('ventas-container');
+      cont.innerHTML = '<div class="card state"><div>Cargando ventas...</div></div>';
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        const res = await window.supabaseClient.listarVentas();
+        if (!res.success) throw new Error(res.error);
+        ventasData = res.data || [];
+        ventasFiltradas = [...ventasData];
+        aplicarFiltros();
+      } catch (e) {
+        console.error(e);
+        cont.innerHTML = '<div class="card state"><div>Error cargando ventas</div></div>';
+      }
+    }
+
+    function aplicarFiltros() {
+      const txt = document.getElementById('filtro-texto').value.toLowerCase().trim();
+      const est = document.getElementById('filtro-estado').value;
+      ventasFiltradas = ventasData.filter(v => {
+        const matchTxt =
+          !txt ||
+          (v.proyecto || '').toLowerCase().includes(txt) ||
+          (v.partida || '').toLowerCase().includes(txt);
+        const matchEst = est === 'todos' ? true : (v.estado || 'en_ejecucion') === est;
+        return matchTxt && matchEst;
+      });
+      renderVentas();
+    }
+
+    function fmt(num) {
+      if (num === null || num === undefined) return '$0';
+      return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
+    }
+
+    function renderVentas() {
+      const cont = document.getElementById('ventas-container');
+      if (!ventasFiltradas.length) {
+        cont.innerHTML = '<div class="card state"><div class="state-icon">📁</div><div>No hay ventas</div></div>';
+        return;
+      }
+      cont.innerHTML = ventasFiltradas.map(v => {
+        const cancelada = v.estado === 'cancelada';
+        return `
+          <div class="sale-card ${cancelada ? 'tachado' : ''}">
+            <div class="sale-head">
+              <div>
+                <h4 class="sale-title">${escapeHtml(v.proyecto || 'Sin proyecto')}</h4>
+                <p class="sale-meta">Partida: ${escapeHtml(v.partida || '-')}</p>
+                <p class="sale-meta">Neto: ${escapeHtml(fmt(v.neto))} · IVA: ${escapeHtml(fmt(v.iva))} · Ganancia: ${escapeHtml(fmt(v.ganancia))}</p>
+                <p class="money">Total Venta: ${escapeHtml(fmt(v.total_venta || v.total_cotizado || 0))}</p>
+              </div>
+              <div>
+                <span class="state-badge state-${v.estado || 'en_ejecucion'}">${v.estado || 'en_ejecucion'}</span>
+                <div class="actions">
+                  <button class="btn btn-ghost" onclick="verCotizacion('${v.cotizacion_id}')">Ver Cotización</button>
+                  <button class="btn btn-primary" onclick="verAdjuntos('${v.cotizacion_id}')">Adjuntos</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function verCotizacion(id) {
+      if (!id) return;
+      window.location.href = `../cotizaciones/detalle.html?id=${id}`;
+    }
+
+    function verAdjuntos(id) {
+      if (!id) return;
+      // Placeholder: si tienes una vista de adjuntos específica, cambia la ruta
+      window.location.href = `../cotizaciones/detalle.html?id=${id}#adjuntos`;
+    }
+
+    function escapeHtml(str) {
+      if (str === undefined || str === null) return '';
+      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+  </script>
+</body>
+</html>
