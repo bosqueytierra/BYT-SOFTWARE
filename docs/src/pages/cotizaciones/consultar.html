@@ -25,11 +25,7 @@
       background: var(--bg);
       color: var(--text);
     }
-    .page {
-      max-width: 1280px;
-      margin: 22px auto 48px;
-      padding: 0 16px;
-    }
+    .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
     .header-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -154,11 +150,7 @@
       flex-shrink: 0;
     }
 
-    .state {
-      text-align: center;
-      color: var(--muted);
-      padding: 24px 12px;
-    }
+    .state { text-align: center; color: var(--muted); padding: 24px 12px; }
     .state-icon {
       width: 54px; height: 54px; margin: 0 auto 8px;
       display: grid; place-items: center;
@@ -593,32 +585,39 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-
-
-    
+    // Manejo de estado con sincronización a Ventas
     async function handleEstadoChange(selectEl, id) {
-  const nuevoEstado = selectEl.value;
-  try {
-    if (window.supabaseClient?.init) await window.supabaseClient.init();
-    const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
-    if (!res.success) throw new Error(res.error);
+      const nuevoEstado = selectEl.value;
+      const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
+        if (!res.success) throw new Error(res.error);
 
-    // Refrescar en memoria para que filtros/orden sigan mostrando el estado correcto
-    cotizacionesData = cotizacionesData.map(c =>
-      c.id === id ? { ...c, estado: nuevoEstado } : c
-    );
-    filtrarCotizaciones();
+        // Actualiza estado en memoria
+        cotizacionesData = cotizacionesData.map(c =>
+          c.id === id ? { ...c, estado: nuevoEstado } : c
+        );
 
-    window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
-  } catch (err) {
-    console.error(err);
-    window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
-    // Revertir selector si falla
-    const prev = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
-    selectEl.value = prev;
-  }
-}
+        // Sincroniza venta según transición
+        const cotizacion = cotizacionesData.find(c => c.id === id);
+        if (nuevoEstado === 'aprobada') {
+          await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
+        } else if ((prevEstado === 'aprobada') && (nuevoEstado === 'rechazada' || nuevoEstado === 'en_revision_cliente')) {
+          await window.supabaseClient.actualizarEstadoVentaPorCotizacion(id, 'cancelada');
+        } else if ((prevEstado === 'rechazada' || prevEstado === 'en_revision_cliente') && nuevoEstado === 'aprobada') {
+          await window.supabaseClient.actualizarEstadoVentaPorCotizacion(id, 'en_ejecucion');
+        }
+
+        filtrarCotizaciones();
+        window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
+      } catch (err) {
+        console.error(err);
+        window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
+        // Revertir selector si falla
+        selectEl.value = prevEstado;
+      }
+    }
   </script>
 </body>
 </html>
-
