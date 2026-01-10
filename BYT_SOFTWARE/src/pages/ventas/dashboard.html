@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Ventas - BYT SOFTWARE</title>
+  <link rel="stylesheet" href="../../styles/global.css">
+  <style>
+    :root {
+      --bg: #f6f7f8;
+      --card: #ffffff;
+      --border: #e4e7eb;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --primary: #2e5e4e;
+      --primary-soft: #3f705d;
+      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+    .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+    .card + .card { margin-top: 14px; }
+    .kpis { display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; }
+    .kpi { padding:12px; border:1px solid var(--border); border-radius:12px; background:#fff; box-shadow: var(--shadow); }
+    .kpi h4 { margin:0 0 4px; font-size:14px; color:var(--muted); }
+    .kpi .value { font-size:22px; font-weight:800; color:var(--primary); }
+    .state { text-align:center; color:var(--muted); padding:24px 12px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <h2 style="margin:0;">Dashboard de Ventas</h2>
+          <p style="margin:2px 0 0; color:var(--muted); font-size:13px;">KPIs agregados (excluye canceladas en sumas)</p>
+        </div>
+        <a class="btn btn-primary" href="index.html" style="padding:10px 14px; border-radius:10px; text-decoration:none; color:#fff; background:var(--primary);">Volver a lista</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px;">KPIs</h3>
+      <div class="kpis" id="kpis"></div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px;">Distribución por estado</h3>
+      <div id="estado-dist" class="kpis"></div>
+    </div>
+  </div>
+
+  <script src="../../js/layout.js"></script>
+  <script src="../../lib/supabaseConfig.js"></script>
+  <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+  <script src="../../js/globalSupabase.js" defer></script>
+
+  <script>
+    let ventasData = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await cargar();
+    });
+
+    async function cargar() {
+      const kpis = document.getElementById('kpis');
+      kpis.innerHTML = 'Cargando...';
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        const res = await window.supabaseClient.listarVentas();
+        if (!res.success) throw new Error(res.error);
+        ventasData = res.data || [];
+        renderKPIs();
+      } catch (e) {
+        console.error(e);
+        kpis.innerHTML = 'Error cargando datos';
+      }
+    }
+
+    function renderKPIs() {
+      const kpis = document.getElementById('kpis');
+      const vigentes = ventasData.filter(v => v.estado !== 'cancelada');
+      const suma = (arr, key) => arr.reduce((acc, v) => acc + (Number(v[key]) || 0), 0);
+
+      const totalVenta = suma(vigentes, 'total_venta');
+      const neto = suma(vigentes, 'neto');
+      const iva = suma(vigentes, 'iva');
+      const ganancia = suma(vigentes, 'ganancia');
+
+      kpis.innerHTML = `
+        <div class="kpi"><h4>Total Venta (sin canceladas)</h4><div class="value">${fmt(totalVenta)}</div></div>
+        <div class="kpi"><h4>Neto</h4><div class="value">${fmt(neto)}</div></div>
+        <div class="kpi"><h4>IVA</h4><div class="value">${fmt(iva)}</div></div>
+        <div class="kpi"><h4>Ganancia</h4><div class="value">${fmt(ganancia)}</div></div>
+      `;
+
+      const dist = document.getElementById('estado-dist');
+      const estados = ['en_ejecucion','completada','cancelada','postventa'];
+      dist.innerHTML = estados.map(e => {
+        const count = ventasData.filter(v => (v.estado || 'en_ejecucion') === e).length;
+        return `<div class="kpi"><h4>${e}</h4><div class="value">${count}</div></div>`;
+      }).join('');
+    }
+
+    function fmt(num) {
+      if (num === null || num === undefined) return '$0';
+      return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
+    }
+  </script>
+</body>
+</html>
