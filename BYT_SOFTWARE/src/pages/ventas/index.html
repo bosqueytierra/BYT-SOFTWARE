@@ -28,25 +28,34 @@
       width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
       background: #fdfdfd; font-family: inherit; font-size: 14px;
     }
-    .list { display:flex; flex-direction:column; gap:12px; }
-    .sale-card { padding:14px; border-radius:12px; border:1px solid var(--border); box-shadow: var(--shadow); background:var(--card); }
-    .sale-head { display:grid; grid-template-columns: 1fr minmax(300px, 420px); gap:10px; align-items:flex-start; }
-    .sale-title { margin:0; font-size:16px; font-weight:800; color:var(--text); word-break:break-word; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .sale-meta { margin:6px 0; color:var(--muted); font-size:13px; display:flex; gap:10px; flex-wrap:wrap; }
-    .meta-pill { background:#f0f3f5; padding:4px 8px; border-radius:8px; border:1px solid var(--border); }
-    .money { font-weight:700; color:var(--primary); margin:4px 0 0; }
-    .actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:8px; }
+    .accordion { display:flex; flex-direction:column; gap:12px; }
+    .project { border:1px solid var(--border); border-radius:12px; box-shadow: var(--shadow); background:var(--card); }
+    .project-header {
+      display:flex; justify-content:space-between; align-items:center; padding:12px 14px;
+      cursor:pointer; border-bottom:1px solid var(--border);
+    }
+    .project-title { margin:0; font-size:15px; font-weight:800; color:var(--text); }
+    .project-meta { color:var(--muted); font-size:13px; display:flex; gap:10px; flex-wrap:wrap; }
+    .chevron { transition: transform 0.18s ease; }
+    .project-body { display:flex; flex-direction:column; }
+    .row { display:grid; grid-template-columns: 2fr 1.4fr 0.9fr 0.9fr; gap:10px; padding:12px 14px; border-top:1px solid var(--border); align-items:center; }
+    .row:first-child { border-top: none; }
+    .col-main { display:flex; flex-direction:column; gap:4px; }
+    .partida { font-weight:700; font-size:14px; color:var(--text); }
+    .submeta { color:var(--muted); font-size:12.5px; display:flex; gap:10px; flex-wrap:wrap; }
+    .money { font-weight:700; color:var(--primary); }
+    .numbers { font-size:12.5px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; }
+    .state-select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#fdfdfd; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
     .btn-primary { background: var(--primary); color:#fff; border-color: var(--primary); }
-    .btn-ghost { background: #f0f3f5; }
     .state-badge { padding:6px 10px; border-radius:10px; font-weight:700; font-size:12px; display:inline-block; }
     .state-en_ejecucion { background:#e6f4ef; color:#1e7d57; }
     .state-completada { background:#e8f1ff; color:#2c4f9e; }
     .state-cancelada { background:#fbeaea; color:#b23b3b; text-decoration: line-through; opacity:0.7; }
     .state-postventa { background:#fff3e0; color:#b66a00; }
-    .tachado { text-decoration: line-through; opacity: 0.6; }
-    @media (max-width: 900px) {
-      .sale-head { grid-template-columns: 1fr; }
+    @media (max-width: 1024px) {
+      .row { grid-template-columns: 1fr; align-items:flex-start; }
       .actions { justify-content:flex-start; }
     }
   </style>
@@ -83,7 +92,7 @@
       </div>
     </div>
 
-    <div id="ventas-container" class="list"></div>
+    <div id="ventas-container" class="accordion"></div>
   </div>
 
   <script src="../../js/layout.js"></script>
@@ -94,6 +103,7 @@
   <script>
     let ventasData = [];
     let ventasFiltradas = [];
+    const openState = new Set(); // proyectos abiertos
 
     document.addEventListener('DOMContentLoaded', async () => {
       await cargarVentas();
@@ -129,6 +139,16 @@
       renderVentas();
     }
 
+    function groupByProyecto(list) {
+      const map = new Map();
+      list.forEach(v => {
+        const key = v.proyecto || 'Sin proyecto';
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(v);
+      });
+      return Array.from(map.entries()).map(([proyecto, items]) => ({ proyecto, items }));
+    }
+
     function fmt(num) {
       if (num === null || num === undefined) return '$0';
       return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
@@ -140,33 +160,95 @@
         cont.innerHTML = '<div class="card state"><div class="state-icon">📁</div><div>No hay ventas</div></div>';
         return;
       }
-      cont.innerHTML = ventasFiltradas.map(v => {
-        const cancelada = v.estado === 'cancelada';
-        const mostrarNeto = Number(v.neto || 0) !== 0 || Number(v.iva || 0) !== 0 || Number(v.ganancia || 0) !== 0;
-        const fecha = v.created_at ? new Date(v.created_at).toLocaleDateString('es-CL') : '';
-        return `
-          <div class="sale-card ${cancelada ? 'tachado' : ''}">
-            <div class="sale-head">
-              <div>
-                <h4 class="sale-title">${escapeHtml(v.proyecto || 'Sin proyecto')}</h4>
-                <div class="sale-meta">
-                  ${v.partida ? `<span class="meta-pill">Partida: ${escapeHtml(v.partida)}</span>` : ''}
-                  ${fecha ? `<span class="meta-pill">Fecha: ${escapeHtml(fecha)}</span>` : ''}
-                </div>
-                ${mostrarNeto ? `<p class="sale-meta">Neto: ${escapeHtml(fmt(v.neto))} · IVA: ${escapeHtml(fmt(v.iva))} · Ganancia: ${escapeHtml(fmt(v.ganancia))}</p>` : ''}
-                <p class="money">Total Venta: ${escapeHtml(fmt(v.total_venta || v.total_cotizado || 0))}</p>
-              </div>
-              <div>
-                <span class="state-badge state-${v.estado || 'en_ejecucion'}">${v.estado || 'en_ejecucion'}</span>
-                <div class="actions">
-                  <button class="btn btn-ghost" onclick="verCotizacion('${v.cotizacion_id}')">Ver Cotización</button>
-                  <button class="btn btn-primary" onclick="verAdjuntos('${v.cotizacion_id}')">Adjuntos</button>
-                </div>
+
+      const grupos = groupByProyecto(ventasFiltradas);
+      const html = grupos.map(g => renderGrupo(g)).join('');
+      cont.innerHTML = html;
+      wireAccordions();
+    }
+
+    function renderGrupo({ proyecto, items }) {
+      const isOpen = openState.has(proyecto);
+      const rows = items.map(v => renderRow(v)).join('');
+      const totalProyecto = items.reduce((acc, v) => acc + (Number(v.total_venta || v.total_cotizado || 0) || 0), 0);
+      return `
+        <div class="project" data-proyecto="${escapeHtml(proyecto)}">
+          <div class="project-header" onclick="toggleProyecto('${escapeHtmlAttr(proyecto)}')">
+            <div>
+              <p class="project-title">${escapeHtml(proyecto)}</p>
+              <div class="project-meta">
+                <span>${items.length} partida(s)</span>
+                <span>Total proyecto: ${escapeHtml(fmt(totalProyecto))}</span>
               </div>
             </div>
+            <div class="chevron" style="transform: rotate(${isOpen ? '90deg' : '0deg'});">›</div>
           </div>
-        `;
-      }).join('');
+          <div class="project-body" style="display:${isOpen ? 'block' : 'none'};">
+            ${rows}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderRow(v) {
+      const fecha = v.created_at ? new Date(v.created_at).toLocaleDateString('es-CL') :
+                    (v.fecha_entrega_max ? new Date(v.fecha_entrega_max).toLocaleDateString('es-CL') : '');
+      const mostrarNeto = Number(v.neto || 0) !== 0 || Number(v.iva || 0) !== 0 || Number(v.ganancia || 0) !== 0;
+      return `
+        <div class="row">
+          <div class="col-main">
+            <div class="partida">${escapeHtml(v.partida || 'Sin partida')}</div>
+            <div class="submeta">
+              ${fecha ? `<span>Fecha: ${escapeHtml(fecha)}</span>` : ''}
+              ${v.cliente ? `<span>Cliente: ${escapeHtml(v.cliente)}</span>` : ''}
+            </div>
+          </div>
+          <div>
+            ${mostrarNeto ? `<div class="numbers">Neto: ${escapeHtml(fmt(v.neto))} · IVA: ${escapeHtml(fmt(v.iva))} · Ganancia: ${escapeHtml(fmt(v.ganancia))}</div>` : '<div class="numbers" style="opacity:0.6;">Neto/IVA/Ganancia: -</div>'}
+          </div>
+          <div>
+            <select class="state-select" onchange="handleEstadoVentaChange(this, '${v.id}', '${v.cotizacion_id}')">
+              <option value="en_ejecucion" ${v.estado==='en_ejecucion'?'selected':''}>En ejecución</option>
+              <option value="completada" ${v.estado==='completada'?'selected':''}>Completada</option>
+              <option value="cancelada" ${v.estado==='cancelada'?'selected':''}>Cancelada</option>
+              <option value="postventa" ${v.estado==='postventa'?'selected':''}>Postventa</option>
+            </select>
+          </div>
+          <div class="actions">
+            <div class="money">${escapeHtml(fmt(v.total_venta || v.total_cotizado || 0))}</div>
+            <button class="btn btn-ghost" onclick="verCotizacion('${v.cotizacion_id}')">Ver Cotización</button>
+            <button class="btn btn-primary" onclick="verAdjuntos('${v.cotizacion_id}')">Adjuntos</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function wireAccordions() {
+      // chevron rotation handled inline; nothing else needed
+    }
+
+    function toggleProyecto(p) {
+      if (openState.has(p)) openState.delete(p); else openState.add(p);
+      renderVentas();
+    }
+
+    async function handleEstadoVentaChange(selectEl, ventaId, cotizacionId) {
+      const nuevoEstado = selectEl.value;
+      const prev = (ventasData.find(v => v.id === ventaId) || {}).estado || 'en_ejecucion';
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        // usamos la función existente por cotizacion_id
+        const res = await window.supabaseClient.actualizarEstadoVentaPorCotizacion(cotizacionId, nuevoEstado);
+        if (!res.success) throw new Error(res.error || 'No se pudo actualizar estado');
+
+        ventasData = ventasData.map(v => v.id === ventaId ? { ...v, estado: nuevoEstado } : v);
+        aplicarFiltros();
+        window.utils?.mostrarNotificacion?.('Estado de venta actualizado', 'success');
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('No se pudo actualizar estado: ' + (e.message || e), 'error');
+        selectEl.value = prev;
+      }
     }
 
     function verCotizacion(id) {
@@ -182,6 +264,9 @@
     function escapeHtml(str) {
       if (str === undefined || str === null) return '';
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+    function escapeHtmlAttr(str) {
+      return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
   </script>
 </body>
