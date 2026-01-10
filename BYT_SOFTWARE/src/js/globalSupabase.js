@@ -90,7 +90,7 @@ async function guardarCotizacion(datosCompletos) {
                 iva: datosCompletos.totales.iva,
                 total_proyecto: datosCompletos.totales.totalProyecto,
                 ganancia: datosCompletos.totales.ganancia,
-                estado: 'borrador', // nuevo: default al crear
+                estado: 'borrador',
                 created_at: new Date().toISOString()
             }]);
 
@@ -205,6 +205,77 @@ async function eliminarCotizacion(id) {
     }
 }
 
+// ===== FUNCIONES DE VENTAS =====
+async function crearOVincularVentaDesdeCotizacion(cotizacion, estadoVenta = 'en_ejecucion') {
+    try {
+        if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
+        }
+        const payload = {
+            cotizacion_id: cotizacion.id,
+            proyecto: cotizacion.nombre_proyecto || cotizacion.project_key || cotizacion.data?.cliente?.nombre_proyecto || cotizacion.data?.cliente?.nombre || 'Sin nombre',
+            partida: cotizacion.partida || cotizacion.nombre_proyecto || '',
+            total_cotizado: cotizacion.total_proyecto || cotizacion.total || 0,
+            total_venta: cotizacion.total_proyecto || cotizacion.total || 0,
+            neto: cotizacion.total_neto || cotizacion.totalNeto || 0,
+            iva: cotizacion.iva || 0,
+            ganancia: cotizacion.ganancia || 0,
+            estado: estadoVenta,
+            updated_at: new Date().toISOString()
+        };
+
+        // Upsert por cotizacion_id
+        const { error } = await supabaseClient
+            .from('ventas')
+            .upsert(payload, { onConflict: 'cotizacion_id' });
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error al crear/actualizar venta desde cotización:', error);
+        return { success: false, error: error.message || String(error) };
+    }
+}
+
+async function actualizarEstadoVentaPorCotizacion(cotizacionId, estado) {
+    try {
+        if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
+        }
+        const { error } = await supabaseClient
+            .from('ventas')
+            .update({ estado, updated_at: new Date().toISOString() })
+            .eq('cotizacion_id', cotizacionId);
+
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error al actualizar estado de venta:', error);
+        return { success: false, error: error.message || String(error) };
+    }
+}
+
+async function listarVentas() {
+    try {
+        if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
+        }
+        const { data, error } = await supabaseClient
+            .from('ventas')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error al listar ventas:', error);
+        return { success: false, error: error.message || String(error) };
+    }
+}
+
 // ===== UTILIDADES =====
 function mostrarNotificacion(mensaje, tipo = 'info') {
     const notification = document.createElement('div');
@@ -258,9 +329,13 @@ window.supabaseClient = {
     obtenerCotizaciones,
     obtenerCotizacionPorId,
     actualizarCotizacion,
-    actualizarEstadoCotizacion, // nuevo
+    actualizarEstadoCotizacion,
     eliminarCotizacion,
-    validarConexion: validarConexionSupabase
+    validarConexion: validarConexionSupabase,
+    // Ventas
+    crearOVincularVentaDesdeCotizacion,
+    actualizarEstadoVentaPorCotizacion,
+    listarVentas
 };
 
 window.utils = { mostrarNotificacion };
