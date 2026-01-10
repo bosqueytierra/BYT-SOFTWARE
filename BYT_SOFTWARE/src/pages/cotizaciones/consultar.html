@@ -16,7 +16,7 @@
       --primary-soft: #3f705d;
       --accent: #2e5e4e;
       --accent-2: #3f705d;
-      --danger: #2e5e4e; /* seguimos evitando rojos */
+      --danger: #2e5e4e;
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
     }
     body {
@@ -26,7 +26,7 @@
       color: var(--text);
     }
     .page {
-      max-width: 1200px;
+      max-width: 1280px;
       margin: 22px auto 48px;
       padding: 0 16px;
     }
@@ -43,8 +43,7 @@
     }
     .logo-row { display: flex; align-items: center; gap: 12px; }
     .logo {
-      width: 44px;
-      height: 44px;
+      width: 44px; height: 44px;
       border-radius: 12px;
       object-fit: contain;
       background: #edf1f3;
@@ -118,18 +117,16 @@
     .list { display: flex; flex-direction: column; gap: 12px; }
     .quote-card { padding: 16px; }
     .quote-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: 1fr minmax(320px, 420px);
+      gap: 12px;
       align-items: flex-start;
-      flex-wrap: wrap;
     }
     .quote-title {
       margin: 0;
       font-size: 16px;
       font-weight: 800;
       color: var(--text);
-      max-width: 640px;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
@@ -143,11 +140,12 @@
       gap: 8px;
       flex-wrap: wrap;
       align-items: center;
-      flex-shrink: 0;
+      justify-content: flex-end;
+      margin-top: 8px;
     }
     .quote-status {
-      min-width: 160px;
-      padding: 9px 10px;
+      width: 100%;
+      padding: 11px 12px;
       border: 1px solid var(--border);
       border-radius: 10px;
       background: #fdfdfd;
@@ -181,7 +179,6 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Modal de confirmación */
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -202,12 +199,7 @@
     }
     .modal h3 { margin: 0 0 8px; }
     .modal p { margin: 0 0 14px; color: var(--muted); }
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
     .hold-btn { position: relative; overflow: hidden; }
     .hold-fill {
       position: absolute;
@@ -218,33 +210,24 @@
       transition: width 0.1s linear;
     }
 
-    /* Quitar subrayado en links del sidebar */
     .sidebar a,
     .sidebar .nav-item,
     .sidebar .nav-item .nav-label,
-    .sidebar .submenu a {
-      text-decoration: none !important;
-    }
+    .sidebar .submenu a { text-decoration: none !important; }
     .sidebar a:hover,
     .sidebar .nav-item:hover,
     .sidebar .nav-item:focus,
     .sidebar .nav-item:active,
     .sidebar .submenu a:hover,
     .sidebar .submenu a:focus,
-    .sidebar .submenu a:active {
-      text-decoration: none !important;
-    }
+    .sidebar .submenu a:active { text-decoration: none !important; }
 
-    @media (max-width: 768px) {
+    @media (max-width: 900px) {
       .quote-head {
-        flex-direction: column;
-        align-items: flex-start;
+        grid-template-columns: 1fr;
       }
-      .quote-actions {
-        width: 100%;
-        flex-wrap: wrap;
-        gap: 6px;
-      }
+      .quote-actions { justify-content: flex-start; }
+      .quote-status { width: 100%; }
     }
   </style>
 </head>
@@ -306,7 +289,6 @@
       <div id="cotizaciones-container" class="list" style="display:none;"></div>
     </div>
 
-    <!-- Modal de confirmación -->
     <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
       <div class="modal">
         <h3>Eliminar cotización</h3>
@@ -322,10 +304,7 @@
     </div>
   </div>
 
-  <!-- Shell / layout -->
   <script src="../../js/layout.js"></script>
-
-  <!-- Supabase -->
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
   <script src="../../js/globalSupabase.js" defer></script>
@@ -367,7 +346,7 @@
         if (cotizacionesData.length === 0) {
           mostrarEstado('empty');
         } else {
-          ordenarCotizaciones(); // incluye mostrarCotizaciones
+          ordenarCotizaciones();
         }
       } catch (error) {
         console.error('Error al cargar cotizaciones:', error);
@@ -455,7 +434,7 @@
                 <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</p>
                 <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
               </div>
-              <div class="quote-actions">
+              <div>
                 <select class="quote-status" onchange="handleEstadoChange(this, '${c.id}')">
                   <option value="borrador" ${estado==='borrador'?'selected':''}>Borrador</option>
                   <option value="enviada" ${estado==='enviada'?'selected':''}>Enviada</option>
@@ -463,19 +442,21 @@
                   <option value="aprobada" ${estado==='aprobada'?'selected':''}>Aprobada</option>
                   <option value="rechazada" ${estado==='rechazada'?'selected':''}>Rechazada</option>
                 </select>
-                <button class="btn btn-ver" onclick="verDetalle('${c.id}')" title="Ver">
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M3.5 12s3.5-6 8.5-6 8.5 6 8.5 6-3.5 6-8.5 6-8.5-6-8.5-6Z"/></svg>
-                  Ver
-                </button>
-                <button class="btn btn-editar" onclick="editarCotizacion('${c.id}')" title="Editar">
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17.5 17.5 4a1.41 1.41 0 0 1 2 2L6 19.5 4 20z"/><path d="M14.5 6.5 17.5 9.5"/></svg>
-                  Editar
-                </button>
-                <button class="btn btn-duplicar" onclick="duplicarCotizacion('${c.id}')" title="Duplicar">
-                  <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v12H7z"/><path d="M5 5h10v12"/></svg>
-                  Duplicar
-                </button>
-                <button class="btn btn-eliminar" data-id="${c.id}" title="Eliminar">Eliminar</button>
+                <div class="quote-actions">
+                  <button class="btn btn-ver" onclick="verDetalle('${c.id}')" title="Ver">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M3.5 12s3.5-6 8.5-6 8.5 6 8.5 6-3.5 6-8.5 6-8.5-6-8.5-6Z"/></svg>
+                    Ver
+                  </button>
+                  <button class="btn btn-editar" onclick="editarCotizacion('${c.id}')" title="Editar">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17.5 17.5 4a1.41 1.41 0 0 1 2 2L6 19.5 4 20z"/><path d="M14.5 6.5 17.5 9.5"/></svg>
+                    Editar
+                  </button>
+                  <button class="btn btn-duplicar" onclick="duplicarCotizacion('${c.id}')" title="Duplicar">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v12H7z"/><path d="M5 5h10v12"/></svg>
+                    Duplicar
+                  </button>
+                  <button class="btn btn-eliminar" data-id="${c.id}" title="Eliminar">Eliminar</button>
+                </div>
               </div>
             </div>
           </div>
@@ -596,16 +577,14 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Stub: cambio de estado (solo UI por ahora). Conectaremos Supabase/ventas en el siguiente paso.
     async function handleEstadoChange(selectEl, id) {
       const nuevoEstado = selectEl.value;
       console.log('Estado seleccionado', { id, nuevoEstado });
       window.utils?.mostrarNotificacion?.('Estado seleccionado: ' + nuevoEstado + ' (falta guardar en backend)', 'info');
-      // TODO (paso siguiente):
-      // 1) supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado)
-      // 2) Si nuevoEstado === 'aprobada' => crear/actualizar venta (estado en_ejecucion)
-      // 3) Si pasa de aprobada a rechazada/en_revision_cliente => marcar venta cancelada
-      // 4) Si vuelve a aprobada => reactivar venta en_ejecucion
+      // TODO siguiente paso:
+      // supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado)
+      // crear/actualizar venta al aprobar
+      // cancelar/activar venta según cambio de estado
     }
   </script>
 </body>
