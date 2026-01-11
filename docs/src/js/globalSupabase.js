@@ -296,6 +296,25 @@ async function actualizarEstadoVentaPorCotizacion(cotizacionId, estado) {
     }
 }
 
+// Nuevo: actualizar monto de venta por partida
+async function actualizarMontoVenta(id, total_venta) {
+    try {
+        if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
+        }
+        const { error } = await supabaseClient
+            .from('ventas')
+            .update({ total_venta, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error al actualizar monto de venta:', error);
+        return { success: false, error: error.message || String(error) };
+    }
+}
+
 // Eliminar todas las ventas de una cotización (cuando ya no está aprobada)
 async function eliminarVentasPorCotizacion(cotizacionId) {
     try {
@@ -396,6 +415,7 @@ window.supabaseClient = {
     crearOVincularVentaDesdeCotizacion,
     actualizarEstadoVentaPorCotizacion,
     eliminarVentasPorCotizacion,
+    actualizarMontoVenta,
     listarVentas
 };
 
