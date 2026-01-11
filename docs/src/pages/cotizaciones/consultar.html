@@ -305,7 +305,7 @@
     </div>
 
     <!-- Modal de confirmación para cambio de estado -->
-    <div id="status-confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:9999; align-items:center; justify-content:center;">
+    <div id="status-confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:12000; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:12px; padding:16px; width:320px; box-shadow:0 12px 30px rgba(0,0,0,0.15);">
         <h4 style="margin:0 0 8px;">Confirmar cambio de estado</h4>
         <p id="status-confirm-text" style="margin:0 0 12px; color:#555;">Mantén presionado 5s para confirmar.</p>
@@ -603,7 +603,7 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Solo guardamos prev
+    // Guardamos prev
     function wireEstadoSelects() {
       document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
         sel.dataset.prev = sel.value;
@@ -611,8 +611,8 @@
       });
     }
 
-    // Listener delegado: captura cambios en los selects
-    document.getElementById('cotizaciones-container')?.addEventListener('change', (e) => {
+    // Listener delegado en captura para no perder el change
+    document.addEventListener('change', (e) => {
       const sel = e.target.closest('select.estado-cotizacion');
       if (!sel) return;
       if (typeof confirmEstadoChange === 'function') {
@@ -620,8 +620,9 @@
       } else {
         const ok = confirm(`Confirmar cambio a "${sel.value}"`);
         if (ok) handleEstadoChange(sel, sel.dataset.id, sel.value);
+        else sel.value = sel.dataset.prev || sel.value;
       }
-    });
+    }, true);
 
     (() => {
       const modal   = document.getElementById('status-confirm-modal');
@@ -681,11 +682,11 @@
       window.confirmEstadoChange = (selectEl, id) => {
         const prev = selectEl.dataset.prev || selectEl.value;
         const newStatus = selectEl.value;
-        // NO revertimos aquí; solo revertimos si cancelan
+        // No revertimos aquí; revertimos solo si cancelan o falla
         if (!modal) {
           const ok = confirm(`Confirmar cambio a "${newStatus}"`);
           if (ok) handleEstadoChange(selectEl, id, newStatus);
-          else selectEl.value = prev;
+          else { selectEl.value = prev; selectEl.dataset.prev = prev; }
           return;
         }
         openModal(selectEl, id, newStatus,
