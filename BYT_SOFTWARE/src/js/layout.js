@@ -1,5 +1,5 @@
 // Inyecta la shell (layout.html), coloca el contenido de la página en el slot
-// y re-ejecuta los scripts de la página (excepto layout.js para evitar recursión).
+// y re-ejecuta únicamente los scripts inline de la página (evita reinyectar scripts externos para no duplicar).
 (async function() {
   // Evita doble inyección si el script se corre más de una vez.
   if (window.__BYT_SHELL_APPLIED__) return;
@@ -40,22 +40,19 @@
     slot.appendChild(wrapper);
   }
 
-  // Re-ejecuta scripts del contenido, saltando layout.js para evitar recursión
+  // Re-ejecuta SOLO scripts inline del contenido, saltando layout.js y cualquier script con src
   function runScripts(root) {
     if (!root) return;
     const scripts = root.querySelectorAll('script');
     scripts.forEach(old => {
       const src = old.getAttribute('src') || '';
-      if (src.includes('layout.js')) return; // evita recursión
+      // Evita recursión y evita duplicar scripts externos
+      if (src) return;
       const s = document.createElement('script');
       for (const { name, value } of Array.from(old.attributes)) {
         s.setAttribute(name, value);
       }
-      if (src) {
-        s.src = src;
-      } else {
-        s.textContent = old.textContent;
-      }
+      s.textContent = old.textContent;
       document.body.appendChild(s);
     });
   }
