@@ -333,6 +333,33 @@
     let holdTimer = null;
     let holdInterval = null;
 
+    // Wrap supabase calls para ver respuestas
+    window.__logWrap = async (fn, label, ...args) => {
+      console.log(label, 'IN', args);
+      const out = await fn(...args);
+      console.log(label, 'OUT', out);
+      return out;
+    };
+    const origUpdate = () => {};
+    const origVenta  = () => {};
+    const origEliminar = () => {};
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.supabaseClient) {
+        if (!origUpdate.fn) {
+          origUpdate.fn = window.supabaseClient.actualizarEstadoCotizacion;
+          window.supabaseClient.actualizarEstadoCotizacion = (...a) => __logWrap(origUpdate.fn, 'actualizarEstadoCotizacion', ...a);
+        }
+        if (!origVenta.fn) {
+          origVenta.fn = window.supabaseClient.crearOVincularVentaDesdeCotizacion;
+          window.supabaseClient.crearOVincularVentaDesdeCotizacion = (...a) => __logWrap(origVenta.fn, 'crearOVincularVentaDesdeCotizacion', ...a);
+        }
+        if (!origEliminar.fn) {
+          origEliminar.fn = window.supabaseClient.eliminarVentasPorCotizacion;
+          window.supabaseClient.eliminarVentasPorCotizacion = (...a) => __logWrap(origEliminar.fn, 'eliminarVentasPorCotizacion', ...a);
+        }
+      }
+    });
+
     if (!localStorage.getItem('byt_logged_in')) {
       window.location.href = '../login/login.html';
     }
@@ -615,6 +642,7 @@
     document.addEventListener('change', (e) => {
       const sel = e.target.closest('select.estado-cotizacion');
       if (!sel) return;
+      console.log('[delegated change]', sel.dataset.id, '->', sel.value);
       if (typeof confirmEstadoChange === 'function') {
         confirmEstadoChange(sel, sel.dataset.id);
       } else {
@@ -638,6 +666,7 @@
 
       function openModal(selectEl, itemId, newStatus, onConfirm, onCancel) {
         pending = { selectEl, itemId, newStatus, onConfirm, onCancel };
+        console.log('[openModal]', { itemId, newStatus });
         txt.textContent = `Mantén presionado 5s para confirmar cambio a “${newStatus}”.`;
         bar.style.width = '0%';
         modal.style.display = 'flex';
@@ -682,6 +711,7 @@
       window.confirmEstadoChange = (selectEl, id) => {
         const prev = selectEl.dataset.prev || selectEl.value;
         const newStatus = selectEl.value;
+        console.log('[confirmEstadoChange]', { id, prev, newStatus });
         // No revertimos aquí; revertimos solo si cancelan o falla
         if (!modal) {
           const ok = confirm(`Confirmar cambio a "${newStatus}"`);
@@ -714,9 +744,11 @@
     async function handleEstadoChange(selectEl, id, forcedEstado) {
       const nuevoEstado = forcedEstado || selectEl.value;
       const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
+      console.log('[handleEstadoChange]', { id, nuevoEstado, prevEstado });
       try {
         if (window.supabaseClient?.init) await window.supabaseClient.init();
         const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
+        console.log('[actualizarEstadoCotizacion result]', res);
         if (!res.success) throw new Error(res.error);
 
         cotizacionesData = cotizacionesData.map(c =>
@@ -725,8 +757,10 @@
 
         const cotizacion = cotizacionesData.find(c => c.id === id);
         if (nuevoEstado === 'aprobada') {
+          console.log('[crearOVincularVentaDesdeCotizacion] IN', cotizacion);
           await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
         } else {
+          console.log('[eliminarVentasPorCotizacion] IN', id);
           await window.supabaseClient.eliminarVentasPorCotizacion(id);
         }
 
