@@ -49,7 +49,6 @@
     }
     .header-title { margin: 0; font-size: 20px; font-weight: 800; color: var(--text); }
     .header-subtitle { margin: 0; color: var(--muted); font-size: 13px; }
-
     .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
     .card {
@@ -599,14 +598,13 @@
           c.id === id ? { ...c, estado: nuevoEstado } : c
         );
 
-        // Sincroniza venta según transición
+        // Sincroniza ventas según transición
         const cotizacion = cotizacionesData.find(c => c.id === id);
         if (nuevoEstado === 'aprobada') {
           await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
-        } else if ((prevEstado === 'aprobada') && (nuevoEstado === 'rechazada' || nuevoEstado === 'en_revision_cliente')) {
-          await window.supabaseClient.actualizarEstadoVentaPorCotizacion(id, 'cancelada');
-        } else if ((prevEstado === 'rechazada' || prevEstado === 'en_revision_cliente') && nuevoEstado === 'aprobada') {
-          await window.supabaseClient.actualizarEstadoVentaPorCotizacion(id, 'en_ejecucion');
+        } else {
+          // Si deja de ser aprobada, eliminamos las ventas asociadas
+          await window.supabaseClient.eliminarVentasPorCotizacion(id);
         }
 
         filtrarCotizaciones();
