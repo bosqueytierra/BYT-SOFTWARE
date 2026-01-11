@@ -38,13 +38,22 @@
     .project-meta { color:var(--muted); font-size:13px; display:flex; gap:10px; flex-wrap:wrap; }
     .chevron { transition: transform 0.18s ease; }
     .project-body { display:flex; flex-direction:column; }
-    .row { display:grid; grid-template-columns: 2fr 1.2fr 0.9fr 1fr; gap:10px; padding:12px 14px; border-top:1px solid var(--border); align-items:center; }
+    .row { display:grid; grid-template-columns: 2fr 1.2fr 0.9fr 1.1fr; gap:10px; padding:12px 14px; border-top:1px solid var(--border); align-items:center; }
     .row:first-child { border-top: none; }
     .col-main { display:flex; flex-direction:column; gap:4px; }
     .partida { font-weight:700; font-size:14px; color:var(--text); }
     .submeta { color:var(--muted); font-size:12.5px; display:flex; gap:10px; flex-wrap:wrap; }
     .money { font-weight:700; color:var(--primary); }
     .state-select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#fdfdfd; }
+    .money-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fdfdfd;
+      font-family: inherit;
+      font-size: 14px;
+    }
     .actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
     .btn-primary { background: var(--primary); color:#fff; border-color: var(--primary); }
@@ -147,6 +156,11 @@
       if (num === null || num === undefined) return '$0';
       return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
     }
+    function parseCLP(str) {
+      if (typeof str === 'number') return str;
+      const cleaned = String(str).replace(/[^\d-]/g, '');
+      return cleaned ? parseInt(cleaned, 10) : 0;
+    }
 
     function formatCliente(cli) {
       if (!cli) return '';
@@ -204,6 +218,7 @@
                     (v.fecha_entrega_max ? new Date(v.fecha_entrega_max).toLocaleDateString('es-CL') : '');
       const partidaNombre = v.partida_nombre || v.partida || 'Partida';
       const clienteFmt = formatCliente(v.cliente);
+      const montoRaw = v.total_venta ?? v.total_cotizado ?? 0;
       return `
         <div class="row">
           <div class="col-main">
@@ -213,7 +228,15 @@
               ${clienteFmt ? `<span>Cliente: ${escapeHtml(clienteFmt)}</span>` : ''}
             </div>
           </div>
-          <div></div>
+          <div>
+            <input
+              class="money-input"
+              value="${escapeHtml(fmt(montoRaw))}"
+              data-venta-id="${v.id}"
+              onfocus="this.select()"
+              onblur="handleMontoBlur(this, '${v.id}')"
+            />
+          </div>
           <div>
             <select class="state-select" onchange="handleEstadoVentaChange(this, '${v.id}', '${v.cotizacion_id}')">
               <option value="en_ejecucion" ${v.estado==='en_ejecucion'?'selected':''}>En ejecución</option>
@@ -223,7 +246,7 @@
             </select>
           </div>
           <div class="actions">
-            <div class="money">${escapeHtml(fmt(v.total_venta || v.total_cotizado || 0))}</div>
+            <div class="money" id="money-${v.id}">${escapeHtml(fmt(montoRaw))}</div>
             <button class="btn btn-ghost" onclick="verCotizacion('${v.cotizacion_id}')">Ver Cotización</button>
             <button class="btn btn-primary" onclick="verAdjuntos('${v.cotizacion_id}')">Adjuntos</button>
           </div>
@@ -251,6 +274,27 @@
         console.error(e);
         window.utils?.mostrarNotificacion?.('No se pudo actualizar estado: ' + (e.message || e), 'error');
         selectEl.value = prev;
+      }
+    }
+
+    async function handleMontoBlur(inputEl, ventaId) {
+      const val = parseCLP(inputEl.value);
+      const prev = ventasData.find(v => v.id === ventaId)?.total_venta ?? 0;
+      if (isNaN(val)) {
+        inputEl.value = fmt(prev);
+        return;
+      }
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        const res = await window.supabaseClient.actualizarMontoVenta(ventaId, val);
+        if (!res.success) throw new Error(res.error || 'No se pudo actualizar monto');
+        ventasData = ventasData.map(v => v.id === ventaId ? { ...v, total_venta: val } : v);
+        document.getElementById(`money-${ventaId}`).textContent = fmt(val);
+        window.utils?.mostrarNotificacion?.('Monto de venta guardado', 'success');
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('No se pudo guardar monto: ' + (e.message || e), 'error');
+        inputEl.value = fmt(prev);
       }
     }
 
