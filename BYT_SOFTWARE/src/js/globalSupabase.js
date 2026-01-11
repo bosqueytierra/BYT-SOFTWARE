@@ -208,23 +208,31 @@ async function eliminarCotizacion(id) {
 
 // ===== FUNCIONES DE VENTAS (fan-out por partida) =====
 
-// Helper: parsear partidas desde cotización
+// Helper: parsear partidas desde cotización (acepta objeto, string JSON, data.partidas)
 function extraerPartidas(cotizacion) {
-    const candidatas = [
+    const candidatos = [
         cotizacion.partidas,
-        cotizacion.data?.partidas,
+        cotizacion.data,
+        cotizacion.data?.partidas
     ];
-    for (const c of candidatas) {
+    for (const c of candidatos) {
         if (!c) continue;
+        // si es string, intentar parsear
         if (typeof c === 'string') {
-            try { return JSON.parse(c) || []; } catch (_) { continue; }
+            try {
+                const parsed = JSON.parse(c);
+                if (Array.isArray(parsed)) return parsed;
+                if (parsed?.partidas && Array.isArray(parsed.partidas)) return parsed.partidas;
+            } catch (_) { /* ignore */ }
         }
+        // si tiene campo partidas dentro de objeto data
+        if (c?.partidas && Array.isArray(c.partidas)) return c.partidas;
         if (Array.isArray(c)) return c;
     }
     return [];
 }
 
-// Crea/actualiza una venta por cada partida (onConflict cotizacion_id + partida_id)
+// Crea/actualiza ventas por partida; limpia previas para la cotización
 async function crearOVincularVentaDesdeCotizacion(cotizacion, estadoVenta = 'en_ejecucion') {
     try {
         if (!supabaseClient || typeof supabaseClient.from !== 'function') {
@@ -232,11 +240,14 @@ async function crearOVincularVentaDesdeCotizacion(cotizacion, estadoVenta = 'en_
             if (!ok) throw new Error('Supabase no inicializado');
         }
         const partidas = extraerPartidas(cotizacion);
-        if (!partidas.length) return { success: true }; // sin partidas, no insertar
+        // Limpia ventas previas de esta cotización para evitar residuos
+        await supabaseClient.from('ventas').delete().eq('cotizacion_id', cotizacion.id);
 
-        const rows = partidas.map(p => {
-            const partidaId = p.id || p.uuid || p.key || null;
-            const partidaNombre = p.nombre || p.partida || 'Partida';
+        if (!partidas.length) return { success: true }; // sin partidas, nada que crear
+
+        const rows = partidas.map((p, idx) => {
+            const partidaId = p.id || p.uuid || p.key || p._id || `p-${idx}`;
+            const partidaNombre = p.nombre || p.partida || p.titulo || 'Partida';
             return {
                 cotizacion_id: cotizacion.id,
                 partida_id: partidaId,
@@ -244,7 +255,7 @@ async function crearOVincularVentaDesdeCotizacion(cotizacion, estadoVenta = 'en_
                 proyecto: cotizacion.nombre_proyecto || cotizacion.project_key || cotizacion.data?.cliente?.nombre_proyecto || cotizacion.data?.cliente?.nombre || 'Sin nombre',
                 cliente: cotizacion.cliente || cotizacion.data?.cliente?.nombre || null,
                 total_cotizado: cotizacion.total_proyecto || cotizacion.total || 0,
-                total_venta: 0, // se llena manual luego
+                total_venta: 0, // se llenará manualmente luego
                 estado: estadoVenta,
                 updated_at: new Date().toISOString()
             };
