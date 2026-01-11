@@ -48,11 +48,6 @@
     .actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
     .btn-primary { background: var(--primary); color:#fff; border-color: var(--primary); }
-    .state-badge { padding:6px 10px; border-radius:10px; font-weight:700; font-size:12px; display:inline-block; }
-    .state-en_ejecucion { background:#e6f4ef; color:#1e7d57; }
-    .state-completada { background:#e8f1ff; color:#2c4f9e; }
-    .state-cancelada { background:#fbeaea; color:#b23b3b; text-decoration: line-through; opacity:0.7; }
-    .state-postventa { background:#fff3e0; color:#b66a00; }
     @media (max-width: 1024px) {
       .row { grid-template-columns: 1fr; align-items:flex-start; }
       .actions { justify-content:flex-start; }
@@ -64,7 +59,7 @@
     <div class="card header-card">
       <div>
         <h2 style="margin:0;">Ventas</h2>
-        <p style="margin:2px 0 0; color:var(--muted); font-size:13px;">Seguimiento de ventas asociadas a cotizaciones aprobadas</p>
+        <p style="margin:2px 0 0; color:var(--muted); font-size:13px;">Una fila por partida (solo cotizaciones aprobadas)</p>
       </div>
       <div class="actions">
         <a class="btn btn-primary" href="dashboard.html">Ir a Dashboard</a>
@@ -116,7 +111,8 @@
         const res = await window.supabaseClient.listarVentas();
         if (!res.success) throw new Error(res.error);
         ventasData = res.data || [];
-        ventasFiltradas = [...ventasData];
+        // Solo mostramos ventas de cotizaciones aprobadas: ya se borran al cambiar estado, pero reforzamos
+        ventasFiltradas = ventasData;
         aplicarFiltros();
       } catch (e) {
         console.error(e);
@@ -131,7 +127,7 @@
         const matchTxt =
           !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
-          (v.partida || '').toLowerCase().includes(txt);
+          (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
         const matchEst = est === 'todos' ? true : (v.estado || 'en_ejecucion') === est;
         return matchTxt && matchEst;
       });
@@ -191,7 +187,7 @@
     function renderRow(v) {
       const fecha = v.created_at ? new Date(v.created_at).toLocaleDateString('es-CL') :
                     (v.fecha_entrega_max ? new Date(v.fecha_entrega_max).toLocaleDateString('es-CL') : '');
-      const partidaNombre = v.partida || v.partida_nombre || 'Partida';
+      const partidaNombre = v.partida_nombre || v.partida || 'Partida';
       return `
         <div class="row">
           <div class="col-main">
