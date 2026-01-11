@@ -210,12 +210,14 @@ async function eliminarCotizacion(id) {
 
 // ===== FUNCIONES DE VENTAS (fan-out por partida) =====
 
-// Helper: parsear partidas desde cotización (acepta objeto, string JSON, data.partidas)
+// Helper: parsear partidas desde cotización (acepta objeto, string JSON, data.partidas, cliente.partidas)
 function extraerPartidas(cotizacion) {
     const candidatos = [
         cotizacion.partidas,
         cotizacion.data,
-        cotizacion.data?.partidas
+        cotizacion.data?.partidas,
+        cotizacion.cliente,
+        cotizacion.data?.cliente
     ];
     for (const c of candidatos) {
         if (!c) continue;
@@ -224,9 +226,11 @@ function extraerPartidas(cotizacion) {
                 const parsed = JSON.parse(c);
                 if (Array.isArray(parsed)) return parsed;
                 if (parsed?.partidas && Array.isArray(parsed.partidas)) return parsed.partidas;
+                if (parsed?.cliente?.partidas && Array.isArray(parsed.cliente.partidas)) return parsed.cliente.partidas;
             } catch (_) { /* ignore */ }
         }
         if (c?.partidas && Array.isArray(c.partidas)) return c.partidas;
+        if (c?.cliente?.partidas && Array.isArray(c.cliente.partidas)) return c.cliente.partidas;
         if (Array.isArray(c)) return c;
     }
     return [];
