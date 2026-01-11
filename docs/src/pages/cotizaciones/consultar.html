@@ -611,6 +611,18 @@
       });
     }
 
+    // Listener delegado: captura cualquier cambio en los selects de estado
+    document.getElementById('cotizaciones-container')?.addEventListener('change', (e) => {
+      const sel = e.target.closest('select.estado-cotizacion');
+      if (!sel) return;
+      if (typeof confirmEstadoChange === 'function') {
+        confirmEstadoChange(sel, sel.dataset.id);
+      } else {
+        const ok = confirm(`Confirmar cambio a "${sel.value}"`);
+        if (ok) handleEstadoChange(sel, sel.dataset.id, sel.value);
+      }
+    });
+
     (() => {
       const modal   = document.getElementById('status-confirm-modal');
       const txt     = document.getElementById('status-confirm-text');
