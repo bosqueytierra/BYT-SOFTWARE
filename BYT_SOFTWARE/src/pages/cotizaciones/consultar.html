@@ -101,7 +101,7 @@
     .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
     .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
     .btn-primary:hover { background: var(--primary-soft); }
-    .btn-ghost { background: #f0f3f5; color: var(--text); }
+    .btn-ghost { background: #f0f3f5; color: #1f2430; }
     .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
     .btn-ver      { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
     .btn-editar   { background: var(--primary-soft); color: #fff; border-color: var(--primary-soft); }
@@ -289,6 +289,7 @@
       <div id="cotizaciones-container" class="list" style="display:none;"></div>
     </div>
 
+    <!-- Modal eliminar (existente) -->
     <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
       <div class="modal">
         <h3>Eliminar cotización</h3>
@@ -299,6 +300,21 @@
             <span id="delete-hold-text">Mantén 9s para eliminar</span>
             <div class="hold-fill" id="delete-hold-fill"></div>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NUEVO: Modal de confirmación para cambio de estado -->
+    <div id="status-confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:9999; align-items:center; justify-content:center;">
+      <div style="background:#fff; border-radius:12px; padding:16px; width:320px; box-shadow:0 12px 30px rgba(0,0,0,0.15);">
+        <h4 style="margin:0 0 8px;">Confirmar cambio de estado</h4>
+        <p id="status-confirm-text" style="margin:0 0 12px; color:#555;">Mantén presionado 5s para confirmar.</p>
+        <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
+          <div id="status-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
+        </div>
+        <div style="display:flex; gap:8px; justify-content:flex-end;">
+          <button id="status-cancel" class="btn btn-secondary" type="button">Cancelar</button>
+          <button id="status-hold" class="btn btn-primary" type="button" style="touch-action:none;">Mantén 5s</button>
         </div>
       </div>
     </div>
@@ -442,7 +458,8 @@
                 <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
               </div>
               <div>
-                <select class="quote-status" onchange="handleEstadoChange(this, '${c.id}')">
+                <!-- Select con hook de confirmación -->
+                <select class="quote-status estado-cotizacion" data-id="${c.id}">
                   <option value="borrador" ${estado==='borrador'?'selected':''}>Borrador</option>
                   <option value="enviada" ${estado==='enviada'?'selected':''}>Enviada</option>
                   <option value="en_revision_cliente" ${estado==='en_revision_cliente'?'selected':''}>En revisión cliente</option>
@@ -472,6 +489,7 @@
 
       container.innerHTML = html;
       wireDeleteButtons();
+      wireEstadoSelects();   // hook para hold-to-confirm
       mostrarEstado('data');
     }
 
@@ -584,9 +602,85 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
+    // Hook de hold-to-confirm para estados
+    function wireEstadoSelects() {
+      document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
+        sel.dataset.prev = sel.value;
+        sel.addEventListener('focus', () => { sel.dataset.prev = sel.value; });
+        sel.addEventListener('change', () => confirmEstadoChange(sel, sel.dataset.id));
+      });
+    }
+
+    // Lógica del modal hold-5s para estado
+    (() => {
+      const modal   = document.getElementById('status-confirm-modal');
+      const txt     = document.getElementById('status-confirm-text');
+      const bar     = document.getElementById('status-progress');
+      const btnHold = document.getElementById('status-hold');
+      const btnCancel = document.getElementById('status-cancel');
+
+      let pending = null;
+      let timer = null;
+      let tick = null;
+      const HOLD_MS = 5000;
+
+      function openModal(selectEl, itemId, newStatus, onConfirm) {
+        pending = { selectEl, itemId, newStatus, onConfirm };
+        txt.textContent = `Mantén presionado 5s para confirmar cambio a “${newStatus}”.`;
+        bar.style.width = '0%';
+        modal.style.display = 'flex';
+      }
+      function closeModal() {
+        pending = null;
+        bar.style.width = '0%';
+        modal.style.display = 'none';
+        clearTimers();
+      }
+      function clearTimers() {
+        if (timer) clearTimeout(timer);
+        if (tick) clearInterval(tick);
+        timer = tick = null;
+        bar.style.width = '0%';
+      }
+      function startHold() {
+        if (!pending) return;
+        const t0 = performance.now();
+        tick = setInterval(() => {
+          const pct = Math.min(100, ((performance.now() - t0) / HOLD_MS) * 100);
+          bar.style.width = pct + '%';
+        }, 80);
+        timer = setTimeout(() => {
+          clearTimers();
+          if (pending?.onConfirm) pending.onConfirm(pending.selectEl, pending.itemId, pending.newStatus);
+          closeModal();
+        }, HOLD_MS);
+      }
+      function cancelHold() { clearTimers(); }
+
+      btnHold.addEventListener('mousedown', startHold);
+      btnHold.addEventListener('touchstart', (e)=>{ e.preventDefault(); startHold(); }, { passive:false });
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
+        btnHold.addEventListener(ev, cancelHold);
+      });
+      btnCancel.addEventListener('click', closeModal);
+
+      // Exponer helper
+      window.confirmEstadoChange = (selectEl, id) => {
+        const prev = selectEl.dataset.prev || selectEl.value;
+        const newStatus = selectEl.value;
+        // revertir visualmente hasta confirmar
+        selectEl.value = prev;
+        openModal(selectEl, id, newStatus, async (sel, cotId, estado) => {
+          await handleEstadoChange(sel, cotId, estado); // forzamos estado confirmado
+          sel.value = estado;
+          sel.dataset.prev = estado;
+        });
+      };
+    })();
+
     // Manejo de estado con sincronización a Ventas
-    async function handleEstadoChange(selectEl, id) {
-      const nuevoEstado = selectEl.value;
+    async function handleEstadoChange(selectEl, id, forcedEstado) {
+      const nuevoEstado = forcedEstado || selectEl.value;
       const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
       try {
         if (window.supabaseClient?.init) await window.supabaseClient.init();
@@ -614,6 +708,7 @@
         window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
         // Revertir selector si falla
         selectEl.value = prevEstado;
+        selectEl.dataset.prev = prevEstado;
       }
     }
   </script>
