@@ -603,7 +603,7 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Solo guardamos prev; el onchange ya es inline
+    // Solo guardamos prev
     function wireEstadoSelects() {
       document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
         sel.dataset.prev = sel.value;
@@ -611,7 +611,7 @@
       });
     }
 
-    // Listener delegado: captura cualquier cambio en los selects de estado
+    // Listener delegado: captura cambios en los selects
     document.getElementById('cotizaciones-container')?.addEventListener('change', (e) => {
       const sel = e.target.closest('select.estado-cotizacion');
       if (!sel) return;
@@ -635,8 +635,8 @@
       let tick = null;
       const HOLD_MS = 5000;
 
-      function openModal(selectEl, itemId, newStatus, onConfirm) {
-        pending = { selectEl, itemId, newStatus, onConfirm };
+      function openModal(selectEl, itemId, newStatus, onConfirm, onCancel) {
+        pending = { selectEl, itemId, newStatus, onConfirm, onCancel };
         txt.textContent = `Mantén presionado 5s para confirmar cambio a “${newStatus}”.`;
         bar.style.width = '0%';
         modal.style.display = 'flex';
@@ -673,32 +673,40 @@
       ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
         btnHold.addEventListener(ev, cancelHold);
       });
-      btnCancel.addEventListener('click', closeModal);
+      btnCancel.addEventListener('click', () => {
+        if (pending?.onCancel) pending.onCancel();
+        closeModal();
+      });
 
       window.confirmEstadoChange = (selectEl, id) => {
         const prev = selectEl.dataset.prev || selectEl.value;
         const newStatus = selectEl.value;
-        // revertir visualmente hasta confirmar
-        selectEl.value = prev;
-        // Si no existe el modal, usar confirm nativo como fallback
+        // NO revertimos aquí; solo revertimos si cancelan
         if (!modal) {
           const ok = confirm(`Confirmar cambio a "${newStatus}"`);
           if (ok) handleEstadoChange(selectEl, id, newStatus);
+          else selectEl.value = prev;
           return;
         }
-        openModal(selectEl, id, newStatus, async (sel, cotId, estado) => {
-          sel.disabled = true;
-          try {
-            await handleEstadoChange(sel, cotId, estado);
-            sel.value = estado;
-            sel.dataset.prev = estado;
-          } catch (e) {
-            sel.value = prev;
-            sel.dataset.prev = prev;
-          } finally {
-            sel.disabled = false;
+        openModal(selectEl, id, newStatus,
+          async (sel, cotId, estado) => {
+            sel.disabled = true;
+            try {
+              await handleEstadoChange(sel, cotId, estado);
+              sel.value = estado;
+              sel.dataset.prev = estado;
+            } catch (e) {
+              sel.value = prev;
+              sel.dataset.prev = prev;
+            } finally {
+              sel.disabled = false;
+            }
+          },
+          () => {
+            selectEl.value = prev;
+            selectEl.dataset.prev = prev;
           }
-        });
+        );
       };
     })();
 
