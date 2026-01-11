@@ -487,7 +487,8 @@
 
     <!-- Redirigir Finalizar -->
     <script>
-      const MENU_PRINCIPAL_URL = "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/menu_principal.html";
+      window.MENU_PRINCIPAL_URL = window.MENU_PRINCIPAL_URL
+  || "https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/menu_principal.html";
       document.addEventListener('click', (ev) => {
         const btn = ev.target.closest('#btn-finalizar, button[data-role="finalizar"], button[data-action="finalizar"]');
         if (btn) {
@@ -1057,6 +1058,7 @@
   </div>
 </body>
 </html>
+
 
 
 
