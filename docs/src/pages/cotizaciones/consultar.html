@@ -332,7 +332,6 @@
     let deleteTargetId = null;
     let holdTimer = null;
     let holdInterval = null;
-    let modalBusy = false; // evita doble apertura
 
     // Wrap supabase calls para ver respuestas
     window.__logWrap = async (fn, label, ...args) => {
@@ -629,125 +628,28 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Guardamos prev y enganchamos change por elemento (sin delegado para evitar duplicados)
+    // Guardamos prev y enganchamos change por elemento
     function wireEstadoSelects() {
       document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
         sel.dataset.prev = sel.value;
         sel.addEventListener('focus', () => { sel.dataset.prev = sel.value; });
         sel.addEventListener('change', () => {
-          if (typeof confirmEstadoChange === 'function') {
-            confirmEstadoChange(sel, sel.dataset.id);
-          } else {
-            const ok = confirm(`Confirmar cambio a "${sel.value}"`);
-            if (ok) handleEstadoChange(sel, sel.dataset.id, sel.value);
-            else sel.value = sel.dataset.prev || sel.value;
-          }
+          const prev = sel.dataset.prev || sel.value;
+          const newStatus = sel.value;
+          // Confirmación temporal nativa (sin modal) para asegurar guardado
+          const ok = confirm(`Confirmar cambio a "${newStatus}"`);
+          if (!ok) { sel.value = prev; sel.dataset.prev = prev; return; }
+          sel.disabled = true;
+          handleEstadoChange(sel, sel.dataset.id, newStatus)
+            .catch(err => {
+              sel.value = prev;
+              sel.dataset.prev = prev;
+              console.error(err);
+            })
+            .finally(() => { sel.disabled = false; });
         });
       });
     }
-
-    (() => {
-      const modal   = document.getElementById('status-confirm-modal');
-      const txt     = document.getElementById('status-confirm-text');
-      const bar     = document.getElementById('status-progress');
-      const btnHold = document.getElementById('status-hold');
-      const btnCancel = document.getElementById('status-cancel');
-
-      let pending = null;
-      let timer = null;
-      let tick = null;
-      const HOLD_MS = 5000;
-
-      function openModal(selectEl, itemId, newStatus, onConfirm, onCancel) {
-        if (modalBusy) return; // evita doble
-        modalBusy = true;
-        pending = { selectEl, itemId, newStatus, onConfirm, onCancel };
-        txt.textContent = `Mantén presionado 5s para confirmar cambio a “${newStatus}”.`;
-        bar.style.width = '0%';
-        modal.style.display = 'flex';
-
-        // fallback: si en 200ms sigue oculto, usa confirm nativo
-        setTimeout(() => {
-          if (pending && modal.style.display === 'none') {
-            console.warn('[fallback confirm] modal no visible, usando confirm nativo');
-            const prev = selectEl.dataset.prev || selectEl.value;
-            const ok = confirm(`Confirmar cambio a "${newStatus}"`);
-            if (ok) pending.onConfirm?.(selectEl, itemId, newStatus);
-            else { selectEl.value = prev; selectEl.dataset.prev = prev; }
-            pending = null;
-            clearTimers();
-            modalBusy = false;
-          }
-        }, 200);
-      }
-      function closeModal() {
-        pending = null;
-        bar.style.width = '0%';
-        modal.style.display = 'none';
-        clearTimers();
-        modalBusy = false;
-      }
-      function clearTimers() {
-        if (timer) clearTimeout(timer);
-        if (tick) clearInterval(tick);
-        timer = tick = null;
-        bar.style.width = '0%';
-      }
-      function startHold() {
-        if (!pending) return;
-        const t0 = performance.now();
-        tick = setInterval(() => {
-          const pct = Math.min(100, ((performance.now() - t0) / HOLD_MS) * 100);
-          bar.style.width = pct + '%';
-        }, 80);
-        timer = setTimeout(() => {
-          clearTimers();
-          if (pending?.onConfirm) pending.onConfirm(pending.selectEl, pending.itemId, pending.newStatus);
-          closeModal();
-        }, HOLD_MS);
-      }
-      function cancelHold() { clearTimers(); }
-
-      btnHold.addEventListener('mousedown', startHold);
-      btnHold.addEventListener('touchstart', (e)=>{ e.preventDefault(); startHold(); }, { passive:false });
-      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
-        btnHold.addEventListener(ev, cancelHold);
-      });
-      btnCancel.addEventListener('click', () => {
-        if (pending?.onCancel) pending.onCancel();
-        closeModal();
-      });
-
-      window.confirmEstadoChange = (selectEl, id) => {
-        const prev = selectEl.dataset.prev || selectEl.value;
-        const newStatus = selectEl.value;
-        if (!modal) {
-          const ok = confirm(`Confirmar cambio a "${newStatus}"`);
-          if (ok) handleEstadoChange(selectEl, id, newStatus);
-          else { selectEl.value = prev; selectEl.dataset.prev = prev; }
-          return;
-        }
-        openModal(selectEl, id, newStatus,
-          async (sel, cotId, estado) => {
-            sel.disabled = true;
-            try {
-              await handleEstadoChange(sel, cotId, estado);
-              sel.value = estado;
-              sel.dataset.prev = estado;
-            } catch (e) {
-              sel.value = prev;
-              sel.dataset.prev = prev;
-            } finally {
-              sel.disabled = false;
-            }
-          },
-          () => {
-            selectEl.value = prev;
-            selectEl.dataset.prev = prev;
-          }
-        );
-      };
-    })();
 
     async function handleEstadoChange(selectEl, id, forcedEstado) {
       const nuevoEstado = forcedEstado || selectEl.value;
@@ -763,15 +665,17 @@
 
         const cotizacion = cotizacionesData.find(c => c.id === id);
         if (nuevoEstado === 'aprobada') {
-          await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
+          const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
+          console.log('crearOVincularVentaDesdeCotizacion OUT', v);
         } else {
-          await window.supabaseClient.eliminarVentasPorCotizacion(id);
+          const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
+          console.log('eliminarVentasPorCotizacion OUT', v);
         }
 
         filtrarCotizaciones();
         window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
       } catch (err) {
-        console.error(err);
+        console.error('handleEstadoChange error', err);
         window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
         selectEl.value = prevEstado;
         selectEl.dataset.prev = prevEstado;
