@@ -14,7 +14,9 @@ async function initSupabase() {
             window.globalSupabase.client = supabaseClient;
             return true;
         }
-        if (supabaseClient && typeof supabaseClient.from === 'function') {
+        if (supabaseClient && typeof supabaseClient.from !== 'function') {
+            // nada
+        } else if (supabaseClient && typeof supabaseClient.from === 'function') {
             window.supabase = supabaseClient;
             window.globalSupabase = window.globalSupabase || {};
             window.globalSupabase.client = supabaseClient;
@@ -246,7 +248,8 @@ async function crearOVincularVentaDesdeCotizacion(cotizacion, estadoVenta = 'en_
 
         const rows = partidas.map((p, idx) => {
             const partidaId =
-              p.id || p.uuid || p.key || p._id || (crypto?.randomUUID ? crypto.randomUUID() : `00000000-0000-4000-8000-${idx.toString().padStart(12,'0')}`);
+              p.id || p.uuid || p.key || p._id ||
+              (crypto?.randomUUID ? crypto.randomUUID() : `00000000-0000-4000-8000-${idx.toString().padStart(12,'0')}`);
             const partidaNombre = p.nombre || p.partida || p.titulo || 'Partida';
             return {
                 cotizacion_id: cotizacion.id,
