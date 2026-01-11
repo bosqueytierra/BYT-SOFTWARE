@@ -340,9 +340,9 @@
       console.log(label, 'OUT', out);
       return out;
     };
-    const origUpdate = () => {};
-    const origVenta  = () => {};
-    const origEliminar = () => {};
+    const origUpdate = {};
+    const origVenta  = {};
+    const origEliminar = {};
     document.addEventListener('DOMContentLoaded', () => {
       if (window.supabaseClient) {
         if (!origUpdate.fn) {
@@ -485,9 +485,8 @@
                 <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
               </div>
               <div>
-                <select class="quote-status estado-cotizacion"
-                        data-id="${c.id}"
-                        onchange="confirmEstadoChange(this, '${c.id}')">
+                <!-- quitamos onchange inline para evitar doble disparo -->
+                <select class="quote-status estado-cotizacion" data-id="${c.id}">
                   <option value="borrador" ${estado==='borrador'?'selected':''}>Borrador</option>
                   <option value="enviada" ${estado==='enviada'?'selected':''}>Enviada</option>
                   <option value="en_revision_cliente" ${estado==='en_revision_cliente'?'selected':''}>En revisión cliente</option>
@@ -670,6 +669,18 @@
         txt.textContent = `Mantén presionado 5s para confirmar cambio a “${newStatus}”.`;
         bar.style.width = '0%';
         modal.style.display = 'flex';
+        // fallback: si en 150 ms el modal sigue hidden, usamos confirm nativo
+        setTimeout(() => {
+          if (pending && modal.style.display === 'none') {
+            console.warn('[fallback confirm] modal no visible, usando confirm nativo');
+            const prev = selectEl.dataset.prev || selectEl.value;
+            const ok = confirm(`Confirmar cambio a "${newStatus}"`);
+            if (ok) pending.onConfirm?.(selectEl, itemId, newStatus);
+            else { selectEl.value = prev; selectEl.dataset.prev = prev; }
+            pending = null;
+            clearTimers();
+          }
+        }, 150);
       }
       function closeModal() {
         pending = null;
@@ -734,8 +745,8 @@
             }
           },
           () => {
-            selectEl.value = prev;
-            selectEl.dataset.prev = prev;
+            sel.value = prev;
+            sel.dataset.prev = prev;
           }
         );
       };
