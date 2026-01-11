@@ -111,7 +111,6 @@
         const res = await window.supabaseClient.listarVentas();
         if (!res.success) throw new Error(res.error);
         ventasData = res.data || [];
-        // Solo mostramos ventas de cotizaciones aprobadas: ya se borran al cambiar estado, pero reforzamos
         ventasFiltradas = ventasData;
         aplicarFiltros();
       } catch (e) {
@@ -149,6 +148,20 @@
       return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
     }
 
+    function formatCliente(cli) {
+      if (!cli) return '';
+      if (typeof cli === 'string') {
+        try {
+          const o = JSON.parse(cli);
+          return o.nombre || o.name || o.cliente || '';
+        } catch {
+          return cli;
+        }
+      }
+      if (typeof cli === 'object') return cli.nombre || cli.name || cli.cliente || '';
+      return String(cli);
+    }
+
     function renderVentas() {
       const cont = document.getElementById('ventas-container');
       if (!ventasFiltradas.length) {
@@ -162,16 +175,18 @@
     }
 
     function renderGrupo({ proyecto, items }) {
+      // ordenar partidas por fecha desc para que no se vean “desordenadas”
+      const sorted = [...items].sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
       const isOpen = openState.has(proyecto);
-      const rows = items.map(v => renderRow(v)).join('');
-      const totalProyecto = items.reduce((acc, v) => acc + (Number(v.total_venta || v.total_cotizado || 0) || 0), 0);
+      const rows = sorted.map(v => renderRow(v)).join('');
+      const totalProyecto = sorted.reduce((acc, v) => acc + (Number(v.total_venta || v.total_cotizado || 0) || 0), 0);
       return `
         <div class="project" data-proyecto="${escapeHtml(proyecto)}">
           <div class="project-header" onclick="toggleProyecto('${escapeHtmlAttr(proyecto)}')">
             <div>
               <p class="project-title">${escapeHtml(proyecto)}</p>
               <div class="project-meta">
-                <span>${items.length} partida(s)</span>
+                <span>${sorted.length} partida(s)</span>
                 <span>Total proyecto: ${escapeHtml(fmt(totalProyecto))}</span>
               </div>
             </div>
@@ -188,13 +203,14 @@
       const fecha = v.created_at ? new Date(v.created_at).toLocaleDateString('es-CL') :
                     (v.fecha_entrega_max ? new Date(v.fecha_entrega_max).toLocaleDateString('es-CL') : '');
       const partidaNombre = v.partida_nombre || v.partida || 'Partida';
+      const clienteFmt = formatCliente(v.cliente);
       return `
         <div class="row">
           <div class="col-main">
             <div class="partida">${escapeHtml(partidaNombre)}</div>
             <div class="submeta">
               ${fecha ? `<span>Fecha: ${escapeHtml(fecha)}</span>` : ''}
-              ${v.cliente ? `<span>Cliente: ${escapeHtml(v.cliente)}</span>` : ''}
+              ${clienteFmt ? `<span>Cliente: ${escapeHtml(clienteFmt)}</span>` : ''}
             </div>
           </div>
           <div></div>
