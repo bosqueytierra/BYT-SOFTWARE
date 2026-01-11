@@ -38,13 +38,12 @@
     .project-meta { color:var(--muted); font-size:13px; display:flex; gap:10px; flex-wrap:wrap; }
     .chevron { transition: transform 0.18s ease; }
     .project-body { display:flex; flex-direction:column; }
-    .row { display:grid; grid-template-columns: 2fr 1.4fr 0.9fr 0.9fr; gap:10px; padding:12px 14px; border-top:1px solid var(--border); align-items:center; }
+    .row { display:grid; grid-template-columns: 2fr 1.2fr 0.9fr 1fr; gap:10px; padding:12px 14px; border-top:1px solid var(--border); align-items:center; }
     .row:first-child { border-top: none; }
     .col-main { display:flex; flex-direction:column; gap:4px; }
     .partida { font-weight:700; font-size:14px; color:var(--text); }
     .submeta { color:var(--muted); font-size:12.5px; display:flex; gap:10px; flex-wrap:wrap; }
     .money { font-weight:700; color:var(--primary); }
-    .numbers { font-size:12.5px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; }
     .state-select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#fdfdfd; }
     .actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
@@ -164,7 +163,6 @@
       const grupos = groupByProyecto(ventasFiltradas);
       const html = grupos.map(g => renderGrupo(g)).join('');
       cont.innerHTML = html;
-      wireAccordions();
     }
 
     function renderGrupo({ proyecto, items }) {
@@ -193,19 +191,17 @@
     function renderRow(v) {
       const fecha = v.created_at ? new Date(v.created_at).toLocaleDateString('es-CL') :
                     (v.fecha_entrega_max ? new Date(v.fecha_entrega_max).toLocaleDateString('es-CL') : '');
-      const mostrarNeto = Number(v.neto || 0) !== 0 || Number(v.iva || 0) !== 0 || Number(v.ganancia || 0) !== 0;
+      const partidaNombre = v.partida || v.partida_nombre || 'Partida';
       return `
         <div class="row">
           <div class="col-main">
-            <div class="partida">${escapeHtml(v.partida || 'Sin partida')}</div>
+            <div class="partida">${escapeHtml(partidaNombre)}</div>
             <div class="submeta">
               ${fecha ? `<span>Fecha: ${escapeHtml(fecha)}</span>` : ''}
               ${v.cliente ? `<span>Cliente: ${escapeHtml(v.cliente)}</span>` : ''}
             </div>
           </div>
-          <div>
-            ${mostrarNeto ? `<div class="numbers">Neto: ${escapeHtml(fmt(v.neto))} · IVA: ${escapeHtml(fmt(v.iva))} · Ganancia: ${escapeHtml(fmt(v.ganancia))}</div>` : '<div class="numbers" style="opacity:0.6;">Neto/IVA/Ganancia: -</div>'}
-          </div>
+          <div></div>
           <div>
             <select class="state-select" onchange="handleEstadoVentaChange(this, '${v.id}', '${v.cotizacion_id}')">
               <option value="en_ejecucion" ${v.estado==='en_ejecucion'?'selected':''}>En ejecución</option>
@@ -223,10 +219,6 @@
       `;
     }
 
-    function wireAccordions() {
-      // chevron rotation handled inline; nothing else needed
-    }
-
     function toggleProyecto(p) {
       if (openState.has(p)) openState.delete(p); else openState.add(p);
       renderVentas();
@@ -237,7 +229,6 @@
       const prev = (ventasData.find(v => v.id === ventaId) || {}).estado || 'en_ejecucion';
       try {
         if (window.supabaseClient?.init) await window.supabaseClient.init();
-        // usamos la función existente por cotizacion_id
         const res = await window.supabaseClient.actualizarEstadoVentaPorCotizacion(cotizacionId, nuevoEstado);
         if (!res.success) throw new Error(res.error || 'No se pudo actualizar estado');
 
