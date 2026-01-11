@@ -458,7 +458,6 @@
                 <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
               </div>
               <div>
-                <!-- Select con confirmación inline -->
                 <select class="quote-status estado-cotizacion"
                         data-id="${c.id}"
                         onchange="confirmEstadoChange(this, '${c.id}')">
@@ -491,7 +490,7 @@
 
       container.innerHTML = html;
       wireDeleteButtons();
-      wireEstadoSelects();   // hook para hold-to-confirm
+      wireEstadoSelects();
       mostrarEstado('data');
     }
 
@@ -604,7 +603,7 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Hook de hold-to-confirm para estados (solo guarda prev; el onchange es inline)
+    // Solo guardamos prev; el onchange ya es inline
     function wireEstadoSelects() {
       document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
         sel.dataset.prev = sel.value;
@@ -612,7 +611,6 @@
       });
     }
 
-    // Lógica del modal hold-5s para estado
     (() => {
       const modal   = document.getElementById('status-confirm-modal');
       const txt     = document.getElementById('status-confirm-text');
@@ -665,16 +663,21 @@
       });
       btnCancel.addEventListener('click', closeModal);
 
-      // Exponer helper
       window.confirmEstadoChange = (selectEl, id) => {
         const prev = selectEl.dataset.prev || selectEl.value;
         const newStatus = selectEl.value;
         // revertir visualmente hasta confirmar
         selectEl.value = prev;
+        // Si no existe el modal, usar confirm nativo como fallback
+        if (!modal) {
+          const ok = confirm(`Confirmar cambio a "${newStatus}"`);
+          if (ok) handleEstadoChange(selectEl, id, newStatus);
+          return;
+        }
         openModal(selectEl, id, newStatus, async (sel, cotId, estado) => {
           sel.disabled = true;
           try {
-            await handleEstadoChange(sel, cotId, estado); // forzamos estado confirmado
+            await handleEstadoChange(sel, cotId, estado);
             sel.value = estado;
             sel.dataset.prev = estado;
           } catch (e) {
@@ -687,7 +690,6 @@
       };
     })();
 
-    // Manejo de estado con sincronización a Ventas
     async function handleEstadoChange(selectEl, id, forcedEstado) {
       const nuevoEstado = forcedEstado || selectEl.value;
       const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
@@ -696,12 +698,10 @@
         const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
         if (!res.success) throw new Error(res.error);
 
-        // Actualiza estado en memoria
         cotizacionesData = cotizacionesData.map(c =>
           c.id === id ? { ...c, estado: nuevoEstado } : c
         );
 
-        // Sincroniza ventas según transición
         const cotizacion = cotizacionesData.find(c => c.id === id);
         if (nuevoEstado === 'aprobada') {
           await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
@@ -714,7 +714,6 @@
       } catch (err) {
         console.error(err);
         window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
-        // Revertir selector si falla
         selectEl.value = prevEstado;
         selectEl.dataset.prev = prevEstado;
         throw err;
