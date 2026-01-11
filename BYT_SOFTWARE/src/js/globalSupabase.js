@@ -91,7 +91,8 @@ async function guardarCotizacion(datosCompletos) {
                 total_proyecto: datosCompletos.totales.totalProyecto,
                 ganancia: datosCompletos.totales.ganancia,
                 estado: 'borrador',
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                partidas: JSON.stringify(datosCompletos?.cliente?.partidas || datosCompletos?.partidas || [])
             }]);
 
         if (error) throw error;
@@ -205,30 +206,53 @@ async function eliminarCotizacion(id) {
     }
 }
 
-// ===== FUNCIONES DE VENTAS =====
+// ===== FUNCIONES DE VENTAS (fan-out por partida) =====
+
+// Helper: parsear partidas desde cotización
+function extraerPartidas(cotizacion) {
+    const candidatas = [
+        cotizacion.partidas,
+        cotizacion.data?.partidas,
+    ];
+    for (const c of candidatas) {
+        if (!c) continue;
+        if (typeof c === 'string') {
+            try { return JSON.parse(c) || []; } catch (_) { continue; }
+        }
+        if (Array.isArray(c)) return c;
+    }
+    return [];
+}
+
+// Crea/actualiza una venta por cada partida (onConflict cotizacion_id + partida_id)
 async function crearOVincularVentaDesdeCotizacion(cotizacion, estadoVenta = 'en_ejecucion') {
     try {
         if (!supabaseClient || typeof supabaseClient.from !== 'function') {
             const ok = await initSupabase();
             if (!ok) throw new Error('Supabase no inicializado');
         }
-        const payload = {
-            cotizacion_id: cotizacion.id,
-            proyecto: cotizacion.nombre_proyecto || cotizacion.project_key || cotizacion.data?.cliente?.nombre_proyecto || cotizacion.data?.cliente?.nombre || 'Sin nombre',
-            partida: cotizacion.partida || cotizacion.nombre_proyecto || '',
-            total_cotizado: cotizacion.total_proyecto || cotizacion.total || 0,
-            total_venta: cotizacion.total_proyecto || cotizacion.total || 0,
-            neto: cotizacion.total_neto || cotizacion.totalNeto || 0,
-            iva: cotizacion.iva || 0,
-            ganancia: cotizacion.ganancia || 0,
-            estado: estadoVenta,
-            updated_at: new Date().toISOString()
-        };
+        const partidas = extraerPartidas(cotizacion);
+        if (!partidas.length) return { success: true }; // sin partidas, no insertar
 
-        // Upsert por cotizacion_id
+        const rows = partidas.map(p => {
+            const partidaId = p.id || p.uuid || p.key || null;
+            const partidaNombre = p.nombre || p.partida || 'Partida';
+            return {
+                cotizacion_id: cotizacion.id,
+                partida_id: partidaId,
+                partida_nombre: partidaNombre,
+                proyecto: cotizacion.nombre_proyecto || cotizacion.project_key || cotizacion.data?.cliente?.nombre_proyecto || cotizacion.data?.cliente?.nombre || 'Sin nombre',
+                cliente: cotizacion.cliente || cotizacion.data?.cliente?.nombre || null,
+                total_cotizado: cotizacion.total_proyecto || cotizacion.total || 0,
+                total_venta: 0, // se llena manual luego
+                estado: estadoVenta,
+                updated_at: new Date().toISOString()
+            };
+        });
+
         const { error } = await supabaseClient
             .from('ventas')
-            .upsert(payload, { onConflict: 'cotizacion_id' });
+            .upsert(rows, { onConflict: 'cotizacion_id,partida_id' });
 
         if (error) throw error;
         return { success: true };
@@ -238,6 +262,7 @@ async function crearOVincularVentaDesdeCotizacion(cotizacion, estadoVenta = 'en_
     }
 }
 
+// Actualiza estado de ventas de una cotización (todas sus partidas)
 async function actualizarEstadoVentaPorCotizacion(cotizacionId, estado) {
     try {
         if (!supabaseClient || typeof supabaseClient.from !== 'function') {
@@ -257,6 +282,25 @@ async function actualizarEstadoVentaPorCotizacion(cotizacionId, estado) {
     }
 }
 
+// Eliminar todas las ventas de una cotización (cuando ya no está aprobada)
+async function eliminarVentasPorCotizacion(cotizacionId) {
+    try {
+        if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
+        }
+        const { error } = await supabaseClient
+            .from('ventas')
+            .delete()
+            .eq('cotizacion_id', cotizacionId);
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error al eliminar ventas de cotización:', error);
+        return { success: false, error: error.message || String(error) };
+    }
+}
+
 async function listarVentas() {
     try {
         if (!supabaseClient || typeof supabaseClient.from !== 'function') {
@@ -266,6 +310,8 @@ async function listarVentas() {
         const { data, error } = await supabaseClient
             .from('ventas')
             .select('*')
+            .order('proyecto', { ascending: true })
+            .order('partida_nombre', { ascending: true })
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -335,6 +381,7 @@ window.supabaseClient = {
     // Ventas
     crearOVincularVentaDesdeCotizacion,
     actualizarEstadoVentaPorCotizacion,
+    eliminarVentasPorCotizacion,
     listarVentas
 };
 
