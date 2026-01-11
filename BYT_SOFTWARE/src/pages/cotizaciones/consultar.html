@@ -304,7 +304,7 @@
       </div>
     </div>
 
-    <!-- NUEVO: Modal de confirmación para cambio de estado -->
+    <!-- Modal de confirmación para cambio de estado -->
     <div id="status-confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:#fff; border-radius:12px; padding:16px; width:320px; box-shadow:0 12px 30px rgba(0,0,0,0.15);">
         <h4 style="margin:0 0 8px;">Confirmar cambio de estado</h4>
@@ -458,8 +458,10 @@
                 <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
               </div>
               <div>
-                <!-- Select con hook de confirmación -->
-                <select class="quote-status estado-cotizacion" data-id="${c.id}">
+                <!-- Select con confirmación inline -->
+                <select class="quote-status estado-cotizacion"
+                        data-id="${c.id}"
+                        onchange="confirmEstadoChange(this, '${c.id}')">
                   <option value="borrador" ${estado==='borrador'?'selected':''}>Borrador</option>
                   <option value="enviada" ${estado==='enviada'?'selected':''}>Enviada</option>
                   <option value="en_revision_cliente" ${estado==='en_revision_cliente'?'selected':''}>En revisión cliente</option>
@@ -602,12 +604,11 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Hook de hold-to-confirm para estados
+    // Hook de hold-to-confirm para estados (solo guarda prev; el onchange es inline)
     function wireEstadoSelects() {
       document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
         sel.dataset.prev = sel.value;
         sel.addEventListener('focus', () => { sel.dataset.prev = sel.value; });
-        sel.addEventListener('change', () => confirmEstadoChange(sel, sel.dataset.id));
       });
     }
 
@@ -671,9 +672,17 @@
         // revertir visualmente hasta confirmar
         selectEl.value = prev;
         openModal(selectEl, id, newStatus, async (sel, cotId, estado) => {
-          await handleEstadoChange(sel, cotId, estado); // forzamos estado confirmado
-          sel.value = estado;
-          sel.dataset.prev = estado;
+          sel.disabled = true;
+          try {
+            await handleEstadoChange(sel, cotId, estado); // forzamos estado confirmado
+            sel.value = estado;
+            sel.dataset.prev = estado;
+          } catch (e) {
+            sel.value = prev;
+            sel.dataset.prev = prev;
+          } finally {
+            sel.disabled = false;
+          }
         });
       };
     })();
@@ -697,7 +706,6 @@
         if (nuevoEstado === 'aprobada') {
           await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
         } else {
-          // Si deja de ser aprobada, eliminamos las ventas asociadas
           await window.supabaseClient.eliminarVentasPorCotizacion(id);
         }
 
@@ -709,6 +717,7 @@
         // Revertir selector si falla
         selectEl.value = prevEstado;
         selectEl.dataset.prev = prevEstado;
+        throw err;
       }
     }
   </script>
