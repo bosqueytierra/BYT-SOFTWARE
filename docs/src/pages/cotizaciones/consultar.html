@@ -289,11 +289,14 @@
       <div id="cotizaciones-container" class="list" style="display:none;"></div>
     </div>
 
-    <!-- Modal eliminar (existente) -->
+    <!-- Modal eliminar (existente, ahora con barra) -->
     <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
       <div class="modal">
         <h3>Eliminar cotización</h3>
-        <p>¿Seguro que deseas eliminar esta cotización? Mantén el botón 9 segundos para confirmar.</p>
+        <p id="delete-text">¿Seguro que deseas eliminar esta cotización? Mantén el botón 9 segundos para confirmar.</p>
+        <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
+          <div id="delete-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
+        </div>
         <div class="modal-actions">
           <button class="btn btn-secondary" id="delete-cancel">Cancelar</button>
           <button class="btn btn-primary hold-btn" id="delete-hold-btn">
@@ -532,14 +535,15 @@
       });
     }
 
+    // Delete modal con barra
     function setupDeleteModal() {
       const modal = document.getElementById('delete-modal');
       const cancelBtn = document.getElementById('delete-cancel');
       const holdBtn = document.getElementById('delete-hold-btn');
       const holdText = document.getElementById('delete-hold-text');
       const holdFill = document.getElementById('delete-hold-fill');
+      const bar = document.getElementById('delete-progress');
       const HOLD_MS = 9000;
-      const STEP_MS = 100;
 
       const resetHold = () => {
         if (holdTimer) clearTimeout(holdTimer);
@@ -547,6 +551,7 @@
         holdTimer = null;
         holdInterval = null;
         holdFill.style.width = '0%';
+        bar.style.width = '0%';
         holdText.textContent = 'Mantén 9s para eliminar';
       };
 
@@ -561,13 +566,14 @@
       const startHold = () => {
         if (!deleteTargetId) return;
         resetHold();
-        let elapsed = 0;
+        const t0 = performance.now();
         holdInterval = setInterval(() => {
-          elapsed += STEP_MS;
-          const pct = Math.min(100, (elapsed / HOLD_MS) * 100);
+          const pct = Math.min(100, ((performance.now() - t0) / HOLD_MS) * 100);
           holdFill.style.width = pct + '%';
-          holdText.textContent = `Mantén ${(Math.max(0, HOLD_MS - elapsed)/1000).toFixed(1)}s`;
-        }, STEP_MS);
+          bar.style.width = pct + '%';
+          const remaining = Math.max(0, HOLD_MS - (performance.now() - t0));
+          holdText.textContent = `Mantén ${(remaining/1000).toFixed(1)}s para eliminar`;
+        }, 80);
         holdTimer = setTimeout(async () => {
           resetHold();
           await eliminarCotizacion(deleteTargetId, null, { silentRemove: true });
@@ -584,12 +590,8 @@
       ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => {
         holdBtn.addEventListener(ev, stopHold);
       });
-      modal.addEventListener('click', e => {
-        if (e.target === modal) closeModal();
-      });
-      window.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
-      });
+      modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+      window.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') closeModal(); });
     }
 
     function openDeleteModal(id) {
