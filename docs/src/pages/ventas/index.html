@@ -17,12 +17,12 @@
       --danger: #c0392b;
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
       --selected: #e9f2ed;
+      --dot-ok: #1f9d55;
+      --dot-bad: #d64545;
       --st-en-ejecucion: #f6e0a3;
       --st-completada: #d6f5d6;
       --st-cancelada: #e4d3f6;
       --st-postventa: #f8d0d0;
-      --dot-ok: #1f9d55;
-      --dot-bad: #d64545;
     }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
     .page { max-width: 1800px; width: 99%; margin: 22px auto 48px; padding: 0 28px; }
@@ -33,7 +33,7 @@
     label { font-size:13px; color:var(--muted); font-weight:600; margin-bottom:6px; display:block; }
     input, select {
       width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
-      background: #fdfdfd; font-family: inherit; font-size: 14px;
+      background: #fdfdfd; font-family: inherit; font-size: 14px; color: var(--text);
     }
     table { width:100%; border-collapse: collapse; }
     th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align:left; font-size:14px; }
@@ -52,16 +52,16 @@
     .table-title { margin:0 0 8px; font-size:16px; font-weight:800; }
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
-    select.state-select { min-width: 150px; }
-    .st-en_ejecucion { background: var(--st-en-ejecucion); }
-    .st-completada   { background: var(--st-completada); }
-    .st-cancelada    { background: var(--st-cancelada); }
-    .st-postventa    { background: var(--st-postventa); }
+    select.state-select { min-width: 150px; background: #fff; }
+    /* solo el option lleva color de fondo, no el select */
+    select.state-select option[value="en_ejecucion"] { background: var(--st-en-ejecucion); }
+    select.state-select option[value="completada"]   { background: var(--st-completada); }
+    select.state-select option[value="cancelada"]    { background: var(--st-cancelada); }
+    select.state-select option[value="postventa"]    { background: var(--st-postventa); }
     .dot-status { width: 14px; height: 14px; border-radius: 50%; display:inline-block; }
     .dot-ok { background: var(--dot-ok); }
     .dot-bad { background: var(--dot-bad); }
 
-    /* Modal centrado */
     .modal-backdrop {
       position: fixed; inset: 0; background: rgba(0,0,0,0.35);
       display: none; align-items: center; justify-content: center; z-index: 12000; padding: 16px;
@@ -152,7 +152,6 @@
     let selectedProyectoKey = null;
     const notesStore = new Map();
     let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
-    // Precio cobrado manual por proyecto
     const proyectoCobradoMap = new Map();
 
     document.addEventListener('DOMContentLoaded', async () => { await cargarVentas(); });
@@ -204,7 +203,6 @@
         const fechaCierre = items[0]?.fecha_aprobacion || items[0]?.fecha_cierre || items[0]?.fecha_cierre_max || '';
         const cotizacionId = items[0]?.cotizacion_id;
         const proyectoId = items[0]?.proyecto_id || key;
-        // calculamos si todas las partidas están completadas
         const allDone = items.every(it => (it.estado || 'en_ejecucion') === 'completada');
         return { key, proyectoId, cotizacionId, cliente, fechaCierre, totalCobrado: cobrado, totalCotizado: sumCotizado, items, allDone };
       });
@@ -262,7 +260,6 @@
           </table>
         </div>
       `;
-      applyStateStyles(); // para selects de partidas más abajo
     }
 
     function renderPartidas() {
@@ -299,7 +296,7 @@
         return `
           <tr>
             <td style="width:170px;">
-              <select class="state-select ${stateClass(item.estado)}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
+              <select class="state-select" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
                 ${ESTADOS.map(st => `<option value="${st}" ${item.estado===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
@@ -332,7 +329,6 @@
           </table>
         </div>
       `;
-      applyStateStyles();
     }
 
     function renderResumen() {
@@ -376,21 +372,6 @@
         case 'postventa': return 'Postventa';
         default: return st;
       }
-    }
-    function stateClass(st) {
-      switch(st) {
-        case 'en_ejecucion': return 'st-en_ejecucion';
-        case 'completada': return 'st-completada';
-        case 'cancelada': return 'st-cancelada';
-        case 'postventa': return 'st-postventa';
-        default: return '';
-      }
-    }
-    function applyStateStyles() {
-      document.querySelectorAll('select.state-select').forEach(sel => {
-        sel.classList.remove('st-en_ejecucion','st-completada','st-cancelada','st-postventa');
-        sel.classList.add(stateClass(sel.value));
-      });
     }
 
     // Estado de partida independiente
