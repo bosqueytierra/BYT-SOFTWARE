@@ -456,6 +456,21 @@
       renderPartidas();
     }
 
+    function fmt(num) {
+      if (num === null || num === undefined) return '$0';
+      return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
+    }
+    function formatCliente(cli) {
+      if (!cli) return '';
+      if (typeof cli === 'string') {
+        try { const o = JSON.parse(cli); return o.nombre || o.name || o.cliente || ''; }
+        catch { return cli; }
+      }
+      if (typeof cli === 'object') return cli.nombre || cli.name || cli.cliente || '';
+      return String(cli);
+    }
+    function formatDate(d) { try { return new Date(d).toLocaleDateString('es-CL'); } catch { return ''; } }
+
     function escapeHtml(str) {
       if (str === undefined || str === null) return '';
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
