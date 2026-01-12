@@ -289,7 +289,7 @@
       <div id="cotizaciones-container" class="list" style="display:none;"></div>
     </div>
 
-    <!-- Modal eliminar (ahora 10s, barra y alerta) -->
+    <!-- Modal eliminar (10s, barra, alerta, nombre proyecto) -->
     <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
       <div class="modal">
         <h3 style="margin:0 0 8px; display:flex; align-items:center; gap:8px;">
@@ -539,7 +539,7 @@
       });
     }
 
-    // Delete modal con barra y 10s
+    // Delete modal con barra, 10s y nombre de proyecto
     function setupDeleteModal() {
       const modal = document.getElementById('delete-modal');
       const cancelBtn = document.getElementById('delete-cancel');
@@ -547,6 +547,7 @@
       const holdText = document.getElementById('delete-hold-text');
       const holdFill = document.getElementById('delete-hold-fill');
       const bar = document.getElementById('delete-progress');
+      const deleteText = document.getElementById('delete-text');
       const HOLD_MS = 10000;
 
       const resetHold = () => {
@@ -597,11 +598,21 @@
       });
       modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
       window.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') closeModal(); });
+
+      // Insertar nombre del proyecto al abrir
+      window._setDeleteProjectName = (name) => {
+        deleteText.textContent = `¿Seguro que deseas eliminar "${name}"? Mantén el botón 10 segundos para confirmar.`;
+      };
     }
 
     function openDeleteModal(id) {
       deleteTargetId = id;
       const modal = document.getElementById('delete-modal');
+      // Set project name in modal
+      const cot = cotizacionesData.find(c => c.id === id);
+      const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
+      if (typeof window._setDeleteProjectName === 'function') window._setDeleteProjectName(nombreProyecto);
+
       modal.style.display = 'flex';
       modal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
