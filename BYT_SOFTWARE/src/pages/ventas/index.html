@@ -21,7 +21,6 @@
       --dot-bad: #d64545;
       --st-en-ejecucion: #f6e0a3;
       --st-completada: #d6f5d6;
-      --st-cancelada: #e4d3f6;
       --st-postventa: #f8d0d0;
     }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
@@ -53,12 +52,13 @@
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
-    /* Color SOLO en el control (no en las options) */
+    /* color solo en el control seleccionado; cancelada sin color */
     .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
-    .state-select.st-cancelada    { background: var(--st-cancelada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
-    /* reset de opciones: sin fondo */
+    /* cancelada sin color */
+    .state-select.st-cancelada    { background: #fff; }
+    /* opciones sin fondo coloreado */
     select.state-select option { background: #fff; color: var(--text); }
     .dot-status { width: 14px; height: 14px; border-radius: 50%; display:inline-block; }
     .dot-ok { background: var(--dot-ok); }
@@ -205,8 +205,8 @@
         const fechaCierre = items[0]?.fecha_aprobacion || items[0]?.fecha_cierre || items[0]?.fecha_cierre_max || '';
         const cotizacionId = items[0]?.cotizacion_id;
         const proyectoId = items[0]?.proyecto_id || key;
-        const allDone = items.every(it => (it.estado || 'en_ejecucion') === 'completada');
-        return { key, proyectoId, cotizacionId, cliente, fechaCierre, totalCobrado: cobrado, totalCotizado: sumCotizado, items, allDone };
+        const allGreen = items.every(it => ['completada','cancelada'].includes(it.estado || 'en_ejecucion'));
+        return { key, proyectoId, cotizacionId, cliente, fechaCierre, totalCobrado: cobrado, totalCotizado: sumCotizado, items, allGreen };
       });
       if (!selectedProyectoKey && proyectos.length) selectedProyectoKey = proyectos[0].key;
       if (selectedProyectoKey && !proyectos.find(p => p.key === selectedProyectoKey)) selectedProyectoKey = null;
@@ -220,7 +220,7 @@
       }
       const rows = proyectos.map(p => {
         const isSel = p.key === selectedProyectoKey;
-        const dotClass = p.allDone ? 'dot-ok' : 'dot-bad';
+        const dotClass = p.allGreen ? 'dot-ok' : 'dot-bad';
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
             <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
@@ -380,7 +380,7 @@
       switch(st) {
         case 'en_ejecucion': return 'st-en_ejecucion';
         case 'completada': return 'st-completada';
-        case 'cancelada': return 'st-cancelada';
+        case 'cancelada': return 'st-cancelada'; // cancelada sin color por CSS
         case 'postventa': return 'st-postventa';
         default: return '';
       }
