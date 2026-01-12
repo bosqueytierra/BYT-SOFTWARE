@@ -289,18 +289,20 @@
       <div id="cotizaciones-container" class="list" style="display:none;"></div>
     </div>
 
-    <!-- Modal eliminar (existente, ahora con barra) -->
+    <!-- Modal eliminar (ahora 10s, barra y alerta) -->
     <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
       <div class="modal">
-        <h3>Eliminar cotización</h3>
-        <p id="delete-text">¿Seguro que deseas eliminar esta cotización? Mantén el botón 9 segundos para confirmar.</p>
+        <h3 style="margin:0 0 8px; display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--danger);">⚠️</span> Eliminar cotización
+        </h3>
+        <p id="delete-text">¿Seguro que deseas eliminar esta cotización? Mantén el botón 10 segundos para confirmar.</p>
         <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
           <div id="delete-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
         </div>
         <div class="modal-actions">
           <button class="btn btn-secondary" id="delete-cancel">Cancelar</button>
           <button class="btn btn-primary hold-btn" id="delete-hold-btn">
-            <span id="delete-hold-text">Mantén 9s para eliminar</span>
+            <span id="delete-hold-text">Mantén 10s para eliminar</span>
             <div class="hold-fill" id="delete-hold-fill"></div>
           </button>
         </div>
@@ -310,7 +312,9 @@
     <!-- Modal de confirmación para cambio de estado (custom, 10s) -->
     <div class="modal-backdrop" id="status-confirm-modal" aria-hidden="true">
       <div class="modal">
-        <h3 style="margin:0 0 8px;">Confirmar cambio de estado</h3>
+        <h3 style="margin:0 0 8px; display:flex; align-items:center; gap:8px;">
+          <span style="color:var(--danger);">⚠️</span> Confirmar cambio de estado
+        </h3>
         <p id="status-confirm-text" style="margin:0 0 12px; color:#555;">Mantén presionado 10s para confirmar.</p>
         <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
           <div id="status-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
@@ -318,7 +322,7 @@
         <div style="display:flex; gap:8px; justify-content:flex-end;">
           <button id="status-cancel" class="btn btn-secondary" type="button">Cancelar</button>
           <button id="status-hold" class="btn btn-primary hold-btn" type="button" style="touch-action:none;">
-            <span>Mantén 10s</span>
+            <span id="status-hold-text">Mantén 10s</span>
             <div class="hold-fill" id="status-hold-fill"></div>
           </button>
         </div>
@@ -535,7 +539,7 @@
       });
     }
 
-    // Delete modal con barra
+    // Delete modal con barra y 10s
     function setupDeleteModal() {
       const modal = document.getElementById('delete-modal');
       const cancelBtn = document.getElementById('delete-cancel');
@@ -543,7 +547,7 @@
       const holdText = document.getElementById('delete-hold-text');
       const holdFill = document.getElementById('delete-hold-fill');
       const bar = document.getElementById('delete-progress');
-      const HOLD_MS = 9000;
+      const HOLD_MS = 10000;
 
       const resetHold = () => {
         if (holdTimer) clearTimeout(holdTimer);
@@ -552,7 +556,7 @@
         holdInterval = null;
         holdFill.style.width = '0%';
         bar.style.width = '0%';
-        holdText.textContent = 'Mantén 9s para eliminar';
+        holdText.textContent = 'Mantén 10s para eliminar';
       };
 
       const closeModal = () => {
@@ -568,10 +572,11 @@
         resetHold();
         const t0 = performance.now();
         holdInterval = setInterval(() => {
-          const pct = Math.min(100, ((performance.now() - t0) / HOLD_MS) * 100);
+          const elapsed = performance.now() - t0;
+          const remaining = Math.max(0, HOLD_MS - elapsed);
+          const pct = Math.min(100, (elapsed / HOLD_MS) * 100);
           holdFill.style.width = pct + '%';
           bar.style.width = pct + '%';
-          const remaining = Math.max(0, HOLD_MS - (performance.now() - t0));
           holdText.textContent = `Mantén ${(remaining/1000).toFixed(1)}s para eliminar`;
         }, 80);
         holdTimer = setTimeout(async () => {
@@ -646,7 +651,7 @@
       });
     }
 
-    // Modal de confirmación 10s con nombre de proyecto
+    // Modal de confirmación 10s con nombre de proyecto y countdown
     function openStatusModal(selectEl, id, prev, newStatus) {
       const backdrop = document.getElementById('status-confirm-modal');
       const txt = document.getElementById('status-confirm-text');
@@ -654,11 +659,13 @@
       const btnHold = document.getElementById('status-hold');
       const btnCancel = document.getElementById('status-cancel');
       const holdFill = document.getElementById('status-hold-fill');
+      const holdLabel = document.getElementById('status-hold-text');
 
       const cot = cotizacionesData.find(c => c.id === id);
       const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
 
       txt.textContent = `Mantén presionado 10s para confirmar cambio de "${nombreProyecto}" a “${newStatus}”.`;
+      holdLabel.textContent = 'Mantén 10s';
 
       let timer = null;
       let tick = null;
@@ -669,6 +676,7 @@
         if (tick) clearInterval(tick);
         bar.style.width = '0%';
         holdFill.style.width = '0%';
+        holdLabel.textContent = 'Mantén 10s';
         timer = tick = null;
       };
 
@@ -682,9 +690,12 @@
       const startHold = () => {
         const t0 = performance.now();
         tick = setInterval(() => {
-          const pct = Math.min(100, ((performance.now() - t0) / HOLD_MS) * 100);
+          const elapsed = performance.now() - t0;
+          const remaining = Math.max(0, HOLD_MS - elapsed);
+          const pct = Math.min(100, (elapsed / HOLD_MS) * 100);
           bar.style.width = pct + '%';
           holdFill.style.width = pct + '%';
+          holdLabel.textContent = `Mantén ${(remaining/1000).toFixed(1)}s`;
         }, 80);
         timer = setTimeout(async () => {
           reset();
