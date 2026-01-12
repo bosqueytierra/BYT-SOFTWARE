@@ -52,12 +52,12 @@
     .table-title { margin:0 0 8px; font-size:16px; font-weight:800; }
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
-    select.state-select { min-width: 150px; background: #fff; }
-    /* solo el option lleva color de fondo, no el select */
-    select.state-select option[value="en_ejecucion"] { background: var(--st-en-ejecucion); }
-    select.state-select option[value="completada"]   { background: var(--st-completada); }
-    select.state-select option[value="cancelada"]    { background: var(--st-cancelada); }
-    select.state-select option[value="postventa"]    { background: var(--st-postventa); }
+    select.state-select { min-width: 150px; background:#fff; }
+    /* color solo en el select (no en el dropdown) */
+    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
+    .state-select.st-completada   { background: var(--st-completada); }
+    .state-select.st-cancelada    { background: var(--st-cancelada); }
+    .state-select.st-postventa    { background: var(--st-postventa); }
     .dot-status { width: 14px; height: 14px; border-radius: 50%; display:inline-block; }
     .dot-ok { background: var(--dot-ok); }
     .dot-bad { background: var(--dot-bad); }
@@ -296,7 +296,7 @@
         return `
           <tr>
             <td style="width:170px;">
-              <select class="state-select" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
+              <select class="state-select ${stateClass(item.estado)}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
                 ${ESTADOS.map(st => `<option value="${st}" ${item.estado===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
@@ -329,6 +329,7 @@
           </table>
         </div>
       `;
+      applyStateStyles();
     }
 
     function renderResumen() {
@@ -373,18 +374,31 @@
         default: return st;
       }
     }
+    function stateClass(st) {
+      switch(st) {
+        case 'en_ejecucion': return 'st-en_ejecucion';
+        case 'completada': return 'st-completada';
+        case 'cancelada': return 'st-cancelada';
+        case 'postventa': return 'st-postventa';
+        default: return '';
+      }
+    }
+    function applyStateStyles() {
+      document.querySelectorAll('select.state-select').forEach(sel => {
+        sel.classList.remove('st-en_ejecucion','st-completada','st-cancelada','st-postventa');
+        sel.classList.add(stateClass(sel.value));
+      });
+    }
 
-    // Estado de partida independiente
     function handleEstadoPartidaChange(e, partidaId) {
       const nuevoEstado = e.target.value;
       ventasData = ventasData.map(v => {
         const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
         return idv === partidaId ? { ...v, estado: nuevoEstado } : v;
       });
-      aplicarFiltros(); // recalcula dot del proyecto
+      aplicarFiltros();
     }
 
-    // Precio cobrado manual por proyecto
     function handleCobradoBlur(key, value) {
       const num = Number(value || 0) || 0;
       proyectoCobradoMap.set(key, num);
@@ -406,7 +420,6 @@
     function verAdjuntos(id) { if (!id) return; window.location.href = `../cotizaciones/detalle.html?id=${id}#adjuntos`; }
     function imprimirContrato(id) { window.utils?.mostrarNotificacion?.('Imprimir contrato aún no está disponible', 'info'); }
 
-    // Modal notas
     function openNotesModal(partidaId, proyectoKey, proyectoNombre) {
       notesModalState = { partidaId, proyectoKey, proyectoNombre };
       const modal = document.getElementById('notes-modal');
