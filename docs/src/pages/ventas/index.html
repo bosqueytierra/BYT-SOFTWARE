@@ -53,11 +53,13 @@
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
-    /* Color solo en el elemento seleccionado (no en la lista) */
+    /* Color SOLO en el control (no en las options) */
     .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-cancelada    { background: var(--st-cancelada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
+    /* reset de opciones: sin fondo */
+    select.state-select option { background: #fff; color: var(--text); }
     .dot-status { width: 14px; height: 14px; border-radius: 50%; display:inline-block; }
     .dot-ok { background: var(--dot-ok); }
     .dot-bad { background: var(--dot-bad); }
