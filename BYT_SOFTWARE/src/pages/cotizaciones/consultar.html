@@ -304,17 +304,20 @@
       </div>
     </div>
 
-    <!-- Modal de confirmación para cambio de estado -->
-    <div id="status-confirm-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:12000; align-items:center; justify-content:center;">
-      <div style="background:#fff; border-radius:12px; padding:16px; width:320px; box-shadow:0 12px 30px rgba(0,0,0,0.15);">
-        <h4 style="margin:0 0 8px;">Confirmar cambio de estado</h4>
-        <p id="status-confirm-text" style="margin:0 0 12px; color:#555;">Mantén presionado 5s para confirmar.</p>
+    <!-- Modal de confirmación para cambio de estado (custom, 10s) -->
+    <div class="modal-backdrop" id="status-confirm-modal" aria-hidden="true">
+      <div class="modal">
+        <h3 style="margin:0 0 8px;">Confirmar cambio de estado</h3>
+        <p id="status-confirm-text" style="margin:0 0 12px; color:#555;">Mantén presionado 10s para confirmar.</p>
         <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
           <div id="status-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
         </div>
         <div style="display:flex; gap:8px; justify-content:flex-end;">
           <button id="status-cancel" class="btn btn-secondary" type="button">Cancelar</button>
-          <button id="status-hold" class="btn btn-primary" type="button" style="touch-action:none;">Mantén 5s</button>
+          <button id="status-hold" class="btn btn-primary hold-btn" type="button" style="touch-action:none;">
+            <span>Mantén 10s</span>
+            <div class="hold-fill" id="status-hold-fill"></div>
+          </button>
         </div>
       </div>
     </div>
@@ -628,7 +631,7 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Guardamos prev y enganchamos change por elemento
+    // Guardamos prev y enganchamos change por elemento, usando modal custom de 10s
     function wireEstadoSelects() {
       document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
         sel.dataset.prev = sel.value;
@@ -636,19 +639,84 @@
         sel.addEventListener('change', () => {
           const prev = sel.dataset.prev || sel.value;
           const newStatus = sel.value;
-          // Confirmación temporal nativa (sin modal) para asegurar guardado
-          const ok = confirm(`Confirmar cambio a "${newStatus}"`);
-          if (!ok) { sel.value = prev; sel.dataset.prev = prev; return; }
-          sel.disabled = true;
-          handleEstadoChange(sel, sel.dataset.id, newStatus)
-            .catch(err => {
-              sel.value = prev;
-              sel.dataset.prev = prev;
-              console.error(err);
-            })
-            .finally(() => { sel.disabled = false; });
+          openStatusModal(sel, sel.dataset.id, prev, newStatus);
         });
       });
+    }
+
+    // Modal de confirmación 10s
+    function openStatusModal(selectEl, id, prev, newStatus) {
+      const backdrop = document.getElementById('status-confirm-modal');
+      const txt = document.getElementById('status-confirm-text');
+      const bar = document.getElementById('status-progress');
+      const btnHold = document.getElementById('status-hold');
+      const btnCancel = document.getElementById('status-cancel');
+      const holdFill = document.getElementById('status-hold-fill');
+
+      let timer = null;
+      let tick = null;
+      const HOLD_MS = 10000;
+
+      const reset = () => {
+        if (timer) clearTimeout(timer);
+        if (tick) clearInterval(tick);
+        bar.style.width = '0%';
+        holdFill.style.width = '0%';
+        timer = tick = null;
+      };
+
+      const close = () => {
+        reset();
+        backdrop.style.display = 'none';
+        backdrop.setAttribute('aria-hidden','true');
+        document.body.style.overflow = '';
+      };
+
+      const startHold = () => {
+        const t0 = performance.now();
+        tick = setInterval(() => {
+          const pct = Math.min(100, ((performance.now() - t0) / HOLD_MS) * 100);
+          bar.style.width = pct + '%';
+          holdFill.style.width = pct + '%';
+        }, 80);
+        timer = setTimeout(async () => {
+          reset();
+          await confirmChange();
+          close();
+        }, HOLD_MS);
+      };
+      const stopHold = () => reset();
+
+      async function confirmChange() {
+        selectEl.disabled = true;
+        try {
+          await handleEstadoChange(selectEl, id, newStatus);
+          selectEl.value = newStatus;
+          selectEl.dataset.prev = newStatus;
+        } catch (e) {
+          selectEl.value = prev;
+          selectEl.dataset.prev = prev;
+        } finally {
+          selectEl.disabled = false;
+        }
+      }
+
+      btnHold.onmousedown = startHold;
+      btnHold.ontouchstart = (e)=>{ e.preventDefault(); startHold(); };
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
+        btnHold.addEventListener(ev, stopHold);
+      });
+      btnCancel.onclick = () => { selectEl.value = prev; selectEl.dataset.prev = prev; close(); };
+      backdrop.onclick = (e) => { if (e.target === backdrop) { selectEl.value = prev; selectEl.dataset.prev = prev; close(); } };
+      window.addEventListener('keydown', escClose);
+      function escClose(e){ if (e.key === 'Escape' && backdrop.style.display === 'flex') { selectEl.value = prev; selectEl.dataset.prev = prev; close(); window.removeEventListener('keydown', escClose);} }
+
+      txt.textContent = `Mantén presionado 10s para confirmar cambio a “${newStatus}”.`;
+      bar.style.width = '0%';
+      holdFill.style.width = '0%';
+      backdrop.style.display = 'flex';
+      backdrop.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
     }
 
     async function handleEstadoChange(selectEl, id, forcedEstado) {
