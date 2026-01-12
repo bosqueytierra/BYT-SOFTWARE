@@ -655,6 +655,7 @@
 
       const cot = cotizacionesData.find(c => c.id === id);
       const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
+
       txt.textContent = `Mantén presionado 10s para confirmar cambio de "${nombreProyecto}" a “${newStatus}”.`;
 
       let timer = null;
