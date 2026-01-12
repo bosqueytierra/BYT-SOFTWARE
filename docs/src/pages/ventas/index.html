@@ -17,14 +17,13 @@
       --danger: #c0392b;
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
       --selected: #e9f2ed;
-      --st-en-ejecucion: #f6e0a3;  /* amarillo suave */
+      --st-en-ejecucion: #f6e0a3;  /* amarillo */
       --st-completada: #d6f5d6;   /* verde claro */
       --st-cancelada: #e4d3f6;    /* morado claro */
       --st-postventa: #f8d0d0;    /* rojo claro */
     }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
-    /* ancho máximo amplio */
-    .page { max-width: 1680px; width: 98%; margin: 22px auto 48px; padding: 0 24px; }
+    .page { max-width: 1800px; width: 99%; margin: 22px auto 48px; padding: 0 28px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
     .card + .card { margin-top: 14px; }
     .header-card { display:flex; justify-content:space-between; gap:12px; align-items:center; }
@@ -52,12 +51,23 @@
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select, select.project-state { min-width: 150px; }
-
-    /* Colores por estado aplicados al select */
     .st-en_ejecucion { background: var(--st-en-ejecucion); }
     .st-completada   { background: var(--st-completada); }
     .st-cancelada    { background: var(--st-cancelada); }
     .st-postventa    { background: var(--st-postventa); }
+
+    /* Modal centrado */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+      display: none; align-items: center; justify-content: center; z-index: 12000; padding: 16px;
+    }
+    .modal {
+      background: #fff; border-radius: 14px; border: 1px solid var(--border);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.12); width: min(520px, 100%); padding: 18px;
+    }
+    .modal h3 { margin: 0 0 8px; }
+    .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    textarea { width:100%; min-height:140px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px; background:#fdfdfd; }
   </style>
 </head>
 <body>
@@ -114,7 +124,7 @@
   <!-- Modal de notas -->
   <div class="modal-backdrop" id="notes-modal">
     <div class="modal">
-      <h3 id="notes-title">Notas</h3>
+      <h3 id="notes-title">Observaciones</h3>
       <textarea id="notes-textarea" placeholder="Escribe observaciones..."></textarea>
       <div class="modal-actions">
         <button class="btn btn-ghost" type="button" onclick="closeNotesModal()">Cancelar</button>
@@ -130,12 +140,16 @@
 
   <script>
     const ESTADOS = ['en_ejecucion','completada','cancelada','postventa'];
+
     let ventasData = [];
     let ventasFiltradas = [];
     let proyectos = [];
     let selectedProyectoKey = null;
     const notesStore = new Map();
-    let notesModalState = { partidaId: null, proyectoKey: null };
+    let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
+    // Estados y cobros por proyecto (independientes de partidas)
+    const proyectoEstadoMap = new Map();
+    const proyectoCobradoMap = new Map();
 
     document.addEventListener('DOMContentLoaded', async () => { await cargarVentas(); });
 
@@ -179,14 +193,15 @@
         map.get(key).push(v);
       });
       proyectos = Array.from(map.entries()).map(([key, items]) => {
-        const totalCobrado = items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
-        const totalCotizado = items.reduce((acc, it) => acc + (Number(it.total_cotizado || 0) || 0), 0);
-        const estado = items[0]?.estado || 'en_ejecucion';
+        const sumCobrado = items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
+        const sumCotizado = items.reduce((acc, it) => acc + (Number(it.total_cotizado || 0) || 0), 0);
+        const estado = proyectoEstadoMap.has(key) ? proyectoEstadoMap.get(key) : (items[0]?.estado || 'en_ejecucion');
+        const cobrado = proyectoCobradoMap.has(key) ? proyectoCobradoMap.get(key) : sumCobrado;
         const cliente = formatCliente(items[0]?.cliente);
         const fechaCierre = items[0]?.fecha_aprobacion || items[0]?.fecha_cierre || items[0]?.fecha_cierre_max || '';
         const cotizacionId = items[0]?.cotizacion_id;
         const proyectoId = items[0]?.proyecto_id || key;
-        return { key, proyectoId, cotizacionId, cliente, estado, fechaCierre, totalCobrado, totalCotizado, items };
+        return { key, proyectoId, cotizacionId, cliente, estado, fechaCierre, totalCobrado: cobrado, totalCotizado: sumCotizado, items };
       });
       if (!selectedProyectoKey && proyectos.length) selectedProyectoKey = proyectos[0].key;
       if (selectedProyectoKey && !proyectos.find(p => p.key === selectedProyectoKey)) selectedProyectoKey = null;
@@ -202,8 +217,8 @@
         const isSel = p.key === selectedProyectoKey;
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
-            <td style="width:160px;">
-              <select class="project-state ${stateClass(p.estado)}" onmousedown="event.stopPropagation();" onchange="handleEstadoProyectoChange(event, '${escapeHtmlAttr(p.cotizacionId || '')}', '${escapeHtmlAttr(p.key)}')">
+            <td style="width:170px;">
+              <select class="project-state ${stateClass(p.estado)}" onmousedown="event.stopPropagation();" onchange="handleEstadoProyectoChange(event, '${escapeHtmlAttr(p.key)}')">
                 ${ESTADOS.map(st => `<option value="${st}" ${p.estado===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
@@ -211,7 +226,11 @@
             <td>${p.fechaCierre ? escapeHtml(formatDate(p.fechaCierre)) : '-'}</td>
             <td>${escapeHtml(p.cliente || '')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
-            <td>${escapeHtml(fmt(p.totalCobrado))}</td>
+            <td>
+              <input type="number" min="0" step="1000" value="${Number(p.totalCobrado||0)}"
+                     onmousedown="event.stopPropagation();" onfocus="this.select()"
+                     onblur="handleCobradoBlur('${escapeHtmlAttr(p.key)}', this.value)">
+            </td>
             <td>
               <div class="actions">
                 <button class="btn btn-ghost" onclick="event.stopPropagation(); verAdjuntos('${escapeHtmlAttr(p.cotizacionId || '')}')">Adjuntos</button>
@@ -233,7 +252,7 @@
                 <th>Fecha de cierre</th>
                 <th>Cliente</th>
                 <th>Precio cotizado</th>
-                <th>Precio cobrado</th>
+                <th>Precio cobrado (manual)</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -277,8 +296,8 @@
         const nota = notesStore.get(partidaId) || '';
         return `
           <tr>
-            <td style="width:160px;">
-              <select class="state-select ${stateClass(item.estado)}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}', '${escapeHtmlAttr(item.cotizacion_id || proyecto.cotizacionId || '')}')">
+            <td style="width:170px;">
+              <select class="state-select ${stateClass(item.estado)}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
                 ${ESTADOS.map(st => `<option value="${st}" ${item.estado===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
@@ -287,7 +306,7 @@
             <td><input type="date" value="${item.fecha_instalacion || ''}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','fecha_instalacion', this.value)"></td>
             <td><input type="number" min="0" step="1000" value="${Number(item.precio_individual_estimado||0)}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','precio_individual_estimado', this.value)"></td>
             <td>
-              <button class="btn btn-ghost" onclick="openNotesModal('${escapeHtmlAttr(partidaId)}','${escapeHtmlAttr(selectedProyectoKey)}')">Notas</button>
+              <button class="btn btn-ghost" onclick="openNotesModal('${escapeHtmlAttr(partidaId)}','${escapeHtmlAttr(selectedProyectoKey)}','${escapeHtmlAttr(proyecto.key)}')">Notas</button>
               ${nota ? `<span class="note-indicator">📝</span>` : ''}
             </td>
           </tr>
@@ -387,44 +406,29 @@
     }
     function formatDate(d) { try { return new Date(d).toLocaleDateString('es-CL'); } catch { return ''; } }
 
-    async function handleEstadoProyectoChange(e, cotizacionId, key) {
+    // Estado de proyecto independiente (no toca partidas)
+    function handleEstadoProyectoChange(e, key) {
       e.stopPropagation();
       const nuevoEstado = e.target.value;
-      const proyecto = proyectos.find(p => p.key === key);
-      if (!proyecto) return;
-      const prev = proyecto.estado;
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const res = await window.supabaseClient.actualizarEstadoVentaPorCotizacion(cotizacionId, nuevoEstado);
-        if (!res.success) throw new Error(res.error || 'No se pudo actualizar estado');
-        ventasData = ventasData.map(v => (v.proyecto === proyecto.key) ? { ...v, estado: nuevoEstado } : v);
-        aplicarFiltros();
-        window.utils?.mostrarNotificacion?.('Estado del proyecto actualizado', 'success');
-      } catch (err) {
-        console.error(err);
-        window.utils?.mostrarNotificacion?.('No se pudo actualizar estado: ' + (err.message || err), 'error');
-        e.target.value = prev;
-      }
+      proyectoEstadoMap.set(key, nuevoEstado);
+      applyStateStyles();
     }
 
-    async function handleEstadoPartidaChange(e, partidaId, cotizacionId) {
+    // Estado de partida independiente (no toca proyecto)
+    function handleEstadoPartidaChange(e, partidaId) {
       const nuevoEstado = e.target.value;
-      const prev = (ventasData.find(v => (v.id || v.partida_id || v.partida_nombre || v.partida) === partidaId) || {}).estado || 'en_ejecucion';
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const res = await window.supabaseClient.actualizarEstadoVentaPorCotizacion(cotizacionId, nuevoEstado);
-        if (!res.success) throw new Error(res.error || 'No se pudo actualizar estado');
-        ventasData = ventasData.map(v => {
-          const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
-          return idv === partidaId ? { ...v, estado: nuevoEstado } : v;
-        });
-        aplicarFiltros();
-        window.utils?.mostrarNotificacion?.('Estado de la partida actualizado', 'success');
-      } catch (err) {
-        console.error(err);
-        window.utils?.mostrarNotificacion?.('No se pudo actualizar estado: ' + (err.message || err), 'error');
-        e.target.value = prev;
-      }
+      ventasData = ventasData.map(v => {
+        const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
+        return idv === partidaId ? { ...v, estado: nuevoEstado } : v;
+      });
+      aplicarFiltros();
+    }
+
+    // Precio cobrado manual por proyecto (no toca partidas)
+    function handleCobradoBlur(key, value) {
+      const num = Number(value || 0) || 0;
+      proyectoCobradoMap.set(key, num);
+      renderProyectos();
     }
 
     function handlePartidaInput(partidaId, field, value) {
@@ -443,14 +447,14 @@
     function imprimirContrato(id) { window.utils?.mostrarNotificacion?.('Imprimir contrato aún no está disponible', 'info'); }
 
     // Modal notas
-    function openNotesModal(partidaId, proyectoKey) {
-      notesModalState = { partidaId, proyectoKey };
+    function openNotesModal(partidaId, proyectoKey, proyectoNombre) {
+      notesModalState = { partidaId, proyectoKey, proyectoNombre };
       const modal = document.getElementById('notes-modal');
       const textarea = document.getElementById('notes-textarea');
       const title = document.getElementById('notes-title');
       const partida = ventasData.find(v => (v.id || v.partida_id || v.partida_nombre || v.partida) === partidaId);
       const nombrePartida = partida?.partida_nombre || partida?.partida || 'Partida';
-      title.textContent = `Notas - ${nombrePartida}`;
+      title.textContent = `Observaciones · ${proyectoNombre || proyectoKey} · ${nombrePartida}`;
       textarea.value = notesStore.get(partidaId) || '';
       modal.style.display = 'flex';
       modal.setAttribute('aria-hidden','false');
@@ -461,7 +465,7 @@
       modal.style.display = 'none';
       modal.setAttribute('aria-hidden','true');
       document.body.style.overflow = '';
-      notesModalState = { partidaId: null, proyectoKey: null };
+      notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
     }
     function saveNotes() {
       const { partidaId } = notesModalState;
