@@ -17,10 +17,12 @@
       --danger: #c0392b;
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
       --selected: #e9f2ed;
-      --st-en-ejecucion: #f6e0a3;  /* amarillo */
-      --st-completada: #d6f5d6;   /* verde claro */
-      --st-cancelada: #e4d3f6;    /* morado claro */
-      --st-postventa: #f8d0d0;    /* rojo claro */
+      --st-en-ejecucion: #f6e0a3;
+      --st-completada: #d6f5d6;
+      --st-cancelada: #e4d3f6;
+      --st-postventa: #f8d0d0;
+      --dot-ok: #1f9d55;
+      --dot-bad: #d64545;
     }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
     .page { max-width: 1800px; width: 99%; margin: 22px auto 48px; padding: 0 28px; }
@@ -50,11 +52,14 @@
     .table-title { margin:0 0 8px; font-size:16px; font-weight:800; }
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
-    select.state-select, select.project-state { min-width: 150px; }
+    select.state-select { min-width: 150px; }
     .st-en_ejecucion { background: var(--st-en-ejecucion); }
     .st-completada   { background: var(--st-completada); }
     .st-cancelada    { background: var(--st-cancelada); }
     .st-postventa    { background: var(--st-postventa); }
+    .dot-status { width: 14px; height: 14px; border-radius: 50%; display:inline-block; }
+    .dot-ok { background: var(--dot-ok); }
+    .dot-bad { background: var(--dot-bad); }
 
     /* Modal centrado */
     .modal-backdrop {
@@ -147,8 +152,7 @@
     let selectedProyectoKey = null;
     const notesStore = new Map();
     let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
-    // Estados y cobros por proyecto (independientes de partidas)
-    const proyectoEstadoMap = new Map();
+    // Precio cobrado manual por proyecto
     const proyectoCobradoMap = new Map();
 
     document.addEventListener('DOMContentLoaded', async () => { await cargarVentas(); });
@@ -195,13 +199,14 @@
       proyectos = Array.from(map.entries()).map(([key, items]) => {
         const sumCobrado = items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
         const sumCotizado = items.reduce((acc, it) => acc + (Number(it.total_cotizado || 0) || 0), 0);
-        const estado = proyectoEstadoMap.has(key) ? proyectoEstadoMap.get(key) : (items[0]?.estado || 'en_ejecucion');
         const cobrado = proyectoCobradoMap.has(key) ? proyectoCobradoMap.get(key) : sumCobrado;
         const cliente = formatCliente(items[0]?.cliente);
         const fechaCierre = items[0]?.fecha_aprobacion || items[0]?.fecha_cierre || items[0]?.fecha_cierre_max || '';
         const cotizacionId = items[0]?.cotizacion_id;
         const proyectoId = items[0]?.proyecto_id || key;
-        return { key, proyectoId, cotizacionId, cliente, estado, fechaCierre, totalCobrado: cobrado, totalCotizado: sumCotizado, items };
+        // calculamos si todas las partidas están completadas
+        const allDone = items.every(it => (it.estado || 'en_ejecucion') === 'completada');
+        return { key, proyectoId, cotizacionId, cliente, fechaCierre, totalCobrado: cobrado, totalCotizado: sumCotizado, items, allDone };
       });
       if (!selectedProyectoKey && proyectos.length) selectedProyectoKey = proyectos[0].key;
       if (selectedProyectoKey && !proyectos.find(p => p.key === selectedProyectoKey)) selectedProyectoKey = null;
@@ -215,13 +220,10 @@
       }
       const rows = proyectos.map(p => {
         const isSel = p.key === selectedProyectoKey;
+        const dotClass = p.allDone ? 'dot-ok' : 'dot-bad';
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
-            <td style="width:170px;">
-              <select class="project-state ${stateClass(p.estado)}" onmousedown="event.stopPropagation();" onchange="handleEstadoProyectoChange(event, '${escapeHtmlAttr(p.key)}')">
-                ${ESTADOS.map(st => `<option value="${st}" ${p.estado===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
-              </select>
-            </td>
+            <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
             <td>${escapeHtml(p.key)}</td>
             <td>${p.fechaCierre ? escapeHtml(formatDate(p.fechaCierre)) : '-'}</td>
             <td>${escapeHtml(p.cliente || '')}</td>
@@ -247,7 +249,7 @@
           <table>
             <thead>
               <tr>
-                <th>Status</th>
+                <th style="width:40px;">&nbsp;</th>
                 <th>Nombre proyecto</th>
                 <th>Fecha de cierre</th>
                 <th>Cliente</th>
@@ -260,7 +262,7 @@
           </table>
         </div>
       `;
-      applyStateStyles();
+      applyStateStyles(); // para selects de partidas más abajo
     }
 
     function renderPartidas() {
@@ -385,46 +387,23 @@
       }
     }
     function applyStateStyles() {
-      document.querySelectorAll('select.project-state, select.state-select').forEach(sel => {
+      document.querySelectorAll('select.state-select').forEach(sel => {
         sel.classList.remove('st-en_ejecucion','st-completada','st-cancelada','st-postventa');
         sel.classList.add(stateClass(sel.value));
       });
     }
 
-    function fmt(num) {
-      if (num === null || num === undefined) return '$0';
-      return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
-    }
-    function formatCliente(cli) {
-      if (!cli) return '';
-      if (typeof cli === 'string') {
-        try { const o = JSON.parse(cli); return o.nombre || o.name || o.cliente || ''; }
-        catch { return cli; }
-      }
-      if (typeof cli === 'object') return cli.nombre || cli.name || cli.cliente || '';
-      return String(cli);
-    }
-    function formatDate(d) { try { return new Date(d).toLocaleDateString('es-CL'); } catch { return ''; } }
-
-    // Estado de proyecto independiente (no toca partidas)
-    function handleEstadoProyectoChange(e, key) {
-      e.stopPropagation();
-      const nuevoEstado = e.target.value;
-      proyectoEstadoMap.set(key, nuevoEstado);
-      applyStateStyles();
-    }
-
-    // Estado de partida independiente (no toca proyecto)
+    // Estado de partida independiente
     function handleEstadoPartidaChange(e, partidaId) {
       const nuevoEstado = e.target.value;
       ventasData = ventasData.map(v => {
         const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
         return idv === partidaId ? { ...v, estado: nuevoEstado } : v;
       });
-      aplicarFiltros();
+      aplicarFiltros(); // recalcula dot del proyecto
     }
 
-    // Precio cobrado manual por proyecto (no toca partidas)
+    // Precio cobrado manual por proyecto
     function handleCobradoBlur(key, value) {
       const num = Number(value || 0) || 0;
       proyectoCobradoMap.set(key, num);
