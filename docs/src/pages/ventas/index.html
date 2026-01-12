@@ -19,8 +19,8 @@
       --selected: #e9f2ed;
     }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
-    /* ancho más amplio */
-    .page { max-width: 1480px; margin: 22px auto 48px; padding: 0 20px; }
+    /* ancho máximo casi completo */
+    .page { max-width: 1680px; width: 98%; margin: 22px auto 48px; padding: 0 24px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
     .card + .card { margin-top: 14px; }
     .header-card { display:flex; justify-content:space-between; gap:12px; align-items:center; }
@@ -47,9 +47,7 @@
     .table-title { margin:0 0 8px; font-size:16px; font-weight:800; }
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
-    select.state-select, select.project-state {
-      min-width: 150px;
-    }
+    select.state-select, select.project-state { min-width: 150px; }
     .modal-backdrop {
       position: fixed; inset: 0; background: rgba(0,0,0,0.35);
       display: none; align-items: center; justify-content: center; z-index: 12000; padding: 16px;
@@ -191,12 +189,8 @@
         const proyectoId = items[0]?.proyecto_id || key;
         return { key, proyectoId, cotizacionId, cliente, estado, fechaCierre, totalCobrado, totalCotizado, items };
       });
-      if (!selectedProyectoKey && proyectos.length) {
-        selectedProyectoKey = proyectos[0].key;
-      }
-      if (selectedProyectoKey && !proyectos.find(p => p.key === selectedProyectoKey)) {
-        selectedProyectoKey = null;
-      }
+      if (!selectedProyectoKey && proyectos.length) selectedProyectoKey = proyectos[0].key;
+      if (selectedProyectoKey && !proyectos.find(p => p.key === selectedProyectoKey)) selectedProyectoKey = null;
     }
 
     function renderProyectos() {
@@ -350,12 +344,7 @@
       `;
     }
 
-    function selectProyecto(key) {
-      selectedProyectoKey = key;
-      renderProyectos();
-      renderPartidas();
-      renderResumen();
-    }
+    function selectProyecto(key) { selectedProyectoKey = key; renderProyectos(); renderPartidas(); renderResumen(); }
 
     function labelEstado(st) {
       switch(st) {
@@ -366,7 +355,6 @@
         default: return st;
       }
     }
-
     function fmt(num) {
       if (num === null || num === undefined) return '$0';
       return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
@@ -374,10 +362,8 @@
     function formatCliente(cli) {
       if (!cli) return '';
       if (typeof cli === 'string') {
-        try {
-          const o = JSON.parse(cli);
-          return o.nombre || o.name || o.cliente || '';
-        } catch { return cli; }
+        try { const o = JSON.parse(cli); return o.nombre || o.name || o.cliente || ''; }
+        catch { return cli; }
       }
       if (typeof cli === 'object') return cli.nombre || cli.name || cli.cliente || '';
       return String(cli);
