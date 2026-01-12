@@ -644,7 +644,7 @@
       });
     }
 
-    // Modal de confirmación 10s
+    // Modal de confirmación 10s con nombre de proyecto
     function openStatusModal(selectEl, id, prev, newStatus) {
       const backdrop = document.getElementById('status-confirm-modal');
       const txt = document.getElementById('status-confirm-text');
@@ -652,6 +652,10 @@
       const btnHold = document.getElementById('status-hold');
       const btnCancel = document.getElementById('status-cancel');
       const holdFill = document.getElementById('status-hold-fill');
+
+      const cot = cotizacionesData.find(c => c.id === id);
+      const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
+      txt.textContent = `Mantén presionado 10s para confirmar cambio de "${nombreProyecto}" a “${newStatus}”.`;
 
       let timer = null;
       let tick = null;
@@ -711,7 +715,6 @@
       window.addEventListener('keydown', escClose);
       function escClose(e){ if (e.key === 'Escape' && backdrop.style.display === 'flex') { selectEl.value = prev; selectEl.dataset.prev = prev; close(); window.removeEventListener('keydown', escClose);} }
 
-      txt.textContent = `Mantén presionado 10s para confirmar cambio a “${newStatus}”.`;
       bar.style.width = '0%';
       holdFill.style.width = '0%';
       backdrop.style.display = 'flex';
