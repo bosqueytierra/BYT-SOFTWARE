@@ -19,8 +19,9 @@
       --selected: #e9f2ed;
     }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
-    .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+    /* ancho más amplio */
+    .page { max-width: 1480px; margin: 22px auto 48px; padding: 0 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
     .card + .card { margin-top: 14px; }
     .header-card { display:flex; justify-content:space-between; gap:12px; align-items:center; }
     .filters { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; align-items:end; }
@@ -35,20 +36,20 @@
     tr.project-row { cursor:pointer; transition: background 0.15s ease; }
     tr.project-row:hover { background: #f5f8f7; }
     tr.project-row.selected { background: var(--selected); }
-    .status-badge { padding: 6px 10px; border-radius: 10px; border:1px solid var(--border); background:#fdfdfd; }
-    .actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .actions { display:flex; gap:8px; flex-wrap:nowrap; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:9px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
-    .btn-primary { background: var(--primary); color:#fff; border-color: var(--primary); }
     .btn-ghost { background:#f0f3f5; color:#1f2430; }
     .layout-grid { display:grid; grid-template-columns: 2fr 1fr; gap:14px; align-items:start; }
-    @media (max-width: 1024px) { .layout-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { .layout-grid { grid-template-columns: 1fr; } }
     .empty { padding:14px; color:var(--muted); text-align:center; }
     .state-icon { font-size:20px; display:inline-block; margin-right:6px; }
     .money { font-weight:700; color:var(--primary); }
     .table-title { margin:0 0 8px; font-size:16px; font-weight:800; }
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
-    .pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:#eef4f1; color:var(--primary); font-weight:700; font-size:12px; }
-    .note-indicator { font-size:12px; color:var(--muted); }
+    .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
+    select.state-select, select.project-state {
+      min-width: 150px;
+    }
     .modal-backdrop {
       position: fixed; inset: 0; background: rgba(0,0,0,0.35);
       display: none; align-items: center; justify-content: center; z-index: 12000; padding: 16px;
@@ -70,7 +71,7 @@
         <p style="margin:2px 0 0; color:var(--muted); font-size:13px;">Cotizaciones aprobadas. Selecciona un proyecto para ver sus partidas.</p>
       </div>
       <div class="actions">
-        <a class="btn btn-primary" href="dashboard.html">Ir a Dashboard</a>
+        <a class="btn btn-ghost" href="dashboard.html">Ir a Dashboard</a>
       </div>
     </div>
 
@@ -119,7 +120,7 @@
       <h3 id="notes-title">Notas</h3>
       <textarea id="notes-textarea" placeholder="Escribe observaciones..."></textarea>
       <div class="modal-actions">
-        <button class="btn btn-secondary" type="button" onclick="closeNotesModal()">Cancelar</button>
+        <button class="btn btn-ghost" type="button" onclick="closeNotesModal()">Cancelar</button>
         <button class="btn btn-primary" type="button" onclick="saveNotes()">Guardar</button>
       </div>
     </div>
@@ -132,17 +133,14 @@
 
   <script>
     const ESTADOS = ['en_ejecucion','completada','cancelada','postventa'];
-    let ventasData = [];          // datos crudos (partidas)
-    let ventasFiltradas = [];     // partidas filtradas
-    let proyectos = [];           // [{ key, nombre, items, totales... }]
+    let ventasData = [];
+    let ventasFiltradas = [];
+    let proyectos = [];
     let selectedProyectoKey = null;
-    const notesStore = new Map(); // { partidaId: texto }
-
+    const notesStore = new Map();
     let notesModalState = { partidaId: null, proyectoKey: null };
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      await cargarVentas();
-    });
+    document.addEventListener('DOMContentLoaded', async () => { await cargarVentas(); });
 
     async function cargarVentas() {
       const pw = document.getElementById('proyectos-wrapper');
@@ -164,8 +162,7 @@
       const txt = document.getElementById('filtro-texto').value.toLowerCase().trim();
       const est = document.getElementById('filtro-estado').value;
       ventasFiltradas = ventasData.filter(v => {
-        const matchTxt =
-          !txt ||
+        const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
         const matchEst = est === 'todos' ? true : (v.estado || 'en_ejecucion') === est;
@@ -189,26 +186,14 @@
         const totalCotizado = items.reduce((acc, it) => acc + (Number(it.total_cotizado || 0) || 0), 0);
         const estado = items[0]?.estado || 'en_ejecucion';
         const cliente = formatCliente(items[0]?.cliente);
-        const fechaCierre = items[0]?.fecha_cierre || items[0]?.fecha_cierre_max || ''; // fallback
+        const fechaCierre = items[0]?.fecha_aprobacion || items[0]?.fecha_cierre || items[0]?.fecha_cierre_max || '';
         const cotizacionId = items[0]?.cotizacion_id;
         const proyectoId = items[0]?.proyecto_id || key;
-        return {
-          key,
-          proyectoId,
-          cotizacionId,
-          cliente,
-          estado,
-          fechaCierre,
-          totalCobrado,
-          totalCotizado,
-          items
-        };
+        return { key, proyectoId, cotizacionId, cliente, estado, fechaCierre, totalCobrado, totalCotizado, items };
       });
-      // si no hay seleccionado, tomar el primero
       if (!selectedProyectoKey && proyectos.length) {
         selectedProyectoKey = proyectos[0].key;
       }
-      // si el seleccionado ya no existe, limpiar
       if (selectedProyectoKey && !proyectos.find(p => p.key === selectedProyectoKey)) {
         selectedProyectoKey = null;
       }
@@ -224,20 +209,19 @@
         const isSel = p.key === selectedProyectoKey;
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
-            <td>${escapeHtml(p.proyectoId || '')}</td>
             <td>${escapeHtml(p.key)}</td>
             <td>${p.fechaCierre ? escapeHtml(formatDate(p.fechaCierre)) : '-'}</td>
             <td>${escapeHtml(p.cliente || '')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
             <td>${escapeHtml(fmt(p.totalCobrado))}</td>
             <td>
-              <select onchange="handleEstadoProyectoChange(event, '${escapeHtmlAttr(p.cotizacionId || '')}', '${escapeHtmlAttr(p.key)}')">
+              <select class="project-state" onmousedown="event.stopPropagation();" onchange="handleEstadoProyectoChange(event, '${escapeHtmlAttr(p.cotizacionId || '')}', '${escapeHtmlAttr(p.key)}')">
                 ${ESTADOS.map(st => `<option value="${st}" ${p.estado===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
             <td>
               <div class="actions">
-                <button class="btn btn-primary" onclick="event.stopPropagation(); verAdjuntos('${escapeHtmlAttr(p.cotizacionId || '')}')">Adjuntos</button>
+                <button class="btn btn-ghost" onclick="event.stopPropagation(); verAdjuntos('${escapeHtmlAttr(p.cotizacionId || '')}')">Adjuntos</button>
                 <button class="btn btn-ghost" onclick="event.stopPropagation(); verCotizacion('${escapeHtmlAttr(p.cotizacionId || '')}')">Ver Cotización</button>
                 <button class="btn btn-ghost" onclick="event.stopPropagation(); imprimirContrato('${escapeHtmlAttr(p.cotizacionId || '')}')">Imprimir contrato</button>
               </div>
@@ -251,7 +235,6 @@
           <table>
             <thead>
               <tr>
-                <th>Código ID</th>
                 <th>Nombre proyecto</th>
                 <th>Fecha de cierre</th>
                 <th>Cliente</th>
@@ -306,10 +289,10 @@
             <td><input type="number" min="0" step="1000" value="${Number(item.precio_individual_estimado||0)}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','precio_individual_estimado', this.value)"></td>
             <td>
               <button class="btn btn-ghost" onclick="openNotesModal('${escapeHtmlAttr(partidaId)}','${escapeHtmlAttr(selectedProyectoKey)}')">Notas</button>
-              ${nota ? `<div class="note-indicator">📝</div>` : ''}
+              ${nota ? `<span class="note-indicator">📝</span>` : ''}
             </td>
             <td>
-              <select onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}', '${escapeHtmlAttr(item.cotizacion_id || proyecto.cotizacionId || '')}')">
+              <select class="state-select" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}', '${escapeHtmlAttr(item.cotizacion_id || proyecto.cotizacionId || '')}')">
                 ${ESTADOS.map(st => `<option value="${st}" ${item.estado===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
@@ -388,31 +371,18 @@
       if (num === null || num === undefined) return '$0';
       return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
     }
-    function parseCLP(str) {
-      if (typeof str === 'number') return str;
-      const cleaned = String(str).replace(/[^\d-]/g, '');
-      return cleaned ? parseInt(cleaned, 10) : 0;
-    }
     function formatCliente(cli) {
       if (!cli) return '';
       if (typeof cli === 'string') {
         try {
           const o = JSON.parse(cli);
           return o.nombre || o.name || o.cliente || '';
-        } catch {
-          return cli;
-        }
+        } catch { return cli; }
       }
       if (typeof cli === 'object') return cli.nombre || cli.name || cli.cliente || '';
       return String(cli);
     }
-    function formatDate(d) {
-      try {
-        return new Date(d).toLocaleDateString('es-CL');
-      } catch {
-        return '';
-      }
-    }
+    function formatDate(d) { try { return new Date(d).toLocaleDateString('es-CL'); } catch { return ''; } }
 
     async function handleEstadoProyectoChange(e, cotizacionId, key) {
       e.stopPropagation();
@@ -424,7 +394,6 @@
         if (window.supabaseClient?.init) await window.supabaseClient.init();
         const res = await window.supabaseClient.actualizarEstadoVentaPorCotizacion(cotizacionId, nuevoEstado);
         if (!res.success) throw new Error(res.error || 'No se pudo actualizar estado');
-        // propagar a items
         ventasData = ventasData.map(v => (v.proyecto === proyecto.key) ? { ...v, estado: nuevoEstado } : v);
         aplicarFiltros();
         window.utils?.mostrarNotificacion?.('Estado del proyecto actualizado', 'success');
@@ -466,22 +435,11 @@
       aplicarFiltros();
     }
 
-    function verCotizacion(id) {
-      if (!id) return;
-      window.location.href = `../cotizaciones/detalle.html?id=${id}`;
-    }
+    function verCotizacion(id) { if (!id) return; window.location.href = `../cotizaciones/detalle.html?id=${id}`; }
+    function verAdjuntos(id) { if (!id) return; window.location.href = `../cotizaciones/detalle.html?id=${id}#adjuntos`; }
+    function imprimirContrato(id) { window.utils?.mostrarNotificacion?.('Imprimir contrato aún no está disponible', 'info'); }
 
-    function verAdjuntos(id) {
-      if (!id) return;
-      window.location.href = `../cotizaciones/detalle.html?id=${id}#adjuntos`;
-    }
-
-    function imprimirContrato(id) {
-      // Placeholder
-      window.utils?.mostrarNotificacion?.('Imprimir contrato aún no está disponible', 'info');
-    }
-
-    // Modal de notas (solo front, sin persistir aún)
+    // Modal notas
     function openNotesModal(partidaId, proyectoKey) {
       notesModalState = { partidaId, proyectoKey };
       const modal = document.getElementById('notes-modal');
@@ -495,7 +453,6 @@
       modal.setAttribute('aria-hidden','false');
       document.body.style.overflow = 'hidden';
     }
-
     function closeNotesModal() {
       const modal = document.getElementById('notes-modal');
       modal.style.display = 'none';
@@ -503,7 +460,6 @@
       document.body.style.overflow = '';
       notesModalState = { partidaId: null, proyectoKey: null };
     }
-
     function saveNotes() {
       const { partidaId } = notesModalState;
       if (!partidaId) { closeNotesModal(); return; }
@@ -511,16 +467,14 @@
       const text = textarea.value.trim();
       notesStore.set(partidaId, text);
       closeNotesModal();
-      renderPartidas(); // actualizar indicador de nota
+      renderPartidas();
     }
 
     function escapeHtml(str) {
       if (str === undefined || str === null) return '';
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
-    function escapeHtmlAttr(str) {
-      return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    }
+    function escapeHtmlAttr(str) { return escapeHtml(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   </script>
 </body>
 </html>
