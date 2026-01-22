@@ -392,17 +392,37 @@
       });
     }
 
+    async function persistVenta(partidaId, patch) {
+      const row = ventasData.find(v => (v.id || v.partida_id || v.partida_nombre || v.partida) === partidaId);
+      if (!row || !row.id) return;
+      try { await window.supabaseClient.actualizarVenta(row.id, patch); }
+      catch (e) { console.warn('persistVenta error', e); }
+    }
+
     function handleEstadoPartidaChange(e, partidaId) {
       const nuevoEstado = e.target.value;
       ventasData = ventasData.map(v => {
         const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
         return idv === partidaId ? { ...v, estado: nuevoEstado } : v;
       });
+      persistVenta(partidaId, { estado: nuevoEstado });
       aplicarFiltros();
     }
 
     function handleCobradoBlur(key, value) {
       const num = Number(value || 0) || 0;
+      const proyecto = proyectos.find(p => p.key === key);
+      if (proyecto && proyecto.items?.length) {
+        proyecto.items.forEach((it, idx) => {
+          const pid = it.id || it.partida_id || it.partida_nombre || it.partida;
+          const newVal = idx === 0 ? num : 0; // asignar al primero, 0 al resto
+          ventasData = ventasData.map(v => {
+            const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
+            return idv === pid ? { ...v, total_venta: newVal } : v;
+          });
+          persistVenta(pid, { total_venta: newVal });
+        });
+      }
       proyectoCobradoMap.set(key, num);
       renderProyectos();
     }
@@ -411,7 +431,9 @@
       ventasData = ventasData.map(v => {
         const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
         if (idv === partidaId) {
-          return { ...v, [field]: field === 'precio_individual_estimado' ? Number(value || 0) : value };
+          const patch = field === 'precio_individual_estimado' ? Number(value || 0) : value;
+          persistVenta(partidaId, { [field]: patch });
+          return { ...v, [field]: patch };
         }
         return v;
       });
