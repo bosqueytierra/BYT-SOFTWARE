@@ -319,6 +319,25 @@ async function actualizarMontoVenta(id, total_venta) {
     }
 }
 
+// Nuevo: actualizar campos arbitrarios de venta por id (estado, fechas, precio_individual_estimado, total_venta, etc.)
+async function actualizarVenta(id, patch) {
+    try {
+        if (!supabaseClient || typeof supabaseClient.from !== 'function') {
+            const ok = await initSupabase();
+            if (!ok) throw new Error('Supabase no inicializado');
+        }
+        const { error } = await supabaseClient
+            .from('ventas')
+            .update({ ...patch, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        if (error) throw error;
+        return { success: true };
+    } catch (error) {
+        console.error('Error al actualizar venta:', error);
+        return { success: false, error: error.message || String(error) };
+    }
+}
+
 // Eliminar todas las ventas de una cotización (cuando ya no está aprobada)
 async function eliminarVentasPorCotizacion(cotizacionId) {
     try {
@@ -420,6 +439,7 @@ window.supabaseClient = {
     actualizarEstadoVentaPorCotizacion,
     eliminarVentasPorCotizacion,
     actualizarMontoVenta,
+    actualizarVenta,
     listarVentas
 };
 
