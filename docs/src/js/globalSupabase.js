@@ -326,15 +326,15 @@ async function eliminarVentasPorCotizacion(cotizacionId) {
             const ok = await initSupabase();
             if (!ok) throw new Error('Supabase no inicializado');
         }
-        const { error } = await supabaseClient
+        const { error, count } = await supabaseClient
             .from('ventas')
-            .delete()
+            .delete({ count: 'exact' })
             .eq('cotizacion_id', cotizacionId);
         if (error) throw error;
-        return { success: true };
+        return { success: true, count: count ?? 0 };
     } catch (error) {
         console.error('Error al eliminar ventas de cotización:', error);
-        return { success: false, error: error.message || String(error) };
+        return { success: false, error: error.message || String(error), count: 0 };
     }
 }
 
