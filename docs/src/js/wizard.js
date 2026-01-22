@@ -5,6 +5,7 @@
 // - Servicio de corte (melaminas/durolac) en Tableros, con proveedor y valor unitario editables. Se suma a materiales antes de factor/IVA. Se imprime en texto.
 // - Servicio de pegado de tapacantos (delgado/grueso) en Tapacantos, con proveedor y valor unitario editables. Se suma a materiales antes de factor/IVA. Se imprime en texto.
 // - Se mantienen estilos de chips, progreso, autosave, etc.
+// - Sincronización con Ventas después de guardar/actualizar cotización aprobada (o vigente) para reflejar cambios de nombre y montos.
 //
 // Colores resaltado paso activo:
 //   fondo: #bfe7c7
@@ -2023,6 +2024,8 @@ class WizardCotizacion {
                 this.datos.numero = data.numero;
                 this.datos.version = data.version;
                 this.datos._updated_at = data.updated_at;
+                // Sincronizar Ventas si corresponde
+                await this._syncVentasDesdeCotizacion(data);
                 if (!silent) this._showToast('Cotización actualizada');
                 return { ok:true, data };
             } else {
@@ -2048,6 +2051,8 @@ class WizardCotizacion {
                 this.datos.version = data.version || 1;
                 this.datos._created_at = data.created_at;
                 this.datos._updated_at = data.updated_at;
+                // Sincronizar Ventas si corresponde
+                await this._syncVentasDesdeCotizacion(data);
                 if (!silent) this._showToast('Cotización guardada');
                 return { ok:true, data };
             }
@@ -2145,6 +2150,8 @@ class WizardCotizacion {
                 this.mostrarPaso(1);
                 this.actualizarBarraSuperior();
             }
+            // Si se borra cotización, se eliminan ventas asociadas
+            try { await window.supabaseClient?.eliminarVentasPorCotizacion?.(id); } catch (_) {}
             this._showToast('Cotización eliminada');
             return { ok:true, data };
         } catch (err) {
@@ -2194,6 +2201,25 @@ class WizardCotizacion {
         } catch (err) {
             console.error('duplicateCotizacion error', err);
             return { ok:false, error: err };
+        }
+    }
+
+    // ------------- Sincronización Ventas -------------
+    async _syncVentasDesdeCotizacion(record) {
+        try {
+            if (!record?.id || !window.supabaseClient) return;
+            const estado = String(record.estado || '').toLowerCase();
+            const esAprobada = ['aprobada', 'aprobado'].includes(estado);
+            const esVentaVigente = esAprobada || ['en_ejecucion','completada','postventa'].includes(estado);
+
+            if (esVentaVigente) {
+                const estadoVenta = esAprobada ? 'en_ejecucion' : estado || 'en_ejecucion';
+                await window.supabaseClient.crearOVincularVentaDesdeCotizacion(record, estadoVenta);
+            } else {
+                await window.supabaseClient.eliminarVentasPorCotizacion(record.id);
+            }
+        } catch (e) {
+            console.warn('_syncVentasDesdeCotizacion error', e);
         }
     }
 
