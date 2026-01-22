@@ -766,6 +766,15 @@
         } else {
           const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
           console.log('eliminarVentasPorCotizacion OUT', v);
+          if (v?.success && (v.count === 0)) {
+            window.utils?.mostrarNotificacion?.('No se borró ninguna venta (0 filas). Verifica cotizacion_id.', 'warning');
+          }
+          if (!v?.success) {
+            window.utils?.mostrarNotificacion?.('Error al borrar ventas: ' + (v.error || 'desconocido'), 'error');
+            selectEl.value = prevEstado;
+            selectEl.dataset.prev = prevEstado;
+            throw new Error(v.error || 'No se pudieron borrar ventas');
+          }
         }
 
         filtrarCotizaciones();
