@@ -57,7 +57,7 @@
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
     /* color solo en el control seleccionado; cancelada sin color */
-    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     /* cancelada sin color */
@@ -253,6 +253,11 @@
         const cotizacionId = items[0]?.cotizacion_id;
         const proyectoId = items[0]?.proyecto_id || key;
         const allGreen = items.every(it => ['completada','cancelada'].includes(it.estado || 'en_ejecucion'));
+
+        // Sembrar motivo desde BD (primer item)
+        const motivo = items[0]?.motivo_variacion;
+        if (motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key, motivo);
+
         return { key, proyectoId, cotizacionId, cliente, fechaCierre, totalCobrado: cobrado, totalCotizado: sumCotizado, items, allGreen };
       });
       if (!selectedProyectoKey && proyectos.length) selectedProyectoKey = proyectos[0].key;
@@ -544,8 +549,20 @@
       aplicarFiltros();
     }
 
-    function handleMotivoChange(proyectoKey, value) {
+    async function handleMotivoChange(proyectoKey, value) {
       motivoVariacionMap.set(proyectoKey, value);
+      // Guarda en la primera partida del proyecto
+      const proyecto = proyectos.find(p => p.key === proyectoKey);
+      if (proyecto && proyecto.items?.length) {
+        const it = proyecto.items[0];
+        const pid = it.id || it.partida_id || it.partida_nombre || it.partida;
+        ventasData = ventasData.map(v => {
+          const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
+          return idv === pid ? { ...v, motivo_variacion: value } : v;
+        });
+        await persistVenta(pid, { motivo_variacion: value });
+      }
+      renderResumen();
     }
 
     function verCotizacion(id) { if (!id) return; window.location.href = `../cotizaciones/detalle.html?id=${id}`; }
