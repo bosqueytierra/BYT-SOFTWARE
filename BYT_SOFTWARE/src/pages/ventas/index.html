@@ -26,6 +26,8 @@
       --chip-red: #fdeceb;
       --chip-green-text: #1f9d55;
       --chip-red-text: #d64545;
+      --chip-neutral: #f2f3f5;
+      --chip-neutral-text: #6c7a86;
     }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
     .page { max-width: 1800px; width: 99%; margin: 22px auto 48px; padding: 0 28px; }
@@ -56,35 +58,25 @@
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
-    /* color solo en el control seleccionado; cancelada sin color */
     .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
-    /* cancelada sin color */
     .state-select.st-cancelada    { background: #fff; }
-    /* opciones sin fondo coloreado */
     select.state-select option { background: #fff; color: var(--text); }
     .dot-status { width: 14px; height: 14px; border-radius: 50%; display:inline-block; }
     .dot-ok { background: var(--dot-ok); }
     .dot-bad { background: var(--dot-bad); }
 
-    .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.35);
-      display: none; align-items: center; justify-content: center; z-index: 12000; padding: 16px;
-    }
-    .modal {
-      background: #fff; border-radius: 14px; border: 1px solid var(--border);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.12); width: min(520px, 100%); padding: 18px;
-    }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 12000; padding: 16px; }
+    .modal { background: #fff; border-radius: 14px; border: 1px solid var(--border); box-shadow: 0 16px 40px rgba(0,0,0,0.12); width: min(520px, 100%); padding: 18px; }
     .modal h3 { margin: 0 0 8px; }
     .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
     textarea { width:100%; min-height:140px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px; background:#fdfdfd; }
 
-    .diff-chip {
-      display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; font-weight:700;
-    }
+    .diff-chip { display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; font-weight:700; }
     .diff-pos { background: var(--chip-green); color: var(--chip-green-text); }
     .diff-neg { background: var(--chip-red); color: var(--chip-red-text); }
+    .diff-neutral { background: var(--chip-neutral); color: var(--chip-neutral-text); }
     .diff-sign { font-size:18px; font-weight:800; }
     .resumen-row { display:flex; justify-content:space-between; align-items:center; margin:4px 0; }
     .resumen-label { color: var(--muted); font-size:13px; }
@@ -254,7 +246,6 @@
         const proyectoId = items[0]?.proyecto_id || key;
         const allGreen = items.every(it => ['completada','cancelada'].includes(it.estado || 'en_ejecucion'));
 
-        // Sembrar motivo desde BD (primer item)
         const motivo = items[0]?.motivo_variacion;
         if (motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key, motivo);
 
@@ -415,28 +406,32 @@
         : proyecto.items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
 
       const diferencia = totalCobrado - totalCotizado;
-      const diffSign = diferencia >= 0 ? '+' : '−';
-      const diffClass = diferencia >= 0 ? 'diff-pos' : 'diff-neg';
+      const diffSign = diferencia > 0 ? '+' : (diferencia < 0 ? '−' : '±');
+      const diffClass = diferencia > 0 ? 'diff-pos' : (diferencia < 0 ? 'diff-neg' : 'diff-neutral');
       const diffAbs = Math.abs(diferencia);
 
-      // Valores ingresados son con IVA (total)
-      const total = totalCobrado;
-      const subtotal = total / 1.19;
-      const iva = total - subtotal;
-
       const motivoSel = motivoVariacionMap.get(proyecto.key) || '';
+      const motivoAjusteIVA = motivoSel === 'Ajuste tributario (IVA u otros impuestos)';
 
-      const selectMotivos = `
-        <select onchange="handleMotivoChange('${escapeHtmlAttr(proyecto.key)}', this.value)">
-          <option value="">Selecciona motivo</option>
-          <optgroup label="🔻 Motivos de BAJADA de precio">
-            ${MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('')}
-          </optgroup>
-          <optgroup label="🔺 Motivos de SUBIDA de precio">
-            ${MOTIVOS_SUBIDA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('')}
-          </optgroup>
-        </select>
-      `;
+      const total = totalCobrado;
+      const subtotal = motivoAjusteIVA ? total : (total / 1.19);
+      const iva = motivoAjusteIVA ? 0 : (total - subtotal);
+
+      let optionsHtml = '';
+      if (diferencia > 0) {
+        optionsHtml = MOTIVOS_SUBIDA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
+      } else if (diferencia < 0) {
+        optionsHtml = MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
+      }
+
+      const selectMotivos = diferencia === 0
+        ? `<select disabled><option value="">Sin diferencia cobrada</option></select>`
+        : `
+          <select onchange="handleMotivoChange('${escapeHtmlAttr(proyecto.key)}', this.value)">
+            <option value="">Selecciona motivo</option>
+            ${optionsHtml}
+          </select>
+        `;
 
       rw.innerHTML = `
         <div style="display:flex; flex-direction:column; gap:10px; font-size:14px;">
@@ -483,7 +478,7 @@
       switch(st) {
         case 'en_ejecucion': return 'st-en_ejecucion';
         case 'completada': return 'st-completada';
-        case 'cancelada': return 'st-cancelada'; // cancelada sin color por CSS
+        case 'cancelada': return 'st-cancelada';
         case 'postventa': return 'st-postventa';
         default: return '';
       }
@@ -521,7 +516,6 @@
     async function handleCobradoBlur(key, value) {
       const num = parseMoney(value);
       const proyecto = proyectos.find(p => p.key === key);
-      // Guardamos sólo en la primera partida del proyecto
       if (proyecto && proyecto.items?.length) {
         const it = proyecto.items[0];
         const pid = it.id || it.partida_id || it.partida_nombre || it.partida;
@@ -551,7 +545,6 @@
 
     async function handleMotivoChange(proyectoKey, value) {
       motivoVariacionMap.set(proyectoKey, value);
-      // Guarda en la primera partida del proyecto
       const proyecto = proyectos.find(p => p.key === proyectoKey);
       if (proyecto && proyecto.items?.length) {
         const it = proyecto.items[0];
