@@ -406,7 +406,7 @@
         : proyecto.items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
 
       const diffRaw = totalCobrado - totalCotizado;
-      const diferencia = Math.abs(diffRaw) < 1e-6 ? 0 : diffRaw; // evita -0
+      const diferencia = Math.abs(diffRaw) < 1e-6 ? 0 : diffRaw; // evita -0 por flotantes
       const diffSign = diferencia > 0 ? '+' : (diferencia < 0 ? '−' : '±');
       const diffClass = diferencia > 0 ? 'diff-pos' : (diferencia < 0 ? 'diff-neg' : 'diff-neutral');
       const diffAbs = Math.abs(diferencia);
@@ -424,6 +424,10 @@
       } else if (diferencia < 0) {
         optionsHtml = MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
       }
+
+      const diffPill = diferencia === 0
+        ? `<span class="diff-chip diff-neutral"><span class="diff-sign">±</span><span>${escapeHtml(fmt(0))}</span></span>`
+        : `<span class="diff-chip ${diffClass}"><span class="diff-sign">${diffSign}</span><span>${escapeHtml(fmt(diffAbs))}</span></span>`;
 
       const selectMotivos = diferencia === 0
         ? `<div class="resumen-label" style="margin-top:4px;">Sin diferencia</div>`
@@ -446,10 +450,7 @@
           </div>
           <div class="resumen-row" style="align-items:center; gap:8px;">
             <span class="resumen-label">Diferencia</span>
-            <span class="diff-chip ${diffClass}">
-              <span class="diff-sign">${diffSign}</span>
-              <span>${escapeHtml(fmt(diffAbs))}</span>
-            </span>
+            ${diffPill}
           </div>
           <div>
             <span class="resumen-label" style="display:block; margin-bottom:6px;">Motivo de la variación</span>
