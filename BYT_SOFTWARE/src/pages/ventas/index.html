@@ -232,8 +232,11 @@
             <td>${escapeHtml(p.cliente || '')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
             <td>
-              <input type="text" inputmode="decimal" value="${escapeHtml(fmt(totalCobrado))}"
-                     onmousedown="event.stopPropagation();" onfocus="this.select()"
+              <input type="text" inputmode="decimal"
+                     value="${escapeHtml(fmt(totalCobrado))}"
+                     onclick="event.stopPropagation();"
+                     onmousedown="event.stopPropagation();"
+                     onfocus="event.stopPropagation(); this.value = parseMoney(this.value); this.select();"
                      onblur="handleCobradoBlur('${escapeHtmlAttr(p.key)}', this.value)">
             </td>
             <td>
@@ -488,8 +491,10 @@
     }
     function parseMoney(val) {
       if (typeof val === 'number') return val;
-      const n = Number(String(val || '').replace(/[^0-9.-]/g, ''));
-      return Number.isFinite(n) ? n : 0;
+      const cleaned = String(val || '').replace(/[^0-9,-.]/g, '');
+      const noThousand = cleaned.replace(/[.,](?=.*[0-9]{3}\b)/g, ''); // elimina separadores de miles
+      const n = Number(noThousand.replace(',', '.')); // si queda una coma decimal, la pasa a punto
+      return Number.isFinite(n) ? Math.round(n) : 0;
     }
     function formatCliente(cli) {
       if (!cli) return '';
