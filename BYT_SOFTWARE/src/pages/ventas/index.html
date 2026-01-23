@@ -221,6 +221,9 @@
       const rows = proyectos.map(p => {
         const isSel = p.key === selectedProyectoKey;
         const dotClass = p.allGreen ? 'dot-ok' : 'dot-bad';
+        const totalCobrado = proyectoCobradoMap.has(p.key)
+          ? proyectoCobradoMap.get(p.key)
+          : p.items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
             <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
@@ -229,7 +232,7 @@
             <td>${escapeHtml(p.cliente || '')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
             <td>
-              <input type="number" min="0" step="1000" value="${Number(p.totalCobrado||0)}"
+              <input type="number" min="0" step="1000" value="${Number(totalCobrado||0)}"
                      onmousedown="event.stopPropagation();" onfocus="this.select()"
                      onblur="handleCobradoBlur('${escapeHtmlAttr(p.key)}', this.value)">
             </td>
@@ -418,17 +421,15 @@
     async function handleCobradoBlur(key, value) {
       const num = Number(value || 0) || 0;
       const proyecto = proyectos.find(p => p.key === key);
+      // Guardamos sólo en la primera partida del proyecto
       if (proyecto && proyecto.items?.length) {
-        const updates = proyecto.items.map((it, idx) => {
-          const pid = it.id || it.partida_id || it.partida_nombre || it.partida;
-          const newVal = idx === 0 ? num : 0; // asignar al primero, 0 al resto
-          ventasData = ventasData.map(v => {
-            const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
-            return idv === pid ? { ...v, total_venta: newVal } : v;
-          });
-          return persistVenta(pid, { total_venta: newVal });
+        const it = proyecto.items[0];
+        const pid = it.id || it.partida_id || it.partida_nombre || it.partida;
+        ventasData = ventasData.map(v => {
+          const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
+          return idv === pid ? { ...v, total_venta: num } : v;
         });
-        await Promise.all(updates);
+        await persistVenta(pid, { total_venta: num });
       }
       proyectoCobradoMap.set(key, num);
       renderProyectos();
