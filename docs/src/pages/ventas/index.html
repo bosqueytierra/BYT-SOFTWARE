@@ -22,6 +22,10 @@
       --st-en-ejecucion: #f6e0a3;
       --st-completada: #d6f5d6;
       --st-postventa: #f8d0d0;
+      --chip-green: #e9f7ef;
+      --chip-red: #fdeceb;
+      --chip-green-text: #1f9d55;
+      --chip-red-text: #d64545;
     }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
     .page { max-width: 1800px; width: 99%; margin: 22px auto 48px; padding: 0 28px; }
@@ -75,6 +79,17 @@
     .modal h3 { margin: 0 0 8px; }
     .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
     textarea { width:100%; min-height:140px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px; background:#fdfdfd; }
+
+    .diff-chip {
+      display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px; font-weight:700;
+    }
+    .diff-pos { background: var(--chip-green); color: var(--chip-green-text); }
+    .diff-neg { background: var(--chip-red); color: var(--chip-red-text); }
+    .diff-sign { font-size:18px; font-weight:800; }
+    .resumen-row { display:flex; justify-content:space-between; align-items:center; margin:4px 0; }
+    .resumen-label { color: var(--muted); font-size:13px; }
+    .resumen-value { font-weight:700; }
+    .resumen-divider { border:none; border-top:1px solid var(--border); margin:8px 0; }
   </style>
 </head>
 <body>
@@ -148,6 +163,37 @@
   <script>
     const ESTADOS = ['en_ejecucion','completada','cancelada','postventa'];
 
+    const MOTIVOS_BAJADA = [
+      'Ajuste a presupuesto del cliente',
+      'Descuento comercial aplicado',
+      'Ajuste tributario (IVA u otros impuestos)',
+      'Variación en costos reales de compra',
+      'Modificación de cantidades ejecutadas',
+      'Sustitución de materiales o proveedores',
+      'Error en cotización inicial',
+      'Reajuste por plazos de entrega',
+      'Eliminación de partidas no ejecutadas',
+      'Ajuste por logística o transporte',
+      'Regularización administrativa'
+    ];
+    const MOTIVOS_SUBIDA = [
+      'Aumento en costo de materiales',
+      'Aumento en costo de mano de obra',
+      'Incorporación de trabajos adicionales',
+      'Cambio en especificaciones del proyecto',
+      'Aumento por proveedor o marca seleccionada',
+      'Ajuste por variación del tipo de cambio',
+      'Incremento por urgencia en plazos',
+      'Costos adicionales de transporte o logística',
+      'Ajuste por condiciones del lugar de instalación',
+      'Reproceso o rectificación solicitada por el cliente',
+      'Diferencia entre mediciones estimadas y reales',
+      'Actualización de precios por vigencia de cotización',
+      'Ajuste por normativa o requerimientos técnicos',
+      'Aumento por disponibilidad de materiales',
+      'Ajuste por condiciones de pago'
+    ];
+
     let ventasData = [];
     let ventasFiltradas = [];
     let proyectos = [];
@@ -155,6 +201,7 @@
     const notesStore = new Map();
     let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
     const proyectoCobradoMap = new Map();
+    const motivoVariacionMap = new Map();
 
     document.addEventListener('DOMContentLoaded', async () => { await cargarVentas(); });
 
@@ -357,16 +404,61 @@
       }
       title.textContent = `Resumen del proyecto: ${proyecto.key}`;
 
-      const subtotal = proyecto.items.reduce((acc, it) => acc + (Number(it.precio_individual_estimado || 0) || 0), 0);
-      const iva = subtotal * 0.19;
-      const total = subtotal + iva;
+      const totalCotizado = proyecto.totalCotizado || 0;
+      const totalCobrado = proyectoCobradoMap.has(proyecto.key)
+        ? proyectoCobradoMap.get(proyecto.key)
+        : proyecto.items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
+
+      const diferencia = totalCobrado - totalCotizado;
+      const diffSign = diferencia >= 0 ? '+' : '−';
+      const diffClass = diferencia >= 0 ? 'diff-pos' : 'diff-neg';
+      const diffAbs = Math.abs(diferencia);
+
+      // Valores ingresados son con IVA (total)
+      const total = totalCobrado;
+      const subtotal = total / 1.19;
+      const iva = total - subtotal;
+
+      const motivoSel = motivoVariacionMap.get(proyecto.key) || '';
+
+      const selectMotivos = `
+        <select onchange="handleMotivoChange('${escapeHtmlAttr(proyecto.key)}', this.value)">
+          <option value="">Selecciona motivo</option>
+          <optgroup label="🔻 Motivos de BAJADA de precio">
+            ${MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('')}
+          </optgroup>
+          <optgroup label="🔺 Motivos de SUBIDA de precio">
+            ${MOTIVOS_SUBIDA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('')}
+          </optgroup>
+        </select>
+      `;
 
       rw.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:8px; font-size:14px;">
-          <div style="display:flex; justify-content:space-between;"><span>Subtotal</span><span class="money">${escapeHtml(fmt(subtotal))}</span></div>
-          <div style="display:flex; justify-content:space-between;"><span>IVA (19%)</span><span class="money">${escapeHtml(fmt(iva))}</span></div>
-          <hr style="border:none; border-top:1px solid var(--border);">
-          <div style="display:flex; justify-content:space-between; font-weight:800; font-size:15px;"><span>Total</span><span class="money">${escapeHtml(fmt(total))}</span></div>
+        <div style="display:flex; flex-direction:column; gap:10px; font-size:14px;">
+          <div class="resumen-row">
+            <span class="resumen-label">Precio cotizado</span>
+            <span class="resumen-value">${escapeHtml(fmt(totalCotizado))}</span>
+          </div>
+          <div class="resumen-row">
+            <span class="resumen-label">Precio cobrado</span>
+            <span class="resumen-value">${escapeHtml(fmt(totalCobrado))}</span>
+          </div>
+          <div class="resumen-row" style="align-items:center; gap:8px;">
+            <span class="resumen-label">Diferencia</span>
+            <span class="diff-chip ${diffClass}">
+              <span class="diff-sign">${diffSign}</span>
+              <span>${escapeHtml(fmt(diffAbs))}</span>
+            </span>
+          </div>
+          <div>
+            <span class="resumen-label" style="display:block; margin-bottom:6px;">Motivo de la variación</span>
+            ${selectMotivos}
+          </div>
+          <hr class="resumen-divider">
+          <div class="resumen-row"><span>Subtotal</span><span class="money">${escapeHtml(fmt(subtotal))}</span></div>
+          <div class="resumen-row"><span>IVA (19%)</span><span class="money">${escapeHtml(fmt(iva))}</span></div>
+          <hr class="resumen-divider">
+          <div class="resumen-row" style="font-weight:800; font-size:15px;"><span>Total</span><span class="money">${escapeHtml(fmt(total))}</span></div>
         </div>
       `;
     }
@@ -436,6 +528,7 @@
       }
       proyectoCobradoMap.set(key, num);
       renderProyectos();
+      renderResumen();
     }
 
     function handlePartidaInput(partidaId, field, value) {
@@ -449,6 +542,10 @@
         return v;
       });
       aplicarFiltros();
+    }
+
+    function handleMotivoChange(proyectoKey, value) {
+      motivoVariacionMap.set(proyectoKey, value);
     }
 
     function verCotizacion(id) { if (!id) return; window.location.href = `../cotizaciones/detalle.html?id=${id}`; }
@@ -492,8 +589,8 @@
     function parseMoney(val) {
       if (typeof val === 'number') return val;
       const cleaned = String(val || '').replace(/[^0-9,-.]/g, '');
-      const noThousand = cleaned.replace(/[.,](?=.*[0-9]{3}\b)/g, ''); // elimina separadores de miles
-      const n = Number(noThousand.replace(',', '.')); // si queda una coma decimal, la pasa a punto
+      const noThousand = cleaned.replace(/[.,](?=.*[0-9]{3}\b)/g, '');
+      const n = Number(noThousand.replace(',', '.'));
       return Number.isFinite(n) ? Math.round(n) : 0;
     }
     function formatCliente(cli) {
