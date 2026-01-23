@@ -58,7 +58,7 @@
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
-    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -425,7 +425,7 @@
       }
 
       const selectMotivos = diferencia === 0
-        ? `<select disabled><option value="">Sin diferencia cobrada</option></select>`
+        ? `<div class="resumen-label" style="margin-top:4px;">Sin diferencia</div>`
         : `
           <select onchange="handleMotivoChange('${escapeHtmlAttr(proyecto.key)}', this.value)">
             <option value="">Selecciona motivo</option>
