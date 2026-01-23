@@ -394,9 +394,15 @@
 
     async function persistVenta(partidaId, patch) {
       const row = ventasData.find(v => (v.id || v.partida_id || v.partida_nombre || v.partida) === partidaId);
-      if (!row || !row.id) return;
-      try { await window.supabaseClient.actualizarVenta(row.id, patch); }
-      catch (e) { console.warn('persistVenta error', e); }
+      if (!row || !row.id) return false;
+      try {
+        const res = await window.supabaseClient.actualizarVenta(row.id, patch);
+        if (!res?.success) throw new Error(res?.error || 'Error desconocido');
+        return true;
+      } catch (e) {
+        console.warn('persistVenta error', e);
+        return false;
+      }
     }
 
     function handleEstadoPartidaChange(e, partidaId) {
@@ -409,19 +415,20 @@
       aplicarFiltros();
     }
 
-    function handleCobradoBlur(key, value) {
+    async function handleCobradoBlur(key, value) {
       const num = Number(value || 0) || 0;
       const proyecto = proyectos.find(p => p.key === key);
       if (proyecto && proyecto.items?.length) {
-        proyecto.items.forEach((it, idx) => {
+        const updates = proyecto.items.map((it, idx) => {
           const pid = it.id || it.partida_id || it.partida_nombre || it.partida;
           const newVal = idx === 0 ? num : 0; // asignar al primero, 0 al resto
           ventasData = ventasData.map(v => {
             const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
             return idv === pid ? { ...v, total_venta: newVal } : v;
           });
-          persistVenta(pid, { total_venta: newVal });
+          return persistVenta(pid, { total_venta: newVal });
         });
+        await Promise.all(updates);
       }
       proyectoCobradoMap.set(key, num);
       renderProyectos();
