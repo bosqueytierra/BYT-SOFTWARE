@@ -405,7 +405,9 @@
         ? proyectoCobradoMap.get(proyecto.key)
         : proyecto.items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
 
-      const diferencia = totalCobrado - totalCotizado;
+      // Normalizamos posibles -0
+      const diffRaw = totalCobrado - totalCotizado;
+      const diferencia = Math.abs(diffRaw) < 1e-6 ? 0 : diffRaw;
       const diffSign = diferencia > 0 ? '+' : (diferencia < 0 ? '−' : '±');
       const diffClass = diferencia > 0 ? 'diff-pos' : (diferencia < 0 ? 'diff-neg' : 'diff-neutral');
       const diffAbs = Math.abs(diferencia);
