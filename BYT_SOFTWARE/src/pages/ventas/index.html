@@ -232,7 +232,7 @@
             <td>${escapeHtml(p.cliente || '')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
             <td>
-              <input type="number" min="0" step="1000" value="${Number(totalCobrado||0)}"
+              <input type="text" inputmode="decimal" value="${escapeHtml(fmt(totalCobrado))}"
                      onmousedown="event.stopPropagation();" onfocus="this.select()"
                      onblur="handleCobradoBlur('${escapeHtmlAttr(p.key)}', this.value)">
             </td>
@@ -419,7 +419,7 @@
     }
 
     async function handleCobradoBlur(key, value) {
-      const num = Number(value || 0) || 0;
+      const num = parseMoney(value);
       const proyecto = proyectos.find(p => p.key === key);
       // Guardamos sólo en la primera partida del proyecto
       if (proyecto && proyecto.items?.length) {
@@ -485,6 +485,11 @@
     function fmt(num) {
       if (num === null || num === undefined) return '$0';
       return new Intl.NumberFormat('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }).format(num);
+    }
+    function parseMoney(val) {
+      if (typeof val === 'number') return val;
+      const n = Number(String(val || '').replace(/[^0-9.-]/g, ''));
+      return Number.isFinite(n) ? n : 0;
     }
     function formatCliente(cli) {
       if (!cli) return '';
