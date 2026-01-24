@@ -24,6 +24,7 @@
       color: var(--text);
     }
 
+    /* Estilos originales (sidebar/topbar) se mantienen por referencia histórica, pero el shell real lo inyecta layout.js */
     .app-shell {
       display: grid;
       grid-template-columns: 80px 1fr;
@@ -168,18 +169,42 @@
   </style>
 </head>
 <body>
+  <!-- Solo el contenido propio; el layout (sidebar/topbar) lo inyecta layout.js -->
+  <section class="page-header">
+    <div>
+      <div class="breadcrumb">Dashboard / Resumen</div>
+      <h1>Dashboard</h1>
+    </div>
+    <div class="actions">
+      <button class="btn primary">+ Nueva cotización</button>
+      <button class="btn ghost">Exportar</button>
+    </div>
+  </section>
+
+  <section class="kpis">
+    <div class="kpi-card">Total cotizaciones<strong>128</strong></div>
+    <div class="kpi-card">En progreso<strong>32</strong></div>
+    <div class="kpi-card">Aprobadas<strong>76</strong></div>
+    <div class="kpi-card">Rechazadas<strong>20</strong></div>
+  </section>
+
+  <section class="content-card">
+    <h3>Últimas cotizaciones</h3>
+    <div class="table-placeholder">Aquí irá la tabla/lista de cotizaciones recientes.</div>
+  </section>
+
+  <!-- Sidebar/Topbar embebidos originales (comentados para que no se muestren; se deja referencia completa) -->
+  <!--
   <div class="app-shell expanded" id="appShell">
     <aside class="sidebar">
       <div class="brand"><img src="../assets/logo_byt.png" alt="BYT"></div>
       <div class="nav-stack">
-
         <div class="nav-group">
           <div class="nav-item active" title="Proyectos">
             <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4.1a1.5 1.5 0 0 1 1.06.44l1.3 1.3H19A1.5 1.5 0 0 1 20.5 8.8l-.6 9A1.5 1.5 0 0 1 18.4 19H5.6a1.5 1.5 0 0 1-1.5-1.3l-.6-9Z"/></svg></span>
             <span class="nav-label">Proyectos</span>
           </div>
         </div>
-
         <div class="nav-group">
           <div class="nav-item" title="Cotizaciones">
             <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h5.9a1.5 1.5 0 0 1 1.06.44l3.1 3.1A1.5 1.5 0 0 1 18 7.6V19.5A1.5 1.5 0 0 1 16.5 21h-9A1.5 1.5 0 0 1 6 19.5v-15Z"/><path d="M14.5 3v4a.5.5 0 0 0 .5.5h4"/><path d="M9 13h6M9 16.5h4"/></svg></span>
@@ -190,14 +215,12 @@
             <a id="link-admin-cot" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/cotizaciones/consultar.html">Administrar cotizaciones</a>
           </div>
         </div>
-
         <div class="nav-group">
           <div class="nav-item" title="Compras">
             <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 7h11l-1 11h-9l-1-11Z"/><path d="M9 7V5.5a3 3 0 1 1 6 0v2"/><circle cx="10" cy="19.5" r="1"/><circle cx="15" cy="19.5" r="1"/></svg></span>
             <span class="nav-label">Compras</span>
           </div>
         </div>
-
         <div class="nav-group">
           <div class="nav-item" title="Ventas">
             <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16l-2 10H6L4 7Z"/><path d="M9 7V5a3 3 0 1 1 6 0v2"/><circle cx="10" cy="18.5" r="1"/><circle cx="15" cy="18.5" r="1"/></svg></span>
@@ -208,14 +231,12 @@
             <a href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/ventas/dashboard.html">Dashboard ventas</a>
           </div>
         </div>
-
         <div class="nav-group">
           <div class="nav-item" title="Finanzas">
             <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 14h3"/></svg></span>
             <span class="nav-label">Finanzas</span>
           </div>
         </div>
-
         <div class="nav-group">
           <div class="nav-item" title="Datos">
             <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-11Z"/><path d="M8 9.5h8M8 12h8M8 14.5h5"/></svg></span>
@@ -228,7 +249,6 @@
             <a href="#">Gestión Usuarios y Permisos</a>
           </div>
         </div>
-
         <div class="nav-group">
           <div class="nav-item" title="Configuración">
             <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1 1 0 0 0 .2.4l.4.6a1 1 0 0 1-.1 1.2l-.4.4a1 1 0 0 1-1.2.1l-.6-.3a1 1 0 0 0-.5-.1 7 7 0 0 1-1.1.6 1 1 0 0 0-.6.9v.6a1 1 0 0 1-1 1h-.6a1 1 0 0 1-1-.7l-.2-.6a7 7 0 0 1-.7-.4 1 1 0 0 0-1 0l-.7.4-.2.6a1 1 0 0 1-1 .7h-.6a1 1 0 0 1-1-1v-.6a1 1 0 0 0-.6-.9 7 7 0 0 1-1.1-.6 1 1 0 0 0-.5.1l-.6.3a1 1 0 0 1-1.2-.1l-.4-.4a1 1 0 0 1-.1-1.2l.4-.6a1 1 0 0 0 .2-.4 7 7 0 0 1 0-1 1 1 0 0 0-.2-.4l-.4-.6a1 1 0 0 1 .1-1.2l.4-.4a1 1 0 0 1 1.2-.1l.6.3a1 1 0 0 0 .5.1 7 7 0 0 1 1.1-.6 1 1 0 0 0 .6-.9v-.6a1 1 0 0 1 1-1h.6a1 1 0 0 1 1 .7l.2.6.7.4a1 1 0 0 0 1 0l.7-.4.2-.6a1 1 0 0 1 1-.7h.6a1 1 0 0 1 1 1v.6a1 1 0 0 0 .6.9 7 7 0 0 1 1.1.6 1 1 0 0 0 .5-.1l.6-.3a1 1 0 0 1 1.2.1l.4.4a1 1 0 0 1 .1 1.2l-.4.6a1 1 0 0 0-.2.4 7 7 0 0 1 0 1Z"/></svg></span>
@@ -239,9 +259,7 @@
             <a href="#">Preferencias</a>
           </div>
         </div>
-
       </div>
-
       <div class="sidebar-footer">
         <div class="profile-pill" title="Perfil / Cerrar sesión">
           <div class="profile-avatar">👤</div>
@@ -249,7 +267,6 @@
         </div>
       </div>
     </aside>
-
     <div class="main">
       <header class="topbar">
         <div class="left"><span class="logo-text" style="font-weight:700;color:var(--primary);">Bosque y Tierra</span></div>
@@ -261,7 +278,6 @@
           <button class="icon-btn" title="Más opciones">⋯</button>
         </div>
       </header>
-
       <section class="page-header">
         <div>
           <div class="breadcrumb">Dashboard / Resumen</div>
@@ -272,28 +288,18 @@
           <button class="btn ghost">Exportar</button>
         </div>
       </section>
-
       <section class="kpis">
         <div class="kpi-card">Total cotizaciones<strong>128</strong></div>
         <div class="kpi-card">En progreso<strong>32</strong></div>
         <div class="kpi-card">Aprobadas<strong>76</strong></div>
         <div class="kpi-card">Rechazadas<strong>20</strong></div>
       </section>
-
       <section class="content-card">
         <h3>Últimas cotizaciones</h3>
         <div class="table-placeholder">Aquí irá la tabla/lista de cotizaciones recientes.</div>
       </section>
     </div>
   </div>
-
-  <script>
-    const appShell = document.getElementById('appShell');
-    const sidebar  = document.querySelector('.sidebar');
-    if (appShell && sidebar) {
-      sidebar.addEventListener('mouseenter', () => appShell.classList.add('expanded'));
-      sidebar.addEventListener('mouseleave', () => appShell.classList.remove('expanded'));
-    }
-  </script>
+  -->
 </body>
 </html>
