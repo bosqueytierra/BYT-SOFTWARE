@@ -3,7 +3,7 @@
   if (window.__BYT_SHELL_APPLIED__) return;
   window.__BYT_SHELL_APPLIED__ = true;
 
-  // Ruta del fragmento: funciona en GitHub Pages y en local
+  // Ruta del fragmento: GitHub Pages vs local
   const isGhPages = window.location.pathname.includes('/BYT-SOFTWARE/BYT_SOFTWARE/');
   const FRAGMENT_URL = isGhPages
     ? '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html'
@@ -20,14 +20,15 @@
   // Guarda contenido actual de la página
   const pageContent = document.body.innerHTML;
 
-  // Carga fragmento shell
+  // Carga y parsea el fragmento shell
   const html = await fetch(FRAGMENT_URL).then(r => {
     if (!r.ok) throw new Error(`No se pudo cargar layout: ${r.status}`);
     return r.text();
   });
+  const shellDoc = new DOMParser().parseFromString(html, 'text/html');
 
-  // Reemplaza todo el documento por el fragmento
-  document.documentElement.innerHTML = html;
+  // Reemplaza solo el body por el del shell
+  document.body.innerHTML = shellDoc.body.innerHTML;
 
   // Restaura estilos específicos de la página
   if (pageHeadStyles) document.head.insertAdjacentHTML('beforeend', pageHeadStyles);
@@ -87,7 +88,6 @@
     el.className = isChild ? 'submenu-link' : 'nav-item';
     if (hasHref) el.setAttribute('href', item.href);
     else el.classList.add('disabled');
-
     const icon = iconMap[item.icon] || '';
     el.innerHTML = `<span class="nav-icon">${icon}</span><span class="nav-label">${item.label}</span>`;
     return el;
