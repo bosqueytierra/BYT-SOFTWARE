@@ -90,17 +90,7 @@ JavaScript
     return el;
   }
 
-  function createNavItem(item, isChild = false) {
-    const hasHref = !!item.href;
-    const el = document.createElement(hasHref ? 'a' : 'div');
-    el.className = isChild ? 'submenu-link' : 'nav-item';
-    if (hasHref) el.setAttribute('href', item.href);
-    else el.classList.add('disabled'); // sin ruta, deshabilitado
-
-    const icon = iconMap[item.icon] || '•';
-    el.innerHTML = `<span class="nav-icon">${icon}</span><span class="nav-label">${item.label}</span>`;
-    return el;
-  }
+ 
 
   function renderMenu() {
     if (!navStack) return;
