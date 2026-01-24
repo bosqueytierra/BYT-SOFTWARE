@@ -75,7 +75,7 @@
       gap: 12px;
       box-shadow: var(--shadow-soft);
     }
-    .logo-chip { display: none !important; } /* ocultamos el chip BYT */
+    .logo-chip { display: none !important; }
     .header-title { margin: 0; font-size: 18px; font-weight: 700; color: var(--text); }
     .header-subtitle { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
 
@@ -200,6 +200,33 @@
       box-shadow: 0 16px 26px rgba(53,86,76,0.28);
     }
     .btn-sm { padding: 6px 10px; font-size: 12px; border-radius: 10px; }
+
+    /* Overlay carga edición */
+    .bt-loading-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.25);
+      display: none; align-items: center; justify-content: center;
+    }
+    .bt-loading-card {
+      background: #fff; border-radius: 16px; padding: 18px 22px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.16);
+      max-width: 420px; width: 92%;
+      display: flex; flex-direction: column; gap: 12px; text-align: center;
+      color: #1f2a36; font-family: "Inter","SF Pro Display","Roboto",sans-serif;
+    }
+    .bt-bounce {
+      width: 56px; height: 56px; margin: 0 auto;
+      border-radius: 16px; background: linear-gradient(135deg, #3f705d, #2e5e4e);
+      animation: bt-bounce 0.9s ease-in-out infinite;
+    }
+    @keyframes bt-bounce {
+      0% { transform: translateY(0); }
+      40% { transform: translateY(-10px) scale(1.03); }
+      100% { transform: translateY(0); }
+    }
+    .bt-loading-title { font-weight: 800; font-size: 16px; margin: 0; }
+    .bt-loading-text { font-size: 14px; color: #4a5568; margin: 0; line-height: 1.45; }
   </style>
 </head>
 <body>
@@ -340,6 +367,15 @@
       </div>
     </div>
 
+    <!-- Overlay carga edición -->
+    <div id="bt-loading-overlay" class="bt-loading-overlay">
+      <div class="bt-loading-card">
+        <div class="bt-bounce"></div>
+        <p class="bt-loading-title">Cargando cotización…</p>
+        <p class="bt-loading-text" id="bt-loading-phrase"></p>
+      </div>
+    </div>
+
     <!-- Config Supabase: URL y ANON key -->
     <script src="../../lib/supabaseConfig.js"></script>
     <script type="module" src="../../js/supabaseBrowserClient.js"></script>
@@ -347,113 +383,65 @@
     <script src="../../js/categorias_reales.js" defer></script>
     <script src="../../js/wizard.js" defer></script>
 
+    <!-- Header en vivo: título = nombre de proyecto, subtítulo = partidas -->
+    <script>
+    (function () {
+      const titleEl = document.querySelector('[data-wizard-title]');
+      const subEl   = document.querySelector('[data-wizard-subtitle]');
+      if (!titleEl || !subEl) return;
 
+      const getNombreProyecto = () => {
+        const d = window.bytWizard?.datos || {};
+        const fromDatos = (d.cliente?.nombre_proyecto || '').trim();
+        if (fromDatos) return fromDatos;
+        const inp = document.querySelector('input[name="nombre_proyecto"]');
+        return (inp?.value || '').trim();
+      };
 
+      const getPartidas = () => {
+        const d = window.bytWizard?.datos || {};
+        const arr = (d.partidas || []).map(p => (p?.nombre || '').trim()).filter(Boolean);
+        if (arr.length) return arr;
 
+        return Array.from(document.querySelectorAll(
+          '[data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre'
+        ))
+        .map(el => (el.value || '').trim())
+        .filter(Boolean);
+      };
 
+      const refreshHeader = () => {
+        titleEl.textContent = getNombreProyecto() || 'Nueva Cotización';
+        const parts = getPartidas();
+        subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
+      };
 
-<!-- Header en vivo: título = nombre de proyecto, subtítulo = partidas -->
-<script>
-(function () {
-  const titleEl = document.querySelector('[data-wizard-title]');
-  const subEl   = document.querySelector('[data-wizard-subtitle]');
-  if (!titleEl || !subEl) return;
-
-  // Selectores separados
-  const nameSelectors = [
-    'input[name="nombre_proyecto"]',
-    'input[id="nombre_proyecto"]',
-    'input[name*="proyecto"]',
-    'input[id*="proyecto"]',
-    'input[placeholder*="Proyecto"]',
-    'input[aria-label*="Proyecto"]'
-  ].join(', ');
-
-  const partidaSelectors = [
-    '[data-partida-nombre]',
-    '.partida-item input',
-    'input[name="partidas[]"]',
-    'input.partida-nombre',
-    'input[name*="partida"]',
-    'input[id*="partida"]',
-    'input[placeholder*="partida"]',
-    'input[aria-label*="partida"]'
-  ].join(', ');
-
-  const getNombreProyecto = () => {
-    const d = window.bytWizard?.datos || {};
-    const fromDatos = (d.cliente?.nombre_proyecto || '').trim();
-    if (fromDatos) return fromDatos;
-    const inp = document.querySelector(nameSelectors);
-    return (inp?.value || '').trim();
-  };
-
-  const getPartidas = () => {
-    const d = window.bytWizard?.datos || {};
-    const arr = (d.partidas || []).map(p => (p?.nombre || '').trim()).filter(Boolean);
-    if (arr.length) return arr;
-    return Array.from(document.querySelectorAll(partidaSelectors))
-      .map(el => (el.value || '').trim())
-      .filter(Boolean);
-  };
-
-  const refreshHeader = () => {
-    titleEl.textContent = getNombreProyecto() || 'Nueva Cotización';
-    const parts = getPartidas();
-    subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
-  };
-
-  // Eventos en vivo: solo inputs de proyecto o partidas
-  const handler = (e) => {
-    if (e.target.matches(nameSelectors) || e.target.matches(partidaSelectors)) {
-      requestAnimationFrame(refreshHeader);
-    }
-  };
-  document.addEventListener('input', handler, { capture: true });
-  document.addEventListener('keyup', handler, { capture: true });
-
-  // Observer por si el wizard re-renderiza inputs
-  const mo = new MutationObserver(() => requestAnimationFrame(refreshHeader));
-  mo.observe(document.body, { childList: true, subtree: true });
-
-  // Hook sobre wizard para refrescar después de sus métodos
-  const hookWizard = () => {
-    const wiz = window.bytWizard;
-    if (!wiz || wiz.__headerHooked) return;
-    ['mostrarPaso','agregarPartida','eliminarPartida','actualizarPartidaNombre','_actualizarPartidaNombre','setDato','setCliente']
-      .forEach(m => {
-        if (typeof wiz[m] === 'function') {
-          const orig = wiz[m].bind(wiz);
-          wiz[m] = function(...args){ const r = orig(...args); requestAnimationFrame(refreshHeader); return r; };
+      const wireEvents = () => {
+        document.addEventListener('input', (e) => {
+          if (e.target.matches('input[name="nombre_proyecto"], [data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre')) {
+            refreshHeader();
+          }
+        });
+        const wiz = window.bytWizard;
+        if (wiz && wiz.mostrarPaso && !wiz.__headerPatched) {
+          const orig = wiz.mostrarPaso.bind(wiz);
+          wiz.mostrarPaso = function(n){
+            const r = orig(n);
+            setTimeout(refreshHeader, 0);
+            return r;
+          };
+          wiz.__headerPatched = true;
         }
-      });
-    wiz.__headerHooked = true;
-  };
+      };
 
-  // Refresco inicial + polling corto hasta que exista bytWizard
-  const poll = setInterval(() => {
-    hookWizard();
-    refreshHeader();
-    if (window.bytWizard) clearInterval(poll);
-  }, 200);
+      const wait = setInterval(() => {
+        refreshHeader();
+        wireEvents();
+        if (window.bytWizard) clearInterval(wait);
+      }, 400);
+    })();
+    </script>
 
-  window.addEventListener('beforeunload', () => {
-    mo.disconnect();
-    clearInterval(poll);
-  });
-
-  refreshHeader();
-})();
-</script>
-
-
-
-
-
-
-
-
-    
     <script>
       if (!localStorage.getItem('byt_logged_in')) {
         window.location.href = '../login/login.html';
@@ -498,21 +486,64 @@
       });
     </script>
 
-    <!-- Carga en modo edición o duplicado -->
+    <!-- Carga en modo edición o duplicado + overlay 4s solo edición -->
     <script>
-      document.addEventListener('DOMContentLoaded', async () => {
-        const params = new URLSearchParams(window.location.search);
-        const editId = params.get('id');
-        const duplicateId = params.get('duplicate');
-        const targetId = duplicateId || editId;
-        if (!targetId) return;
+      (function(){
+        const FRASES = [
+          "Medir dos veces no es exagerar, es respetar el material.",
+          "La madera no perdona el apuro, pero siempre recompensa la paciencia.",
+          "Un buen mueble no se apura, se construye con intención.",
+          "El detalle que no se ve es el que realmente sostiene todo.",
+          "La precisión no se nota a simple vista, pero se siente al usarlo.",
+          "Aquí las cosas toman tiempo porque buscamos que duren.",
+          "La madera marca el ritmo y el oficio lo acompaña.",
+          "Un corte bien pensado ahorra muchos ajustes después.",
+          "La calma también es parte del proceso de diseño.",
+          "El taller enseña que apurarse casi nunca conviene."
+        ];
+        const pick = (arr) => arr[Math.floor(Math.random()*arr.length)];
 
-        try {
-          if (window.supabaseClient?.init) await window.supabaseClient.init();
-          if (window.bytWizard?._ensureSupabase) await window.bytWizard._ensureSupabase(5000);
-          if (window.bytWizard?.loadCotizacionSupabase) {
-            const res = await window.bytWizard.loadCotizacionSupabase(targetId);
-            if (!res?.ok) throw new Error(res?.error || 'No se pudo cargar');
+        function showOverlay() {
+          const ov = document.getElementById('bt-loading-overlay');
+          const ph = document.getElementById('bt-loading-phrase');
+          if (!ov || !ph) return;
+          ph.textContent = pick(FRASES);
+          ov.style.display = 'flex';
+        }
+        function hideOverlay() {
+          const ov = document.getElementById('bt-loading-overlay');
+          if (ov) ov.style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+          const params = new URLSearchParams(window.location.search);
+          const editId = params.get('id');
+          const duplicateId = params.get('duplicate');
+          const targetId = duplicateId || editId;
+          if (!targetId) return;
+
+          const useOverlay = !!editId && !duplicateId; // solo edición, no duplicado
+          if (useOverlay) showOverlay();
+
+          try {
+            if (window.supabaseClient?.init) await window.supabaseClient.init();
+            if (window.bytWizard?._ensureSupabase) await window.bytWizard._ensureSupabase(5000);
+          } catch (e) {
+            console.warn('Init supa/wizard', e);
+          }
+
+          let tries = 50;
+          while (tries-- && !window.bytWizard?.loadCotizacionSupabase) {
+            await new Promise(r => setTimeout(r, 100));
+          }
+          if (!window.bytWizard?.loadCotizacionSupabase) {
+            console.warn('bytWizard no está listo');
+            if (useOverlay) hideOverlay();
+            return;
+          }
+
+          try {
+            await window.bytWizard.loadCotizacionSupabase(targetId);
             if (duplicateId) {
               const d = window.bytWizard.datos || {};
               d._id = null;
@@ -524,14 +555,17 @@
               window.bytWizard.mostrarPaso(1);
               window.bytWizard.actualizarBarraSuperior?.();
             }
-          } else {
-            console.warn('loadCotizacionSupabase no disponible en bytWizard');
+          } catch (e) {
+            console.error('Error cargando cotización (ed/dup)', e);
+            alert('No se pudo cargar la cotización. Intenta de nuevo.');
           }
-        } catch (e) {
-          console.error('Error cargando cotización (ed/dup)', e);
-          alert('No se pudo cargar la cotización. Intenta de nuevo.');
-        }
-      });
+
+          if (useOverlay) {
+            await new Promise(r => setTimeout(r, 4000)); // fijo ~4s
+            hideOverlay();
+          }
+        });
+      })();
     </script>
 
     <!-- Menú de pasos: construcción y hook con wizard + actualiza barra -->
@@ -623,7 +657,7 @@
         function maxFor(file) {
           if (file.type === 'video/mp4') return MAX_VIDEO_MB;
           if (file.type === 'application/pdf') return MAX_PDF_MB;
-          return MAX_IMG_MB; // imágenes
+          return MAX_IMG_MB;
         }
 
         async function uploadFile(file, nota = '') {
@@ -674,7 +708,6 @@
             .eq('cotizacion_id', id)
             .order('created_at', { ascending: false });
           if (error) throw error;
-          // excluir los que estén en subcarpeta cad/
           return (data || []).filter(item => {
             const p = item.path || '';
             return !(p.includes(`${id}/cad/`) || p.includes(`/cad/`));
@@ -786,7 +819,6 @@
           }
         });
 
-        // Cargar listado al entrar (si hay ID)
         setTimeout(() => {
           canUpload();
           refreshList();
@@ -794,12 +826,11 @@
       })();
     </script>
 
-    <!-- Archivos CAD/3D: subida/listado/ver/eliminar (Supabase) -->
+    <!-- Archivos CAD/3D -->
     <script>
       (function(){
         const BUCKET = 'cotizaciones';
         const MAX_MB = 100;
-        // Permitimos extensiones comunes CAD/3D y contenedores
         const EXT_ALLOW = ['skp','3ds','max','dwg','dxf','fbx','obj','stl','rvt','step','stp','iges','igs','ifc','blend','zip','rar','7z','cad'];
         const drop = document.getElementById('dropzone-cad');
         const input = document.getElementById('file-input-cad');
@@ -809,19 +840,16 @@
         function getCotizacionId() {
           return window.bytWizard?.datos?._id || window.bytWizard?.datos?.id || null;
         }
-
         function sanitizeName(name) {
           return name.normalize("NFD").replace(/[\u0300-\u036f]/g, '')
             .replace(/[^a-zA-Z0-9._-]/g, '_');
         }
-
         function canUpload() {
           const id = getCotizacionId();
           const ok = !!(id && window.supabaseClient);
           if (hint) hint.style.display = ok ? 'none' : 'block';
           return ok;
         }
-
         function extOf(file) {
           const parts = (file.name || '').toLowerCase().split('.');
           return parts.length > 1 ? parts.pop() : '';
@@ -831,13 +859,9 @@
           if (!canUpload()) throw new Error('Guarda primero la cotización');
           const id = getCotizacionId();
           if (!id) throw new Error('Sin ID de cotización');
-
           if (file.size > MAX_MB * 1024 * 1024) throw new Error(`Máx ${MAX_MB} MB para CAD/3D`);
-
           const ext = extOf(file);
-          if (!EXT_ALLOW.includes(ext)) {
-            throw new Error('Extensión no permitida para CAD/3D');
-          }
+          if (!EXT_ALLOW.includes(ext)) throw new Error('Extensión no permitida para CAD/3D');
 
           const ts = Date.now();
           const rand = Math.random().toString(36).slice(2, 7);
@@ -870,7 +894,6 @@
           if (!canUpload()) return [];
           const id = getCotizacionId();
           if (!id) return [];
-          // Filtramos por prefijo cad/ en el path
           const { data, error } = await supabaseClient
             .from('cotizacion_files')
             .select('id,path,filename,size,created_at,content_type,nota')
@@ -985,7 +1008,6 @@
           }
         });
 
-        // Cargar listado al entrar (si hay ID)
         setTimeout(() => {
           canUpload();
           refreshList();
@@ -993,72 +1015,67 @@
       })();
     </script>
    
-  <!-- Título/subtítulo dinámicos: proyecto y partidas -->
-  <script>
-    (function () {
-      const titleEl = document.querySelector('[data-wizard-title]');
-      const subEl   = document.querySelector('[data-wizard-subtitle]');
-      if (!titleEl || !subEl) return;
+    <!-- Título/subtítulo dinámicos -->
+    <script>
+      (function () {
+        const titleEl = document.querySelector('[data-wizard-title]');
+        const subEl   = document.querySelector('[data-wizard-subtitle]');
+        if (!titleEl || !subEl) return;
 
-      const getNombreProyecto = () => {
-        const d = window.bytWizard?.datos || {};
-        const fromDatos = (d.cliente?.nombre_proyecto || '').trim();
-        if (fromDatos) return fromDatos;
-        const inp = document.querySelector('input[name="nombre_proyecto"]');
-        return (inp?.value || '').trim();
-      };
+        const getNombreProyecto = () => {
+          const d = window.bytWizard?.datos || {};
+          const fromDatos = (d.cliente?.nombre_proyecto || '').trim();
+          if (fromDatos) return fromDatos;
+          const inp = document.querySelector('input[name="nombre_proyecto"]');
+          return (inp?.value || '').trim();
+        };
 
-      const getPartidas = () => {
-        const d = window.bytWizard?.datos || {};
-        const arr = (d.partidas || []).map(p => (p?.nombre || '').trim()).filter(Boolean);
-        if (arr.length) return arr;
+        const getPartidas = () => {
+          const d = window.bytWizard?.datos || {};
+          const arr = (d.partidas || []).map(p => (p?.nombre || '').trim()).filter(Boolean);
+          if (arr.length) return arr;
 
-        // fallback: lee inputs en DOM
-        return Array.from(document.querySelectorAll(
-          '[data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre'
-        ))
-        .map(el => (el.value || '').trim())
-        .filter(Boolean);
-      };
+          return Array.from(document.querySelectorAll(
+            '[data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre'
+          ))
+          .map(el => (el.value || '').trim())
+          .filter(Boolean);
+        };
 
-      const refreshHeader = () => {
-        titleEl.textContent = getNombreProyecto() || 'Nueva Cotización';
-        const parts = getPartidas();
-        subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
-      };
+        const refreshHeader = () => {
+          titleEl.textContent = getNombreProyecto() || 'Nueva Cotización';
+          const parts = getPartidas();
+          subEl.textContent = parts.length ? parts.join(' | ') : 'Definir partidas';
+        };
 
-      const wireEvents = () => {
-        document.addEventListener('input', (e) => {
-          if (e.target.matches('input[name="nombre_proyecto"], [data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre')) {
-            refreshHeader();
+        const wireEvents = () => {
+          document.addEventListener('input', (e) => {
+            if (e.target.matches('input[name="nombre_proyecto"], [data-partida-nombre], .partida-item input, input[name="partidas[]"], input.partida-nombre')) {
+              refreshHeader();
+            }
+          });
+          const wiz = window.bytWizard;
+          if (wiz && wiz.mostrarPaso && !wiz.__headerPatched) {
+            const orig = wiz.mostrarPaso.bind(wiz);
+            wiz.mostrarPaso = function(n){
+              const r = orig(n);
+              setTimeout(refreshHeader, 0);
+              return r;
+            };
+            wiz.__headerPatched = true;
           }
-        });
-        const wiz = window.bytWizard;
-        if (wiz && wiz.mostrarPaso && !wiz.__headerPatched) {
-          const orig = wiz.mostrarPaso.bind(wiz);
-          wiz.mostrarPaso = function(n){
-            const r = orig(n);
-            setTimeout(refreshHeader, 0);
-            return r;
-          };
-          wiz.__headerPatched = true;
-        }
-      };
+        };
 
-      const wait = setInterval(() => {
-        refreshHeader();
-        wireEvents();
-        if (window.bytWizard) clearInterval(wait);
-      }, 400);
-    })();
-  </script>
+        const wait = setInterval(() => {
+          refreshHeader();
+          wireEvents();
+          if (window.bytWizard) clearInterval(wait);
+        }, 400);
+      })();
+    </script>
 
-  <!-- Inyecta shell (sidebar+topbar) -->
-  <script src="../../js/layout.js"></script>
+    <!-- Inyecta shell (sidebar+topbar) -->
+    <script src="../../js/layout.js"></script>
   </div>
 </body>
 </html>
-
-
-
-
