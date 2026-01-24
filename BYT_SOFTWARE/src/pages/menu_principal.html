@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BYT SOFTWARE - Panel</title>
   <link rel="stylesheet" href="../styles/global.css">
-  <!-- Loader -->
   <link rel="stylesheet" href="../styles/loader.css">
   <!-- Menú unificado + shell -->
   <script src="../js/menuConfig.js"></script>
@@ -24,152 +23,31 @@
       color: var(--text);
     }
 
-    /* Estilos originales (sidebar/topbar) se mantienen por referencia histórica, pero el shell real lo inyecta layout.js */
-    .app-shell {
-      display: grid;
-      grid-template-columns: 80px 1fr;
-      min-height: 100vh;
-      transition: grid-template-columns 0.6s ease;
-    }
-    .app-shell.expanded { grid-template-columns: 240px 1fr; }
-
-    /* Sidebar */
-    .sidebar {
-      background: var(--sidebar);
-      color: #fff;
-      padding: 16px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow: hidden;
-      transition: width 0.6s ease, box-shadow 0.6s ease, backdrop-filter 0.6s ease, background 0.6s ease;
-      width: 80px;
-      backdrop-filter: blur(0px);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-    }
-    .app-shell.expanded .sidebar {
-      width: 240px;
-      background: linear-gradient(180deg, #222a35 0%, #1b222b 100%);
-      backdrop-filter: blur(6px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
-    }
-
-    /* Logo sin recuadro y tamaño moderado */
-    .brand {
-      width: auto;
-      height: auto;
-      padding: 4px 0;
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      margin: 0 auto;
-      display: grid;
-      place-items: center;
-    }
-    .brand img {
-      width: 52px;
-      max-height: 52px;
-      height: auto;
-      object-fit: contain;
-    }
-
-    .nav-stack { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 8px; }
-    .nav-group { display: flex; flex-direction: column; gap: 0; }
-
-    .nav-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 12px; cursor: pointer;
-      background: var(--pill-bg); border: 1px solid var(--pill-border);
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
-      color: #fff; font-weight: 600;
-      box-shadow: 0 10px 18px rgba(0,0,0,0.12);
-    }
-    .nav-item:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 30px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.06);
-      background: var(--pill-hover);
-    }
-    .nav-item.active {
-      border-color: rgba(255,255,255,0.5);
-      background: linear-gradient(145deg, #2c3b4b, #1e2936);
-      box-shadow: 0 18px 36px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.08);
-    }
-    .nav-icon svg { width: 22px; height: 22px; stroke: var(--icon); stroke-width: 1.8; fill: none; flex-shrink: 0; }
-    .nav-label { display: none; white-space: nowrap; opacity: 0; transition: opacity 0.3s ease; }
-    .app-shell.expanded .nav-label { display: inline; opacity: 1; }
-
-    .submenu { display: none; flex-direction: column; gap: 6px; margin: 6px 0 0 34px; }
-    .submenu a {
-      color: #e8edf2; text-decoration: none; font-size: 13px;
-      padding: 6px 8px; border-radius: 10px; transition: background 0.15s ease, color 0.15s ease;
-    }
-    .submenu a:hover { background: rgba(255,255,255,0.12); color: #fff; }
-    .app-shell.expanded .nav-group:hover .submenu,
-    .app-shell.expanded .nav-group:focus-within .submenu { display: flex; }
-
-    /* Sidebar footer (perfil) */
-    .sidebar-footer { margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
-    .profile-pill {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 12px;
-      background: var(--pill-bg); border: 1px solid var(--pill-border);
-      color: #fff; font-weight: 600; cursor: pointer;
-      transition: background 0.18s ease, box-shadow 0.18s ease;
-      box-shadow: 0 10px 18px rgba(0,0,0,0.12);
-    }
-    .profile-pill:hover { background: var(--pill-hover); box-shadow: 0 16px 26px rgba(0,0,0,0.16); }
-    .profile-avatar {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: linear-gradient(135deg, #4b596a, #2c3642);
-      display: grid; place-items: center; font-size: 14px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
-    }
-    .profile-label { display: none; opacity: 0; transition: opacity 0.3s ease; }
-    .app-shell.expanded .profile-label { display: inline; opacity: 1; }
-
-    /* Topbar */
-    .topbar {
-      background: #ffffff; border-bottom: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-      padding: 12px 18px; display: grid; grid-template-columns: 1fr 1.5fr 1fr; align-items: center; gap: 12px;
-      position: sticky; top: 0; z-index: 20;
-    }
-    .topbar .left { display: flex; align-items: center; gap: 10px; }
-    .topbar .right { display: flex; justify-content: flex-end; gap: 8px; }
-    .icon-btn { border: none; background: #eef2f5; padding: 9px 10px; border-radius: 10px; cursor: pointer; color: var(--text); }
-    .search-bar {
-      display: flex; align-items: center; background: #f0f3f5; border: 1px solid var(--border); border-radius: 12px; padding: 0 12px; gap: 8px;
-    }
-    .search-bar input { width: 100%; border: none; background: transparent; padding: 10px 0; outline: none; font-size: 14px; }
-
-    /* Page header, KPIs y cards */
+    /* Estilos del contenido propio */
     .page-header { display: flex; justify-content: space-between; align-items: center; padding: 18px; gap: 12px; }
     .breadcrumb { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
     h1 { margin: 0; font-size: 22px; }
     .actions { display: none; }
+
     .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; padding: 0 18px 12px; }
     .kpi-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.03); color: var(--muted);
     }
     .kpi-card strong { display: block; margin-top: 6px; color: var(--text); font-size: 20px; }
+
     .content-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin: 0 18px 18px; padding: 16px; box-shadow: var(--shadow);
     }
     .table-placeholder { border: 1px dashed var(--border); border-radius: 10px; padding: 28px; text-align: center; color: var(--muted); }
 
     @media (max-width: 960px) {
-      .app-shell { grid-template-columns: 72px 1fr; }
-      .topbar { grid-template-columns: 1fr; }
       .page-header { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
-  <!-- Solo el contenido propio; el layout (sidebar/topbar) lo inyecta layout.js -->
+  <!-- Contenido propio; el shell (sidebar/topbar) lo inyecta layout.js -->
   <section class="page-header">
     <div>
       <div class="breadcrumb">Dashboard / Resumen</div>
@@ -193,7 +71,7 @@
     <div class="table-placeholder">Aquí irá la tabla/lista de cotizaciones recientes.</div>
   </section>
 
-  <!-- Sidebar/Topbar embebidos originales (comentados para que no se muestren; se deja referencia completa) -->
+  <!-- Sidebar/Topbar embebidos originales (comentados para no mostrarlos, se deja el historial completo). Descomenta si quieres volver al layout embebido. -->
   <!--
   <div class="app-shell expanded" id="appShell">
     <aside class="sidebar">
