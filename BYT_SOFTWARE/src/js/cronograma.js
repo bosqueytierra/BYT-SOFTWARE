@@ -1,4 +1,4 @@
-// TODO: Reemplazar mock con datos reales desde backend
+// Mock de proyectos aprobados (sustituir por backend real si corresponde)
 const proyectosAprobados = [
   { id: "proj-001", nombre: "Proyecto Bahía - Pocket Door", cliente: "Terrazio", partidas: [
     { id: "p1", nombre: "Excavación" }, { id: "p2", nombre: "Cimentación" }, { id: "p3", nombre: "Estructura" }
@@ -35,15 +35,18 @@ let colorSeleccionado = colores[0];
 let calendar;
 let eventoSeleccionado = null;
 
-// Estado de asignación por partida (counts)
 const estadoPartidas = {}; // key: projId::partId -> { count }
-const colapsados = {};     // recordar expand/colapsar proyectos
-
-// Listas de visitas/rectificaciones creadas
+const colapsados = {};
 const visitasItems = [];
 const rectItems = [];
 
-// Inicializar estado base
+// Helpers de título con nota
+function buildTitle({ partida, proyecto, tipo, nota }) {
+  const base = partida ? `${partida} — ${proyecto}` : tipo ? `${tipo}${proyecto ? ' — ' + proyecto : ''}` : proyecto || '';
+  const note = nota ? ` (${nota})` : '';
+  return base + note;
+}
+
 function initEstado() {
   proyectosAprobados.forEach(p => {
     p.partidas.forEach(part => {
@@ -53,7 +56,6 @@ function initEstado() {
   });
 }
 
-// Contadores globales
 function updateStats() {
   const total = Object.keys(estadoPartidas).length;
   const programadas = Object.values(estadoPartidas).filter(x => x.count > 0).length;
@@ -64,7 +66,6 @@ function updateStats() {
   if (elN) elN.textContent = noProg;
 }
 
-// Renderiza la lista de proyectos con partidas e indicadores
 function renderPalette() {
   const palette = document.getElementById('palette');
   if (!palette) return;
@@ -134,7 +135,6 @@ function renderPalette() {
   });
 }
 
-// Render listas de visitas/rectificaciones
 function renderExtras() {
   const vList = document.getElementById('visitasList');
   const rList = document.getElementById('rectList');
@@ -143,7 +143,7 @@ function renderExtras() {
     visitasItems.forEach(item => {
       const div = document.createElement('div');
       div.className = 'chip fc-event';
-      div.setAttribute('data-tipo', 'visita');
+      div.setAttribute('data-tipo', 'Visita técnica');
       div.setAttribute('data-proyecto', item.proyectoNombre || '(Manual)');
       div.setAttribute('data-proyecto-id', item.proyectoId || '');
       div.setAttribute('data-cliente', item.cliente || '');
@@ -159,7 +159,7 @@ function renderExtras() {
     rectItems.forEach(item => {
       const div = document.createElement('div');
       div.className = 'chip fc-event';
-      div.setAttribute('data-tipo', 'rectificacion');
+      div.setAttribute('data-tipo', 'Rectificación');
       div.setAttribute('data-proyecto', item.proyectoNombre || '(Manual)');
       div.setAttribute('data-proyecto-id', item.proyectoId || '');
       div.setAttribute('data-cliente', item.cliente || '');
@@ -172,7 +172,7 @@ function renderExtras() {
   }
 }
 
-// Modal helpers (color)
+// Color picker modal
 function renderColorPicker(containerId, onSelect) {
   const picker = document.getElementById(containerId);
   if (!picker) return;
@@ -193,12 +193,13 @@ function renderColorPicker(containerId, onSelect) {
 // Modal info evento
 function abrirModal(evento) {
   eventoSeleccionado = evento;
-  const backdrop = document.getElementById('modalBackdrop');
-  document.getElementById('modalTitle').textContent = 'Detalle de evento';
   document.getElementById('modalProyecto').textContent = evento.extendedProps.proyecto;
   document.getElementById('modalPartida').textContent = evento.extendedProps.partida || evento.extendedProps.tipo || '(Proyecto completo)';
   document.getElementById('modalCliente').textContent = evento.extendedProps.cliente || '';
   document.getElementById('modalFecha').textContent = evento.start.toLocaleDateString();
+  const nota = evento.extendedProps.note || '';
+  document.getElementById('modalNota').value = nota;
+
   colorSeleccionado = evento.backgroundColor || colores[0];
   renderColorPicker('modalColorPicker', (c) => {
     if (eventoSeleccionado) {
@@ -206,7 +207,8 @@ function abrirModal(evento) {
       eventoSeleccionado.setProp('borderColor', c);
     }
   });
-  backdrop.style.display = 'flex';
+
+  document.getElementById('modalBackdrop').style.display = 'flex';
 }
 function cerrarModal() {
   document.getElementById('modalBackdrop').style.display = 'none';
@@ -216,7 +218,7 @@ function cerrarModal() {
 // Modal crear visita/rectificación
 let createTipo = null;
 function abrirCreateModal(tipo) {
-  createTipo = tipo; // 'visita' | 'rectificacion'
+  createTipo = tipo;
   document.getElementById('createTitle').textContent = tipo === 'visita' ? 'Agregar visita técnica' : 'Agregar rectificación';
   document.getElementById('createNombre').value = '';
   document.getElementById('createCliente').value = '';
@@ -239,7 +241,7 @@ function cargarSelectProyectos() {
   });
 }
 
-// Gestiona contador de asignación por partida
+// Asignación contadores
 function incPartida(key) {
   if (!estadoPartidas[key]) estadoPartidas[key] = { count: 0 };
   estadoPartidas[key].count++;
@@ -254,12 +256,11 @@ function getPartKeyFromEvent(ev) {
   return null;
 }
 
-// Inicializa el calendario
+// Init calendario
 function initCalendar() {
   const calendarEl = document.getElementById('calendar');
   if (!calendarEl) return;
 
-  // Draggables
   new FullCalendar.Draggable(document.getElementById('palette'), {
     itemSelector: '.fc-event',
     eventData: function(el) {
@@ -272,7 +273,8 @@ function initCalendar() {
             proyecto: el.getAttribute('data-proyecto'),
             proyectoId: el.getAttribute('data-proyecto-id'),
             cliente: el.getAttribute('data-cliente'),
-            partidas: JSON.parse(el.getAttribute('data-partidas') || '[]')
+            partidas: JSON.parse(el.getAttribute('data-partidas') || '[]'),
+            note: ''
           },
           duration: { days: 1 },
           color: colores[0],
@@ -287,7 +289,8 @@ function initCalendar() {
           proyectoId: el.getAttribute('data-proyecto-id'),
           partida: el.getAttribute('data-partida'),
           partidaId: el.getAttribute('data-partida-id'),
-          cliente: el.getAttribute('data-cliente')
+          cliente: el.getAttribute('data-cliente'),
+          note: ''
         },
         duration: { days: 1 },
         color: colores[0],
@@ -306,7 +309,8 @@ function initCalendar() {
           tipo: 'Visita técnica',
           proyecto: el.getAttribute('data-proyecto'),
           proyectoId: el.getAttribute('data-proyecto-id'),
-          cliente: el.getAttribute('data-cliente')
+          cliente: el.getAttribute('data-cliente'),
+          note: ''
         },
         duration: { days: 1 },
         color: colores[0],
@@ -325,7 +329,8 @@ function initCalendar() {
           tipo: 'Rectificación',
           proyecto: el.getAttribute('data-proyecto'),
           proyectoId: el.getAttribute('data-proyecto-id'),
-          cliente: el.getAttribute('data-cliente')
+          cliente: el.getAttribute('data-cliente'),
+          note: ''
         },
         duration: { days: 1 },
         color: colores[0],
@@ -348,14 +353,14 @@ function initCalendar() {
       right: 'dayGridMonth,timeGridWeek,timeGridDay'
     },
     eventReceive: function(info) {
-      // Si es un bundle (proyecto), crear eventos por cada partida
+      // bundle proyecto -> generar eventos por partida
       if (info.event.extendedProps.bundle) {
         const startDate = info.event.start;
         const { partidas, proyecto, proyectoId, cliente } = info.event.extendedProps;
-        info.event.remove(); // quitar placeholder
+        info.event.remove();
         partidas.forEach(p => {
           calendar.addEvent({
-            title: `${p.nombre} — ${proyecto}`,
+            title: buildTitle({ partida: p.nombre, proyecto }),
             start: startDate,
             allDay: true,
             backgroundColor: colores[0],
@@ -365,7 +370,8 @@ function initCalendar() {
               proyectoId,
               partida: p.nombre,
               partidaId: p.id,
-              cliente
+              cliente,
+              note: ''
             }
           });
           const key = `${proyectoId}::${p.id}`;
@@ -375,7 +381,7 @@ function initCalendar() {
         renderPalette();
         return;
       }
-      // Partida individual
+      // partida individual
       if (info.event.extendedProps.partidaId) {
         const key = getPartKeyFromEvent(info.event);
         if (key) incPartida(key);
@@ -432,6 +438,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('modalDelete').addEventListener('click', () => {
     if (eventoSeleccionado) eventoSeleccionado.remove();
+    cerrarModal();
+  });
+  document.getElementById('modalSave').addEventListener('click', () => {
+    if (!eventoSeleccionado) return;
+    const nota = document.getElementById('modalNota').value.trim();
+    eventoSeleccionado.setExtendedProp('note', nota);
+    const ep = eventoSeleccionado.extendedProps;
+    const newTitle = buildTitle({ partida: ep.partida, proyecto: ep.proyecto, tipo: ep.tipo, nota });
+    eventoSeleccionado.setProp('title', newTitle);
     cerrarModal();
   });
 
