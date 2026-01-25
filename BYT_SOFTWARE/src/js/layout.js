@@ -1,6 +1,6 @@
 // Inyecta la shell y aplica menú unificado desde window.BYT_MENU
 (async function() {
-  // Espera a que exista el DOM
+  // Espera a que el DOM exista
   if (document.readyState === 'loading') {
     await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
   }
@@ -11,39 +11,37 @@
   const CURRENT_PATH = window.location.pathname;
   const FALLBACK_BACK = '../menu_principal.html';
 
-  // Rutas candidatas al fragmento
   const FRAGMENT_URLS = [
     'https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html',
     '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html',
     '../fragments/layout.html'
   ];
 
-  // Guarda estilos del head y contenido actual
   const pageHeadStyles = Array.from(
     document.head.querySelectorAll('style, link[rel="stylesheet"]')
   ).map(el => el.outerHTML).join('\n');
   const pageContent = document.body?.innerHTML || '';
 
-  // Carga el fragmento
+  // Carga fragmento
   let html = null;
   for (const url of FRAGMENT_URLS) {
     try {
       const res = await fetch(url);
       if (res.ok) { html = await res.text(); break; }
-    } catch (e) { /* sigue intentando */ }
+    } catch (e) { /* sigue */ }
   }
   if (!html) { console.warn('No se pudo cargar layout.html'); return; }
 
   const shellDoc = new DOMParser().parseFromString(html, 'text/html');
-  if (!shellDoc.body) { console.warn('No se pudo parsear layout.html'); return; }
+  if (!shellDoc || !shellDoc.body) { console.warn('No se pudo parsear layout.html'); return; }
 
-  // Reemplaza solo el body
+  // Reemplaza SOLO el body
   document.body.innerHTML = shellDoc.body.innerHTML;
 
   // Restaura estilos específicos de la página
   if (pageHeadStyles) document.head.insertAdjacentHTML('beforeend', pageHeadStyles);
 
-  // Inserta el contenido previo en el slot
+  // Inserta contenido previo en el slot
   const slot = document.getElementById('page-content-slot');
   let wrapper = null;
   if (slot) {
@@ -53,7 +51,7 @@
     slot.appendChild(wrapper);
   }
 
-  // Fuerza sidebar expandida al inicio
+  // Sidebar expandida por defecto
   const appShell = document.getElementById('appShell');
   if (appShell) appShell.classList.add('expanded');
 
@@ -78,10 +76,9 @@
     sidebar.addEventListener('mouseleave', () => appShell.classList.remove('expanded'));
   }
 
-  // --------- Menú dinámico desde window.BYT_MENU ---------
+  // Menú dinámico desde window.BYT_MENU
   const menu = Array.isArray(window.BYT_MENU) ? window.BYT_MENU : [];
   const navStack = document.querySelector('.nav-stack');
-
   const iconMap = {
     folder: `<svg viewBox="0 0 24 24"><path d="M3.5 6.5A1.5 1.5 0 0 1 5 5h4.4a1.5 1.5 0 0 1 1.06.44l1.1 1.1H19a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 18.5H5A1.5 1.5 0 0 1 3.5 17V6.5Z"/></svg>`,
     file: `<svg viewBox="0 0 24 24"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h5.9a1.5 1.5 0 0 1 1.06.44l3.1 3.1A1.5 1.5 0 0 1 18 7.6V19.5A1.5 1.5 0 0 1 16.5 21h-9A1.5 1.5 0 0 1 6 19.5v-15Z"/><path d="M14.5 3v4a.5.5 0 0 0 .5.5h4"/><path d="M9 13h6M9 16.5h4"/></svg>`,
@@ -122,7 +119,6 @@
   }
   renderMenu();
 
-  // Marca activo según URL actual
   function markActive() {
     const links = document.querySelectorAll('.nav-item[href], .submenu a');
     links.forEach(el => {
@@ -138,7 +134,7 @@
   }
   markActive();
 
-  // --------- Botón Atrás con pila interna ---------
+  // Navegación atrás
   const isInternal = url => {
     try { return new URL(url, window.location.origin).origin === window.location.origin; }
     catch { return false; }
@@ -146,8 +142,7 @@
   const stack = JSON.parse(sessionStorage.getItem('byt_nav_stack') || '[]');
   const ref = document.referrer;
   if (ref && isInternal(ref) && ref !== window.location.href) {
-    stack.push(ref);
-    while (stack.length > 10) stack.shift();
+    stack.push(ref); while (stack.length > 10) stack.shift();
     sessionStorage.setItem('byt_nav_stack', JSON.stringify(stack));
   }
   function goBack() {
@@ -168,10 +163,7 @@
     btn.addEventListener('click', e => { e.preventDefault(); goBack(); });
   });
 
-  // Estilos mínimos para deshabilitados
   const style = document.createElement('style');
-  style.textContent = `
-    .nav-item.disabled, .submenu-link.disabled { cursor: default; opacity: 0.6; pointer-events: none; }
-  `;
+  style.textContent = `.nav-item.disabled, .submenu-link.disabled { cursor: default; opacity: 0.6; pointer-events: none; }`;
   document.head.appendChild(style);
 })();
