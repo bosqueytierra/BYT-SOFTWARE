@@ -33,7 +33,6 @@
 
     .palette-wrapper { height: calc(100% - 30px); overflow-y: auto; padding-right: 4px; }
     .palette { display: grid; gap: 10px; }
-
     .chip {
       border: 1px solid #d7dce0;
       border-radius: 10px;
@@ -44,15 +43,6 @@
       gap: 2px;
     }
     .chip strong { color: #2e5e4e; }
-
-    .color-picker { display: grid; grid-template-columns: repeat(9, 22px); gap: 6px; margin-bottom: 8px; }
-    .color-swatch {
-      width: 22px; height: 22px;
-      border-radius: 6px;
-      border: 1px solid #d7dce0;
-      cursor: pointer;
-    }
-    .color-swatch.active { outline: 2px solid #2e5e4e; }
 
     #calendar { height: 100%; }
     .fc {
@@ -86,6 +76,15 @@
     .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
     .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
     .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
+
+    .color-picker { display: grid; grid-template-columns: repeat(9, 22px); gap: 6px; margin-top: 6px; }
+    .color-swatch {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      border: 1px solid #d7dce0;
+      cursor: pointer;
+    }
+    .color-swatch.active { outline: 2px solid #2e5e4e; }
   </style>
 </head>
 <body>
@@ -97,7 +96,6 @@
   <div class="layout">
     <aside class="panel">
       <h2>Partidas (proyectos aprobados)</h2>
-      <div class="color-picker" id="colorPicker"></div>
       <div class="palette-wrapper">
         <div id="palette" class="palette"></div>
       </div>
@@ -110,14 +108,14 @@
   <!-- Modal info -->
   <div class="modal-backdrop" id="modalBackdrop">
     <div class="modal">
-      <h3 id="modalTitle">Detalle</h3>
+      <h3 id="modalTitle">Detalle de evento</h3>
       <div class="row"><span class="label">Proyecto:</span> <span id="modalProyecto"></span></div>
       <div class="row"><span class="label">Partida:</span> <span id="modalPartida"></span></div>
       <div class="row"><span class="label">Cliente:</span> <span id="modalCliente"></span></div>
       <div class="row"><span class="label">Fecha:</span> <span id="modalFecha"></span></div>
       <div class="row">
         <span class="label">Color:</span>
-        <div class="color-picker" id="modalColorPicker" style="margin-top:6px;"></div>
+        <div class="color-picker" id="modalColorPicker"></div>
       </div>
       <div class="modal-footer">
         <button class="btn danger" id="modalDelete">Eliminar</button>
