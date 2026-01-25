@@ -3,6 +3,9 @@
   if (window.__BYT_SHELL_APPLIED__) return;
   window.__BYT_SHELL_APPLIED__ = true;
 
+
+  
+
   const FRAGMENT_URL = '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html';
   const CURRENT_PATH = window.location.pathname;
   const FALLBACK_BACK = '../menu_principal.html';
