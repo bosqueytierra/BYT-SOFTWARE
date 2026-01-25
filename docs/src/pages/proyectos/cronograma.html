@@ -10,7 +10,15 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" />
   <style>
     body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
-    .layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; padding: 16px; }
+    .page-header { padding: 16px; }
+    .page-header .crumb { color: #6c7a86; font-size: 12px; }
+    .page-header h1 { margin: 4px 0 0; font-size: 22px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      padding: 0 16px 20px;
+    }
     .panel {
       background: #fff;
       border: 1px solid #e4e7eb;
@@ -19,7 +27,8 @@
       padding: 12px;
     }
     .panel h2 { margin: 0 0 8px; font-size: 16px; }
-    .palette { display: grid; gap: 8px; max-height: calc(100vh - 120px); overflow: auto; }
+    .palette { display: grid; gap: 10px; max-height: calc(100vh - 200px); overflow: auto; }
+    .group-title { font-weight: 700; font-size: 13px; color: #2e5e4e; margin-bottom: 4px; }
     .chip {
       border: 1px solid #d7dce0;
       border-radius: 10px;
@@ -30,21 +39,38 @@
       gap: 2px;
     }
     .chip strong { color: #2e5e4e; }
-    .fc { background: #fff; border: 1px solid #e4e7eb; border-radius: 12px; padding: 8px; }
+    .fc {
+      background: #fff;
+      border: 1px solid #e4e7eb;
+      border-radius: 12px;
+      padding: 8px;
+    }
+    .fc-toolbar-title { font-size: 16px; }
+    .color-picker {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .color-swatch {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      border: 1px solid #d7dce0;
+      cursor: pointer;
+    }
+    .color-swatch.active { outline: 2px solid #2e5e4e; }
   </style>
 </head>
 <body>
-  <!-- Shell se inyecta por layout.js -->
-  <div class="page-header" style="padding:16px 16px 0;">
-    <div>
-      <div style="color:#6c7a86;font-size:12px;">Proyectos / Cronograma</div>
-      <h1 style="margin:0;font-size:22px;">Cronograma de proyectos</h1>
-    </div>
+  <div class="page-header">
+    <div class="crumb">Proyectos / Cronograma</div>
+    <h1>Cronograma de proyectos</h1>
   </div>
 
   <div class="layout">
     <aside class="panel">
       <h2>Partidas (proyectos aprobados)</h2>
+      <div class="color-picker" id="colorPicker"></div>
       <div id="palette" class="palette"></div>
     </aside>
     <section class="panel">
