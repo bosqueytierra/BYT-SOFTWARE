@@ -1,299 +1,85 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BYT SOFTWARE - Panel</title>
-  <link rel="stylesheet" href="../styles/global.css">
-  <!-- Loader -->
-  <link rel="stylesheet" href="../styles/loader.css">
-  <!-- Menú unificado + shell -->
+  <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/loader.css" />
+  <!-- Shell y menú unificado -->
   <script src="../js/menuConfig.js"></script>
   <script src="../js/layout.js"></script>
   <style>
     :root {
       --bg: #f6f7f8; --primary: #2e5e4e; --accent: #ee7b45; --text: #2d2d2d; --muted: #6c7a86;
       --border: #e4e7eb; --card: #ffffff; --shadow: 0 6px 16px rgba(0,0,0,0.06);
-      --sidebar: #1f2530; --pill-bg: #202a36; --pill-border: #303b47; --icon: #ffffff; --pill-hover: rgba(255,255,255,0.1);
     }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
 
-    .app-shell {
-      display: grid;
-      grid-template-columns: 80px 1fr;
-      min-height: 100vh;
-      transition: grid-template-columns 0.6s ease;
-    }
-    .app-shell.expanded { grid-template-columns: 240px 1fr; }
-
-    /* Sidebar */
-    .sidebar {
-      background: var(--sidebar);
-      color: #fff;
-      padding: 16px 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow: hidden;
-      transition: width 0.6s ease, box-shadow 0.6s ease, backdrop-filter 0.6s ease, background 0.6s ease;
-      width: 80px;
-      backdrop-filter: blur(0px);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
-    }
-    .app-shell.expanded .sidebar {
-      width: 240px;
-      background: linear-gradient(180deg, #222a35 0%, #1b222b 100%);
-      backdrop-filter: blur(6px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.05);
-    }
-
-    /* Logo sin recuadro y tamaño moderado */
-    .brand {
-      width: auto;
-      height: auto;
-      padding: 4px 0;
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      margin: 0 auto;
-      display: grid;
-      place-items: center;
-    }
-    .brand img {
-      width: 52px;
-      max-height: 52px;
-      height: auto;
-      object-fit: contain;
-    }
-
-    .nav-stack { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 8px; }
-    .nav-group { display: flex; flex-direction: column; gap: 0; }
-
-    .nav-item {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 12px; cursor: pointer;
-      background: var(--pill-bg); border: 1px solid var(--pill-border);
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
-      color: #fff; font-weight: 600;
-      box-shadow: 0 10px 18px rgba(0,0,0,0.12);
-    }
-    .nav-item:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 16px 30px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.06);
-      background: var(--pill-hover);
-    }
-    .nav-item.active {
-      border-color: rgba(255,255,255,0.5);
-      background: linear-gradient(145deg, #2c3b4b, #1e2936);
-      box-shadow: 0 18px 36px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.08);
-    }
-    .nav-icon svg { width: 22px; height: 22px; stroke: var(--icon); stroke-width: 1.8; fill: none; flex-shrink: 0; }
-    .nav-label { display: none; white-space: nowrap; opacity: 0; transition: opacity 0.3s ease; }
-    .app-shell.expanded .nav-label { display: inline; opacity: 1; }
-
-    .submenu { display: none; flex-direction: column; gap: 6px; margin: 6px 0 0 34px; }
-    .submenu a {
-      color: #e8edf2; text-decoration: none; font-size: 13px;
-      padding: 6px 8px; border-radius: 10px; transition: background 0.15s ease, color 0.15s ease;
-    }
-    .submenu a:hover { background: rgba(255,255,255,0.12); color: #fff; }
-    .app-shell.expanded .nav-group:hover .submenu,
-    .app-shell.expanded .nav-group:focus-within .submenu { display: flex; }
-
-    /* Sidebar footer (perfil) */
-    .sidebar-footer { margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
-    .profile-pill {
-      display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-radius: 12px;
-      background: var(--pill-bg); border: 1px solid var(--pill-border);
-      color: #fff; font-weight: 600; cursor: pointer;
-      transition: background 0.18s ease, box-shadow 0.18s ease;
-      box-shadow: 0 10px 18px rgba(0,0,0,0.12);
-    }
-    .profile-pill:hover { background: var(--pill-hover); box-shadow: 0 16px 26px rgba(0,0,0,0.16); }
-    .profile-avatar {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: linear-gradient(135deg, #4b596a, #2c3642);
-      display: grid; place-items: center; font-size: 14px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
-    }
-    .profile-label { display: none; opacity: 0; transition: opacity 0.3s ease; }
-    .app-shell.expanded .profile-label { display: inline; opacity: 1; }
-
-    /* Topbar */
-    .topbar {
-      background: #ffffff; border-bottom: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-      padding: 12px 18px; display: grid; grid-template-columns: 1fr 1.5fr 1fr; align-items: center; gap: 12px;
-      position: sticky; top: 0; z-index: 20;
-    }
-    .topbar .left { display: flex; align-items: center; gap: 10px; }
-    .topbar .right { display: flex; justify-content: flex-end; gap: 8px; }
-    .icon-btn { border: none; background: #eef2f5; padding: 9px 10px; border-radius: 10px; cursor: pointer; color: var(--text); }
-    .search-bar {
-      display: flex; align-items: center; background: #f0f3f5; border: 1px solid var(--border); border-radius: 12px; padding: 0 12px; gap: 8px;
-    }
-    .search-bar input { width: 100%; border: none; background: transparent; padding: 10px 0; outline: none; font-size: 14px; }
-
-    /* Page header, KPIs y cards */
     .page-header { display: flex; justify-content: space-between; align-items: center; padding: 18px; gap: 12px; }
     .breadcrumb { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
     h1 { margin: 0; font-size: 22px; }
     .actions { display: none; }
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; padding: 0 18px 12px; }
+
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; padding: 0 18px 12px; }
     .kpi-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.03); color: var(--muted);
     }
     .kpi-card strong { display: block; margin-top: 6px; color: var(--text); font-size: 20px; }
+
     .content-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin: 0 18px 18px; padding: 16px; box-shadow: var(--shadow);
     }
     .table-placeholder { border: 1px dashed var(--border); border-radius: 10px; padding: 28px; text-align: center; color: var(--muted); }
 
+    .hero {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px; margin: 0 18px 18px; padding: 18px;
+      box-shadow: var(--shadow); display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: center;
+    }
+    .hero img { width: 100%; border-radius: 12px; object-fit: cover; }
+    .hero h2 { margin: 0 0 8px; }
+    .hero p { margin: 0; color: var(--muted); }
+
     @media (max-width: 960px) {
-      .app-shell { grid-template-columns: 72px 1fr; }
-      .topbar { grid-template-columns: 1fr; }
       .page-header { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
-  <div class="app-shell expanded" id="appShell">
-    <aside class="sidebar">
-      <div class="brand"><img src="../assets/logo_byt.png" alt="BYT"></div>
-      <div class="nav-stack">
-
-        <div class="nav-group">
-          <div class="nav-item active" title="Proyectos">
-            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3.5 7A1.5 1.5 0 0 1 5 5.5h4.1a1.5 1.5 0 0 1 1.06.44l1.3 1.3H19A1.5 1.5 0 0 1 20.5 8.8l-.6 9A1.5 1.5 0 0 1 18.4 19H5.6a1.5 1.5 0 0 1-1.5-1.3l-.6-9Z"/></svg></span>
-            <span class="nav-label">Proyectos</span>
-          </div>
-        </div>
-
-        <div class="nav-group">
-          <div class="nav-item" title="Cotizaciones">
-            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 4.5A1.5 1.5 0 0 1 7.5 3h5.9a1.5 1.5 0 0 1 1.06.44l3.1 3.1A1.5 1.5 0 0 1 18 7.6V19.5A1.5 1.5 0 0 1 16.5 21h-9A1.5 1.5 0 0 1 6 19.5v-15Z"/><path d="M14.5 3v4a.5.5 0 0 0 .5.5h4"/><path d="M9 13h6M9 16.5h4"/></svg></span>
-            <span class="nav-label">Cotizaciones</span>
-          </div>
-          <div class="submenu">
-            <a id="link-crear-cot" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/cotizaciones/nueva.html">Crear cotización</a>
-            <a id="link-admin-cot" href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/cotizaciones/consultar.html">Administrar cotizaciones</a>
-          </div>
-        </div>
-
-        <div class="nav-group">
-          <div class="nav-item" title="Compras">
-            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6.5 7h11l-1 11h-9l-1-11Z"/><path d="M9 7V5.5a3 3 0 1 1 6 0v2"/><circle cx="10" cy="19.5" r="1"/><circle cx="15" cy="19.5" r="1"/></svg></span>
-            <span class="nav-label">Compras</span>
-          </div>
-        </div>
-
-        <div class="nav-group">
-          <div class="nav-item" title="Ventas">
-            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16l-2 10H6L4 7Z"/><path d="M9 7V5a3 3 0 1 1 6 0v2"/><circle cx="10" cy="18.5" r="1"/><circle cx="15" cy="18.5" r="1"/></svg></span>
-            <span class="nav-label">Ventas</span>
-          </div>
-          <div class="submenu">
-            <a href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/ventas/index.html">Lista de ventas</a>
-            <a href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/ventas/dashboard.html">Dashboard ventas</a>
-          </div>
-        </div>
-
-        <div class="nav-group">
-          <div class="nav-item" title="Finanzas">
-            <span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 14h3"/></svg></span>
-            <span class="nav-label">Finanzas</span>
-          </div>
-        </div>
-
-        <div class="nav-group">
-          <div class="nav-item" title="Datos">
-            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-11Z"/><path d="M8 9.5h8M8 12h8M8 14.5h5"/></svg></span>
-            <span class="nav-label">Datos</span>
-          </div>
-          <div class="submenu">
-            <a href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/configuracion/proveedores.html">Gestión de Proveedores</a>
-            <a href="https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/configuracion/materiales.html">Gestión de Materiales</a>
-            <a href="#">Gestión de Clientes</a>
-            <a href="#">Gestión Usuarios y Permisos</a>
-          </div>
-        </div>
-
-        <div class="nav-group">
-          <div class="nav-item" title="Configuración">
-            <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1 1 0 0 0 .2.4l.4.6a1 1 0 0 1-.1 1.2l-.4.4a1 1 0 0 1-1.2.1l-.6-.3a1 1 0 0 0-.5-.1 7 7 0 0 1-1.1.6 1 1 0 0 0-.6.9v.6a1 1 0 0 1-1 1h-.6a1 1 0 0 1-1-.7l-.2-.6a7 7 0 0 1-.7-.4 1 1 0 0 0-1 0l-.7.4-.2.6a1 1 0 0 1-1 .7h-.6a1 1 0 0 1-1-1v-.6a1 1 0 0 0-.6-.9 7 7 0 0 1-1.1-.6 1 1 0 0 0-.5.1l-.6.3a1 1 0 0 1-1.2-.1l-.4-.4a1 1 0 0 1-.1-1.2l.4-.6a1 1 0 0 0 .2-.4 7 7 0 0 1 0-1 1 1 0 0 0-.2-.4l-.4-.6a1 1 0 0 1 .1-1.2l.4-.4a1 1 0 0 1 1.2-.1l.6.3a1 1 0 0 0 .5.1 7 7 0 0 1 1.1-.6 1 1 0 0 0 .6-.9v-.6a1 1 0 0 1 1-1h.6a1 1 0 0 1 1 .7l.2.6.7.4a1 1 0 0 0 1 0l.7-.4.2-.6a1 1 0 0 1 1-.7h.6a1 1 0 0 1 1 1v.6a1 1 0 0 0 .6.9 7 7 0 0 1 1.1.6 1 1 0 0 0 .5-.1l.6-.3a1 1 0 0 1 1.2.1l.4.4a1 1 0 0 1 .1 1.2l-.4.6a1 1 0 0 0-.2.4 7 7 0 0 1 0 1Z"/></svg></span>
-            <span class="nav-label">Configuración</span>
-          </div>
-          <div class="submenu">
-            <a href="#">Perfil</a>
-            <a href="#">Preferencias</a>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="sidebar-footer">
-        <div class="profile-pill" title="Perfil / Cerrar sesión">
-          <div class="profile-avatar">👤</div>
-          <span class="profile-label">Perfil</span>
-        </div>
-      </div>
-    </aside>
-
-    <div class="main">
-      <header class="topbar">
-        <div class="left"><span class="logo-text" style="font-weight:700;color:var(--primary);">Bosque y Tierra</span></div>
-        <div class="search-bar">
-          <span style="color: var(--muted);">🔍</span>
-          <input type="search" placeholder="Buscar proyectos, cotizaciones, clientes…" aria-label="Buscar">
-        </div>
-        <div class="right">
-          <button class="icon-btn" title="Más opciones">⋯</button>
-        </div>
-      </header>
-
-      <section class="page-header">
-        <div>
-          <div class="breadcrumb">Dashboard / Resumen</div>
-          <h1>Dashboard</h1>
-        </div>
-        <div class="actions">
-          <button class="btn primary">+ Nueva cotización</button>
-          <button class="btn ghost">Exportar</button>
-        </div>
-      </section>
-
-      <section class="kpis">
-        <div class="kpi-card">Total cotizaciones<strong>128</strong></div>
-        <div class="kpi-card">En progreso<strong>32</strong></div>
-        <div class="kpi-card">Aprobadas<strong>76</strong></div>
-        <div class="kpi-card">Rechazadas<strong>20</strong></div>
-      </section>
-
-      <section class="content-card">
-        <h3>Últimas cotizaciones</h3>
-        <div class="table-placeholder">Aquí irá la tabla/lista de cotizaciones recientes.</div>
-      </section>
+  <!-- Solo contenido propio: el shell (sidebar/topbar) lo inyecta layout.js -->
+  <section class="page-header">
+    <div>
+      <div class="breadcrumb">Dashboard / Resumen</div>
+      <h1>Dashboard</h1>
     </div>
-  </div>
+    <div class="actions">
+      <button class="btn primary">+ Nueva cotización</button>
+      <button class="btn ghost">Exportar</button>
+    </div>
+  </section>
 
-  <script>
-    const appShell = document.getElementById('appShell');
-    const sidebar  = document.querySelector('.sidebar');
-    if (appShell && sidebar) {
-      sidebar.addEventListener('mouseenter', () => appShell.classList.add('expanded'));
-      sidebar.addEventListener('mouseleave', () => appShell.classList.remove('expanded'));
-    }
-  </script>
+  <section class="kpis">
+    <div class="kpi-card">Total cotizaciones<strong>128</strong></div>
+    <div class="kpi-card">En progreso<strong>32</strong></div>
+    <div class="kpi-card">Aprobadas<strong>76</strong></div>
+    <div class="kpi-card">Rechazadas<strong>20</strong></div>
+  </section>
+
+  <section class="content-card hero">
+    <div>
+      <h2>Bienvenido al panel</h2>
+      <p>Aquí podrás visualizar tus KPIs y atajos principales. Esta sección es temporal; luego colocaremos los KPIs reales de todas las páginas.</p>
+    </div>
+    <div>
+      <img src="https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1600&q=80" alt="Hero placeholder">
+    </div>
+  </section>
+
+  <section class="content-card">
+    <h3>Últimas cotizaciones</h3>
+    <div class="table-placeholder">Aquí irá la tabla/lista de cotizaciones recientes.</div>
+  </section>
 </body>
 </html>
