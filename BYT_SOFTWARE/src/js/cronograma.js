@@ -1,4 +1,4 @@
-// TODO: Reemplazar este mock por datos reales de proyectos aprobados (con partidas) desde tu backend.
+// TODO: Reemplazar este mock por datos reales desde backend
 const proyectosAprobados = [
   { id: "proj-001", nombre: "Proyecto Bahía - Pocket Door", cliente: "Terrazio", partidas: [
     { id: "p1", nombre: "Excavación" }, { id: "p2", nombre: "Cimentación" }, { id: "p3", nombre: "Estructura" }
@@ -36,51 +36,93 @@ let colorSeleccionado = colores[0];
 let calendar;
 let eventoSeleccionado = null;
 
-// Renderiza la lista de proyectos con despliegue de partidas y drag del proyecto completo
+// Estado de asignación por partida (counts)
+const estadoPartidas = {}; // key: projId::partId -> { count }
+const colapsados = {};     // recordar expand/colapsar proyectos
+
+// Inicializar estado base
+function initEstado() {
+  proyectosAprobados.forEach(p => {
+    p.partidas.forEach(part => {
+      const key = `${p.id}::${part.id}`;
+      if (!estadoPartidas[key]) estadoPartidas[key] = { count: 0 };
+    });
+  });
+}
+
+// Contadores globales
+function updateStats() {
+  const total = Object.keys(estadoPartidas).length;
+  const programadas = Object.values(estadoPartidas).filter(x => x.count > 0).length;
+  const noProg = total - programadas;
+  const elP = document.getElementById('statProgramadas');
+  const elN = document.getElementById('statNoProgramadas');
+  if (elP) elP.textContent = programadas;
+  if (elN) elN.textContent = noProg;
+}
+
+// Renderiza la lista de proyectos con partidas e indicadores
 function renderPalette() {
   const palette = document.getElementById('palette');
   if (!palette) return;
   palette.innerHTML = '';
 
   proyectosAprobados.forEach(proj => {
+    const totalPart = proj.partidas.length;
+    const asignadas = proj.partidas.reduce((acc, part) => {
+      const k = `${proj.id}::${part.id}`;
+      return acc + (estadoPartidas[k]?.count > 0 ? 1 : 0);
+    }, 0);
+    const projectAssigned = asignadas === totalPart && totalPart > 0;
+
     const block = document.createElement('div');
     block.className = 'project-block';
 
-    // Header del proyecto (draggable de bundle)
     const header = document.createElement('div');
     header.className = 'project-header fc-event';
     header.setAttribute('data-bundle', '1');
     header.setAttribute('data-proyecto', proj.nombre);
+    header.setAttribute('data-proyecto-id', proj.id);
     header.setAttribute('data-cliente', proj.cliente);
     header.setAttribute('data-partidas', JSON.stringify(proj.partidas));
     header.innerHTML = `
-      <span class="project-title">${proj.nombre}</span>
-      <button class="toggle-btn" type="button">Desplegar</button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="dot ${projectAssigned ? 'assigned' : 'unassigned'}"></span>
+        <span class="project-title">${proj.nombre}</span>
+        <span style="color:#6c7a86;font-size:12px;">(${asignadas}/${totalPart})</span>
+      </div>
+      <button class="toggle-btn" type="button">${colapsados[proj.id] ? 'Ocultar' : 'Desplegar'}</button>
     `;
 
-    // Lista de partidas
     const list = document.createElement('div');
     list.className = 'partidas-list';
-    list.style.display = 'none';
+    list.style.display = colapsados[proj.id] ? 'grid' : 'none';
 
     proj.partidas.forEach(part => {
+      const key = `${proj.id}::${part.id}`;
+      const asignada = estadoPartidas[key]?.count > 0;
       const div = document.createElement('div');
       div.className = 'chip fc-event';
       div.setAttribute('data-proyecto', proj.nombre);
+      div.setAttribute('data-proyecto-id', proj.id);
       div.setAttribute('data-partida', part.nombre);
+      div.setAttribute('data-partida-id', part.id);
       div.setAttribute('data-cliente', proj.cliente);
-      div.innerHTML = `<strong>${part.nombre}</strong>
+      div.innerHTML = `<div style="display:flex;align-items:center;gap:6px;">
+          <span class="dot ${asignada ? 'assigned' : 'unassigned'}"></span>
+          <strong>${part.nombre}</strong>
+        </div>
         <small>${proj.nombre}</small>
         <small style="color:#6c7a86;">Cliente: ${proj.cliente}</small>`;
       list.appendChild(div);
     });
 
-    // Toggle mostrar/ocultar partidas
     header.querySelector('.toggle-btn').addEventListener('click', (e) => {
       e.stopPropagation();
       const visible = list.style.display !== 'none';
       list.style.display = visible ? 'none' : 'grid';
       e.target.textContent = visible ? 'Desplegar' : 'Ocultar';
+      colapsados[proj.id] = !visible;
     });
 
     block.appendChild(header);
@@ -130,12 +172,26 @@ function cerrarModal() {
   eventoSeleccionado = null;
 }
 
+// Gestiona contador de asignación por partida
+function incPartida(key) {
+  if (!estadoPartidas[key]) estadoPartidas[key] = { count: 0 };
+  estadoPartidas[key].count++;
+}
+function decPartida(key) {
+  if (!estadoPartidas[key]) estadoPartidas[key] = { count: 0 };
+  estadoPartidas[key].count = Math.max(estadoPartidas[key].count - 1, 0);
+}
+function getPartKeyFromEvent(ev) {
+  const p = ev.extendedProps;
+  if (p.proyectoId && p.partidaId) return `${p.proyectoId}::${p.partidaId}`;
+  return null;
+}
+
 // Inicializa el calendario
 function initCalendar() {
   const calendarEl = document.getElementById('calendar');
   if (!calendarEl) return;
 
-  // Draggables desde la lista (proyecto completo o partida individual)
   new FullCalendar.Draggable(document.getElementById('palette'), {
     itemSelector: '.fc-event',
     eventData: function(el) {
@@ -146,6 +202,7 @@ function initCalendar() {
           extendedProps: {
             bundle: true,
             proyecto: el.getAttribute('data-proyecto'),
+            proyectoId: el.getAttribute('data-proyecto-id'),
             cliente: el.getAttribute('data-cliente'),
             partidas: JSON.parse(el.getAttribute('data-partidas') || '[]')
           },
@@ -159,7 +216,9 @@ function initCalendar() {
         title: `${el.getAttribute('data-partida')} — ${el.getAttribute('data-proyecto')}`,
         extendedProps: {
           proyecto: el.getAttribute('data-proyecto'),
+          proyectoId: el.getAttribute('data-proyecto-id'),
           partida: el.getAttribute('data-partida'),
+          partidaId: el.getAttribute('data-partida-id'),
           cliente: el.getAttribute('data-cliente')
         },
         duration: { days: 1 },
@@ -186,12 +245,10 @@ function initCalendar() {
       // Si es un bundle (proyecto), crear eventos por cada partida
       if (info.event.extendedProps.bundle) {
         const startDate = info.event.start;
-        const { partidas, proyecto, cliente } = info.event.extendedProps;
-        // eliminar placeholder
-        info.event.remove();
-        // crear uno por partida
+        const { partidas, proyecto, proyectoId, cliente } = info.event.extendedProps;
+        info.event.remove(); // quitar placeholder
         partidas.forEach(p => {
-          calendar.addEvent({
+          const ev = calendar.addEvent({
             title: `${p.nombre} — ${proyecto}`,
             start: startDate,
             allDay: true,
@@ -199,20 +256,35 @@ function initCalendar() {
             borderColor: colores[0],
             extendedProps: {
               proyecto,
+              proyectoId,
               partida: p.nombre,
+              partidaId: p.id,
               cliente
             }
           });
+          const key = `${proyectoId}::${p.id}`;
+          incPartida(key);
         });
+        updateStats();
+        renderPalette();
         return;
       }
-      // Si no es bundle, asegurar id y color base
+      // Si no es bundle, marcar asignación
+      const key = getPartKeyFromEvent(info.event);
+      if (key) incPartida(key);
       info.event.setProp('id', `${info.event.id || 'evt'}-${crypto.randomUUID()}`);
       info.event.setProp('backgroundColor', colores[0]);
       info.event.setProp('borderColor', colores[0]);
+      updateStats();
+      renderPalette();
+    },
+    eventRemove: function(info) {
+      const key = getPartKeyFromEvent(info.event);
+      if (key) decPartida(key);
+      updateStats();
+      renderPalette();
     },
     eventDidMount: function(arg) {
-      // Botón eliminar en cada evento
       const el = arg.el;
       el.style.position = 'relative';
       const btn = document.createElement('span');
@@ -238,10 +310,10 @@ function initCalendar() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initEstado();
   renderPalette();
   initCalendar();
 
-  // Modal listeners
   document.getElementById('modalClose').addEventListener('click', cerrarModal);
   document.getElementById('modalBackdrop').addEventListener('click', (e) => {
     if (e.target.id === 'modalBackdrop') cerrarModal();
@@ -250,4 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (eventoSeleccionado) eventoSeleccionado.remove();
     cerrarModal();
   });
+
+  updateStats();
 });
