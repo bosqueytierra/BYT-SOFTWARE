@@ -17,6 +17,12 @@ const proyectosAprobados = [
   ]},
   { id: "proj-006", nombre: "Proyecto Sierra - Estructural", cliente: "Constructora Gamma", partidas: [
     { id: "p13", nombre: "Hormigonado" }, { id: "p14", nombre: "Acero" }
+  ]},
+  { id: "proj-007", nombre: "Proyecto Norte - Climatización", cliente: "Cliente Norte", partidas: [
+    { id: "p15", nombre: "Ductos" }, { id: "p16", nombre: "Equipos" }
+  ]},
+  { id: "proj-008", nombre: "Proyecto Sur - Paisajismo", cliente: "Cliente Sur", partidas: [
+    { id: "p17", nombre: "Riego" }, { id: "p18", nombre: "Vegetación" }
   ]}
 ];
 
@@ -30,7 +36,7 @@ let colorSeleccionado = colores[0];
 let calendar; // referencia global para el modal
 let eventoSeleccionado = null;
 
-// Render color pickers (principal y modal)
+// Render color picker (solo modal)
 function renderColorPicker(containerId, onSelect) {
   const picker = document.getElementById(containerId);
   if (!picker) return;
@@ -41,7 +47,7 @@ function renderColorPicker(containerId, onSelect) {
     sw.style.background = c;
     sw.addEventListener('click', () => {
       colorSeleccionado = c;
-      renderColorPicker(containerId, onSelect); // refresca active
+      renderColorPicker(containerId, onSelect);
       if (typeof onSelect === 'function') onSelect(c);
     });
     picker.appendChild(sw);
@@ -109,9 +115,9 @@ function initCalendar() {
           cliente: el.getAttribute('data-cliente')
         },
         duration: { days: 1 },
-        color: colorSeleccionado,
-        backgroundColor: colorSeleccionado,
-        borderColor: colorSeleccionado
+        color: colores[0],
+        backgroundColor: colores[0],
+        borderColor: colores[0]
       };
     }
   });
@@ -128,14 +134,12 @@ function initCalendar() {
       center: 'title',
       right: 'dayGridMonth,timeGridWeek,timeGridDay'
     },
-    drop: function() {},
     eventReceive: function(info) {
       info.event.setProp('id', `${info.event.id || 'evt'}-${crypto.randomUUID()}`);
-      info.event.setProp('backgroundColor', colorSeleccionado);
-      info.event.setProp('borderColor', colorSeleccionado);
+      info.event.setProp('backgroundColor', colores[0]);
+      info.event.setProp('borderColor', colores[0]);
     },
     eventDidMount: function(arg) {
-      // Botón eliminar pequeño dentro del evento
       const el = arg.el;
       el.style.position = 'relative';
       const btn = document.createElement('span');
@@ -153,7 +157,6 @@ function initCalendar() {
       el.appendChild(btn);
     },
     eventClick: function(info) {
-      // Mostrar modal (no recolorear automáticamente)
       abrirModal(info.event);
     }
   });
@@ -162,8 +165,6 @@ function initCalendar() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  renderColorPicker('colorPicker');      // paleta principal
-  renderColorPicker('modalColorPicker'); // modal (se actualiza en abrirModal)
   renderPalette();
   initCalendar();
 
