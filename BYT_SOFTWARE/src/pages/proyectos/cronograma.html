@@ -13,21 +13,34 @@
     .page-header { padding: 16px; }
     .page-header .crumb { color: #6c7a86; font-size: 12px; }
     .page-header h1 { margin: 4px 0 0; font-size: 22px; }
+
+    /* Layout ocupa casi todo el alto de la ventana */
     .layout {
       display: grid;
       grid-template-columns: 320px 1fr;
       gap: 16px;
       padding: 0 16px 20px;
+      height: calc(100vh - 140px);
+      align-items: stretch;
     }
+
     .panel {
       background: #fff;
       border: 1px solid #e4e7eb;
       border-radius: 12px;
       box-shadow: 0 6px 12px rgba(0,0,0,0.04);
       padding: 12px;
+      overflow: hidden;
     }
     .panel h2 { margin: 0 0 8px; font-size: 16px; }
-    .palette { display: grid; gap: 10px; max-height: calc(100vh - 200px); overflow: auto; }
+
+    .palette-wrapper {
+      height: calc(100% - 30px);
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .palette { display: grid; gap: 10px; }
+
     .group-title { font-weight: 700; font-size: 13px; color: #2e5e4e; margin-bottom: 4px; }
     .chip {
       border: 1px solid #d7dce0;
@@ -39,13 +52,7 @@
       gap: 2px;
     }
     .chip strong { color: #2e5e4e; }
-    .fc {
-      background: #fff;
-      border: 1px solid #e4e7eb;
-      border-radius: 12px;
-      padding: 8px;
-    }
-    .fc-toolbar-title { font-size: 16px; }
+
     .color-picker {
       display: flex;
       gap: 6px;
@@ -59,6 +66,19 @@
       cursor: pointer;
     }
     .color-swatch.active { outline: 2px solid #2e5e4e; }
+
+    /* Calendar ocupa todo el panel derecho */
+    #calendar {
+      height: calc(100% - 0px);
+    }
+    .fc {
+      background: #fff;
+      border: 1px solid #e4e7eb;
+      border-radius: 12px;
+      padding: 8px;
+      height: 100%;
+    }
+    .fc-toolbar-title { font-size: 16px; }
   </style>
 </head>
 <body>
@@ -71,7 +91,9 @@
     <aside class="panel">
       <h2>Partidas (proyectos aprobados)</h2>
       <div class="color-picker" id="colorPicker"></div>
-      <div id="palette" class="palette"></div>
+      <div class="palette-wrapper">
+        <div id="palette" class="palette"></div>
+      </div>
     </aside>
     <section class="panel">
       <div id="calendar"></div>
