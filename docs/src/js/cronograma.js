@@ -26,9 +26,16 @@ const proyectosAprobados = [
   ]}
 ];
 
+// Paleta de colores (8 distintos, sin repetir)
 const colores = [
-  "#2e5e4e", "#4a7a9c", "#c15d4f", "#d48b24", "#7a5ac8", "#2b8f7b", "#b04c8c", "#566573", "#9c640c",
-  "#1f618d", "#117864", "#8e44ad", "#d68910", "#af7ac5", "#16a085", "#d35400", "#5d6d7e", "#7d6608"
+  "#2e5e4e", // verde bosque
+  "#4a7a9c", // azul acero
+  "#c15d4f", // rojo terracota
+  "#d48b24", // ámbar
+  "#7a5ac8", // violeta
+  "#2b8f7b", // verde azulado
+  "#b04c8c", // magenta
+  "#566573"  // gris pizarra
 ];
 let colorSeleccionado = colores[0];
 
