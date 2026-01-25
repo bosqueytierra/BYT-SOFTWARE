@@ -1,4 +1,4 @@
-// Mock extendido de proyectos aprobados
+// TODO: Reemplazar este mock por datos reales de proyectos aprobados (con partidas) desde tu backend.
 const proyectosAprobados = [
   { id: "proj-001", nombre: "Proyecto Bahía - Pocket Door", cliente: "Terrazio", partidas: [
     { id: "p1", nombre: "Excavación" }, { id: "p2", nombre: "Cimentación" }, { id: "p3", nombre: "Estructura" }
@@ -26,17 +26,70 @@ const proyectosAprobados = [
   ]}
 ];
 
-// Paletas de colores (dos filas)
+// Paleta de colores (2 filas)
 const colores = [
   "#2e5e4e", "#4a7a9c", "#c15d4f", "#d48b24", "#7a5ac8", "#2b8f7b", "#b04c8c", "#566573", "#9c640c",
   "#1f618d", "#117864", "#8e44ad", "#d68910", "#af7ac5", "#16a085", "#d35400", "#5d6d7e", "#7d6608"
 ];
 let colorSeleccionado = colores[0];
 
-let calendar; // referencia global para el modal
+let calendar;
 let eventoSeleccionado = null;
 
-// Render color picker (solo modal)
+// Renderiza la lista de proyectos con despliegue de partidas y drag del proyecto completo
+function renderPalette() {
+  const palette = document.getElementById('palette');
+  if (!palette) return;
+  palette.innerHTML = '';
+
+  proyectosAprobados.forEach(proj => {
+    const block = document.createElement('div');
+    block.className = 'project-block';
+
+    // Header del proyecto (draggable de bundle)
+    const header = document.createElement('div');
+    header.className = 'project-header fc-event';
+    header.setAttribute('data-bundle', '1');
+    header.setAttribute('data-proyecto', proj.nombre);
+    header.setAttribute('data-cliente', proj.cliente);
+    header.setAttribute('data-partidas', JSON.stringify(proj.partidas));
+    header.innerHTML = `
+      <span class="project-title">${proj.nombre}</span>
+      <button class="toggle-btn" type="button">Desplegar</button>
+    `;
+
+    // Lista de partidas
+    const list = document.createElement('div');
+    list.className = 'partidas-list';
+    list.style.display = 'none';
+
+    proj.partidas.forEach(part => {
+      const div = document.createElement('div');
+      div.className = 'chip fc-event';
+      div.setAttribute('data-proyecto', proj.nombre);
+      div.setAttribute('data-partida', part.nombre);
+      div.setAttribute('data-cliente', proj.cliente);
+      div.innerHTML = `<strong>${part.nombre}</strong>
+        <small>${proj.nombre}</small>
+        <small style="color:#6c7a86;">Cliente: ${proj.cliente}</small>`;
+      list.appendChild(div);
+    });
+
+    // Toggle mostrar/ocultar partidas
+    header.querySelector('.toggle-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const visible = list.style.display !== 'none';
+      list.style.display = visible ? 'none' : 'grid';
+      e.target.textContent = visible ? 'Desplegar' : 'Ocultar';
+    });
+
+    block.appendChild(header);
+    block.appendChild(list);
+    palette.appendChild(block);
+  });
+}
+
+// Modal helpers
 function renderColorPicker(containerId, onSelect) {
   const picker = document.getElementById(containerId);
   if (!picker) return;
@@ -54,36 +107,14 @@ function renderColorPicker(containerId, onSelect) {
   });
 }
 
-// Renderiza la paleta de partidas
-function renderPalette() {
-  const palette = document.getElementById('palette');
-  if (!palette) return;
-  palette.innerHTML = '';
-  proyectosAprobados.forEach(proj => {
-    proj.partidas.forEach(part => {
-      const div = document.createElement('div');
-      div.className = 'chip fc-event';
-      div.setAttribute('data-proyecto', proj.nombre);
-      div.setAttribute('data-partida', part.nombre);
-      div.setAttribute('data-cliente', proj.cliente);
-      div.innerHTML = `<strong>${part.nombre}</strong>
-        <small>${proj.nombre}</small>
-        <small style="color:#6c7a86;">Cliente: ${proj.cliente}</small>`;
-      palette.appendChild(div);
-    });
-  });
-}
-
-// Modal helpers
 function abrirModal(evento) {
   eventoSeleccionado = evento;
   const backdrop = document.getElementById('modalBackdrop');
   document.getElementById('modalTitle').textContent = 'Detalle de evento';
   document.getElementById('modalProyecto').textContent = evento.extendedProps.proyecto;
-  document.getElementById('modalPartida').textContent = evento.extendedProps.partida;
-  document.getElementById('modalCliente').textContent = evento.extendedProps.cliente;
+  document.getElementById('modalPartida').textContent = evento.extendedProps.partida || '(Proyecto completo)';
+  document.getElementById('modalCliente').textContent = evento.extendedProps.cliente || '';
   document.getElementById('modalFecha').textContent = evento.start.toLocaleDateString();
-  // pinta color activo del evento
   colorSeleccionado = evento.backgroundColor || colores[0];
   renderColorPicker('modalColorPicker', (c) => {
     if (eventoSeleccionado) {
@@ -104,9 +135,26 @@ function initCalendar() {
   const calendarEl = document.getElementById('calendar');
   if (!calendarEl) return;
 
+  // Draggables desde la lista (proyecto completo o partida individual)
   new FullCalendar.Draggable(document.getElementById('palette'), {
     itemSelector: '.fc-event',
     eventData: function(el) {
+      const isBundle = el.getAttribute('data-bundle') === '1';
+      if (isBundle) {
+        return {
+          title: el.getAttribute('data-proyecto'),
+          extendedProps: {
+            bundle: true,
+            proyecto: el.getAttribute('data-proyecto'),
+            cliente: el.getAttribute('data-cliente'),
+            partidas: JSON.parse(el.getAttribute('data-partidas') || '[]')
+          },
+          duration: { days: 1 },
+          color: colores[0],
+          backgroundColor: colores[0],
+          borderColor: colores[0]
+        };
+      }
       return {
         title: `${el.getAttribute('data-partida')} — ${el.getAttribute('data-proyecto')}`,
         extendedProps: {
@@ -135,11 +183,36 @@ function initCalendar() {
       right: 'dayGridMonth,timeGridWeek,timeGridDay'
     },
     eventReceive: function(info) {
+      // Si es un bundle (proyecto), crear eventos por cada partida
+      if (info.event.extendedProps.bundle) {
+        const startDate = info.event.start;
+        const { partidas, proyecto, cliente } = info.event.extendedProps;
+        // eliminar placeholder
+        info.event.remove();
+        // crear uno por partida
+        partidas.forEach(p => {
+          calendar.addEvent({
+            title: `${p.nombre} — ${proyecto}`,
+            start: startDate,
+            allDay: true,
+            backgroundColor: colores[0],
+            borderColor: colores[0],
+            extendedProps: {
+              proyecto,
+              partida: p.nombre,
+              cliente
+            }
+          });
+        });
+        return;
+      }
+      // Si no es bundle, asegurar id y color base
       info.event.setProp('id', `${info.event.id || 'evt'}-${crypto.randomUUID()}`);
       info.event.setProp('backgroundColor', colores[0]);
       info.event.setProp('borderColor', colores[0]);
     },
     eventDidMount: function(arg) {
+      // Botón eliminar en cada evento
       const el = arg.el;
       el.style.position = 'relative';
       const btn = document.createElement('span');
