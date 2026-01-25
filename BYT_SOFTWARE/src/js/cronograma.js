@@ -1,4 +1,4 @@
-// TODO: Reemplazar este mock por datos reales desde backend
+// TODO: Reemplazar mock con datos reales desde backend
 const proyectosAprobados = [
   { id: "proj-001", nombre: "Proyecto Bahía - Pocket Door", cliente: "Terrazio", partidas: [
     { id: "p1", nombre: "Excavación" }, { id: "p2", nombre: "Cimentación" }, { id: "p3", nombre: "Estructura" }
@@ -26,7 +26,6 @@ const proyectosAprobados = [
   ]}
 ];
 
-// Paleta de colores (2 filas)
 const colores = [
   "#2e5e4e", "#4a7a9c", "#c15d4f", "#d48b24", "#7a5ac8", "#2b8f7b", "#b04c8c", "#566573", "#9c640c",
   "#1f618d", "#117864", "#8e44ad", "#d68910", "#af7ac5", "#16a085", "#d35400", "#5d6d7e", "#7d6608"
