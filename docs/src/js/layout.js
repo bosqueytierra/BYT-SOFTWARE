@@ -3,28 +3,46 @@
   if (window.__BYT_SHELL_APPLIED__) return;
   window.__BYT_SHELL_APPLIED__ = true;
 
-  const FRAGMENT_URL = '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html';
   const CURRENT_PATH = window.location.pathname;
   const FALLBACK_BACK = '../menu_principal.html';
 
-  // Guarda estilos del head de la página (CSS específicos)
+  // Rutas candidatas: GH Pages, absoluta y relativa local
+  const FRAGMENT_URLS = [
+    'https://bosqueytierra.github.io/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html',
+    '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html',
+    '../fragments/layout.html'
+  ];
+
+  // Guarda estilos de la página
   const pageHeadStyles = Array.from(
     document.head.querySelectorAll('style, link[rel="stylesheet"]')
   ).map(el => el.outerHTML).join('\n');
 
-  // Guarda contenido actual de la página
+  // Guarda contenido actual
   const pageContent = document.body.innerHTML;
 
-  // Carga fragmento shell
-  const html = await fetch(FRAGMENT_URL).then(r => {
-    if (!r.ok) throw new Error(`No se pudo cargar layout: ${r.status}`);
-    return r.text();
-  });
+  // Busca el fragmento sin reventar
+  let html = null;
+  for (const url of FRAGMENT_URLS) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) { html = await res.text(); break; }
+    } catch(e) { /* sigue */ }
+  }
+  if (!html) {
+    console.warn('No se pudo cargar layout.html; se deja la página tal cual.');
+    return;
+  }
 
-  // Reemplaza todo el documento por el fragmento
-  document.documentElement.innerHTML = html;
+  // Parsear y sustituir solo el body
+  const shellDoc = new DOMParser().parseFromString(html, 'text/html');
+  if (!shellDoc.body) {
+    console.warn('No se pudo parsear layout.html; se deja la página tal cual.');
+    return;
+  }
+  document.body.innerHTML = shellDoc.body.innerHTML;
 
-  // Restaura estilos específicos de la página
+  // Restaura estilos específicos
   if (pageHeadStyles) document.head.insertAdjacentHTML('beforeend', pageHeadStyles);
 
   // Inserta contenido previo en el slot
@@ -37,12 +55,12 @@
     slot.appendChild(wrapper);
   }
 
-  // Re-ejecuta SOLO scripts inline del contenido original
+  // Re-ejecuta scripts inline del contenido original
   function runScripts(root) {
     if (!root) return;
     const scripts = root.querySelectorAll('script');
     scripts.forEach(old => {
-      if (old.getAttribute('src')) return; // no duplicar externos
+      if (old.getAttribute('src')) return;
       const s = document.createElement('script');
       for (const { name, value } of Array.from(old.attributes)) s.setAttribute(name, value);
       s.textContent = old.textContent;
@@ -51,10 +69,9 @@
   }
   runScripts(wrapper);
 
-  // Dispara DOMContentLoaded para los listeners de los scripts reinyectados
   setTimeout(() => { document.dispatchEvent(new Event('DOMContentLoaded')); }, 0);
 
-  // Sidebar hover expand/collapse
+  // Hover sidebar
   const appShell = document.getElementById('appShell');
   const sidebar  = document.querySelector('.sidebar');
   if (appShell && sidebar) {
@@ -73,7 +90,7 @@
     tag: `<svg viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h5.9a1.5 1.5 0 0 1 1.06.44l6.1 6.1a1.5 1.5 0 0 1 0 2.12l-5.5 5.5a1.5 1.5 0 0 1-2.12 0l-6.1-6.1A1.5 1.5 0 0 1 4 11.9V5.5Z"/><circle cx="9" cy="9" r="1.1"/></svg>`,
     card: `<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 14h3"/></svg>`,
     db: `<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="7.5" ry="3.5"/><path d="M4.5 6.5v11c0 1.93 3.36 3.5 7.5 3.5s7.5-1.57 7.5-3.5v-11"/><path d="M4.5 12c0 1.93 3.36 3.5 7.5 3.5s7.5-1.57 7.5-3.5"/></svg>`,
-    gear: `<svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.69.05 1.25.61 1.3 1.3V10a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.21 1Z"/></svg>`
+    gear: `<svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.69.05 1.25.61 1.3 1.3V10a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.21 1Z"/></svg>`
   };
 
   function createNavItem(item, isChild = false) {
@@ -82,7 +99,6 @@
     el.className = isChild ? 'submenu-link' : 'nav-item';
     if (hasHref) el.setAttribute('href', item.href);
     else el.classList.add('disabled');
-
     const icon = iconMap[item.icon] || '';
     el.innerHTML = `<span class="nav-icon">${icon}</span><span class="nav-label">${item.label}</span>`;
     return el;
