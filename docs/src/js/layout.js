@@ -1,7 +1,7 @@
 // Inyecta la shell y aplica menú unificado desde window.BYT_MENU (no docs)
 (async function() {
   if (window._BYT_SHELL_APPLIED_) return;
-  window._BYT_SHELL_APPLIED_ = true;
+  window._BYT_SHELL_APPLIED_ = true; 
 
   const FRAGMENT_URL = '/BYT-SOFTWARE/BYT_SOFTWARE/src/fragments/layout.html';
   const CURRENT_PATH = window.location.pathname;
