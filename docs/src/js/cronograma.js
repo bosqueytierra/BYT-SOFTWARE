@@ -40,6 +40,10 @@ let eventoSeleccionado = null;
 const estadoPartidas = {}; // key: projId::partId -> { count }
 const colapsados = {};     // recordar expand/colapsar proyectos
 
+// Listas de visitas/rectificaciones creadas
+const visitasItems = [];
+const rectItems = [];
+
 // Inicializar estado base
 function initEstado() {
   proyectosAprobados.forEach(p => {
@@ -131,7 +135,45 @@ function renderPalette() {
   });
 }
 
-// Modal helpers
+// Render listas de visitas/rectificaciones
+function renderExtras() {
+  const vList = document.getElementById('visitasList');
+  const rList = document.getElementById('rectList');
+  if (vList) {
+    vList.innerHTML = '';
+    visitasItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'chip fc-event';
+      div.setAttribute('data-tipo', 'visita');
+      div.setAttribute('data-proyecto', item.proyectoNombre || '(Manual)');
+      div.setAttribute('data-proyecto-id', item.proyectoId || '');
+      div.setAttribute('data-cliente', item.cliente || '');
+      div.setAttribute('data-titulo', item.titulo);
+      div.innerHTML = `<strong>${item.titulo}</strong>
+        <small>${item.proyectoNombre || 'Manual'}</small>
+        ${item.cliente ? `<small style="color:#6c7a86;">Cliente: ${item.cliente}</small>` : ''}`;
+      vList.appendChild(div);
+    });
+  }
+  if (rList) {
+    rList.innerHTML = '';
+    rectItems.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'chip fc-event';
+      div.setAttribute('data-tipo', 'rectificacion');
+      div.setAttribute('data-proyecto', item.proyectoNombre || '(Manual)');
+      div.setAttribute('data-proyecto-id', item.proyectoId || '');
+      div.setAttribute('data-cliente', item.cliente || '');
+      div.setAttribute('data-titulo', item.titulo);
+      div.innerHTML = `<strong>${item.titulo}</strong>
+        <small>${item.proyectoNombre || 'Manual'}</small>
+        ${item.cliente ? `<small style="color:#6c7a86;">Cliente: ${item.cliente}</small>` : ''}`;
+      rList.appendChild(div);
+    });
+  }
+}
+
+// Modal helpers (color)
 function renderColorPicker(containerId, onSelect) {
   const picker = document.getElementById(containerId);
   if (!picker) return;
@@ -149,12 +191,13 @@ function renderColorPicker(containerId, onSelect) {
   });
 }
 
+// Modal info evento
 function abrirModal(evento) {
   eventoSeleccionado = evento;
   const backdrop = document.getElementById('modalBackdrop');
   document.getElementById('modalTitle').textContent = 'Detalle de evento';
   document.getElementById('modalProyecto').textContent = evento.extendedProps.proyecto;
-  document.getElementById('modalPartida').textContent = evento.extendedProps.partida || '(Proyecto completo)';
+  document.getElementById('modalPartida').textContent = evento.extendedProps.partida || evento.extendedProps.tipo || '(Proyecto completo)';
   document.getElementById('modalCliente').textContent = evento.extendedProps.cliente || '';
   document.getElementById('modalFecha').textContent = evento.start.toLocaleDateString();
   colorSeleccionado = evento.backgroundColor || colores[0];
@@ -167,9 +210,34 @@ function abrirModal(evento) {
   backdrop.style.display = 'flex';
 }
 function cerrarModal() {
-  const backdrop = document.getElementById('modalBackdrop');
-  backdrop.style.display = 'none';
+  document.getElementById('modalBackdrop').style.display = 'none';
   eventoSeleccionado = null;
+}
+
+// Modal crear visita/rectificación
+let createTipo = null;
+function abrirCreateModal(tipo) {
+  createTipo = tipo; // 'visita' | 'rectificacion'
+  document.getElementById('createTitle').textContent = tipo === 'visita' ? 'Agregar visita técnica' : 'Agregar rectificación';
+  document.getElementById('createNombre').value = '';
+  document.getElementById('createCliente').value = '';
+  document.getElementById('createProyecto').value = '';
+  document.getElementById('createBackdrop').style.display = 'flex';
+}
+function cerrarCreateModal() {
+  document.getElementById('createBackdrop').style.display = 'none';
+  createTipo = null;
+}
+function cargarSelectProyectos() {
+  const sel = document.getElementById('createProyecto');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+  proyectosAprobados.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.nombre;
+    sel.appendChild(opt);
+  });
 }
 
 // Gestiona contador de asignación por partida
@@ -192,6 +260,7 @@ function initCalendar() {
   const calendarEl = document.getElementById('calendar');
   if (!calendarEl) return;
 
+  // Draggables
   new FullCalendar.Draggable(document.getElementById('palette'), {
     itemSelector: '.fc-event',
     eventData: function(el) {
@@ -229,6 +298,44 @@ function initCalendar() {
     }
   });
 
+  new FullCalendar.Draggable(document.getElementById('visitasList'), {
+    itemSelector: '.fc-event',
+    eventData: function(el) {
+      return {
+        title: el.getAttribute('data-titulo'),
+        extendedProps: {
+          tipo: 'Visita técnica',
+          proyecto: el.getAttribute('data-proyecto'),
+          proyectoId: el.getAttribute('data-proyecto-id'),
+          cliente: el.getAttribute('data-cliente')
+        },
+        duration: { days: 1 },
+        color: colores[0],
+        backgroundColor: colores[0],
+        borderColor: colores[0]
+      };
+    }
+  });
+
+  new FullCalendar.Draggable(document.getElementById('rectList'), {
+    itemSelector: '.fc-event',
+    eventData: function(el) {
+      return {
+        title: el.getAttribute('data-titulo'),
+        extendedProps: {
+          tipo: 'Rectificación',
+          proyecto: el.getAttribute('data-proyecto'),
+          proyectoId: el.getAttribute('data-proyecto-id'),
+          cliente: el.getAttribute('data-cliente')
+        },
+        duration: { days: 1 },
+        color: colores[0],
+        backgroundColor: colores[0],
+        borderColor: colores[0]
+      };
+    }
+  });
+
   calendar = new FullCalendar.Calendar(calendarEl, {
     locale: 'es',
     buttonText: { today: 'hoy', month: 'mes', week: 'semana', day: 'día' },
@@ -248,7 +355,7 @@ function initCalendar() {
         const { partidas, proyecto, proyectoId, cliente } = info.event.extendedProps;
         info.event.remove(); // quitar placeholder
         partidas.forEach(p => {
-          const ev = calendar.addEvent({
+          calendar.addEvent({
             title: `${p.nombre} — ${proyecto}`,
             start: startDate,
             allDay: true,
@@ -269,9 +376,11 @@ function initCalendar() {
         renderPalette();
         return;
       }
-      // Si no es bundle, marcar asignación
-      const key = getPartKeyFromEvent(info.event);
-      if (key) incPartida(key);
+      // Partida individual
+      if (info.event.extendedProps.partidaId) {
+        const key = getPartKeyFromEvent(info.event);
+        if (key) incPartida(key);
+      }
       info.event.setProp('id', `${info.event.id || 'evt'}-${crypto.randomUUID()}`);
       info.event.setProp('backgroundColor', colores[0]);
       info.event.setProp('borderColor', colores[0]);
@@ -312,8 +421,12 @@ function initCalendar() {
 document.addEventListener('DOMContentLoaded', () => {
   initEstado();
   renderPalette();
+  renderExtras();
   initCalendar();
+  updateStats();
+  cargarSelectProyectos();
 
+  // Modal info
   document.getElementById('modalClose').addEventListener('click', cerrarModal);
   document.getElementById('modalBackdrop').addEventListener('click', (e) => {
     if (e.target.id === 'modalBackdrop') cerrarModal();
@@ -323,5 +436,35 @@ document.addEventListener('DOMContentLoaded', () => {
     cerrarModal();
   });
 
-  updateStats();
+  // Modal crear visita/rectificación
+  document.getElementById('btnAddVisita').addEventListener('click', () => abrirCreateModal('visita'));
+  document.getElementById('btnAddRect').addEventListener('click', () => abrirCreateModal('rectificacion'));
+  document.getElementById('createCancel').addEventListener('click', cerrarCreateModal);
+  document.getElementById('createBackdrop').addEventListener('click', (e) => {
+    if (e.target.id === 'createBackdrop') cerrarCreateModal();
+  });
+  document.getElementById('createSave').addEventListener('click', () => {
+    const sel = document.getElementById('createProyecto');
+    const nombre = document.getElementById('createNombre').value.trim();
+    const clienteIn = document.getElementById('createCliente').value.trim();
+    const projId = sel.value;
+    const proj = proyectosAprobados.find(p => p.id === projId);
+    const proyectoNombre = proj ? proj.nombre : '';
+    const cliente = clienteIn || (proj ? proj.cliente : '');
+    const tituloBase = createTipo === 'visita' ? 'Visita técnica' : 'Rectificación';
+    const titulo = nombre || (proyectoNombre ? `${tituloBase} — ${proyectoNombre}` : tituloBase);
+
+    const item = {
+      id: crypto.randomUUID(),
+      titulo,
+      proyectoId: projId || '',
+      proyectoNombre: proyectoNombre || '',
+      cliente
+    };
+    if (createTipo === 'visita') visitasItems.push(item);
+    else rectItems.push(item);
+
+    renderExtras();
+    cerrarCreateModal();
+  });
 });
