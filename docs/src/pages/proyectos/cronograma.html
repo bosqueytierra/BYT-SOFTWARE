@@ -50,7 +50,6 @@
     .stat-row { display: flex; justify-content: space-between; font-weight: 700; color: #2d2d2d; }
     .stat-row span.value { font-size: 18px; }
 
-    /* Lista de proyectos/partidas ocupa el espacio y hace scroll propio */
     .palette-wrapper {
       flex: 1;
       overflow-y: auto;
@@ -116,6 +115,10 @@
     .modal input, .modal select {
       width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px;
       background: #f9fbfc;
+    }
+    .modal textarea {
+      width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px;
+      background: #f9fbfc; resize: vertical; min-height: 64px;
     }
     .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
     .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
@@ -184,7 +187,12 @@
         <span class="label">Color:</span>
         <div class="color-picker" id="modalColorPicker"></div>
       </div>
+      <div class="row">
+        <label class="label" for="modalNota">Nota (se mostrará entre paréntesis):</label>
+        <textarea id="modalNota" placeholder="Ej: Cuarzo / Muebles arriba / Muebles abajo"></textarea>
+      </div>
       <div class="modal-footer">
+        <button class="btn primary" id="modalSave">Guardar cambios</button>
         <button class="btn danger" id="modalDelete">Eliminar</button>
         <button class="btn" id="modalClose">Cerrar</button>
       </div>
