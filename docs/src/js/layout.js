@@ -1,4 +1,4 @@
-// Inyecta la shell y aplica menú unificado desde window.BYT_MENU
+// Inyecta la shell y aplica menú unificado desde window.BYT_MENU (no docs)
 (async function() {
   if (window._BYT_SHELL_APPLIED_) return;
   window._BYT_SHELL_APPLIED_ = true;
@@ -135,6 +135,7 @@
     } catch { return false; }
   };
 
+  // Guarda última URL interna (referrer) en una pila corta
   const stack = JSON.parse(sessionStorage.getItem('byt_nav_stack') || '[]');
   const ref = document.referrer;
   if (ref && isInternal(ref) && ref !== window.location.href) {
