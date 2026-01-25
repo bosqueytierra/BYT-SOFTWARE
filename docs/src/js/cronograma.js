@@ -54,7 +54,7 @@ function renderColorPicker() {
   });
 }
 
-// Renderiza la paleta de partidas agrupadas por partida nombre (categoría)
+// Renderiza la paleta de partidas
 function renderPalette() {
   const palette = document.getElementById('palette');
   if (!palette) return;
@@ -66,7 +66,6 @@ function renderPalette() {
       div.setAttribute('data-proyecto', proj.nombre);
       div.setAttribute('data-partida', part.nombre);
       div.setAttribute('data-cliente', proj.cliente);
-      div.setAttribute('data-color', colorSeleccionado);
       div.innerHTML = `<strong>${part.nombre}</strong>
         <small>${proj.nombre}</small>
         <small style="color:#6c7a86;">Cliente: ${proj.cliente}</small>`;
@@ -75,7 +74,6 @@ function renderPalette() {
   });
 }
 
-// Inicializa el calendario
 function initCalendar() {
   const calendarEl = document.getElementById('calendar');
   if (!calendarEl) return;
@@ -91,7 +89,7 @@ function initCalendar() {
           partida: el.getAttribute('data-partida'),
           cliente: el.getAttribute('data-cliente')
         },
-        duration: { days: 1 }, // ocupa un solo día por defecto
+        duration: { days: 1 }, // ocupa un día
         color: colorSeleccionado,
         backgroundColor: colorSeleccionado,
         borderColor: colorSeleccionado
@@ -101,8 +99,9 @@ function initCalendar() {
 
   const calendar = new FullCalendar.Calendar(calendarEl, {
     locale: 'es',
+    buttonText: { today: 'hoy', month: 'mes', week: 'semana', day: 'día' },
     initialView: 'dayGridMonth',
-    height: 'auto',
+    height: '100%',
     droppable: true,
     editable: true,
     headerToolbar: {
@@ -114,9 +113,8 @@ function initCalendar() {
       // No removemos de la paleta
     },
     eventReceive: function(info) {
-      // Asegura ID único al recibir
+      // ID único y color seleccionado al soltar
       info.event.setProp('id', `${info.event.id || 'evt'}-${crypto.randomUUID()}`);
-      // Aplica color elegido
       info.event.setProp('backgroundColor', colorSeleccionado);
       info.event.setProp('borderColor', colorSeleccionado);
     },
@@ -139,8 +137,9 @@ function initCalendar() {
       el.appendChild(btn);
     },
     eventClick: function(info) {
-      const p = info.event.extendedProps;
-      alert(`Proyecto: ${p.proyecto}\nPartida: ${p.partida}\nCliente: ${p.cliente}\nFecha: ${info.event.start.toLocaleDateString()}`);
+      // Al hacer clic, aplica el color seleccionado al evento
+      info.event.setProp('backgroundColor', colorSeleccionado);
+      info.event.setProp('borderColor', colorSeleccionado);
     }
   });
 
