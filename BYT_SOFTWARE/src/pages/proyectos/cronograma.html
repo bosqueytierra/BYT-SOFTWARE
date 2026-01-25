@@ -6,7 +6,6 @@
   <title>Cronograma de proyectos</title>
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css" />
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
-  <!-- FullCalendar CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" />
   <style>
     body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
@@ -14,7 +13,6 @@
     .page-header .crumb { color: #6c7a86; font-size: 12px; }
     .page-header h1 { margin: 4px 0 0; font-size: 22px; }
 
-    /* Layout ocupa casi todo el alto de la ventana */
     .layout {
       display: grid;
       grid-template-columns: 320px 1fr;
@@ -23,7 +21,6 @@
       height: calc(100vh - 140px);
       align-items: stretch;
     }
-
     .panel {
       background: #fff;
       border: 1px solid #e4e7eb;
@@ -34,14 +31,9 @@
     }
     .panel h2 { margin: 0 0 8px; font-size: 16px; }
 
-    .palette-wrapper {
-      height: calc(100% - 30px);
-      overflow-y: auto;
-      padding-right: 4px;
-    }
+    .palette-wrapper { height: calc(100% - 30px); overflow-y: auto; padding-right: 4px; }
     .palette { display: grid; gap: 10px; }
 
-    .group-title { font-weight: 700; font-size: 13px; color: #2e5e4e; margin-bottom: 4px; }
     .chip {
       border: 1px solid #d7dce0;
       border-radius: 10px;
@@ -53,12 +45,7 @@
     }
     .chip strong { color: #2e5e4e; }
 
-    .color-picker {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-bottom: 8px;
-    }
+    .color-picker { display: grid; grid-template-columns: repeat(9, 22px); gap: 6px; margin-bottom: 8px; }
     .color-swatch {
       width: 22px; height: 22px;
       border-radius: 6px;
@@ -67,10 +54,7 @@
     }
     .color-swatch.active { outline: 2px solid #2e5e4e; }
 
-    /* Calendar ocupa todo el panel derecho */
-    #calendar {
-      height: calc(100% - 0px);
-    }
+    #calendar { height: 100%; }
     .fc {
       background: #fff;
       border: 1px solid #e4e7eb;
@@ -79,6 +63,29 @@
       height: 100%;
     }
     .fc-toolbar-title { font-size: 16px; }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none; align-items: center; justify-content: center;
+      z-index: 9999;
+    }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      width: 360px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      border: 1px solid #e4e7eb;
+    }
+    .modal h3 { margin: 0 0 8px; }
+    .modal .row { margin-bottom: 8px; color: #2d2d2d; }
+    .modal .label { color: #6c7a86; font-size: 13px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+    .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+    .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
+    .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
   </style>
 </head>
 <body>
@@ -100,12 +107,28 @@
     </section>
   </div>
 
-  <!-- Menú + shell -->
+  <!-- Modal info -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <h3 id="modalTitle">Detalle</h3>
+      <div class="row"><span class="label">Proyecto:</span> <span id="modalProyecto"></span></div>
+      <div class="row"><span class="label">Partida:</span> <span id="modalPartida"></span></div>
+      <div class="row"><span class="label">Cliente:</span> <span id="modalCliente"></span></div>
+      <div class="row"><span class="label">Fecha:</span> <span id="modalFecha"></span></div>
+      <div class="row">
+        <span class="label">Color:</span>
+        <div class="color-picker" id="modalColorPicker" style="margin-top:6px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn danger" id="modalDelete">Eliminar</button>
+        <button class="btn" id="modalClose">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
-  <!-- FullCalendar JS -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-  <!-- Lógica del cronograma -->
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/cronograma.js"></script>
 </body>
 </html>
