@@ -43,9 +43,8 @@
 
   // Inserta contenido previo en el slot
   const slot = document.getElementById('page-content-slot');
-  let wrapper = null;
   if (slot) {
-    wrapper = document.createElement('div');
+    const wrapper = document.createElement('div');
     wrapper.id = 'page-content';
     wrapper.innerHTML = pageContent;
     slot.appendChild(wrapper);
@@ -55,19 +54,7 @@
   const appShell = document.getElementById('appShell');
   if (appShell) appShell.classList.add('expanded');
 
-  // Re-ejecuta scripts inline del contenido original
-  function runScripts(root) {
-    if (!root) return;
-    root.querySelectorAll('script').forEach(old => {
-      if (old.getAttribute('src')) return;
-      const s = document.createElement('script');
-      for (const { name, value } of Array.from(old.attributes)) s.setAttribute(name, value);
-      s.textContent = old.textContent;
-      document.body.appendChild(s);
-    });
-  }
-  runScripts(wrapper);
-  setTimeout(() => document.dispatchEvent(new Event('DOMContentLoaded')), 0);
+  // NO re‑ejecutamos scripts inline para evitar redeclaraciones
 
   // Hover sidebar
   const sidebar = document.querySelector('.sidebar');
