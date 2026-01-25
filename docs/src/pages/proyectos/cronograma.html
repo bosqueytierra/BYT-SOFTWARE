@@ -75,7 +75,7 @@
     }
     .fc-toolbar-title { font-size: 16px; }
 
-    .card-lite { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fafbfc; margin-bottom: 10px; }
+    .card-lite { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fafbfc; margin: 10px 0; }
     .card-lite h3 { margin: 0 0 6px; font-size: 14px; }
     .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
     .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
@@ -101,11 +101,10 @@
     .modal h3 { margin: 0 0 12px; }
     .modal .row { margin-bottom: 10px; color: #2d2d2d; }
     .modal .label { color: #6c7a86; font-size: 13px; display: block; margin-bottom: 4px; }
-    .modal input, .modal select, .modal textarea {
+    .modal input, .modal select {
       width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px;
       background: #f9fbfc;
     }
-    .modal textarea { resize: vertical; min-height: 64px; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
     .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
 
@@ -143,7 +142,7 @@
         <div id="palette" class="palette"></div>
       </div>
 
-      <div class="card-lite" style="margin-top:12px;">
+      <div class="card-lite">
         <h3>Agendar visita técnica</h3>
         <button class="btn primary full" id="btnAddVisita">Agregar visita</button>
         <div id="visitasList" class="list-extra"></div>
@@ -191,7 +190,7 @@
         </select>
       </div>
       <div class="row">
-        <label class="label" for="createNombre">Nombre / descripción (opcional)</label>
+        <label class="label" for="createNombre">Nombre / descripción</label>
         <input id="createNombre" type="text" placeholder="Ej: Visita obra cliente X" />
       </div>
       <div class="row">
