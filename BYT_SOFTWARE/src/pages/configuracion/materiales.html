@@ -719,7 +719,7 @@
       document.getElementById('crearMaterialForm').reset();
     }
 
-    // Handler sobrescrito con stopPropagation/stopImmediatePropagation
+    // Handler sobrescrito con stopPropagation/stopImmediatePropagation y refresco de UI
     const crearForm = document.getElementById('crearMaterialForm');
     crearForm.onsubmit = async function(e) {
       e.preventDefault();
@@ -753,6 +753,11 @@
           if (res?.error) throw res.error;
           await refreshFromRemote();
           notifyUpdate();
+          loadCategories();
+          actualizarTodosLosSelects();
+          if (document.getElementById('consultar').classList.contains('active')) {
+            consultarTodosMateriales();
+          }
           alert('✅ Material creado correctamente (remote)');
         } catch (err) {
           console.error('Error creando material remote', err);
@@ -766,12 +771,15 @@
           window.categoriasMateriales[categoria].push(nombre);
         }
         notifyUpdate();
+        loadCategories();
+        actualizarTodosLosSelects();
+        if (document.getElementById('consultar').classList.contains('active')) {
+          consultarTodosMateriales();
+        }
         alert('✅ Material creado (local)');
       }
 
       limpiarFormularioCrear();
-      loadCategories();
-      actualizarTodosLosSelects();
     };
 
     // ===== EDITAR =====
