@@ -6,151 +6,64 @@
     <title>Gestión de Materiales - BYT SOFTWARE</title>
     <link rel="stylesheet" href="../../styles/global.css">
     <style>
-        .tabs {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
+        :root {
+            --primary: #2e7d32;
+            --primary-dark: #245f28;
+            --secondary: #6c757d;
+            --danger: #c62828;
+            --warning: #f5a524;
+            --bg-soft: #f5f6f7;
+            --text: #333;
         }
-        
-        .tab {
-            padding: 12px 24px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            color: #666;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
+        body { background: var(--bg-soft); color: var(--text); }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
+        .tab { padding: 12px 24px; background: none; border: none; cursor: pointer; font-size: 16px; color: #666; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab.active { color: var(--primary-dark); border-bottom-color: var(--primary-dark); font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .search-section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 20px; }
+        .search-row { display: flex; gap: 15px; align-items: end; }
+        .form-group { flex: 1; }
+        .form-group label { display: block; margin-bottom: 5px; color: #444; font-weight: 600; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff;
         }
-        
-        .tab.active {
-            color: #2e5e4e;
-            border-bottom-color: #2e5e4e;
-            font-weight: bold;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .search-section {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        
-        .search-row {
-            display: flex;
-            gap: 15px;
-            align-items: end;
-        }
-        
-        .form-group {
-            flex: 1;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-            font-weight: bold;
-        }
-        
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
+        .form-group select:focus, .form-group input:focus, .form-group textarea:focus { outline: 2px solid rgba(46,125,50,0.15); border-color: var(--primary); }
+        .simple-table-container { overflow-x: auto; }
+        .simple-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .simple-table th, .simple-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        .simple-table th { background-color: #f8f9fa; font-weight: bold; color: var(--primary-dark); }
+        .simple-table tr:hover { background-color: #f8f9fa; }
+        .btn-small { padding: 6px 12px; font-size: 0.8em; margin: 0 2px; }
+        .material-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0; background: white; margin-bottom: 5px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .material-item:last-child { border-bottom: none; }
+        .material-info { flex: 1; }
+        .material-name { font-weight: bold; color: #333; margin-bottom: 4px; }
+        .material-category { color: #666; font-size: 0.9em; }
+        .btn { background: var(--primary); color: white; padding: 10px 14px; border-radius: 6px; border: 0; cursor: pointer; transition: all 0.15s; }
+        .btn:hover { background: var(--primary-dark); }
+        .btn-secondary { background: var(--secondary); color: white; padding: 10px 14px; border-radius: 6px; border: 0; cursor: pointer; }
+        .btn-secondary:hover { background: #565e64; }
+        .btn-danger { background: var(--danger); color: white; padding: 10px 14px; border-radius: 6px; border: 0; cursor: pointer; }
+        .btn-danger:hover { background: #a32020; }
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
 
-        .simple-table-container {
-            overflow-x: auto;
-        }
+        /* Toast & modal */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { min-width: 240px; background: #fff; color: #333; padding: 12px 14px; border-radius: 8px; box-shadow: 0 4px 18px rgba(0,0,0,0.12); border-left: 4px solid var(--primary); font-size: 14px; }
+        .toast.success { border-left-color: #4caf50; }
+        .toast.error { border-left-color: #e53935; }
+        .toast.warning { border-left-color: #f5a524; }
+        .toast.info { border-left-color: #2196f3; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 9998; }
+        .modal { background: #fff; padding: 18px 20px; border-radius: 10px; width: 360px; max-width: 90%; box-shadow: 0 8px 26px rgba(0,0,0,0.22); }
+        .modal h3 { margin: 0 0 8px 0; font-size: 17px; color: #222; }
+        .modal p { margin: 0 0 12px 0; color: #444; line-height: 1.4; }
+        .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 
-        .simple-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        .simple-table th,
-        .simple-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .simple-table th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-            color: #2e5e4e;
-        }
-
-        .simple-table tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 0.8em;
-            margin: 0 2px;
-        }
-
-        .material-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            border-bottom: 1px solid #f0f0f0;
-            background: white;
-            margin-bottom: 5px;
-            border-radius: 5px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .material-item:last-child {
-            border-bottom: none;
-        }
-
-        .material-info {
-            flex: 1;
-        }
-
-        .material-name {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 4px;
-        }
-
-        .material-category {
-            color: #666;
-            font-size: 0.9em;
-        }
-
-        .actions {
-            display: flex;
-            gap: 5px;
-        }
-
-        .btn-icon {
-            padding: 6px 10px;
-            font-size: 0.8em;
-            min-width: auto;
-        }
-
-        /* Buttons */
-        .btn { background:#2e7d32;color:white;padding:10px 14px;border-radius:6px;border:0;cursor:pointer }
-        .btn-secondary { background:#6c757d;color:white;padding:10px 14px;border-radius:6px;border:0;cursor:pointer }
-        .btn-danger { background:#c62828;color:white;padding:10px 14px;border-radius:6px;border:0;cursor:pointer }
+        /* Hold-to-delete */
+        .hold-btn { position: relative; overflow: hidden; }
+        .hold-progress { position: absolute; inset: 0; background: rgba(0,0,0,0.12); width: 0%; transition: width linear; pointer-events: none; }
     </style>
 </head>
 <body>
@@ -169,7 +82,6 @@
             </header>
 
             <main>
-                <!-- Pestañas -->
                 <div class="tabs" role="tablist" aria-label="Gestión de materiales">
                     <button class="tab active" onclick="showTab('categorias')" role="tab" aria-selected="true">📁 Categorías</button>
                     <button class="tab" onclick="showTab('consultar')" role="tab">🔍 Consultar Materiales</button>
@@ -178,7 +90,6 @@
                     <button class="tab" onclick="showTab('eliminar')" role="tab">🗑️ Eliminar Material</button>
                 </div>
 
-                <!-- Pestaña Categorías -->
                 <div id="categorias" class="tab-content active" role="tabpanel">
                     <div class="card">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -186,7 +97,7 @@
                             <button class="btn" onclick="mostrarModalAgregarCategoria()">+ Nueva Categoría</button>
                         </div>
                         
-                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 15px; margin-bottom: 20px;">
+                        <div style="background: #fff8e1; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                             <p><strong>ℹ️ Información:</strong> En esta sección solo se gestionan las <strong>categorías</strong>. Los materiales se gestionan en las pestañas correspondientes.</p>
                         </div>
                         
@@ -199,15 +110,12 @@
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody id="tablaCategorias">
-                                    <!-- Las categorías se cargarán dinámicamente -->
-                                </tbody>
+                                <tbody id="tablaCategorias"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- Pestaña Consultar -->
                 <div id="consultar" class="tab-content" role="tabpanel">
                     <div class="search-section">
                         <h3>🔍 Consultar Materiales (Solo Lectura)</h3>
@@ -244,7 +152,6 @@
                     </div>
                 </div>
 
-                <!-- Pestaña Crear -->
                 <div id="crear" class="tab-content" role="tabpanel">
                     <div class="card">
                         <h2 class="card-title">➕ Crear Nuevo Material</h2>
@@ -265,14 +172,8 @@
                                 
                                 <div class="form-group">
                                     <label>Unidad de Medida</label>
-                                    <select id="crearUnidad">
-                                        <option value="pza">Pieza</option>
-                                        <option value="mt">Metro</option>
-                                        <option value="m2">Metro cuadrado</option>
-                                        <option value="kg">Kilogramo</option>
-                                        <option value="lt">Litro</option>
-                                        <option value="caja">Caja</option>
-                                        <option value="par">Par</option>
+                                    <select id="crearUnidad" onchange="handleUnidadChange(event, 'crearUnidad')">
+                                        <!-- Se llena dinámicamente -->
                                     </select>
                                 </div>
                                 
@@ -290,7 +191,6 @@
                     </div>
                 </div>
 
-                <!-- Pestaña Editar -->
                 <div id="editar" class="tab-content" role="tabpanel">
                     <div class="search-section">
                         <h3>✏️ Buscar Material a Editar</h3>
@@ -341,7 +241,6 @@
                     </div>
                 </div>
 
-                <!-- Pestaña Eliminar -->
                 <div id="eliminar" class="tab-content" role="tabpanel">
                     <div class="search-section">
                         <h3>🗑️ Buscar Material a Eliminar</h3>
@@ -358,13 +257,16 @@
                                     <option value="">-- Primero seleccione una categoría --</option>
                                 </select>
                             </div>
-                            <button class="btn-danger" onclick="eliminarMaterialSeleccionado()">🗑️ Eliminar Material</button>
+                            <button id="btnHoldDelete" class="btn-danger hold-btn">
+                                <span>🗑️ Eliminar Material</span>
+                                <div class="hold-progress" id="holdProgress"></div>
+                            </button>
                         </div>
                     </div>
 
                     <div class="card">
                         <h3>⚠️ Zona de Eliminación</h3>
-                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 5px; padding: 20px; margin: 15px 0;">
+                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 15px 0;">
                             <p><strong>⚠️ Advertencia:</strong> La eliminación de materiales es <strong>permanente</strong> y no se puede deshacer.</p>
                             <p>Asegúrese de seleccionar el material correcto antes de proceder con la eliminación.</p>
                         </div>
@@ -383,47 +285,131 @@
         </div>
     </div>
 
-    <!-- Keep local categories fallback script -->
-    <script src="../../js/categorias_reales.js"></script>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="modal-backdrop" id="confirmBackdrop">
+        <div class="modal">
+            <h3 id="confirmTitle">Confirmar</h3>
+            <p id="confirmMessage">¿Seguro?</p>
+            <div class="actions">
+                <button class="btn-secondary" id="confirmCancel">Cancelar</button>
+                <button class="btn" id="confirmOk">Aceptar</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Layout global: inyecta sidebar/topbar -->
+    <script src="../../js/categorias_reales.js"></script>
     <script src="../../js/menuConfig.js"></script>
     <script src="../../js/layout.js"></script>
 
-    <!-- Main logic: module to allow dynamic import of materialsApi -->
     <script type="module">
-    // Module-scoped state
     let materialsApi = null;
-    let remoteAvailable = false; // Supabase-backed materials API available
-    let categoriesData = {};      // { category: [ {id?, name, price?, unit?, active?}, ... ] } OR fallback where values are strings
-    const LOCAL_FALLBACK_KEY = 'byt_local_materials_used';
+    let unitsApi = null;
+    let remoteAvailable = false;
+    let categoriesData = {};
+    let unidades = [];
+    let unitsMap = {};
 
-    // Try to import the materialsApi (Supabase). If fails, we'll use local categoriasMateriales (from categorias_reales.js).
+    function toast(msg, type='info', timeout=2400) {
+      const cont = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      cont.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; setTimeout(()=>cont.removeChild(el),300); }, timeout);
+    }
+
+    function confirmDialog({title='Confirmar', message='¿Seguro?', okText='Aceptar', cancelText='Cancelar'} = {}) {
+      return new Promise(res => {
+        const back = document.getElementById('confirmBackdrop');
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        document.getElementById('confirmOk').textContent = okText;
+        document.getElementById('confirmCancel').textContent = cancelText;
+        back.style.display = 'flex';
+        const clean = () => { back.style.display = 'none'; ok.onclick = cancel.onclick = null; };
+        const ok = document.getElementById('confirmOk');
+        const cancel = document.getElementById('confirmCancel');
+        ok.onclick = () => { clean(); res(true); };
+        cancel.onclick = () => { clean(); res(false); };
+      });
+    }
+
+    function renderUnidades(selectId, selected='') {
+      const sel = document.getElementById(selectId);
+      sel.innerHTML = '';
+      unidades.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u; opt.textContent = unitsMap[u]?.name || u;
+        if (u === selected) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      const optAdd = document.createElement('option');
+      optAdd.value = '__add__'; optAdd.textContent = '＋ Agregar nueva unidad…';
+      sel.appendChild(optAdd);
+    }
+
+    async function handleUnidadChange(ev, selectId) {
+      const v = ev.target.value;
+      if (v === '__add__') {
+        const nueva = prompt('Ingrese nueva unidad (ej: “bolsa”)');
+        if (!nueva || !nueva.trim()) { renderUnidades(selectId); return; }
+        const code = nueva.trim();
+        try {
+          const api = unitsApi || await import('../../lib/unitsApi.js');
+          unitsApi = api;
+          const res = await api.createUnit({ code, name: code, active: true });
+          if (res.error) throw res.error;
+          await refreshUnits();
+          renderUnidades(selectId, code);
+        } catch(err) {
+          console.error('Error creando unidad', err);
+          toast('Error creando unidad (ver consola)','error');
+          renderUnidades(selectId);
+        }
+      }
+    }
+
+    async function refreshUnits() {
+      try {
+        const api = unitsApi || await import('../../lib/unitsApi.js');
+        unitsApi = api;
+        const res = await api.listUnits({ onlyActive: true });
+        if (!res.error && Array.isArray(res.data)) {
+          unidades = res.data.map(u => u.code);
+          unitsMap = res.data.reduce((acc,u)=>{ acc[u.code]=u; return acc; }, {});
+          return;
+        }
+      } catch(e) {
+        console.warn('units fallback local', e);
+      }
+      unidades = ['pza','mt','m2','kg','lt','caja','par'];
+      unitsMap = {};
+    }
+
     async function initDataLayer() {
       try {
         const mod = await import('../../lib/materialsApi.js');
         materialsApi = mod;
-        // quick check: try to list materials, but don't fail the whole init if query errors
         try {
           const res = await materialsApi.listMaterials({ onlyActive: false });
           if (!res?.error) {
             remoteAvailable = true;
-            // build categoriesData from DB results
             buildCategoriesFromMaterialsArray(res.data || []);
             console.log('Materials API connected - using Supabase materials');
-            return;
           } else {
             console.warn('materialsApi.listMaterials returned error, falling back to local categories:', res.error);
+            buildCategoriesFromLocal();
           }
         } catch (err) {
           console.warn('materialsApi.listMaterials threw, fallback to local:', err);
+          buildCategoriesFromLocal();
         }
       } catch (err) {
         console.warn('No materialsApi available, using local categories fallback.', err);
+        buildCategoriesFromLocal();
       }
 
-      // Fallback: use global categoriasMateriales (from categorias_reales.js)
-      buildCategoriesFromLocal();
+      await refreshUnits();
     }
 
     function buildCategoriesFromMaterialsArray(arr) {
@@ -442,7 +428,6 @@
     }
 
     function buildCategoriesFromLocal() {
-      // categoriasMateriales is assumed to be defined by categorias_reales.js
       categoriesData = {};
       if (window.categoriasMateriales && typeof window.categoriasMateriales === 'object') {
         Object.keys(window.categoriasMateriales).forEach(cat => {
@@ -454,7 +439,6 @@
       }
     }
 
-    // Utility: return flattened array of materials { category, name, id?, price?, unit?, active? }
     function getAllMaterialsArray() {
       const out = [];
       Object.keys(categoriesData).forEach(cat => {
@@ -472,7 +456,6 @@
       return out;
     }
 
-    // Notify other tabs & wizard about changes
     function notifyUpdate() {
       try {
         const bc = new BroadcastChannel('byt-materials');
@@ -482,7 +465,6 @@
       try { localStorage.setItem('byt_materials_updated_at', Date.now()); } catch(e){}
     }
 
-    // UI helpers (adapted from original code but using categoriesData)
     function loadCategories() {
       const tbody = document.getElementById('tablaCategorias');
       tbody.innerHTML = '';
@@ -502,38 +484,25 @@
       });
     }
 
-    // Keep the original category-edit/delete flows but sync to remote when possible.
     async function mostrarModalAgregarCategoria() {
       const nombreCategoria = prompt('Ingrese el nombre de la nueva categoría:');
       if (!nombreCategoria || !nombreCategoria.trim()) return;
       const nombre = nombreCategoria.trim();
-      if (categoriesData[nombre]) {
-        alert('Ya existe una categoría con ese nombre');
-        return;
-      }
-      // Local creation: create empty array
+      if (categoriesData[nombre]) { toast('Ya existe una categoría con ese nombre','warning'); return; }
       categoriesData[nombre] = [];
-      // If fallback local source exists, also update it
-      if (window.categoriasMateriales) {
-        window.categoriasMateriales[nombre] = [];
-      }
+      if (window.categoriasMateriales) window.categoriasMateriales[nombre] = [];
       loadCategories();
       actualizarTodosLosSelects();
-      alert('✅ Categoría creada correctamente');
+      toast('Categoría creada','success');
     }
 
     async function editarCategoria(categoriaActual) {
       const nuevoNombre = prompt(`Editar nombre de categoría:\nNombre actual: ${categoriaActual}`, categoriaActual);
       if (!nuevoNombre || !nuevoNombre.trim() || nuevoNombre.trim() === categoriaActual) return;
       const nombre = nuevoNombre.trim();
-      if (categoriesData[nombre]) {
-        alert('Ya existe una categoría con ese nombre');
-        return;
-      }
-      // Move data
+      if (categoriesData[nombre]) { toast('Ya existe una categoría con ese nombre','warning'); return; }
       categoriesData[nombre] = categoriesData[categoriaActual] || [];
       delete categoriesData[categoriaActual];
-      // If using local fallback, move there too
       if (window.categoriasMateriales) {
         window.categoriasMateriales[nombre] = window.categoriasMateriales[categoriaActual] || [];
         delete window.categoriasMateriales[categoriaActual];
@@ -542,47 +511,43 @@
         const list = categoriesData[nombre];
         for (const item of list) {
           if (item.id) {
-            try {
-              await materialsApi.updateMaterial(item.id, { category: nombre });
-            } catch(e){ console.warn('Failed to update material category on remote for id', item.id, e); }
+            try { await materialsApi.updateMaterial(item.id, { category: nombre }); }
+            catch(e){ console.warn('Failed to update material category on remote for id', item.id, e); }
           }
         }
         await refreshFromRemote();
       }
       loadCategories();
       actualizarTodosLosSelects();
-      alert('✅ Categoría actualizada correctamente');
+      toast('Categoría actualizada','success');
     }
 
     async function eliminarCategoria(categoria) {
       const materiales = categoriesData[categoria] || [];
       const cantidadMateriales = materiales.length;
       const mensaje = cantidadMateriales > 0 
-        ? `⚠️ ¿Está seguro de eliminar la categoría "${categoria}"?\n\nEsta categoría contiene ${cantidadMateriales} material(es) que también se eliminarán.\n\n❌ Esta acción NO se puede deshacer.`
-        : `¿Está seguro de eliminar la categoría "${categoria}"?`;
-      if (!confirm(mensaje)) return;
+        ? `¿Eliminar la categoría "${categoria}"?\nContiene ${cantidadMateriales} material(es) que también se eliminarán.`
+        : `¿Eliminar la categoría "${categoria}"?`;
+      const ok = await confirmDialog({ title:'Eliminar categoría', message: mensaje, okText:'Eliminar', cancelText:'Cancelar' });
+      if (!ok) return;
       if (remoteAvailable) {
         for (const m of materiales) {
           if (m.id) {
-            try {
-              await materialsApi.deleteMaterial(m.id, { soft: true });
-            } catch(e){ console.warn('Failed deleting material remotely', m.id, e); }
+            try { await materialsApi.deleteMaterial(m.id, { soft: true }); }
+            catch(e){ console.warn('Failed deleting material remotely', m.id, e); }
           }
         }
         await refreshFromRemote();
       } else {
-        if (window.categoriasMateriales) {
-          delete window.categoriasMateriales[categoria];
-        }
+        if (window.categoriasMateriales) delete window.categoriasMateriales[categoria];
         delete categoriesData[categoria];
       }
       loadCategories();
       actualizarTodosLosSelects();
       notifyUpdate();
-      alert('✅ Categoría eliminada correctamente');
+      toast('Categoría eliminada','success');
     }
 
-    // Load categories into selects (consultar/crear/editar/eliminar)
     function loadConsultarCategories() {
       const select = document.getElementById('consultarCategoria');
       select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
@@ -602,6 +567,7 @@
         option.textContent = categoria;
         select.appendChild(option);
       });
+      renderUnidades('crearUnidad');
     }
     function loadEditarCategories() {
       const select = document.getElementById('editarBuscarCategoria');
@@ -630,7 +596,6 @@
       loadEliminarCategories();
     }
 
-    // ===== CONSULTAS / FILTRADO =====
     function consultarMaterialesPorCategoria() {
       const categoria = document.getElementById('consultarCategoria').value;
       const resultsDiv = document.getElementById('consultarResultados');
@@ -714,12 +679,8 @@
       document.getElementById('contadorMateriales').textContent = '';
     }
 
-    // ===== CREAR =====
-    function limpiarFormularioCrear() {
-      document.getElementById('crearMaterialForm').reset();
-    }
+    function limpiarFormularioCrear() { document.getElementById('crearMaterialForm').reset(); renderUnidades('crearUnidad'); }
 
-    // Bind del submit (igual a lo que pegaste en consola) + refresco UI
     async function bindCrearSubmit() {
       const form = document.getElementById('crearMaterialForm');
       if (!form) { console.error('No se encontró crearMaterialForm'); return; }
@@ -733,25 +694,24 @@
           const name  = document.getElementById('crearNombre').value.trim();
           const unit  = document.getElementById('crearUnidad').value || '';
           const notes = document.getElementById('crearDescripcion').value || '';
-          if (!cat || !name) { alert('Falta categoría o nombre'); return; }
+          if (!cat || !name) { toast('Falta categoría o nombre','warning'); return; }
           const res = await api.createMaterial({ name, category: cat, unit, price: 0, notes, active: true });
           console.log('POST result', res);
-          if (res?.error) { alert('Error creando: revisa consola'); return; }
+          if (res?.error) { toast('Error creando (ver consola)','error'); return; }
           await refreshFromRemote();
           notifyUpdate();
           loadCategories();
           actualizarTodosLosSelects();
           if (document.getElementById('consultar').classList.contains('active')) consultarTodosMateriales();
-          alert('✅ Material creado (revisa Network POST 201)');
+          toast('Material creado','success');
         } catch (err) {
           console.error('Submit error', err);
-          alert('Error en submit: mira consola');
+          toast('Error en submit (consola)','error');
         }
       };
       console.log('CrearMaterial: onsubmit enlazado');
     }
 
-    // ===== EDITAR =====
     function cargarMaterialesParaEditar() {
       const categoria = document.getElementById('editarBuscarCategoria').value;
       const selectMaterial = document.getElementById('editarBuscarMaterial');
@@ -776,7 +736,7 @@
       const categoria = document.getElementById('editarBuscarCategoria').value;
       const select = document.getElementById('editarBuscarMaterial');
       const selectedVal = select.value;
-      if (!categoria || !selectedVal) { alert('Por favor seleccione una categoría y un material'); return; }
+      if (!categoria || !selectedVal) { toast('Seleccione categoría y material','warning'); return; }
       const option = select.selectedOptions[0];
       const remoteId = option?.dataset?.id || null;
       let name = selectedVal;
@@ -800,9 +760,9 @@
       const nombreOriginal = document.getElementById('editarNombreOriginal').value;
       const nuevoNombre = document.getElementById('editarNuevoNombre').value.trim();
       const selectedId = document.getElementById('editarSelectedId').value || null;
-      if (!nuevoNombre) { alert('Por favor complete el nuevo nombre'); return; }
+      if (!nuevoNombre) { toast('Ingrese el nuevo nombre','warning'); return; }
       if (nuevoNombre !== nombreOriginal && (categoriesData[categoriaOriginal] || []).some(it => (it.name || it).toLowerCase() === nuevoNombre.toLowerCase())) {
-        alert(`Ya existe un material "${nuevoNombre}" en "${categoriaOriginal}"`); return;
+        toast(`Ya existe "${nuevoNombre}" en "${categoriaOriginal}"`,'warning'); return;
       }
 
       if (remoteAvailable && selectedId) {
@@ -811,10 +771,10 @@
           if (res?.error) throw res.error;
           await refreshFromRemote();
           notifyUpdate();
-          alert('✅ Material actualizado correctamente (remote)');
+          toast('Material actualizado (remote)','success');
         } catch (e) {
           console.error('Error updating remote', e);
-          alert('Error al actualizar en servidor');
+          toast('Error al actualizar en servidor','error');
         }
       } else {
         const arr = categoriesData[categoriaOriginal] || [];
@@ -831,7 +791,7 @@
           if (idx >= 0) window.categoriasMateriales[categoriaOriginal][idx] = nuevoNombre;
         }
         notifyUpdate();
-        alert('✅ Material actualizado (local)');
+        toast('Material actualizado (local)','success');
       }
 
       limpiarFormularioEditar();
@@ -846,7 +806,6 @@
       document.getElementById('editarSelectedId').value = '';
     }
 
-    // ===== ELIMINAR =====
     function cargarMaterialesParaEliminar() {
       const categoria = document.getElementById('eliminarBuscarCategoria').value;
       const selectMaterial = document.getElementById('eliminarBuscarMaterial');
@@ -871,32 +830,31 @@
       });
     }
 
-    // Aquí se fuerza DELETE permanente en Supabase cuando hay remoteAvailable.
     async function eliminarMaterialSeleccionado() {
       const categoria = document.getElementById('eliminarBuscarCategoria').value;
       const select = document.getElementById('eliminarBuscarMaterial');
       const selectedVal = select.value;
-      if (!categoria || !selectedVal) { alert('Por favor seleccione una categoría y un material para eliminar'); return; }
+      if (!categoria || !selectedVal) { toast('Seleccione categoría y material','warning'); return; }
       const option = select.selectedOptions[0];
       const remoteId = option?.dataset?.id || null;
       let name = selectedVal;
+      const mensaje = `¿Eliminar permanentemente?\nCategoría: ${categoria}\nMaterial: ${name}`;
+      const ok = await confirmDialog({ title:'Eliminar material', message: mensaje, okText:'Eliminar', cancelText:'Cancelar' });
+      if (!ok) return;
+
       if (remoteAvailable && remoteId) {
-        // confirmar borrado permanente
-        if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de ELIMINAR PERMANENTEMENTE este material?\n\nCategoría: ${categoria}\nMaterial ID: ${remoteId}\n\n❌ Esta acción BORRARÁ el registro en la base de datos y NO se podrá recuperar.`)) return;
         try {
-          // hard delete (soft:false) — cambialo si prefieres soft delete en este flujo
           const res = await materialsApi.deleteMaterial(remoteId, { soft: false });
           if (res?.error) throw res.error;
           await refreshFromRemote();
           notifyUpdate();
-          alert('✅ Material eliminado permanentemente en Supabase');
+          toast('Material eliminado (Supabase)','success');
         } catch (e) {
           console.error('Error deleting remote', e);
-          alert('Error al eliminar en servidor. Revisa la consola y las policies RLS.');
+          toast('Error al eliminar en servidor','error');
         }
       } else {
         name = selectedVal;
-        if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de eliminar este material localmente?\n\nCategoría: ${categoria}\nMaterial: ${name}\n\n❌ Esta acción NO se puede deshacer.`)) return;
         const arr = categoriesData[categoria] || [];
         const idx = arr.findIndex(it => (it.name || it) === name);
         if (idx >= 0) arr.splice(idx, 1);
@@ -905,16 +863,41 @@
           if (idx2 >= 0) window.categoriasMateriales[categoria].splice(idx2,1);
         }
         notifyUpdate();
-        alert('✅ Material eliminado (local) correctamente');
+        toast('Material eliminado (local)','success');
       }
+      const prevCat = categoria;
       document.getElementById('eliminarBuscarMaterial').value = '';
       cargarMaterialesParaEliminar();
+      document.getElementById('eliminarBuscarCategoria').value = prevCat;
       document.getElementById('materialAEliminar').style.display = 'none';
       loadCategories();
       actualizarTodosLosSelects();
+      document.getElementById('eliminarBuscarCategoria').value = prevCat;
     }
 
-    // ===== Remote refresh helper =====
+    function setupHoldToDelete() {
+      const btn = document.getElementById('btnHoldDelete');
+      const bar = document.getElementById('holdProgress');
+      let timer = null;
+      const holdMs = 3000;
+      const startHold = () => {
+        if (timer) return;
+        bar.style.transition = `width ${holdMs}ms linear`;
+        bar.style.width = '100%';
+        timer = setTimeout(() => {
+          timer = null; bar.style.width = '0%'; bar.style.transition = '';
+          eliminarMaterialSeleccionado();
+        }, holdMs);
+      };
+      const cancelHold = () => {
+        if (timer) { clearTimeout(timer); timer = null; }
+        bar.style.transition = '';
+        bar.style.width = '0%';
+      };
+      ['mousedown','touchstart'].forEach(ev => btn.addEventListener(ev, startHold));
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => btn.addEventListener(ev, cancelHold));
+    }
+
     async function refreshFromRemote() {
       if (!remoteAvailable || !materialsApi) return;
       try {
@@ -931,7 +914,6 @@
       }
     }
 
-    // Tabs logic (keep original event behavior)
     function showTab(tabName) {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -939,32 +921,30 @@
         try { event.target.classList.add('active'); } catch(e){}
         if (tabName === 'categorias') loadCategories();
         else if (tabName === 'consultar') loadConsultarCategories();
-        else if (tabName === 'crear') loadCrearCategories();
+        else if (tabName === 'crear') { loadCrearCategories(); renderUnidades('crearUnidad'); }
         else if (tabName === 'editar') loadEditarCategories();
-        else if (tabName === 'eliminar') loadEliminarCategories();
+        else if (tabName === 'eliminar') { loadEliminarCategories(); setupHoldToDelete(); }
     }
 
-    // Small helpers
     function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>"']/g, s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
     function escapeJs(s){ return (s+'').replace(/'/g,"\\'"); }
 
-    // Initialize: detect remote and populate UI
     (async function init(){
       await initDataLayer();
       loadCategories();
       actualizarTodosLosSelects();
-      bindCrearSubmit(); // <-- asegura el submit
+      renderUnidades('crearUnidad');
+      bindCrearSubmit();
+      setupHoldToDelete();
 
-      // Listen external updates
       try {
         const bc = new BroadcastChannel('byt-materials');
-        bc.onmessage = (ev) => { if (ev.data?.type === 'materials-updated') refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); }); };
+        bc.onmessage = (ev) => { if (ev.data?.type === 'materials-updated') refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); };
       } catch(e){}
-      window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); }); } });
+      window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); } });
 
     })();
 
-    // Expose some functions globally used in inline onclicks (for compatibility)
     window.showTab = showTab;
     window.mostrarModalAgregarCategoria = mostrarModalAgregarCategoria;
     window.loadCategories = loadCategories;
@@ -981,8 +961,8 @@
     window.eliminarMaterialSeleccionado = eliminarMaterialSeleccionado;
     window.editarCategoria = editarCategoria;
     window.eliminarCategoria = eliminarCategoria;
-    window.refreshFromRemote = refreshFromRemote; // <-- expuesto para consola/otros scripts
-
+    window.refreshFromRemote = refreshFromRemote;
+    window.handleUnidadChange = handleUnidadChange;
     </script>
 </body>
 </html>
