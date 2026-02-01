@@ -725,6 +725,13 @@
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
+
+      // IMPORTA materialsApi si aún no está listo
+      if (!materialsApi) {
+        try { materialsApi = await import('../../lib/materialsApi.js'); }
+        catch (err) { console.error('No se pudo importar materialsApi en submit', err); alert('No se pudo preparar la API'); return; }
+      }
+
       const categoria = document.getElementById('crearCategoria').value;
       const nombre = document.getElementById('crearNombre').value.trim();
       const unidad = document.getElementById('crearUnidad').value || '';
