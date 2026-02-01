@@ -773,13 +773,9 @@
       const option = select.selectedOptions[0];
       const remoteId = option?.dataset?.id || null;
       let name = selectedVal;
-      let item = null;
-      if (remoteAvailable && remoteId) {
-        item = (categoriesData[categoria] || []).find(x => x.id === remoteId);
-        name = item?.name || name;
+      if (remoteId) {
         document.getElementById('editarSelectedId').value = remoteId;
       } else {
-        item = (categoriesData[categoria] || []).find(x => (x.name || x) === selectedVal);
         document.getElementById('editarSelectedId').value = '';
       }
       document.getElementById('editarCategoriaOriginal').value = categoria;
@@ -787,15 +783,35 @@
       document.getElementById('editarNuevoNombre').value = name;
     }
 
+    async function resolveMaterialId(categoria, nombre) {
+      try {
+        const res = await materialsApi.listMaterials({ onlyActive: false });
+        if (res?.data) {
+          const row = res.data.find(r => r.category === categoria && r.name === nombre);
+          return row?.id || null;
+        }
+      } catch (e) {
+        console.warn('resolveMaterialId failed', e);
+      }
+      return null;
+    }
+
     document.getElementById('editarMaterialForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const categoriaOriginal = document.getElementById('editarCategoriaOriginal').value;
       const nombreOriginal = document.getElementById('editarNombreOriginal').value;
       const nuevoNombre = document.getElementById('editarNuevoNombre').value.trim();
-      const selectedId = document.getElementById('editarSelectedId').value || null;
+      let selectedId = document.getElementById('editarSelectedId').value || null;
+
       if (!nuevoNombre) { toast('Ingrese el nuevo nombre','warning'); return; }
       if (nuevoNombre !== nombreOriginal && (categoriesData[categoriaOriginal] || []).some(it => (it.name || it).toLowerCase() === nuevoNombre.toLowerCase())) {
         toast(`Ya existe "${nuevoNombre}" en "${categoriaOriginal}"`,'warning'); return;
+      }
+
+      // Intentar resolver ID si no lo tenemos y estamos en remoto
+      if (remoteAvailable && !selectedId) {
+        selectedId = await resolveMaterialId(categoriaOriginal, nombreOriginal);
+        document.getElementById('editarSelectedId').value = selectedId || '';
       }
 
       if (remoteAvailable && selectedId) {
@@ -931,7 +947,7 @@
       document.getElementById('eliminarBuscarCategoria').value = prevCat;
     }
 
-    function setupHoldButtonInline() {
+    function setupDeleteButtonInline() {
       const btn = document.getElementById('btnHoldDelete');
       btn.onclick = () => {
         const categoria = document.getElementById('eliminarBuscarCategoria').value;
@@ -970,7 +986,7 @@
         else if (tabName === 'consultar') loadConsultarCategories();
         else if (tabName === 'crear') { loadCrearCategories(); renderUnidades('crearUnidad'); }
         else if (tabName === 'editar') loadEditarCategories();
-        else if (tabName === 'eliminar') { loadEliminarCategories(); setupHoldButtonInline(); }
+        else if (tabName === 'eliminar') { loadEliminarCategories(); setupDeleteButtonInline(); }
     }
 
     function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>"']/g, s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
@@ -982,7 +998,7 @@
       actualizarTodosLosSelects();
       renderUnidades('crearUnidad');
       bindCrearSubmit();
-      setupHoldButtonInline();
+      setupDeleteButtonInline();
 
       try {
         const bc = new BroadcastChannel('byt-materials');
