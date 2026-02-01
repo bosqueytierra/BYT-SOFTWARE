@@ -12,58 +12,70 @@
             --secondary: #6c757d;
             --danger: #c62828;
             --warning: #f5a524;
-            --bg-soft: #f5f6f7;
-            --text: #333;
+            --muted: #4a5568;
+            --bg: #f5f6f7;
+            --card: #ffffff;
+            --shadow: 0 10px 30px rgba(0,0,0,0.08);
+            --radius: 12px;
         }
-        body { background: var(--bg-soft); color: var(--text); }
-        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
-        .tab { padding: 12px 24px; background: none; border: none; cursor: pointer; font-size: 16px; color: #666; border-bottom: 2px solid transparent; transition: all 0.2s; }
-        .tab.active { color: var(--primary-dark); border-bottom-color: var(--primary-dark); font-weight: bold; }
+        body { background: var(--bg); color: #2b2d42; }
+        h1,h2,h3,h4 { color: #1f2937; margin: 0; }
+        .header-title { font-size: 22px; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid #e5e7eb; }
+        .tab { padding: 12px 18px; background: none; border: none; cursor: pointer; font-size: 15px; color: #6b7280; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; transition: all .2s; }
+        .tab:hover { color: var(--primary-dark); background: rgba(46,125,50,0.08); }
+        .tab.active { color: var(--primary-dark); border-bottom-color: var(--primary-dark); font-weight: 700; background: rgba(46,125,50,0.08); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .search-section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 20px; }
-        .search-row { display: flex; gap: 15px; align-items: end; }
-        .form-group { flex: 1; }
-        .form-group label { display: block; margin-bottom: 5px; color: #444; font-weight: 600; }
+        .card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid #edf0f4; }
+        .search-section { background: var(--card); padding: 18px; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px; border: 1px solid #edf0f4; }
+        .search-row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+        .form-group { flex: 1; min-width: 220px; }
+        .form-group label { display: block; margin-bottom: 6px; color: #374151; font-weight: 600; font-size: 14px; }
         .form-group input, .form-group select, .form-group textarea {
-            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff;
+            width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; background: #fff;
         }
-        .form-group select:focus, .form-group input:focus, .form-group textarea:focus { outline: 2px solid rgba(46,125,50,0.15); border-color: var(--primary); }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: 2px solid rgba(46,125,50,0.15); border-color: var(--primary);
+        }
         .simple-table-container { overflow-x: auto; }
         .simple-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .simple-table th, .simple-table td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        .simple-table th { background-color: #f8f9fa; font-weight: bold; color: var(--primary-dark); }
-        .simple-table tr:hover { background-color: #f8f9fa; }
-        .btn-small { padding: 6px 12px; font-size: 0.8em; margin: 0 2px; }
-        .material-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0; background: white; margin-bottom: 5px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .material-item:last-child { border-bottom: none; }
-        .material-info { flex: 1; }
-        .material-name { font-weight: bold; color: #333; margin-bottom: 4px; }
-        .material-category { color: #666; font-size: 0.9em; }
-        .btn { background: var(--primary); color: white; padding: 10px 14px; border-radius: 6px; border: 0; cursor: pointer; transition: all 0.15s; }
+        .simple-table th, .simple-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f0f2f5; }
+        .simple-table th { background: #f8fafc; color: #2f3e46; font-weight: 700; }
+        .simple-table tr:hover { background: #f9fafb; }
+        .btn { background: var(--primary); color: white; padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer; font-weight: 600; transition: all .15s; box-shadow: 0 6px 14px rgba(46,125,50,0.22); }
         .btn:hover { background: var(--primary-dark); }
-        .btn-secondary { background: var(--secondary); color: white; padding: 10px 14px; border-radius: 6px; border: 0; cursor: pointer; }
+        .btn-secondary { background: var(--secondary); color: white; padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer; font-weight: 600; }
         .btn-secondary:hover { background: #565e64; }
-        .btn-danger { background: var(--danger); color: white; padding: 10px 14px; border-radius: 6px; border: 0; cursor: pointer; }
+        .btn-danger { background: var(--danger); color: white; padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer; font-weight: 600; box-shadow: 0 6px 14px rgba(198,40,40,0.22); }
         .btn-danger:hover { background: #a32020; }
-        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+        .material-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0; background: #fff; margin-bottom: 5px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .material-info { flex: 1; }
+        .muted { color: #6b7280; }
 
         /* Toast & modal */
-        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast { min-width: 240px; background: #fff; color: #333; padding: 12px 14px; border-radius: 8px; box-shadow: 0 4px 18px rgba(0,0,0,0.12); border-left: 4px solid var(--primary); font-size: 14px; }
+        .toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { min-width: 260px; background: #fff; color: #1f2937; padding: 14px 16px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); border-left: 5px solid var(--primary); font-size: 14px; }
         .toast.success { border-left-color: #4caf50; }
         .toast.error { border-left-color: #e53935; }
         .toast.warning { border-left-color: #f5a524; }
         .toast.info { border-left-color: #2196f3; }
+
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 9998; }
-        .modal { background: #fff; padding: 18px 20px; border-radius: 10px; width: 360px; max-width: 90%; box-shadow: 0 8px 26px rgba(0,0,0,0.22); }
-        .modal h3 { margin: 0 0 8px 0; font-size: 17px; color: #222; }
-        .modal p { margin: 0 0 12px 0; color: #444; line-height: 1.4; }
+        .modal { background: #fff; padding: 22px; border-radius: 14px; width: 420px; max-width: 90%; box-shadow: 0 16px 40px rgba(0,0,0,0.25); border: 1px solid #e5e7eb; }
+        .modal h3 { margin: 0 0 8px 0; font-size: 18px; color: #111827; }
+        .modal p { margin: 0 0 14px 0; color: #374151; line-height: 1.5; }
         .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 
-        /* Hold-to-delete */
-        .hold-btn { position: relative; overflow: hidden; }
-        .hold-progress { position: absolute; inset: 0; background: rgba(0,0,0,0.12); width: 0%; transition: width linear; pointer-events: none; }
+        /* Success center modal */
+        #successBackdrop { z-index: 9997; }
+
+        /* Hold-to-delete in modal */
+        .hold-zone { width: 100%; background: #f3f4f6; border-radius: 10px; padding: 10px; border: 1px solid #e5e7eb; }
+        .hold-btn { position: relative; overflow: hidden; width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 8px; }
+        .hold-progress { position: absolute; inset: 0; background: rgba(0,0,0,0.12); width: 0%; transition: width linear; pointer-events: none; border-radius: 10px; }
+        .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(46,125,50,0.1); color: var(--primary-dark); padding: 6px 10px; border-radius: 999px; font-weight: 600; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -75,7 +87,7 @@
                         <img src="../../assets/logo_byt.png" alt="Logo BYT" class="logo" style="width:48px;height:48px;margin-right:12px;">
                         <div>
                             <h1 class="header-title">Gestión de Materiales</h1>
-                            <p class="header-subtitle">Administración de Materiales y Categorías</p>
+                            <p class="header-subtitle muted">Administración de Materiales y Categorías</p>
                         </div>
                     </div>
                 </div>
@@ -92,24 +104,16 @@
 
                 <div id="categorias" class="tab-content active" role="tabpanel">
                     <div class="card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                             <h2 class="card-title">📁 Gestión de Categorías</h2>
                             <button class="btn" onclick="mostrarModalAgregarCategoria()">+ Nueva Categoría</button>
                         </div>
-                        
-                        <div style="background: #fff8e1; border: 1px solid #ffeaa7; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                        <div style="background:#fff8e1;border:1px solid #ffeaa7;border-radius:10px;padding:14px;margin-bottom:16px;">
                             <p><strong>ℹ️ Información:</strong> En esta sección solo se gestionan las <strong>categorías</strong>. Los materiales se gestionan en las pestañas correspondientes.</p>
                         </div>
-                        
                         <div class="simple-table-container">
-                            <table class="simple-table" aria-describedby="tablaCategorias">
-                                <thead>
-                                    <tr>
-                                        <th>Categoría</th>
-                                        <th>Cantidad de Materiales</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
+                            <table class="simple-table">
+                                <thead><tr><th>Categoría</th><th>Cantidad de Materiales</th><th>Acciones</th></tr></thead>
                                 <tbody id="tablaCategorias"></tbody>
                             </table>
                         </div>
@@ -136,54 +140,47 @@
                     </div>
 
                     <div class="card">
-                        <div style="background: #e7f3ff; border: 1px solid #b3d7ff; border-radius: 5px; padding: 10px; margin-bottom: 15px;">
-                            <p style="margin: 0; color: #0066cc; font-size: 0.9em;"><strong>📖 Solo Consulta:</strong> Esta pestaña es únicamente para ver materiales. Para modificar use las pestañas correspondientes.</p>
+                        <div style="background:#e7f3ff;border:1px solid #b3d7ff;border-radius:8px;padding:10px;margin-bottom:15px;">
+                            <p style="margin:0;color:#0f60c4;font-size:13px;"><strong>📖 Solo Consulta:</strong> Esta pestaña es únicamente para ver materiales. Para modificar use las pestañas correspondientes.</p>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                             <h3 id="tituloResultados">Materiales por Categoría</h3>
-                            <div id="contadorMateriales" style="color: #666; font-size: 0.9em;"></div>
+                            <div id="contadorMateriales" class="muted" style="font-size:13px;"></div>
                         </div>
-                        <div id="consultarResultados">
-                            <p style="color: #666; text-align: center; padding: 40px;">
-                                📦 Seleccione una categoría para ver sus materiales<br>
-                                <small>o haga clic en "Ver Todos" para consultar todos los materiales</small>
-                            </p>
+                        <div id="consultarResultados" class="muted" style="padding:20px;text-align:center;">
+                            📦 Seleccione una categoría para ver sus materiales<br><small>o haga clic en "Ver Todos"</small>
                         </div>
                     </div>
                 </div>
 
                 <div id="crear" class="tab-content" role="tabpanel">
                     <div class="card">
-                        <h2 class="card-title">➕ Crear Nuevo Material</h2>
-                        
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                            <span class="badge">➕ Crear</span>
+                            <h2 class="card-title" style="margin:0;">Crear Nuevo Material</h2>
+                        </div>
                         <form id="crearMaterialForm">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
                                 <div class="form-group">
                                     <label>Categoría *</label>
                                     <select id="crearCategoria" required>
                                         <option value="">Seleccione una categoría</option>
                                     </select>
                                 </div>
-                                
                                 <div class="form-group">
                                     <label>Nombre del Material *</label>
                                     <input type="text" id="crearNombre" required placeholder="Ej: Melamina Blanca 18mm">
                                 </div>
-                                
                                 <div class="form-group">
                                     <label>Unidad de Medida</label>
-                                    <select id="crearUnidad" onchange="handleUnidadChange(event, 'crearUnidad')">
-                                        <!-- Se llena dinámicamente -->
-                                    </select>
+                                    <select id="crearUnidad" onchange="handleUnidadChange(event,'crearUnidad')"></select>
                                 </div>
-                                
-                                <div class="form-group" style="grid-column: 1 / -1;">
+                                <div class="form-group" style="grid-column:1/-1;">
                                     <label>Descripción</label>
                                     <textarea id="crearDescripcion" rows="3" placeholder="Descripción detallada del material..."></textarea>
                                 </div>
                             </div>
-                            
-                            <div style="text-align: center; margin-top: 30px;">
+                            <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center;">
                                 <button type="button" class="btn-secondary" onclick="limpiarFormularioCrear()">🗑️ Limpiar</button>
                                 <button type="submit" class="btn">✅ Crear Material</button>
                             </div>
@@ -213,27 +210,23 @@
 
                     <div class="card">
                         <h2 class="card-title">✏️ Editar Material</h2>
-                        
                         <form id="editarMaterialForm">
                             <input type="hidden" id="editarSelectedId" value="">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
                                 <div class="form-group">
                                     <label>Categoría Original</label>
-                                    <input type="text" id="editarCategoriaOriginal" readonly style="background: #f5f5f5;">
+                                    <input type="text" id="editarCategoriaOriginal" readonly style="background:#f5f5f5;">
                                 </div>
-                                
                                 <div class="form-group">
                                     <label>Nombre Original</label>
-                                    <input type="text" id="editarNombreOriginal" readonly style="background: #f5f5f5;">
+                                    <input type="text" id="editarNombreOriginal" readonly style="background:#f5f5f5;">
                                 </div>
-                                
-                                <div class="form-group" style="grid-column: 1 / -1;">
+                                <div class="form-group" style="grid-column:1/-1;">
                                     <label>Nuevo Nombre *</label>
                                     <input type="text" id="editarNuevoNombre" required placeholder="Nuevo nombre del material">
                                 </div>
                             </div>
-                            
-                            <div style="text-align: center; margin-top: 30px;">
+                            <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center;">
                                 <button type="button" class="btn-secondary" onclick="limpiarFormularioEditar()">🗑️ Limpiar</button>
                                 <button type="submit" class="btn">✏️ Actualizar Material</button>
                             </div>
@@ -257,7 +250,7 @@
                                     <option value="">-- Primero seleccione una categoría --</option>
                                 </select>
                             </div>
-                            <button id="btnHoldDelete" class="btn-danger hold-btn">
+                            <button id="btnHoldDelete" class="btn-danger hold-btn" type="button">
                                 <span>🗑️ Eliminar Material</span>
                                 <div class="hold-progress" id="holdProgress"></div>
                             </button>
@@ -266,18 +259,15 @@
 
                     <div class="card">
                         <h3>⚠️ Zona de Eliminación</h3>
-                        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 15px 0;">
+                        <div style="background:#fff3cd;border:1px solid #ffeaa7;border-radius:10px;padding:16px;margin:12px 0;">
                             <p><strong>⚠️ Advertencia:</strong> La eliminación de materiales es <strong>permanente</strong> y no se puede deshacer.</p>
-                            <p>Asegúrese de seleccionar el material correcto antes de proceder con la eliminación.</p>
                         </div>
-                        
-                        <div id="materialAEliminar" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+                        <div id="materialAEliminar" style="display:none;background:#f8f9fa;padding:12px;border-radius:8px;margin:12px 0;">
                             <h4>Material seleccionado para eliminar:</h4>
                             <div id="datosMaterialEliminar"></div>
                         </div>
-                        
-                        <div style="text-align: center; margin-top: 30px;">
-                            <p style="color: #666;">Seleccione una categoría y material arriba para proceder</p>
+                        <div style="text-align:center;margin-top:16px;" class="muted">
+                            Seleccione una categoría y material arriba para proceder
                         </div>
                     </div>
                 </div>
@@ -285,7 +275,9 @@
         </div>
     </div>
 
+    <!-- Toast / Modals -->
     <div class="toast-container" id="toastContainer"></div>
+
     <div class="modal-backdrop" id="confirmBackdrop">
         <div class="modal">
             <h3 id="confirmTitle">Confirmar</h3>
@@ -293,6 +285,33 @@
             <div class="actions">
                 <button class="btn-secondary" id="confirmCancel">Cancelar</button>
                 <button class="btn" id="confirmOk">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="deleteBackdrop">
+        <div class="modal">
+            <h3>⚠️ Eliminar material</h3>
+            <p id="deleteMessage"></p>
+            <div class="hold-zone">
+                <div style="font-size:13px;color:#374151;margin-bottom:8px;">Mantén presionado para confirmar (3s)</div>
+                <button id="deleteHoldBtn" class="btn-danger hold-btn" type="button" style="width:100%;">
+                    <span id="deleteHoldText">Mantén 3.0s para eliminar</span>
+                    <div class="hold-progress" id="deleteHoldProgress"></div>
+                </button>
+            </div>
+            <div class="actions" style="margin-top:14px;">
+                <button class="btn-secondary" id="deleteCancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="successBackdrop">
+        <div class="modal" style="text-align:center;">
+            <h3>✅ Material creado</h3>
+            <p id="successMessage">El material se creó correctamente.</p>
+            <div class="actions" style="justify-content:center;">
+                <button class="btn" id="successOk">Entendido</button>
             </div>
         </div>
     </div>
@@ -318,6 +337,13 @@
       setTimeout(() => { el.style.opacity = '0'; setTimeout(()=>cont.removeChild(el),300); }, timeout);
     }
 
+    function showSuccess(message='Material creado correctamente') {
+      const back = document.getElementById('successBackdrop');
+      document.getElementById('successMessage').textContent = message;
+      back.style.display = 'flex';
+      document.getElementById('successOk').onclick = () => { back.style.display='none'; };
+    }
+
     function confirmDialog({title='Confirmar', message='¿Seguro?', okText='Aceptar', cancelText='Cancelar'} = {}) {
       return new Promise(res => {
         const back = document.getElementById('confirmBackdrop');
@@ -333,6 +359,15 @@
         cancel.onclick = () => { clean(); res(false); };
       });
     }
+
+    function openDeleteModal({ categoria, nombre, remoteId }) {
+      const back = document.getElementById('deleteBackdrop');
+      const msg = `¿Seguro que deseas eliminar "${nombre}" en la categoría "${categoria}"?`;
+      document.getElementById('deleteMessage').textContent = msg;
+      back.style.display = 'flex';
+      setupDeleteHold(remoteId, categoria, nombre);
+    }
+    function closeDeleteModal() { document.getElementById('deleteBackdrop').style.display = 'none'; }
 
     function renderUnidades(selectId, selected='') {
       const sel = document.getElementById(selectId);
@@ -408,7 +443,6 @@
         console.warn('No materialsApi available, using local categories fallback.', err);
         buildCategoriesFromLocal();
       }
-
       await refreshUnits();
     }
 
@@ -665,7 +699,7 @@
           <div class="material-item">
               <div class="material-info">
                   <div class="material-name">${escapeHtml(item.material)}</div>
-                  <div class="material-category">Categoría: <strong>${escapeHtml(item.categoria)}</strong></div>
+                  <div class="material-category muted">Categoría: <strong>${escapeHtml(item.categoria)}</strong></div>
               </div>
           </div>
       `).join('');
@@ -674,7 +708,7 @@
     function limpiarConsulta() {
       document.getElementById('consultarCategoria').value = '';
       document.getElementById('filtroNombre').value = '';
-      document.getElementById('consultarResultados').innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📦 Seleccione una categoría para ver sus materiales<br><small>o haga clic en "Ver Todos" para consultar todos los materiales</small></p>';
+      document.getElementById('consultarResultados').innerHTML = '<p style="color: #666; text-align: center; padding: 40px;">📦 Seleccione una categoría para ver sus materiales<br><small>o haga clic en "Ver Todos"</small></p>';
       document.getElementById('tituloResultados').textContent = 'Materiales por Categoría';
       document.getElementById('contadorMateriales').textContent = '';
     }
@@ -703,13 +737,12 @@
           loadCategories();
           actualizarTodosLosSelects();
           if (document.getElementById('consultar').classList.contains('active')) consultarTodosMateriales();
-          toast('Material creado','success');
+          showSuccess('El material se creó correctamente.');
         } catch (err) {
           console.error('Submit error', err);
           toast('Error en submit (consola)','error');
         }
       };
-      console.log('CrearMaterial: onsubmit enlazado');
     }
 
     function cargarMaterialesParaEditar() {
@@ -830,18 +863,42 @@
       });
     }
 
-    async function eliminarMaterialSeleccionado() {
-      const categoria = document.getElementById('eliminarBuscarCategoria').value;
-      const select = document.getElementById('eliminarBuscarMaterial');
-      const selectedVal = select.value;
-      if (!categoria || !selectedVal) { toast('Seleccione categoría y material','warning'); return; }
-      const option = select.selectedOptions[0];
-      const remoteId = option?.dataset?.id || null;
-      let name = selectedVal;
-      const mensaje = `¿Eliminar permanentemente?\nCategoría: ${categoria}\nMaterial: ${name}`;
-      const ok = await confirmDialog({ title:'Eliminar material', message: mensaje, okText:'Eliminar', cancelText:'Cancelar' });
-      if (!ok) return;
+    function setupDeleteHold(remoteId, categoria, name) {
+      const btn = document.getElementById('deleteHoldBtn');
+      const bar = document.getElementById('deleteHoldProgress');
+      const text = document.getElementById('deleteHoldText');
+      const cancel = document.getElementById('deleteCancel');
+      let timer = null;
+      const holdMs = 3000;
+      const startHold = () => {
+        if (timer) return;
+        bar.style.transition = `width ${holdMs}ms linear`;
+        bar.style.width = '100%';
+        const start = Date.now();
+        timer = setInterval(() => {
+          const left = Math.max(0, holdMs - (Date.now()-start));
+          text.textContent = `Mantén ${(left/1000).toFixed(1)}s para eliminar`;
+          if (left <= 0) {
+            clearInterval(timer); timer = null;
+            bar.style.width = '0%'; bar.style.transition = '';
+            deleteAction(remoteId, categoria, name);
+            closeDeleteModal();
+          }
+        }, 100);
+      };
+      const cancelHold = () => {
+        if (timer) { clearInterval(timer); timer = null; }
+        bar.style.transition = '';
+        bar.style.width = '0%';
+        text.textContent = 'Mantén 3.0s para eliminar';
+      };
+      ['mousedown','touchstart'].forEach(ev => btn.addEventListener(ev, startHold, { once:false }));
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => btn.addEventListener(ev, cancelHold, { once:false }));
+      cancel.onclick = () => { cancelHold(); closeDeleteModal(); };
+    }
 
+    async function deleteAction(remoteId, categoria, name) {
+      const select = document.getElementById('eliminarBuscarMaterial');
       if (remoteAvailable && remoteId) {
         try {
           const res = await materialsApi.deleteMaterial(remoteId, { soft: false });
@@ -854,7 +911,6 @@
           toast('Error al eliminar en servidor','error');
         }
       } else {
-        name = selectedVal;
         const arr = categoriesData[categoria] || [];
         const idx = arr.findIndex(it => (it.name || it) === name);
         if (idx >= 0) arr.splice(idx, 1);
@@ -866,7 +922,7 @@
         toast('Material eliminado (local)','success');
       }
       const prevCat = categoria;
-      document.getElementById('eliminarBuscarMaterial').value = '';
+      select.value = '';
       cargarMaterialesParaEliminar();
       document.getElementById('eliminarBuscarCategoria').value = prevCat;
       document.getElementById('materialAEliminar').style.display = 'none';
@@ -875,27 +931,18 @@
       document.getElementById('eliminarBuscarCategoria').value = prevCat;
     }
 
-    function setupHoldToDelete() {
+    function setupHoldButtonInline() {
       const btn = document.getElementById('btnHoldDelete');
-      const bar = document.getElementById('holdProgress');
-      let timer = null;
-      const holdMs = 3000;
-      const startHold = () => {
-        if (timer) return;
-        bar.style.transition = `width ${holdMs}ms linear`;
-        bar.style.width = '100%';
-        timer = setTimeout(() => {
-          timer = null; bar.style.width = '0%'; bar.style.transition = '';
-          eliminarMaterialSeleccionado();
-        }, holdMs);
+      btn.onclick = () => {
+        const categoria = document.getElementById('eliminarBuscarCategoria').value;
+        const select = document.getElementById('eliminarBuscarMaterial');
+        const selectedVal = select.value;
+        if (!categoria || !selectedVal) { toast('Seleccione categoría y material','warning'); return; }
+        const option = select.selectedOptions[0];
+        const remoteId = option?.dataset?.id || null;
+        const name = selectedVal;
+        openDeleteModal({ categoria, nombre: name, remoteId });
       };
-      const cancelHold = () => {
-        if (timer) { clearTimeout(timer); timer = null; }
-        bar.style.transition = '';
-        bar.style.width = '0%';
-      };
-      ['mousedown','touchstart'].forEach(ev => btn.addEventListener(ev, startHold));
-      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => btn.addEventListener(ev, cancelHold));
     }
 
     async function refreshFromRemote() {
@@ -923,7 +970,7 @@
         else if (tabName === 'consultar') loadConsultarCategories();
         else if (tabName === 'crear') { loadCrearCategories(); renderUnidades('crearUnidad'); }
         else if (tabName === 'editar') loadEditarCategories();
-        else if (tabName === 'eliminar') { loadEliminarCategories(); setupHoldToDelete(); }
+        else if (tabName === 'eliminar') { loadEliminarCategories(); setupHoldButtonInline(); }
     }
 
     function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>"']/g, s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
@@ -935,14 +982,13 @@
       actualizarTodosLosSelects();
       renderUnidades('crearUnidad');
       bindCrearSubmit();
-      setupHoldToDelete();
+      setupHoldButtonInline();
 
       try {
         const bc = new BroadcastChannel('byt-materials');
         bc.onmessage = (ev) => { if (ev.data?.type === 'materials-updated') refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); };
       } catch(e){}
       window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); } });
-
     })();
 
     window.showTab = showTab;
@@ -958,11 +1004,10 @@
     window.cargarDatosMaterialEditar = cargarDatosMaterialEditar;
     window.limpiarFormularioEditar = limpiarFormularioEditar;
     window.cargarMaterialesParaEliminar = cargarMaterialesParaEliminar;
-    window.eliminarMaterialSeleccionado = eliminarMaterialSeleccionado;
-    window.editarCategoria = editarCategoria;
     window.eliminarCategoria = eliminarCategoria;
-    window.refreshFromRemote = refreshFromRemote;
+    window.editarCategoria = editarCategoria;
     window.handleUnidadChange = handleUnidadChange;
+    window.refreshFromRemote = refreshFromRemote;
     </script>
 </body>
 </html>
