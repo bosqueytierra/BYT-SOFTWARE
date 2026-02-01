@@ -719,68 +719,37 @@
       document.getElementById('crearMaterialForm').reset();
     }
 
-    // Handler sobrescrito con stopPropagation/stopImmediatePropagation y refresco de UI
-    const crearForm = document.getElementById('crearMaterialForm');
-    crearForm.onsubmit = async function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-
-      // IMPORTA materialsApi si aún no está listo
-      if (!materialsApi) {
-        try { materialsApi = await import('../../lib/materialsApi.js'); }
-        catch (err) { console.error('No se pudo importar materialsApi en submit', err); alert('No se pudo preparar la API'); return; }
-      }
-
-      const categoria = document.getElementById('crearCategoria').value;
-      const nombre = document.getElementById('crearNombre').value.trim();
-      const unidad = document.getElementById('crearUnidad').value || '';
-      const descripcion = document.getElementById('crearDescripcion').value || '';
-      if (!categoria || !nombre) { alert('Por favor complete todos los campos requeridos'); return; }
-      const exists = (categoriesData[categoria] || []).some(item => (item.name || item).toLowerCase() === nombre.toLowerCase());
-      if (exists && !confirm(`Ya existe un material "${nombre}" en "${categoria}". ¿Desea continuar?`)) return;
-
-      if (remoteAvailable) {
+    // Bind del submit (igual a lo que pegaste en consola) + refresco UI
+    async function bindCrearSubmit() {
+      const form = document.getElementById('crearMaterialForm');
+      if (!form) { console.error('No se encontró crearMaterialForm'); return; }
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         try {
-          const res = await materialsApi.createMaterial({
-            name: nombre,
-            category: categoria,
-            price: 0,
-            unit: unidad,
-            notes: descripcion,
-            active: true
-          });
-          if (res?.error) throw res.error;
+          const api = materialsApi || await import('../../lib/materialsApi.js');
+          const cat   = document.getElementById('crearCategoria').value;
+          const name  = document.getElementById('crearNombre').value.trim();
+          const unit  = document.getElementById('crearUnidad').value || '';
+          const notes = document.getElementById('crearDescripcion').value || '';
+          if (!cat || !name) { alert('Falta categoría o nombre'); return; }
+          const res = await api.createMaterial({ name, category: cat, unit, price: 0, notes, active: true });
+          console.log('POST result', res);
+          if (res?.error) { alert('Error creando: revisa consola'); return; }
           await refreshFromRemote();
           notifyUpdate();
           loadCategories();
           actualizarTodosLosSelects();
-          if (document.getElementById('consultar').classList.contains('active')) {
-            consultarTodosMateriales();
-          }
-          alert('✅ Material creado correctamente (remote)');
+          if (document.getElementById('consultar').classList.contains('active')) consultarTodosMateriales();
+          alert('✅ Material creado (revisa Network POST 201)');
         } catch (err) {
-          console.error('Error creando material remote', err);
-          alert('Error creando material en servidor. Revisar consola.');
+          console.error('Submit error', err);
+          alert('Error en submit: mira consola');
         }
-      } else {
-        if (!categoriesData[categoria]) categoriesData[categoria] = [];
-        categoriesData[categoria].push({ name: nombre, unit: unidad, active: true });
-        if (window.categoriasMateriales) {
-          if (!window.categoriasMateriales[categoria]) window.categoriasMateriales[categoria] = [];
-          window.categoriasMateriales[categoria].push(nombre);
-        }
-        notifyUpdate();
-        loadCategories();
-        actualizarTodosLosSelects();
-        if (document.getElementById('consultar').classList.contains('active')) {
-          consultarTodosMateriales();
-        }
-        alert('✅ Material creado (local)');
-      }
-
-      limpiarFormularioCrear();
-    };
+      };
+      console.log('CrearMaterial: onsubmit enlazado');
+    }
 
     // ===== EDITAR =====
     function cargarMaterialesParaEditar() {
@@ -984,6 +953,7 @@
       await initDataLayer();
       loadCategories();
       actualizarTodosLosSelects();
+      bindCrearSubmit(); // <-- asegura el submit
 
       // Listen external updates
       try {
@@ -1011,6 +981,7 @@
     window.eliminarMaterialSeleccionado = eliminarMaterialSeleccionado;
     window.editarCategoria = editarCategoria;
     window.eliminarCategoria = eliminarCategoria;
+    window.refreshFromRemote = refreshFromRemote; // <-- expuesto para consola/otros scripts
 
     </script>
 </body>
