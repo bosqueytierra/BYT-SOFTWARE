@@ -692,17 +692,18 @@
       mostrarMateriales(materiales);
     }
 
+    ...
     function mostrarMateriales(materiales) {
       const resultsDiv = document.getElementById('consultarResultados');
       resultsDiv.innerHTML = materiales.map(item => `
           <div class="material-item">
               <div class="material-info">
                   <div class="material-name">${escapeHtml(item.material)}</div>
-                  <div class="material-category muted">Categoría: <strong>${escapeHtml(item.categoria)}</strong></div>
               </div>
           </div>
       `).join('');
     }
+
 
     function limpiarConsulta() {
       document.getElementById('consultarCategoria').value = '';
@@ -1024,3 +1025,4 @@
     </script>
 </body>
 </html>
+
