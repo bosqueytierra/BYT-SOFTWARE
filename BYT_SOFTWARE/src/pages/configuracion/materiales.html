@@ -388,7 +388,7 @@
 
     <!-- Layout global: inyecta sidebar/topbar -->
     <script src="../../js/menuConfig.js"></script>
-<script src="../../js/layout.js"></script>
+    <script src="../../js/layout.js"></script>
 
     <!-- Main logic: module to allow dynamic import of materialsApi -->
     <script type="module">
@@ -731,7 +731,14 @@
 
       if (remoteAvailable) {
         try {
-          const res = await materialsApi.createMaterial({ name: nombre, category: categoria, price: 0, unit: unidad, notes: descripcion });
+          const res = await materialsApi.createMaterial({
+            name: nombre,
+            category: categoria,
+            price: 0,
+            unit: unidad,
+            notes: descripcion,
+            active: true
+          });
           if (res?.error) throw res.error;
           await refreshFromRemote();
           notifyUpdate();
@@ -742,7 +749,7 @@
         }
       } else {
         if (!categoriesData[categoria]) categoriesData[categoria] = [];
-        categoriesData[categoria].push({ name: nombre, unit: unidad });
+        categoriesData[categoria].push({ name: nombre, unit: unidad, active: true });
         if (window.categoriasMateriales) {
           if (!window.categoriasMateriales[categoria]) window.categoriasMateriales[categoria] = [];
           window.categoriasMateriales[categoria].push(nombre);
@@ -989,4 +996,3 @@
     </script>
 </body>
 </html>
-
