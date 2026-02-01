@@ -896,7 +896,7 @@
         // confirmar borrado permanente
         if (!confirm(`⚠️ ¿Está COMPLETAMENTE SEGURO de ELIMINAR PERMANENTEMENTE este material?\n\nCategoría: ${categoria}\nMaterial ID: ${remoteId}\n\n❌ Esta acción BORRARÁ el registro en la base de datos y NO se podrá recuperar.`)) return;
         try {
-          // hard delete (soft:false) — cambialo si preferís soft delete en este flujo
+          // hard delete (soft:false) — cambialo si prefieres soft delete en este flujo
           const res = await materialsApi.deleteMaterial(remoteId, { soft: false });
           if (res?.error) throw res.error;
           await refreshFromRemote();
