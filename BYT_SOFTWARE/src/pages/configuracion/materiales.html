@@ -68,10 +68,8 @@
         .modal p { margin: 0 0 14px 0; color: #374151; line-height: 1.5; }
         .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 
-        /* Success center modal */
         #successBackdrop { z-index: 9997; }
 
-        /* Hold-to-delete in modal */
         .hold-zone { width: 100%; background: #f3f4f6; border-radius: 10px; padding: 10px; border: 1px solid #e5e7eb; }
         .hold-btn { position: relative; overflow: hidden; width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 8px; }
         .hold-progress { position: absolute; inset: 0; background: rgba(0,0,0,0.12); width: 0%; transition: width linear; pointer-events: none; border-radius: 10px; }
@@ -95,17 +93,17 @@
 
             <main>
                 <div class="tabs" role="tablist" aria-label="Gestión de materiales">
-                    <button class="tab active" onclick="showTab('categorias')" role="tab" aria-selected="true">📁 Categorías</button>
-                    <button class="tab" onclick="showTab('consultar')" role="tab">🔍 Consultar Materiales</button>
-                    <button class="tab" onclick="showTab('crear')" role="tab">➕ Crear Material</button>
-                    <button class="tab" onclick="showTab('editar')" role="tab">✏️ Editar Material</button>
-                    <button class="tab" onclick="showTab('eliminar')" role="tab">🗑️ Eliminar Material</button>
+                    <button class="tab active" onclick="showTab('categorias')" role="tab" aria-selected="true">Categorías</button>
+                    <button class="tab" onclick="showTab('consultar')" role="tab">Consultar Materiales</button>
+                    <button class="tab" onclick="showTab('crear')" role="tab">Crear Material</button>
+                    <button class="tab" onclick="showTab('editar')" role="tab">Editar Material</button>
+                    <button class="tab" onclick="showTab('eliminar')" role="tab">Eliminar Material</button>
                 </div>
 
                 <div id="categorias" class="tab-content active" role="tabpanel">
                     <div class="card">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                            <h2 class="card-title">📁 Gestión de Categorías</h2>
+                            <h2 class="card-title">Gestión de Categorías</h2>
                             <button class="btn" onclick="mostrarModalAgregarCategoria()">+ Nueva Categoría</button>
                         </div>
                         <div style="background:#fff8e1;border:1px solid #ffeaa7;border-radius:10px;padding:14px;margin-bottom:16px;">
@@ -122,7 +120,7 @@
 
                 <div id="consultar" class="tab-content" role="tabpanel">
                     <div class="search-section">
-                        <h3>🔍 Consultar Materiales (Solo Lectura)</h3>
+                        <h3>Consultar Materiales (Solo Lectura)</h3>
                         <div class="search-row">
                             <div class="form-group">
                                 <label>Seleccionar Categoría *</label>
@@ -134,14 +132,14 @@
                                 <label>Buscar por nombre (opcional)</label>
                                 <input type="text" id="filtroNombre" placeholder="Filtrar por nombre..." onkeyup="filtrarMateriales()">
                             </div>
-                            <button class="btn" onclick="consultarTodosMateriales()">📋 Ver Todos</button>
-                            <button class="btn-secondary" onclick="limpiarConsulta()">🗑️ Limpiar</button>
+                            <button class="btn" onclick="consultarTodosMateriales()">Ver Todos</button>
+                            <button class="btn-secondary" onclick="limpiarConsulta()">Limpiar</button>
                         </div>
                     </div>
 
                     <div class="card">
                         <div style="background:#e7f3ff;border:1px solid #b3d7ff;border-radius:8px;padding:10px;margin-bottom:15px;">
-                            <p style="margin:0;color:#0f60c4;font-size:13px;"><strong>📖 Solo Consulta:</strong> Esta pestaña es únicamente para ver materiales. Para modificar use las pestañas correspondientes.</p>
+                            <p style="margin:0;color:#0f60c4;font-size:13px;"><strong>Solo Consulta:</strong> Esta pestaña es únicamente para ver materiales. Para modificar use las pestañas correspondientes.</p>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
                             <h3 id="tituloResultados">Materiales por Categoría</h3>
@@ -156,7 +154,7 @@
                 <div id="crear" class="tab-content" role="tabpanel">
                     <div class="card">
                         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-                            <span class="badge">➕ Crear</span>
+                            <span class="badge">Crear</span>
                             <h2 class="card-title" style="margin:0;">Crear Nuevo Material</h2>
                         </div>
                         <form id="crearMaterialForm">
@@ -181,8 +179,8 @@
                                 </div>
                             </div>
                             <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center;">
-                                <button type="button" class="btn-secondary" onclick="limpiarFormularioCrear()">🗑️ Limpiar</button>
-                                <button type="submit" class="btn">✅ Crear Material</button>
+                                <button type="button" class="btn-secondary" onclick="limpiarFormularioCrear()">Limpiar</button>
+                                <button type="submit" class="btn">Crear Material</button>
                             </div>
                         </form>
                     </div>
@@ -190,7 +188,7 @@
 
                 <div id="editar" class="tab-content" role="tabpanel">
                     <div class="search-section">
-                        <h3>✏️ Buscar Material a Editar</h3>
+                        <h3>Buscar Material a Editar</h3>
                         <div class="search-row">
                             <div class="form-group">
                                 <label>Categoría</label>
@@ -204,12 +202,12 @@
                                     <option value="">-- Primero seleccione una categoría --</option>
                                 </select>
                             </div>
-                            <button class="btn" onclick="cargarDatosMaterialEditar()">📝 Cargar para Editar</button>
+                            <button class="btn" onclick="cargarDatosMaterialEditar()">Cargar para Editar</button>
                         </div>
                     </div>
 
                     <div class="card">
-                        <h2 class="card-title">✏️ Editar Material</h2>
+                        <h2 class="card-title">Editar Material</h2>
                         <form id="editarMaterialForm">
                             <input type="hidden" id="editarSelectedId" value="">
                             <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
@@ -227,8 +225,8 @@
                                 </div>
                             </div>
                             <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center;">
-                                <button type="button" class="btn-secondary" onclick="limpiarFormularioEditar()">🗑️ Limpiar</button>
-                                <button type="submit" class="btn">✏️ Actualizar Material</button>
+                                <button type="button" class="btn-secondary" onclick="limpiarFormularioEditar()">Limpiar</button>
+                                <button type="submit" class="btn">Actualizar Material</button>
                             </div>
                         </form>
                     </div>
@@ -236,7 +234,7 @@
 
                 <div id="eliminar" class="tab-content" role="tabpanel">
                     <div class="search-section">
-                        <h3>🗑️ Buscar Material a Eliminar</h3>
+                        <h3>Buscar Material a Eliminar</h3>
                         <div class="search-row">
                             <div class="form-group">
                                 <label>Categoría</label>
@@ -251,16 +249,16 @@
                                 </select>
                             </div>
                             <button id="btnHoldDelete" class="btn-danger hold-btn" type="button">
-                                <span>🗑️ Eliminar Material</span>
+                                <span>Eliminar Material</span>
                                 <div class="hold-progress" id="holdProgress"></div>
                             </button>
                         </div>
                     </div>
 
                     <div class="card">
-                        <h3>⚠️ Zona de Eliminación</h3>
+                        <h3>Zona de Eliminación</h3>
                         <div style="background:#fff3cd;border:1px solid #ffeaa7;border-radius:10px;padding:16px;margin:12px 0;">
-                            <p><strong>⚠️ Advertencia:</strong> La eliminación de materiales es <strong>permanente</strong> y no se puede deshacer.</p>
+                            <p><strong>Advertencia:</strong> La eliminación de materiales es <strong>permanente</strong> y no se puede deshacer.</p>
                         </div>
                         <div id="materialAEliminar" style="display:none;background:#f8f9fa;padding:12px;border-radius:8px;margin:12px 0;">
                             <h4>Material seleccionado para eliminar:</h4>
@@ -275,7 +273,6 @@
         </div>
     </div>
 
-    <!-- Toast / Modals -->
     <div class="toast-container" id="toastContainer"></div>
 
     <div class="modal-backdrop" id="confirmBackdrop">
@@ -291,7 +288,7 @@
 
     <div class="modal-backdrop" id="deleteBackdrop">
         <div class="modal">
-            <h3>⚠️ Eliminar material</h3>
+            <h3>Eliminar material</h3>
             <p id="deleteMessage"></p>
             <div class="hold-zone">
                 <div style="font-size:13px;color:#374151;margin-bottom:8px;">Mantén presionado para confirmar (3s)</div>
@@ -308,7 +305,7 @@
 
     <div class="modal-backdrop" id="successBackdrop">
         <div class="modal" style="text-align:center;">
-            <h3>✅ Material creado</h3>
+            <h3>Material creado</h3>
             <p id="successMessage">El material se creó correctamente.</p>
             <div class="actions" style="justify-content:center;">
                 <button class="btn" id="successOk">Entendido</button>
@@ -510,8 +507,8 @@
             <td><strong>${categoria}</strong></td>
             <td>${cantidadMateriales} material(es)</td>
             <td>
-                <button class="btn-secondary btn-small" onclick="editarCategoria('${escapeJs(categoria)}')" title="Editar categoría">✏️</button>
-                <button class="btn-danger btn-small" onclick="eliminarCategoria('${escapeJs(categoria)}')" title="Eliminar categoría">🗑️</button>
+                <button class="btn-secondary btn-small" onclick="editarCategoria('${escapeJs(categoria)}')" title="Editar categoría">Editar</button>
+                <button class="btn-danger btn-small" onclick="eliminarCategoria('${escapeJs(categoria)}')" title="Eliminar categoría">Eliminar</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -753,14 +750,10 @@
       const materiales = categoriesData[categoria] || [];
       materiales.forEach(item => {
         const option = document.createElement('option');
-        if (remoteAvailable) {
-          option.value = item.id || item.name;
-          option.dataset.id = item.id || '';
-          option.textContent = item.name || '';
-        } else {
-          option.value = item.name || item;
-          option.textContent = item.name || item;
-        }
+        option.value = item.id || item.name;
+        option.dataset.id = item.id || '';
+        option.dataset.name = item.name || item;
+        option.textContent = item.name || item;
         selectMaterial.appendChild(option);
       });
     }
@@ -772,15 +765,16 @@
       if (!categoria || !selectedVal) { toast('Seleccione categoría y material','warning'); return; }
       const option = select.selectedOptions[0];
       const remoteId = option?.dataset?.id || null;
-      let name = selectedVal;
+      const displayName = option?.dataset?.name || option?.textContent || selectedVal;
+
       if (remoteId) {
         document.getElementById('editarSelectedId').value = remoteId;
       } else {
         document.getElementById('editarSelectedId').value = '';
       }
       document.getElementById('editarCategoriaOriginal').value = categoria;
-      document.getElementById('editarNombreOriginal').value = name;
-      document.getElementById('editarNuevoNombre').value = name;
+      document.getElementById('editarNombreOriginal').value = displayName;
+      document.getElementById('editarNuevoNombre').value = displayName;
     }
 
     async function resolveMaterialId(categoria, nombre) {
@@ -808,7 +802,6 @@
         toast(`Ya existe "${nuevoNombre}" en "${categoriaOriginal}"`,'warning'); return;
       }
 
-      // Intentar resolver ID si no lo tenemos y estamos en remoto
       if (remoteAvailable && !selectedId) {
         selectedId = await resolveMaterialId(categoriaOriginal, nombreOriginal);
         document.getElementById('editarSelectedId').value = selectedId || '';
@@ -829,7 +822,7 @@
         const arr = categoriesData[categoriaOriginal] || [];
         for (let i=0;i<arr.length;i++){
           const itm = arr[i];
-          if ((itm.name || itm) === nombreOriginal) {
+          if ((itm.name || itm) === nombreOriginal || (itm.id && itm.id === selectedId)) {
             if (typeof itm === 'string') arr[i] = nuevoNombre;
             else itm.name = nuevoNombre;
             break;
@@ -867,14 +860,10 @@
       const materiales = categoriesData[categoria] || [];
       materiales.forEach(item => {
         const option = document.createElement('option');
-        if (remoteAvailable) {
-          option.value = item.id || item.name;
-          option.dataset.id = item.id || '';
-          option.textContent = item.name || '';
-        } else {
-          option.value = item.name || item;
-          option.textContent = item.name || item;
-        }
+        option.value = item.id || item.name;
+        option.dataset.id = item.id || '';
+        option.dataset.name = item.name || item;
+        option.textContent = item.name || item;
         selectMaterial.appendChild(option);
       });
     }
@@ -928,7 +917,7 @@
         }
       } else {
         const arr = categoriesData[categoria] || [];
-        const idx = arr.findIndex(it => (it.name || it) === name);
+        const idx = arr.findIndex(it => (it.name || it) === name || it.id === remoteId);
         if (idx >= 0) arr.splice(idx, 1);
         if (window.categoriasMateriales && Array.isArray(window.categoriasMateriales[categoria])) {
           const idx2 = window.categoriasMateriales[categoria].indexOf(name);
@@ -956,7 +945,7 @@
         if (!categoria || !selectedVal) { toast('Seleccione categoría y material','warning'); return; }
         const option = select.selectedOptions[0];
         const remoteId = option?.dataset?.id || null;
-        const name = selectedVal;
+        const name = option?.dataset?.name || option?.textContent || selectedVal;
         openDeleteModal({ categoria, nombre: name, remoteId });
       };
     }
