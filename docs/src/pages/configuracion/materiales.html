@@ -721,6 +721,8 @@
 
     document.getElementById('crearMaterialForm').addEventListener('submit', async function(e) {
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
       const categoria = document.getElementById('crearCategoria').value;
       const nombre = document.getElementById('crearNombre').value.trim();
       const unidad = document.getElementById('crearUnidad').value || '';
