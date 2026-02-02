@@ -2775,6 +2775,28 @@ async function listCotizacionFiles(tipo = 'general') {
   return data || [];
 }
 
+
+async function _attachSignedUrls(list) {
+  const supa = await _supaUploadClient().catch(() => null);
+  if (!supa) return list;
+  const out = [];
+  for (const f of list) {
+    let url = '';
+    try {
+      const { data, error } = await supa.storage.from(BUCKET_COT).createSignedUrl(f.path, 3600);
+      if (!error) url = data?.signedUrl || '';
+    } catch (e) {}
+    const downloadUrl = url ? `${url}${url.includes('?') ? '&' : '?'}download=1` : url;
+    out.push({ ...f, url, downloadUrl });
+  }
+  return out;
+}
+
+
+
+
+
+
 function renderFileList(list, container, tipo) {
   if (!container) return;
   if (!list.length) { container.innerHTML = '<div style="color:#6c7380;">Sin archivos</div>'; return; }
