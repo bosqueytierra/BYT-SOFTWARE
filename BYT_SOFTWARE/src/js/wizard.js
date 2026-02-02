@@ -2854,8 +2854,10 @@ function renderFileList(list, container, tipo) {
 }
 
 async function refreshFileLists() {
-  const general = await listCotizacionFiles('general');
-  const cad = await listCotizacionFiles('cad');
+  const generalRaw = await listCotizacionFiles('general');
+  const cadRaw = await listCotizacionFiles('cad');
+  const general = await _attachSignedUrls(generalRaw);
+  const cad = await _attachSignedUrls(cadRaw);
   renderFileList(general, document.getElementById('file-list'), 'general');
   renderFileList(cad, document.getElementById('file-list-cad'), 'cad');
 }
