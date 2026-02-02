@@ -2741,9 +2741,21 @@ async function _supaUploadClient() {
 }
 
 function _filePublicUrl(path) {
-  const base = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : 'https://qwbeectinjasekkjzxls.supabase.co';
-  return `${base}/storage/v1/object/public/${BUCKET_COT}/${path}`;
+  try {
+    const supa = window.supabase || window.globalSupabase?.client;
+    if (!supa?.storage) return '';
+    const { data } = supa.storage.from(BUCKET_COT).getPublicUrl(path);
+    return data?.publicUrl || '';
+  } catch (e) {
+    console.warn('getPublicUrl error', e);
+    return '';
+  }
 }
+
+
+
+
+
 
 // Lista archivos (nota == 'CAD/3D' para CAD; null/otra para general)
 async function listCotizacionFiles(tipo = 'general') {
@@ -2782,6 +2794,13 @@ function renderFileList(list, container, tipo) {
     `;
   }).join('');
 
+
+
+
+
+
+
+    
   // Bind delete buttons
   container.querySelectorAll('button[data-del-id]').forEach(btn => {
     btn.onclick = async () => {
