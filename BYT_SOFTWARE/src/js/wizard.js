@@ -2778,21 +2778,32 @@ async function listCotizacionFiles(tipo = 'general') {
 function renderFileList(list, container, tipo) {
   if (!container) return;
   if (!list.length) { container.innerHTML = '<div style="color:#6c7380;">Sin archivos</div>'; return; }
-  container.innerHTML = list.map(f => {
-    const url = _filePublicUrl(f.path);
-    const sizeMb = (f.size || 0) / (1024 * 1024);
-    const created = f.created_at ? new Date(f.created_at).toLocaleString() : '';
-    const noteText = (tipo === 'cad') ? 'CAD/3D' : (f.nota || '');
-    return `
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #e3e8ea;padding:8px 10px;border-radius:8px;">
-        <div style="display:flex;flex-direction:column;gap:2px;">
-          <a href="${url}" target="_blank" style="font-weight:600;color:#2e5e4e;">${f.filename}</a>
-          <span style="color:#6c7380;font-size:12px;">${(f.content_type||'').toLowerCase()} · ${sizeMb.toFixed(2)} MB · ${created}${noteText ? ' · '+noteText : ''}</span>
+  
+    
+    
+    container.innerHTML = list.map(f => {
+  const url = _filePublicUrl(f.path);
+  const downloadUrl = url ? `${url}${url.includes('?') ? '&' : '?'}download=1` : '#';
+  const sizeMb = (f.size || 0) / (1024 * 1024);
+  const created = f.created_at ? new Date(f.created_at).toLocaleString() : '';
+  const noteText = (tipo === 'cad') ? 'CAD/3D' : (f.nota || '');
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #e3e8ea;padding:8px 10px;border-radius:8px;">
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <span style="font-weight:600;color:#2e5e4e;">${f.filename}</span>
+        <span style="color:#6c7380;font-size:12px;">
+          ${(f.content_type||'').toLowerCase()} · ${sizeMb.toFixed(2)} MB · ${created}${noteText ? ' · ' + noteText : ''}
+        </span>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          ${url ? `<a class="btn btn-secondary btn-sm" href="${url}" target="_blank">Ver</a>` : ''}
+          ${url ? `<a class="btn btn-secondary btn-sm" href="${downloadUrl}" download>Descargar</a>` : ''}
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" data-del-id="${f.id}" data-del-path="${f.path}" data-del-tipo="${tipo}">🗑</button>
       </div>
-    `;
-  }).join('');
+      <button type="button" class="btn btn-secondary btn-sm" data-del-id="${f.id}" data-del-path="${f.path}" data-del-tipo="${tipo}">🗑</button>
+    </div>
+  `;
+}).join('');
 
 
 
