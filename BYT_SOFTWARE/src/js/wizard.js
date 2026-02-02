@@ -2099,6 +2099,7 @@ class WizardCotizacion {
             this.actualizarBarraSuperior();
             this.mostrarPaso(1);
             this._showToast('Cotización cargada');
+            await refreshFileLists();
             return { ok:true, data };
         } catch (err) {
             console.error('loadCotizacionSupabase error', err);
