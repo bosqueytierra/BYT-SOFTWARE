@@ -2928,6 +2928,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Exponer explicitamente la instancia en window.bytWizard
         window.bytWizard = bytWizard;
 
+
+         bindUploadUI();
+
+        
         // Crear un proxy seguro que delegue a bytWizard
         try {
             const existing = Object.prototype.hasOwnProperty.call(window, 'wizard') ? window.wizard : undefined;
