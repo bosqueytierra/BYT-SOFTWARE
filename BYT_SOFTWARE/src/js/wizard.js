@@ -2803,9 +2803,9 @@ function renderFileList(list, container, tipo) {
   
     
     
-    container.innerHTML = list.map(f => {
-  const url = _filePublicUrl(f.path);
-  const downloadUrl = url ? `${url}${url.includes('?') ? '&' : '?'}download=1` : '#';
+   container.innerHTML = list.map(f => {
+  const url = f.url || '';
+  const downloadUrl = f.downloadUrl || (url ? `${url}${url.includes('?') ? '&' : '?'}download=1` : '#');
   const sizeMb = (f.size || 0) / (1024 * 1024);
   const created = f.created_at ? new Date(f.created_at).toLocaleString() : '';
   const noteText = (tipo === 'cad') ? 'CAD/3D' : (f.nota || '');
