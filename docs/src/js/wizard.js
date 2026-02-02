@@ -2721,6 +2721,205 @@ function siguientePaso() {
     console.error('Wizard instance not available for siguientePaso. bytWizard:', window.bytWizard, 'wizard:', window.wizard);
 }
 
+
+
+
+
+
+
+
+
+// ==== Archivos de cotización: subir, listar, eliminar ====
+const BUCKET_COT = 'cotizaciones';
+const FILE_MAX_BYTES = 1_000_000_000; // 1 GB
+
+async function _supaUploadClient() {
+  const supa = await window.bytWizard?._ensureSupabase?.(6000);
+  if (!supa || !supa.storage) throw new Error('Supabase storage no disponible');
+  return supa;
+}
+
+function _filePublicUrl(path) {
+  const base = (typeof window !== 'undefined' && window.SUPABASE_URL) ? window.SUPABASE_URL : 'https://qwbeectinjasekkjzxls.supabase.co';
+  return `${base}/storage/v1/object/public/${BUCKET_COT}/${path}`;
+}
+
+// Lista archivos (nota == 'CAD/3D' para CAD; null/otra para general)
+async function listCotizacionFiles(tipo = 'general') {
+  const cotId = window.bytWizard?.datos?._id;
+  if (!cotId) return [];
+  const supa = await window.bytWizard?._ensureSupabase?.(6000);
+  if (!supa) return [];
+  let q = supa.from('cotizacion_files')
+    .select('id,path,filename,content_type,size,created_at,nota')
+    .eq('cotizacion_id', cotId)
+    .order('created_at', { ascending: false });
+  q = (tipo === 'cad')
+    ? q.eq('nota', 'CAD/3D')
+    : q.or('nota.is.null,nota.neq.CAD/3D');
+  const { data, error } = await q;
+  if (error) { console.warn('listCotizacionFiles error', error); return []; }
+  return data || [];
+}
+
+function renderFileList(list, container, tipo) {
+  if (!container) return;
+  if (!list.length) { container.innerHTML = '<div style="color:#6c7380;">Sin archivos</div>'; return; }
+  container.innerHTML = list.map(f => {
+    const url = _filePublicUrl(f.path);
+    const sizeMb = (f.size || 0) / (1024 * 1024);
+    const created = f.created_at ? new Date(f.created_at).toLocaleString() : '';
+    const noteText = (tipo === 'cad') ? 'CAD/3D' : (f.nota || '');
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #e3e8ea;padding:8px 10px;border-radius:8px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <a href="${url}" target="_blank" style="font-weight:600;color:#2e5e4e;">${f.filename}</a>
+          <span style="color:#6c7380;font-size:12px;">${(f.content_type||'').toLowerCase()} · ${sizeMb.toFixed(2)} MB · ${created}${noteText ? ' · '+noteText : ''}</span>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" data-del-id="${f.id}" data-del-path="${f.path}" data-del-tipo="${tipo}">🗑</button>
+      </div>
+    `;
+  }).join('');
+
+  // Bind delete buttons
+  container.querySelectorAll('button[data-del-id]').forEach(btn => {
+    btn.onclick = async () => {
+      try {
+        const supa = await _supaUploadClient();
+        const path = btn.dataset.delPath;
+        const id = btn.dataset.delId;
+        await supa.storage.from(BUCKET_COT).remove([path]);
+        await supa.from('cotizacion_files').delete().eq('id', id);
+        await refreshFileLists();
+        window.utils?.mostrarNotificacion?.('Archivo eliminado', 'success');
+      } catch (e) {
+        console.error('delete file error', e);
+        window.utils?.mostrarNotificacion?.('Error al eliminar archivo', 'error');
+      }
+    };
+  });
+}
+
+async function refreshFileLists() {
+  const general = await listCotizacionFiles('general');
+  const cad = await listCotizacionFiles('cad');
+  renderFileList(general, document.getElementById('file-list'), 'general');
+  renderFileList(cad, document.getElementById('file-list-cad'), 'cad');
+}
+
+async function uploadFiles(files, tipo = 'general') {
+  const nombreProyecto = (window.bytWizard?.datos?.cliente?.nombre_proyecto || '').trim();
+  const cotId = window.bytWizard?.datos?._id;
+  if (!nombreProyecto || !cotId) {
+    document.getElementById('file-hint')?.style && (document.getElementById('file-hint').style.display = 'block');
+    document.getElementById('file-hint-cad')?.style && (document.getElementById('file-hint-cad').style.display = 'block');
+    window.utils?.mostrarNotificacion?.('Guarda la cotización (con nombre) antes de subir archivos', 'warning');
+    return;
+  }
+  if (!files || !files.length) return;
+
+  // Nota opcional: para CAD se fija CAD/3D; para general se pide prompt
+  let userNote = null;
+  if (tipo === 'cad') {
+    userNote = 'CAD/3D';
+  } else {
+    const n = prompt('Nota u observación (opcional):', '');
+    userNote = (n && n.trim()) ? n.trim() : null;
+  }
+
+  const supa = await _supaUploadClient();
+
+  for (const f of files) {
+    if (f.size > FILE_MAX_BYTES) {
+      window.utils?.mostrarNotificacion?.(`"${f.name}" excede 1GB; no se sube.`, 'warning');
+      continue;
+    }
+    const safeName = `${Date.now()}-${f.name.replace(/[^\w.\-]/g,'_')}`;
+    const path = `${cotId}/${safeName}`;
+    const { error: upErr } = await supa.storage.from(BUCKET_COT).upload(path, f, { upsert: true });
+    if (upErr) {
+      console.error('upload error', upErr);
+      window.utils?.mostrarNotificacion?.('Error subiendo archivo: ' + (upErr.message || upErr), 'error');
+      continue;
+    }
+    const { error: insErr } = await supa.from('cotizacion_files').insert({
+      cotizacion_id: cotId,
+      path,
+      filename: f.name,
+      content_type: f.type || null,
+      size: f.size || null,
+      nota: userNote
+    });
+    if (insErr) {
+      console.error('insert cotizacion_files error', insErr);
+      window.utils?.mostrarNotificacion?.('Subido pero no se guardó en tabla cotizacion_files: ' + (insErr.message || insErr), 'warning');
+    }
+  }
+  await refreshFileLists();
+  window.utils?.mostrarNotificacion?.('Archivo(s) subido(s)', 'success');
+}
+
+function bindUploadUI() {
+  const fi = document.getElementById('file-input');
+  const pi = document.getElementById('photo-input');
+  const fiCad = document.getElementById('file-input-cad');
+  const dz = document.getElementById('dropzone');
+  const dzCad = document.getElementById('dropzone-cad');
+
+  fi?.addEventListener('change', e => uploadFiles(e.target.files, 'general'));
+  pi?.addEventListener('change', e => uploadFiles(e.target.files, 'general'));
+  fiCad?.addEventListener('change', e => uploadFiles(e.target.files, 'cad'));
+
+  function setupDrop(el, tipo) {
+    if (!el) return;
+    el.addEventListener('dragover', ev => { ev.preventDefault(); el.style.borderColor = '#2e7d32'; });
+    el.addEventListener('dragleave', ev => { ev.preventDefault(); el.style.borderColor = '#dfe3e6'; });
+    el.addEventListener('drop', ev => {
+      ev.preventDefault(); el.style.borderColor = '#dfe3e6';
+      uploadFiles(ev.dataTransfer?.files, tipo);
+    });
+  }
+  setupDrop(dz, 'general');
+  setupDrop(dzCad, 'cad');
+
+  // Auto-cargar cuando haya _id disponible
+  let lastId = null;
+  const t = setInterval(() => {
+    const id = window.bytWizard?.datos?._id;
+    if (id && id !== lastId) {
+      lastId = id;
+      refreshFileLists().catch(console.warn);
+      clearInterval(t);
+    }
+  }, 1200);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 document.addEventListener('DOMContentLoaded', function() {
     try {
         bytWizard = new WizardCotizacion();
