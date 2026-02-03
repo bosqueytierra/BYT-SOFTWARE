@@ -173,6 +173,40 @@ function renderPalette(aprobados, eventos = []) {
     wrap.appendChild(body);
     container.appendChild(wrap);
   });
+
+  // habilita draggable externo
+  setupPaletteDraggable();
+}
+
+function setupPaletteDraggable() {
+  const paletteEl = document.getElementById('palette');
+  if (!paletteEl || typeof FullCalendar === 'undefined' || !FullCalendar.Draggable) return;
+
+  // Limpia instancias previas: no hay handler oficial, pero no duplicamos si ya hay draggable asignado.
+  new FullCalendar.Draggable(paletteEl, {
+    itemSelector: '.chip',
+    eventData: function(el) {
+      try {
+        const data = JSON.parse(el.dataset.payload || '{}');
+        return {
+          title: `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`,
+          duration: { days: 1 },
+          allDay: true,
+          backgroundColor: data.color || '#2e5e4e',
+          borderColor: data.color || '#2e5e4e',
+          extendedProps: {
+            tipo: 'programacion',
+            cotizacion_id: data.cotizacion_id || null,
+            partida_id: data.partida_id || null,
+            cliente: data.cliente || null
+          }
+        };
+      } catch (err) {
+        console.warn('No se pudo parsear payload de chip', err);
+        return {};
+      }
+    }
+  });
 }
 
 function pickColor(i) {
@@ -249,19 +283,19 @@ function initCalendar(eventosIniciales = []) {
 // Drop externo (paleta -> calendario)
 async function onExternalDrop(info) {
   try {
-    const data = JSON.parse(info.draggedEl.dataset.payload || '{}');
-    const start = info.date;
-    const title = `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
+    // Si viene por Draggable, usamos el extendedProps del evento recibido
+    const ext = info.event.extendedProps || {};
+    const data = info.draggedEl?.dataset?.payload ? JSON.parse(info.draggedEl.dataset.payload) : {};
     const payload = {
-      cotizacion_id: data.cotizacion_id || null,
-      partida_id: data.partida_id || null,
+      cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
+      partida_id: ext.partida_id || data.partida_id || null,
       tipo: 'programacion',
-      title,
-      start,
+      title: info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`,
+      start: info.date,
       end: null,
-      color: data.color || '#2e5e4e',
+      color: ext.color || data.color || info.event.backgroundColor || '#2e5e4e',
       nota: null,
-      cliente: data.cliente || null
+      cliente: ext.cliente || data.cliente || null
     };
     const ev = await createEvento(payload);
     info.event.remove(); // quita el placeholder
