@@ -148,7 +148,7 @@ function renderPalette(aprobados, eventos = []) {
 
     (proj.partidas || []).forEach(p => {
       const chip = document.createElement('div');
-      chip.className = 'chip';
+      chip.className = 'chip fc-event'; // fc-event para facilitar el drag
       chip.draggable = true;
       chip.innerHTML = `<strong>${p.nombre}</strong><span>${proj.cliente?.nombre || proj.cliente?.razon_social || ''}</span>`;
       chip.dataset.payload = JSON.stringify({
@@ -182,7 +182,6 @@ function setupPaletteDraggable() {
   const paletteEl = document.getElementById('palette');
   if (!paletteEl || typeof FullCalendar === 'undefined' || !FullCalendar.Draggable) return;
 
-  // Limpia instancias previas: no hay handler oficial, pero no duplicamos si ya hay draggable asignado.
   new FullCalendar.Draggable(paletteEl, {
     itemSelector: '.chip',
     eventData: function(el) {
