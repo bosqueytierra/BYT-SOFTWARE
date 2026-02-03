@@ -8,23 +8,30 @@
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" />
   <style>
-
-    
     body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
     .page-header { padding: 16px; }
     .page-header .crumb { color: #6c7a86; font-size: 12px; }
     .page-header h1 { margin: 4px 0 0; font-size: 22px; }
 
-    
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      padding: 0 16px 20px;
+      height: calc(100vh - 140px);
+      align-items: stretch;
+    }
+
     .panel {
       background: #fff;
       border: 1px solid #e4e7eb;
       border-radius: 12px;
       box-shadow: 0 6px 12px rgba(0,0,0,0.04);
       padding: 12px;
-      overflow: hidden;
+      overflow: hidden; /* el scroll queda en la paleta */
     }
-    aside.panel { display: flex; flex-direction: column; overflow-y: auto; }
+
+    aside.panel { display: flex; flex-direction: column; overflow: hidden; }
     .panel h2 { margin: 0 0 8px; font-size: 16px; }
 
     .stats {
@@ -39,7 +46,12 @@
     .stat-row { display: flex; justify-content: space-between; font-weight: 700; color: #2d2d2d; }
     .stat-row span.value { font-size: 18px; }
 
-    .palette-wrapper { flex: 1; overflow-y: auto; padding-right: 4px; }
+    .palette-wrapper {
+      flex: 1;
+      overflow-y: auto; /* scroll solo aquí */
+      min-height: 0;
+      padding-right: 4px;
+    }
     .project-block { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fafbfc; margin-bottom: 8px; }
     .project-header { display: flex; justify-content: space-between; align-items: center; cursor: grab; }
     .project-title { font-weight: 700; color: #2e5e4e; }
