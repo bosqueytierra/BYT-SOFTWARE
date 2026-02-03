@@ -1,491 +1,520 @@
-// Mock de proyectos aprobados (sustituir por backend real si corresponde)
-const proyectosAprobados = [
-  { id: "proj-001", nombre: "Proyecto Bahía - Pocket Door", cliente: "Terrazio", partidas: [
-    { id: "p1", nombre: "Excavación" }, { id: "p2", nombre: "Cimentación" }, { id: "p3", nombre: "Estructura" }
-  ]},
-  { id: "proj-002", nombre: "Proyecto Lago - Ventanas", cliente: "ACME", partidas: [
-    { id: "p4", nombre: "Enmarcado" }, { id: "p5", nombre: "Instalación vidrios" }
-  ]},
-  { id: "proj-003", nombre: "Proyecto Andes - Interior", cliente: "Cliente XYZ", partidas: [
-    { id: "p6", nombre: "Tabiquería" }, { id: "p7", nombre: "Pintura" }, { id: "p8", nombre: "Terminaciones" }
-  ]},
-  { id: "proj-004", nombre: "Proyecto Pacífico - Fachada", cliente: "Inmobiliaria Alfa", partidas: [
-    { id: "p9", nombre: "Revestimiento" }, { id: "p10", nombre: "Sellos" }
-  ]},
-  { id: "proj-005", nombre: "Proyecto Delta - Equipamiento", cliente: "Retail Beta", partidas: [
-    { id: "p11", nombre: "Mobiliario" }, { id: "p12", nombre: "Iluminación" }
-  ]},
-  { id: "proj-006", nombre: "Proyecto Sierra - Estructural", cliente: "Constructora Gamma", partidas: [
-    { id: "p13", nombre: "Hormigonado" }, { id: "p14", nombre: "Acero" }
-  ]},
-  { id: "proj-007", nombre: "Proyecto Norte - Climatización", cliente: "Cliente Norte", partidas: [
-    { id: "p15", nombre: "Ductos" }, { id: "p16", nombre: "Equipos" }
-  ]},
-  { id: "proj-008", nombre: "Proyecto Sur - Paisajismo", cliente: "Cliente Sur", partidas: [
-    { id: "p17", nombre: "Riego" }, { id: "p18", nombre: "Vegetación" }
-  ]}
-];
+const CRONO_TABLE = 'cronograma_eventos';
 
-// Paleta de colores (8 distintos, sin repetir)
-const colores = [
-  "#2e5e4e", // verde bosque
-  "#4a7a9c", // azul acero
-  "#c15d4f", // rojo terracota
-  "#d48b24", // ámbar
-  "#7a5ac8", // violeta
-  "#2b8f7b", // verde azulado
-  "#b04c8c", // magenta
-  "#566573"  // gris pizarra
-];
-let colorSeleccionado = colores[0];
+let fc = null;                 // FullCalendar instance
+let currentEvent = null;       // Evento seleccionado en modal
+let selectedColor = '#2e5e4e'; // Color picker estado actual
+let createContext = { tipo: 'visita', preDate: null };
+let channelCrono = null;
+let channelCots = null;
+const localWrites = new Set(); // ids escritos localmente para evitar eco realtime
 
-let calendar;
-let eventoSeleccionado = null;
-
-const estadoPartidas = {}; // key: projId::partId -> { count }
-const colapsados = {};
-const visitasItems = [];
-const rectItems = [];
-
-// Helpers de título con nota
-function buildTitle({ partida, proyecto, tipo, nota }) {
-  const base = partida ? `${partida} — ${proyecto}` : tipo ? `${tipo}${proyecto ? ' — ' + proyecto : ''}` : proyecto || '';
-  const note = nota ? ` (${nota})` : '';
-  return base + note;
+// ==== Helpers Supabase ====
+function getSupa() {
+  const supa = window.globalSupabase?.client || window.supabase || window.supabaseClient;
+  if (!supa) throw new Error('Supabase no disponible');
+  return supa;
 }
 
-function initEstado() {
-  proyectosAprobados.forEach(p => {
-    p.partidas.forEach(part => {
-      const key = `${p.id}::${part.id}`;
-      if (!estadoPartidas[key]) estadoPartidas[key] = { count: 0 };
-    });
-  });
+// ==== Data load ====
+async function loadAprobados() {
+  const supa = getSupa();
+  const { data, error } = await supa
+    .from('cotizaciones')
+    .select('id, nombre_proyecto, cliente, data')
+    .eq('estado', 'aprobada');
+  if (error) throw error;
+  return (data || []).map(c => ({
+    id: c.id,
+    nombre: c.nombre_proyecto || c.data?.cliente?.nombre_proyecto || 'Sin nombre',
+    cliente: c.cliente || c.data?.cliente || null,
+    partidas: Array.isArray(c.data?.partidas)
+      ? c.data.partidas.map(p => ({
+          id: p.id || (crypto?.randomUUID ? crypto.randomUUID() : String(Math.random())),
+          nombre: p.nombre || 'Partida'
+        }))
+      : []
+  }));
 }
 
-function updateStats() {
-  const total = Object.keys(estadoPartidas).length;
-  const programadas = Object.values(estadoPartidas).filter(x => x.count > 0).length;
-  const noProg = total - programadas;
-  const elP = document.getElementById('statProgramadas');
-  const elN = document.getElementById('statNoProgramadas');
-  if (elP) elP.textContent = programadas;
-  if (elN) elN.textContent = noProg;
+async function loadEventos() {
+  const supa = getSupa();
+  const { data, error } = await supa
+    .from(CRONO_TABLE)
+    .select('*')
+    .order('start', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(mapEventoToCalendar);
 }
 
-function renderPalette() {
-  const palette = document.getElementById('palette');
-  if (!palette) return;
-  palette.innerHTML = '';
+// ==== CRUD eventos ====
+async function createEvento(payload) {
+  const supa = getSupa();
+  const { error, data } = await supa.from(CRONO_TABLE).insert(payload).select().single();
+  if (error) throw error;
+  localWrites.add(data.id);
+  setTimeout(() => localWrites.delete(data.id), 4000);
+  return mapEventoToCalendar(data);
+}
 
-  proyectosAprobados.forEach(proj => {
-    const totalPart = proj.partidas.length;
-    const asignadas = proj.partidas.reduce((acc, part) => {
-      const k = `${proj.id}::${part.id}`;
-      return acc + (estadoPartidas[k]?.count > 0 ? 1 : 0);
-    }, 0);
-    const projectAssigned = asignadas === totalPart && totalPart > 0;
+async function updateEvento(id, patch) {
+  const supa = getSupa();
+  const { error, data } = await supa.from(CRONO_TABLE).update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  localWrites.add(id);
+  setTimeout(() => localWrites.delete(id), 4000);
+  return mapEventoToCalendar(data);
+}
 
-    const block = document.createElement('div');
-    block.className = 'project-block';
+async function deleteEvento(id) {
+  const supa = getSupa();
+  const { error } = await supa.from(CRONO_TABLE).delete().eq('id', id);
+  if (error) throw error;
+  localWrites.add(id);
+  setTimeout(() => localWrites.delete(id), 4000);
+}
+
+// ==== Mappers ====
+function mapEventoToCalendar(ev) {
+  const title = ev.nota ? `${ev.title} (${ev.nota})` : ev.title;
+  return {
+    id: ev.id,
+    title,
+    start: ev.start,
+    end: ev.end,
+    backgroundColor: ev.color || '#2e5e4e',
+    borderColor: ev.color || '#2e5e4e',
+    extendedProps: {
+      tipo: ev.tipo,
+      cotizacion_id: ev.cotizacion_id,
+      partida_id: ev.partida_id,
+      cliente: ev.cliente,
+      nota: ev.nota,
+      color: ev.color
+    }
+  };
+}
+
+// ==== Render palette & stats ====
+function renderPalette(aprobados) {
+  const container = document.getElementById('palette');
+  if (!container) return;
+  container.innerHTML = '';
+
+  aprobados.forEach((proj, idx) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'project-block';
 
     const header = document.createElement('div');
-    header.className = 'project-header fc-event';
-    header.setAttribute('data-bundle', '1');
-    header.setAttribute('data-proyecto', proj.nombre);
-    header.setAttribute('data-proyecto-id', proj.id);
-    header.setAttribute('data-cliente', proj.cliente);
-    header.setAttribute('data-partidas', JSON.stringify(proj.partidas));
+    header.className = 'project-header';
     header.innerHTML = `
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span class="dot ${projectAssigned ? 'assigned' : 'unassigned'}"></span>
-        <span class="project-title">${proj.nombre}</span>
-        <span style="color:#6c7a86;font-size:12px;">(${asignadas}/${totalPart})</span>
-      </div>
-      <button class="toggle-btn" type="button">${colapsados[proj.id] ? 'Ocultar' : 'Desplegar'}</button>
+      <div class="project-title">${proj.nombre}</div>
+      <button class="toggle-btn" type="button">Partidas</button>
     `;
+    const body = document.createElement('div');
+    body.className = 'partidas-list';
 
-    const list = document.createElement('div');
-    list.className = 'partidas-list';
-    list.style.display = colapsados[proj.id] ? 'grid' : 'none';
+    const color = pickColor(idx);
 
-    proj.partidas.forEach(part => {
-      const key = `${proj.id}::${part.id}`;
-      const asignada = estadoPartidas[key]?.count > 0;
-      const div = document.createElement('div');
-      div.className = 'chip fc-event';
-      div.setAttribute('data-proyecto', proj.nombre);
-      div.setAttribute('data-proyecto-id', proj.id);
-      div.setAttribute('data-partida', part.nombre);
-      div.setAttribute('data-partida-id', part.id);
-      div.setAttribute('data-cliente', proj.cliente);
-      div.innerHTML = `<div style="display:flex;align-items:center;gap:6px;">
-          <span class="dot ${asignada ? 'assigned' : 'unassigned'}"></span>
-          <strong>${part.nombre}</strong>
-        </div>
-        <small>${proj.nombre}</small>
-        <small style="color:#6c7a86;">Cliente: ${proj.cliente}</small>`;
-      list.appendChild(div);
+    (proj.partidas || []).forEach(p => {
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.draggable = true;
+      chip.innerHTML = `<strong>${p.nombre}</strong><span>${proj.cliente?.nombre || proj.cliente?.razon_social || ''}</span>`;
+      chip.dataset.payload = JSON.stringify({
+        cotizacion_id: proj.id,
+        cotizacion_nombre: proj.nombre,
+        partida_id: p.id,
+        partida_nombre: p.nombre,
+        color,
+        cliente: proj.cliente?.nombre || proj.cliente?.razon_social || proj.cliente || ''
+      });
+      chip.addEventListener('dragstart', ev => {
+        ev.dataTransfer.setData('text', chip.dataset.payload);
+      });
+      body.appendChild(chip);
     });
 
-    header.querySelector('.toggle-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      const visible = list.style.display !== 'none';
-      list.style.display = visible ? 'none' : 'grid';
-      e.target.textContent = visible ? 'Desplegar' : 'Ocultar';
-      colapsados[proj.id] = !visible;
-    });
+    header.querySelector('.toggle-btn').onclick = () => {
+      body.style.display = body.style.display === 'none' ? 'grid' : 'none';
+    };
 
-    block.appendChild(header);
-    block.appendChild(list);
-    palette.appendChild(block);
+    wrap.appendChild(header);
+    wrap.appendChild(body);
+    container.appendChild(wrap);
   });
 }
 
-function renderExtras() {
-  const vList = document.getElementById('visitasList');
-  const rList = document.getElementById('rectList');
-  if (vList) {
-    vList.innerHTML = '';
-    visitasItems.forEach(item => {
+function pickColor(i) {
+  const palette = ['#2e5e4e','#3f705d','#1abc9c','#3498db','#9b59b6','#e67e22','#e74c3c','#f1c40f','#95a5a6'];
+  return palette[i % palette.length];
+}
+
+function renderStats(aprobados, eventos) {
+  const totalPartidas = aprobados.reduce((acc, p) => acc + (p.partidas?.length || 0), 0);
+  const programadasSet = new Set(
+    (eventos || [])
+      .filter(e => e.extendedProps?.tipo === 'programacion' && e.extendedProps?.partida_id)
+      .map(e => `${e.extendedProps.cotizacion_id}::${e.extendedProps.partida_id}`)
+  );
+  const programadas = programadasSet.size;
+  const porProgramar = Math.max(0, totalPartidas - programadas);
+  const elProg = document.getElementById('statProgramadas');
+  const elNoProg = document.getElementById('statNoProgramadas');
+  if (elProg) elProg.textContent = programadas;
+  if (elNoProg) elNoProg.textContent = porProgramar;
+}
+
+function renderVisitasRect(eventos) {
+  const visitasList = document.getElementById('visitasList');
+  const rectList = document.getElementById('rectList');
+  if (visitasList) visitasList.innerHTML = '';
+  if (rectList) rectList.innerHTML = '';
+  (eventos || []).forEach(ev => {
+    if (ev.extendedProps?.tipo === 'visita' && visitasList) {
       const div = document.createElement('div');
-      div.className = 'chip fc-event';
-      div.setAttribute('data-tipo', 'Visita técnica');
-      div.setAttribute('data-proyecto', item.proyectoNombre || '(Manual)');
-      div.setAttribute('data-proyecto-id', item.proyectoId || '');
-      div.setAttribute('data-cliente', item.cliente || '');
-      div.setAttribute('data-titulo', item.titulo);
-      div.innerHTML = `<strong>${item.titulo}</strong>
-        <small>${item.proyectoNombre || 'Manual'}</small>
-        ${item.cliente ? `<small style="color:#6c7a86;">Cliente: ${item.cliente}</small>` : ''}`;
-      vList.appendChild(div);
-    });
-  }
-  if (rList) {
-    rList.innerHTML = '';
-    rectItems.forEach(item => {
+      div.className = 'chip';
+      div.textContent = ev.title;
+      visitasList.appendChild(div);
+    }
+    if (ev.extendedProps?.tipo === 'rectificacion' && rectList) {
       const div = document.createElement('div');
-      div.className = 'chip fc-event';
-      div.setAttribute('data-tipo', 'Rectificación');
-      div.setAttribute('data-proyecto', item.proyectoNombre || '(Manual)');
-      div.setAttribute('data-proyecto-id', item.proyectoId || '');
-      div.setAttribute('data-cliente', item.cliente || '');
-      div.setAttribute('data-titulo', item.titulo);
-      div.innerHTML = `<strong>${item.titulo}</strong>
-        <small>${item.proyectoNombre || 'Manual'}</small>
-        ${item.cliente ? `<small style="color:#6c7a86;">Cliente: ${item.cliente}</small>` : ''}`;
-      rList.appendChild(div);
-    });
+      div.className = 'chip';
+      div.textContent = ev.title;
+      rectList.appendChild(div);
+    }
+  });
+}
+
+// ==== FullCalendar ====
+function initCalendar(eventosIniciales = []) {
+  const calendarEl = document.getElementById('calendar');
+  if (!calendarEl) return;
+
+  fc = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+    },
+    selectable: true,
+    editable: true,
+    droppable: true,
+    eventReceive: onExternalDrop,
+    eventDrop: onEventMoved,
+    eventResize: onEventMoved,
+    eventClick: onEventClick,
+    dateClick: onDateClick,
+    events: eventosIniciales
+  });
+
+  fc.render();
+  bindCreateModals();
+  bindColorPicker(); // inicializa el picker
+}
+
+// Drop externo (paleta -> calendario)
+async function onExternalDrop(info) {
+  try {
+    const data = JSON.parse(info.draggedEl.dataset.payload || '{}');
+    const start = info.date;
+    const title = `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
+    const payload = {
+      cotizacion_id: data.cotizacion_id || null,
+      partida_id: data.partida_id || null,
+      tipo: 'programacion',
+      title,
+      start,
+      end: null,
+      color: data.color || '#2e5e4e',
+      nota: null,
+      cliente: data.cliente || null
+    };
+    const ev = await createEvento(payload);
+    info.event.remove(); // quita el placeholder
+    fc.addEvent(ev);
+    refreshStatsAndLists();
+  } catch (e) {
+    console.error('onExternalDrop error', e);
+    window.utils?.mostrarNotificacion?.('Error al crear evento', 'error');
+    info.revert && info.revert();
   }
 }
 
-// Color picker modal
-function renderColorPicker(containerId, onSelect) {
-  const picker = document.getElementById(containerId);
+// Move/resize
+async function onEventMoved(info) {
+  try {
+    const id = info.event.id;
+    const patch = {
+      start: info.event.start,
+      end: info.event.end
+    };
+    const ev = await updateEvento(id, patch);
+    info.event.remove();
+    fc.addEvent(ev);
+    refreshStatsAndLists();
+  } catch (e) {
+    console.error('onEventMoved error', e);
+    window.utils?.mostrarNotificacion?.('No se pudo mover/redimensionar', 'error');
+    info.revert();
+  }
+}
+
+// Click en evento
+function onEventClick(info) {
+  currentEvent = info.event;
+  openEventModal(info.event);
+}
+
+// Click en fecha vacía: abre modal de crear (visita/rect) con fecha preseleccionada
+function onDateClick(info) {
+  openCreateModal({ preDate: info.dateStr });
+}
+
+// ==== Modal de evento (ver/editar/eliminar) ====
+function openEventModal(ev) {
+  const backdrop = document.getElementById('modalBackdrop');
+  if (!backdrop) return;
+  const props = ev.extendedProps || {};
+  document.getElementById('modalTitle').textContent = ev.title;
+  document.getElementById('modalProyecto').textContent = props.cotizacion_id || '—';
+  document.getElementById('modalPartida').textContent = props.partida_id || (props.tipo || '—');
+  document.getElementById('modalCliente').textContent = props.cliente || '—';
+  document.getElementById('modalFecha').textContent = ev.start ? ev.start.toLocaleString() : '—';
+  const notaEl = document.getElementById('modalNota');
+  if (notaEl) notaEl.value = props.nota || '';
+  setColorPicker(props.color || ev.backgroundColor || '#2e5e4e');
+
+  const btnSave = document.getElementById('modalSave');
+  const btnDelete = document.getElementById('modalDelete');
+  const btnClose = document.getElementById('modalClose');
+
+  btnSave.onclick = async () => {
+    try {
+      const nota = document.getElementById('modalNota')?.value || null;
+      const color = selectedColor;
+      const patch = { nota, color };
+      const updated = await updateEvento(ev.id, patch);
+      ev.remove();
+      fc.addEvent(updated);
+      refreshStatsAndLists();
+      closeEventModal();
+    } catch (e) {
+      console.error('modal save error', e);
+      window.utils?.mostrarNotificacion?.('Error al guardar evento', 'error');
+    }
+  };
+
+  btnDelete.onclick = async () => {
+    try {
+      await deleteEvento(ev.id);
+      ev.remove();
+      refreshStatsAndLists();
+      closeEventModal();
+    } catch (e) {
+      console.error('modal delete error', e);
+      window.utils?.mostrarNotificacion?.('Error al eliminar evento', 'error');
+    }
+  };
+
+  btnClose.onclick = closeEventModal;
+  backdrop.style.display = 'flex';
+}
+
+function closeEventModal() {
+  const backdrop = document.getElementById('modalBackdrop');
+  if (backdrop) backdrop.style.display = 'none';
+  currentEvent = null;
+}
+
+// ==== Color picker modal ====
+function bindColorPicker() {
+  setColorPicker(selectedColor);
+}
+
+function setColorPicker(color) {
+  selectedColor = color;
+  const picker = document.getElementById('modalColorPicker');
   if (!picker) return;
   picker.innerHTML = '';
-  colores.forEach(c => {
+  const palette = ['#2e5e4e','#3f705d','#1abc9c','#3498db','#9b59b6','#e67e22','#e74c3c','#f1c40f','#95a5a6'];
+  palette.forEach(c => {
     const sw = document.createElement('div');
-    sw.className = 'color-swatch' + (c === colorSeleccionado ? ' active' : '');
+    sw.className = 'color-swatch' + (c === color ? ' active' : '');
     sw.style.background = c;
-    sw.addEventListener('click', () => {
-      colorSeleccionado = c;
-      renderColorPicker(containerId, onSelect);
-      if (typeof onSelect === 'function') onSelect(c);
-    });
+    sw.onclick = () => {
+      selectedColor = c;
+      picker.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active'));
+      sw.classList.add('active');
+    };
     picker.appendChild(sw);
   });
 }
 
-// Modal info evento
-function abrirModal(evento) {
-  eventoSeleccionado = evento;
-  document.getElementById('modalProyecto').textContent = evento.extendedProps.proyecto;
-  document.getElementById('modalPartida').textContent = evento.extendedProps.partida || evento.extendedProps.tipo || '(Proyecto completo)';
-  document.getElementById('modalCliente').textContent = evento.extendedProps.cliente || '';
-  document.getElementById('modalFecha').textContent = evento.start.toLocaleDateString();
-  const nota = evento.extendedProps.note || '';
-  document.getElementById('modalNota').value = nota;
+// ==== Modal crear visita/rectificación ====
+function bindCreateModals() {
+  const btnVisita = document.getElementById('btnAddVisita');
+  const btnRect = document.getElementById('btnAddRect');
+  if (btnVisita) btnVisita.onclick = () => openCreateModal({ tipo: 'visita' });
+  if (btnRect) btnRect.onclick = () => openCreateModal({ tipo: 'rectificacion' });
+  const cancel = document.getElementById('createCancel');
+  const save = document.getElementById('createSave');
+  if (cancel) cancel.onclick = closeCreateModal;
+  if (save) save.onclick = onCreateSave;
+}
 
-  colorSeleccionado = evento.backgroundColor || colores[0];
-  renderColorPicker('modalColorPicker', (c) => {
-    if (eventoSeleccionado) {
-      eventoSeleccionado.setProp('backgroundColor', c);
-      eventoSeleccionado.setProp('borderColor', c);
+function openCreateModal({ tipo = 'visita', preDate = null } = {}) {
+  createContext = { tipo, preDate };
+  const backdrop = document.getElementById('createBackdrop');
+  if (!backdrop) return;
+  document.getElementById('createTitle').textContent = tipo === 'rectificacion' ? 'Agregar rectificación' : 'Agregar visita';
+  backdrop.style.display = 'flex';
+}
+
+function closeCreateModal() {
+  const backdrop = document.getElementById('createBackdrop');
+  if (backdrop) backdrop.style.display = 'none';
+  createContext = { tipo: 'visita', preDate: null };
+}
+
+async function onCreateSave() {
+  const nombre = document.getElementById('createNombre')?.value?.trim() || '';
+  const cliente = document.getElementById('createCliente')?.value?.trim() || '';
+  const proyectoSel = document.getElementById('createProyecto')?.value || '';
+  if (!nombre) {
+    window.utils?.mostrarNotificacion?.('Ingresa un nombre/descrición', 'warning');
+    return;
+  }
+  const payload = {
+    tipo: createContext.tipo || 'visita',
+    cotizacion_id: proyectoSel || null,
+    partida_id: null,
+    title: nombre,
+    start: createContext.preDate || new Date().toISOString(),
+    end: null,
+    color: '#3f705d',
+    nota: null,
+    cliente: cliente || null
+  };
+  try {
+    const ev = await createEvento(payload);
+    fc.addEvent(ev);
+    refreshStatsAndLists();
+    closeCreateModal();
+  } catch (e) {
+    console.error('onCreateSave error', e);
+    window.utils?.mostrarNotificacion?.('Error al crear evento', 'error');
+  }
+}
+
+// ==== Realtime ====
+async function subscribeRealtime() {
+  const supa = getSupa();
+  channelCrono = supa
+    .channel('cronograma-events')
+    .on('postgres_changes', { event: '*', schema: 'public', table: CRONO_TABLE }, handleCronoChange)
+    .subscribe();
+
+  channelCots = supa
+    .channel('cronograma-cots')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'cotizaciones' }, handleCotChange)
+    .subscribe();
+}
+
+async function handleCronoChange(payload) {
+  const { eventType, new: rowNew, old: rowOld } = payload;
+  const id = rowNew?.id || rowOld?.id;
+  if (localWrites.has(id)) return;
+
+  if (eventType === 'INSERT') {
+    const ev = mapEventoToCalendar(rowNew);
+    fc?.addEvent(ev);
+  } else if (eventType === 'UPDATE') {
+    const evExist = fc?.getEventById(id);
+    if (evExist) evExist.remove();
+    const ev = mapEventoToCalendar(rowNew);
+    fc?.addEvent(ev);
+  } else if (eventType === 'DELETE') {
+    const evExist = fc?.getEventById(id);
+    if (evExist) evExist.remove();
+  }
+  refreshStatsAndLists();
+}
+
+async function handleCotChange(payload) {
+  const { new: rowNew, old: rowOld } = payload;
+  const wasApproved = rowOld?.estado === 'aprobada';
+  const isApproved = rowNew?.estado === 'aprobada';
+  if (wasApproved || isApproved) {
+    try {
+      const aprobados = await loadAprobados();
+      renderPalette(aprobados);
+      fillSelectProyectos(aprobados);
+      const eventos = fc ? fc.getEvents().map(e => ({
+        id: e.id,
+        start: e.start,
+        end: e.end,
+        title: e.title,
+        extendedProps: e.extendedProps
+      })) : [];
+      renderStats(aprobados, eventos);
+    } catch (e) {
+      console.warn('No se pudo refrescar paleta/stats tras cambio de cotización', e);
     }
-  });
-
-  document.getElementById('modalBackdrop').style.display = 'flex';
-}
-function cerrarModal() {
-  document.getElementById('modalBackdrop').style.display = 'none';
-  eventoSeleccionado = null;
+  }
 }
 
-// Modal crear visita/rectificación
-let createTipo = null;
-function abrirCreateModal(tipo) {
-  createTipo = tipo;
-  document.getElementById('createTitle').textContent = tipo === 'visita' ? 'Agregar visita técnica' : 'Agregar rectificación';
-  document.getElementById('createNombre').value = '';
-  document.getElementById('createCliente').value = '';
-  document.getElementById('createProyecto').value = '';
-  document.getElementById('createBackdrop').style.display = 'flex';
+// ==== Misceláneo ====
+async function refreshStatsAndLists() {
+  try {
+    const [aprobados, eventosRaw] = await Promise.all([loadAprobados(), loadEventos()]);
+    fc?.getEvents().forEach(e => e.remove());
+    eventosRaw.forEach(ev => fc?.addEvent(ev));
+    renderPalette(aprobados);
+    fillSelectProyectos(aprobados);
+    renderStats(aprobados, eventosRaw);
+    renderVisitasRect(eventosRaw);
+  } catch (e) {
+    console.warn('No se pudieron refrescar stats/listas', e);
+  }
 }
-function cerrarCreateModal() {
-  document.getElementById('createBackdrop').style.display = 'none';
-  createTipo = null;
-}
-function cargarSelectProyectos() {
+
+function fillSelectProyectos(aprobados) {
   const sel = document.getElementById('createProyecto');
   if (!sel) return;
+  const current = sel.value;
   sel.innerHTML = '<option value="">-- Seleccionar --</option>';
-  proyectosAprobados.forEach(p => {
+  aprobados.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p.id;
     opt.textContent = p.nombre;
     sel.appendChild(opt);
   });
+  if (current) sel.value = current;
 }
 
-// Asignación contadores
-function incPartida(key) {
-  if (!estadoPartidas[key]) estadoPartidas[key] = { count: 0 };
-  estadoPartidas[key].count++;
-}
-function decPartida(key) {
-  if (!estadoPartidas[key]) estadoPartidas[key] = { count: 0 };
-  estadoPartidas[key].count = Math.max(estadoPartidas[key].count - 1, 0);
-}
-function getPartKeyFromEvent(ev) {
-  const p = ev.extendedProps;
-  if (p.proyectoId && p.partidaId) return `${p.proyectoId}::${p.partidaId}`;
-  return null;
-}
-
-// Init calendario
-function initCalendar() {
-  const calendarEl = document.getElementById('calendar');
-  if (!calendarEl) return;
-
-  new FullCalendar.Draggable(document.getElementById('palette'), {
-    itemSelector: '.fc-event',
-    eventData: function(el) {
-      const isBundle = el.getAttribute('data-bundle') === '1';
-      if (isBundle) {
-        return {
-          title: el.getAttribute('data-proyecto'),
-          extendedProps: {
-            bundle: true,
-            proyecto: el.getAttribute('data-proyecto'),
-            proyectoId: el.getAttribute('data-proyecto-id'),
-            cliente: el.getAttribute('data-cliente'),
-            partidas: JSON.parse(el.getAttribute('data-partidas') || '[]'),
-            note: ''
-          },
-          duration: { days: 1 },
-          color: colores[0],
-          backgroundColor: colores[0],
-          borderColor: colores[0]
-        };
-      }
-      return {
-        title: `${el.getAttribute('data-partida')} — ${el.getAttribute('data-proyecto')}`,
-        extendedProps: {
-          proyecto: el.getAttribute('data-proyecto'),
-          proyectoId: el.getAttribute('data-proyecto-id'),
-          partida: el.getAttribute('data-partida'),
-          partidaId: el.getAttribute('data-partida-id'),
-          cliente: el.getAttribute('data-cliente'),
-          note: ''
-        },
-        duration: { days: 1 },
-        color: colores[0],
-        backgroundColor: colores[0],
-        borderColor: colores[0]
-      };
-    }
-  });
-
-  new FullCalendar.Draggable(document.getElementById('visitasList'), {
-    itemSelector: '.fc-event',
-    eventData: function(el) {
-      return {
-        title: el.getAttribute('data-titulo'),
-        extendedProps: {
-          tipo: 'Visita técnica',
-          proyecto: el.getAttribute('data-proyecto'),
-          proyectoId: el.getAttribute('data-proyecto-id'),
-          cliente: el.getAttribute('data-cliente'),
-          note: ''
-        },
-        duration: { days: 1 },
-        color: colores[0],
-        backgroundColor: colores[0],
-        borderColor: colores[0]
-      };
-    }
-  });
-
-  new FullCalendar.Draggable(document.getElementById('rectList'), {
-    itemSelector: '.fc-event',
-    eventData: function(el) {
-      return {
-        title: el.getAttribute('data-titulo'),
-        extendedProps: {
-          tipo: 'Rectificación',
-          proyecto: el.getAttribute('data-proyecto'),
-          proyectoId: el.getAttribute('data-proyecto-id'),
-          cliente: el.getAttribute('data-cliente'),
-          note: ''
-        },
-        duration: { days: 1 },
-        color: colores[0],
-        backgroundColor: colores[0],
-        borderColor: colores[0]
-      };
-    }
-  });
-
-  calendar = new FullCalendar.Calendar(calendarEl, {
-    locale: 'es',
-    buttonText: { today: 'hoy', month: 'mes', week: 'semana', day: 'día' },
-    initialView: 'dayGridMonth',
-    height: '100%',
-    droppable: true,
-    editable: true,
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay'
-    },
-    eventReceive: function(info) {
-      // bundle proyecto -> generar eventos por partida
-      if (info.event.extendedProps.bundle) {
-        const startDate = info.event.start;
-        const { partidas, proyecto, proyectoId, cliente } = info.event.extendedProps;
-        info.event.remove();
-        partidas.forEach(p => {
-          calendar.addEvent({
-            title: buildTitle({ partida: p.nombre, proyecto }),
-            start: startDate,
-            allDay: true,
-            backgroundColor: colores[0],
-            borderColor: colores[0],
-            extendedProps: {
-              proyecto,
-              proyectoId,
-              partida: p.nombre,
-              partidaId: p.id,
-              cliente,
-              note: ''
-            }
-          });
-          const key = `${proyectoId}::${p.id}`;
-          incPartida(key);
-        });
-        updateStats();
-        renderPalette();
-        return;
-      }
-      // partida individual
-      if (info.event.extendedProps.partidaId) {
-        const key = getPartKeyFromEvent(info.event);
-        if (key) incPartida(key);
-      }
-      info.event.setProp('id', `${info.event.id || 'evt'}-${crypto.randomUUID()}`);
-      info.event.setProp('backgroundColor', colores[0]);
-      info.event.setProp('borderColor', colores[0]);
-      updateStats();
-      renderPalette();
-    },
-    eventRemove: function(info) {
-      const key = getPartKeyFromEvent(info.event);
-      if (key) decPartida(key);
-      updateStats();
-      renderPalette();
-    },
-    eventDidMount: function(arg) {
-      const el = arg.el;
-      el.style.position = 'relative';
-      const btn = document.createElement('span');
-      btn.textContent = '🗑';
-      btn.title = 'Eliminar';
-      btn.style.position = 'absolute';
-      btn.style.right = '4px';
-      btn.style.top = '2px';
-      btn.style.cursor = 'pointer';
-      btn.style.fontSize = '12px';
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        arg.event.remove();
-      });
-      el.appendChild(btn);
-    },
-    eventClick: function(info) {
-      abrirModal(info.event);
-    }
-  });
-
-  calendar.render();
+// ==== Init ====
+async function initCronograma() {
+  try {
+    const [aprobados, eventos] = await Promise.all([loadAprobados(), loadEventos()]);
+    renderPalette(aprobados);
+    fillSelectProyectos(aprobados);
+    renderStats(aprobados, eventos);
+    renderVisitasRect(eventos);
+    initCalendar(eventos);
+    subscribeRealtime();
+  } catch (err) {
+    console.error('Error inicializando cronograma', err);
+    window.utils?.mostrarNotificacion?.('Error cargando cronograma: ' + (err.message || err), 'error');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initEstado();
-  renderPalette();
-  renderExtras();
-  initCalendar();
-  updateStats();
-  cargarSelectProyectos();
+  initCronograma();
+});
 
-  // Modal info
-  document.getElementById('modalClose').addEventListener('click', cerrarModal);
-  document.getElementById('modalBackdrop').addEventListener('click', (e) => {
-    if (e.target.id === 'modalBackdrop') cerrarModal();
-  });
-  document.getElementById('modalDelete').addEventListener('click', () => {
-    if (eventoSeleccionado) eventoSeleccionado.remove();
-    cerrarModal();
-  });
-  document.getElementById('modalSave').addEventListener('click', () => {
-    if (!eventoSeleccionado) return;
-    const nota = document.getElementById('modalNota').value.trim();
-    eventoSeleccionado.setExtendedProp('note', nota);
-    const ep = eventoSeleccionado.extendedProps;
-    const newTitle = buildTitle({ partida: ep.partida, proyecto: ep.proyecto, tipo: ep.tipo, nota });
-    eventoSeleccionado.setProp('title', newTitle);
-    cerrarModal();
-  });
-
-  // Modal crear visita/rectificación
-  document.getElementById('btnAddVisita').addEventListener('click', () => abrirCreateModal('visita'));
-  document.getElementById('btnAddRect').addEventListener('click', () => abrirCreateModal('rectificacion'));
-  document.getElementById('createCancel').addEventListener('click', cerrarCreateModal);
-  document.getElementById('createBackdrop').addEventListener('click', (e) => {
-    if (e.target.id === 'createBackdrop') cerrarCreateModal();
-  });
-  document.getElementById('createSave').addEventListener('click', () => {
-    const sel = document.getElementById('createProyecto');
-    const nombre = document.getElementById('createNombre').value.trim();
-    const clienteIn = document.getElementById('createCliente').value.trim();
-    const projId = sel.value;
-    const proj = proyectosAprobados.find(p => p.id === projId);
-    const proyectoNombre = proj ? proj.nombre : '';
-    const cliente = clienteIn || (proj ? proj.cliente : '');
-    const tituloBase = createTipo === 'visita' ? 'Visita técnica' : 'Rectificación';
-    const titulo = nombre || (proyectoNombre ? `${tituloBase} — ${proyectoNombre}` : tituloBase);
-
-    const item = {
-      id: crypto.randomUUID(),
-      titulo,
-      proyectoId: projId || '',
-      proyectoNombre: proyectoNombre || '',
-      cliente
-    };
-    if (createTipo === 'visita') visitasItems.push(item);
-    else rectItems.push(item);
-
-    renderExtras();
-    cerrarCreateModal();
-  });
+// Limpia suscripciones al salir
+window.addEventListener('beforeunload', () => {
+  channelCrono?.unsubscribe?.();
+  channelCots?.unsubscribe?.();
 });
