@@ -10,35 +10,31 @@ const localWrites = new Set(); // ids escritos localmente para evitar eco realti
 
 // ==== Helpers Supabase ====
 async function getSupa() {
-  // Si no hay cliente, intenta inicializar el globalSupabase
   if (!window.globalSupabase?.client && window.supabaseClient?.init) {
     await window.supabaseClient.init();
   }
   const supa = window.globalSupabase?.client || window.supabase || window.supabaseClient;
-  if (!supa || typeof supa.from !== 'function') {
-    throw new Error('Supabase no disponible');
-  }
+  if (!supa || typeof supa.from !== 'function') throw new Error('Supabase no disponible');
   return supa;
 }
 
 // ==== Data load ====
 async function loadAprobados() {
   const supa = await getSupa();
-  // No pedimos nombre_proyecto para evitar el error 400
   const { data, error } = await supa
     .from('cotizaciones')
-    .select('id, nombre, project_key, cliente, data')
+    .select('id, numero, project_key, cliente, data')
     .eq('estado', 'aprobada');
 
   if (error) throw error;
 
   return (data || []).map(c => {
     const nombreProyecto =
-      c.nombre ||
       c.project_key ||
+      c.numero ||
       c.data?.cliente?.nombre_proyecto ||
       c.data?.cliente?.nombre ||
-      c.cliente ||
+      c.cliente?.nombre ||
       'Sin nombre';
 
     return {
