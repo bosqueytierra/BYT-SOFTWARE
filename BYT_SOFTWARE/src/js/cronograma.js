@@ -9,15 +9,21 @@ let channelCots = null;
 const localWrites = new Set(); // ids escritos localmente para evitar eco realtime
 
 // ==== Helpers Supabase ====
-function getSupa() {
+async function getSupa() {
+  // Si no hay cliente, intenta inicializar el globalSupabase
+  if (!window.globalSupabase?.client && window.supabaseClient?.init) {
+    await window.supabaseClient.init();
+  }
   const supa = window.globalSupabase?.client || window.supabase || window.supabaseClient;
-  if (!supa) throw new Error('Supabase no disponible');
+  if (!supa || typeof supa.from !== 'function') {
+    throw new Error('Supabase no disponible');
+  }
   return supa;
 }
 
 // ==== Data load ====
 async function loadAprobados() {
-  const supa = getSupa();
+  const supa = await getSupa();
   const { data, error } = await supa
     .from('cotizaciones')
     .select('id, nombre_proyecto, cliente, data')
@@ -37,7 +43,7 @@ async function loadAprobados() {
 }
 
 async function loadEventos() {
-  const supa = getSupa();
+  const supa = await getSupa();
   const { data, error } = await supa
     .from(CRONO_TABLE)
     .select('*')
@@ -48,7 +54,7 @@ async function loadEventos() {
 
 // ==== CRUD eventos ====
 async function createEvento(payload) {
-  const supa = getSupa();
+  const supa = await getSupa();
   const { error, data } = await supa.from(CRONO_TABLE).insert(payload).select().single();
   if (error) throw error;
   localWrites.add(data.id);
@@ -57,7 +63,7 @@ async function createEvento(payload) {
 }
 
 async function updateEvento(id, patch) {
-  const supa = getSupa();
+  const supa = await getSupa();
   const { error, data } = await supa.from(CRONO_TABLE).update(patch).eq('id', id).select().single();
   if (error) throw error;
   localWrites.add(id);
@@ -66,7 +72,7 @@ async function updateEvento(id, patch) {
 }
 
 async function deleteEvento(id) {
-  const supa = getSupa();
+  const supa = await getSupa();
   const { error } = await supa.from(CRONO_TABLE).delete().eq('id', id);
   if (error) throw error;
   localWrites.add(id);
@@ -409,7 +415,7 @@ async function onCreateSave() {
 
 // ==== Realtime ====
 async function subscribeRealtime() {
-  const supa = getSupa();
+  const supa = await getSupa();
   channelCrono = supa
     .channel('cronograma-events')
     .on('postgres_changes', { event: '*', schema: 'public', table: CRONO_TABLE }, handleCronoChange)
@@ -496,6 +502,7 @@ function fillSelectProyectos(aprobados) {
 // ==== Init ====
 async function initCronograma() {
   try {
+    await getSupa(); // asegura cliente
     const [aprobados, eventos] = await Promise.all([loadAprobados(), loadEventos()]);
     renderPalette(aprobados);
     fillSelectProyectos(aprobados);
