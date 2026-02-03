@@ -24,22 +24,35 @@ async function getSupa() {
 // ==== Data load ====
 async function loadAprobados() {
   const supa = await getSupa();
+  // No pedimos nombre_proyecto para evitar el error 400
   const { data, error } = await supa
     .from('cotizaciones')
-    .select('id, nombre_proyecto, cliente, data')
+    .select('id, nombre, project_key, cliente, data')
     .eq('estado', 'aprobada');
+
   if (error) throw error;
-  return (data || []).map(c => ({
-    id: c.id,
-    nombre: c.nombre_proyecto || c.data?.cliente?.nombre_proyecto || 'Sin nombre',
-    cliente: c.cliente || c.data?.cliente || null,
-    partidas: Array.isArray(c.data?.partidas)
-      ? c.data.partidas.map(p => ({
-          id: p.id || (crypto?.randomUUID ? crypto.randomUUID() : String(Math.random())),
-          nombre: p.nombre || 'Partida'
-        }))
-      : []
-  }));
+
+  return (data || []).map(c => {
+    const nombreProyecto =
+      c.nombre ||
+      c.project_key ||
+      c.data?.cliente?.nombre_proyecto ||
+      c.data?.cliente?.nombre ||
+      c.cliente ||
+      'Sin nombre';
+
+    return {
+      id: c.id,
+      nombre: nombreProyecto,
+      cliente: c.cliente || c.data?.cliente || null,
+      partidas: Array.isArray(c.data?.partidas)
+        ? c.data.partidas.map(p => ({
+            id: p.id || (crypto?.randomUUID ? crypto.randomUUID() : String(Math.random())),
+            nombre: p.nombre || 'Partida'
+          }))
+        : []
+    };
+  });
 }
 
 async function loadEventos() {
