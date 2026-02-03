@@ -21,6 +21,7 @@ async function getSupa() {
 // ==== Data load ====
 async function loadAprobados() {
   const supa = await getSupa();
+  // Ajustado a columnas reales: numero, project_key, cliente, data
   const { data, error } = await supa
     .from('cotizaciones')
     .select('id, numero, project_key, cliente, data')
@@ -98,6 +99,7 @@ function mapEventoToCalendar(ev) {
     end: ev.end,
     backgroundColor: ev.color || '#2e5e4e',
     borderColor: ev.color || '#2e5e4e',
+    allDay: true,
     extendedProps: {
       tipo: ev.tipo,
       cotizacion_id: ev.cotizacion_id,
@@ -110,19 +112,33 @@ function mapEventoToCalendar(ev) {
 }
 
 // ==== Render palette & stats ====
-function renderPalette(aprobados) {
+function renderPalette(aprobados, eventos = []) {
   const container = document.getElementById('palette');
   if (!container) return;
   container.innerHTML = '';
 
+  // Conteo de partidas asignadas por proyecto
+  const asignadasPorProyecto = new Map();
+  eventos
+    .filter(e => e.extendedProps?.tipo === 'programacion' && e.extendedProps?.cotizacion_id && e.extendedProps?.partida_id)
+    .forEach(e => {
+      const pid = e.extendedProps.cotizacion_id;
+      const set = asignadasPorProyecto.get(pid) || new Set();
+      set.add(e.extendedProps.partida_id);
+      asignadasPorProyecto.set(pid, set);
+    });
+
   aprobados.forEach((proj, idx) => {
+    const totalPart = proj.partidas?.length || 0;
+    const asignadas = asignadasPorProyecto.get(proj.id)?.size || 0;
+
     const wrap = document.createElement('div');
     wrap.className = 'project-block';
 
     const header = document.createElement('div');
     header.className = 'project-header';
     header.innerHTML = `
-      <div class="project-title">${proj.nombre}</div>
+      <div class="project-title">${proj.nombre} <span style="color:#6c7a86;font-size:12px;">(${asignadas}/${totalPart})</span></div>
       <button class="toggle-btn" type="button">Partidas</button>
     `;
     const body = document.createElement('div');
@@ -206,6 +222,8 @@ function initCalendar(eventosIniciales = []) {
   if (!calendarEl) return;
 
   fc = new FullCalendar.Calendar(calendarEl, {
+    locale: 'es',
+    buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Lista' },
     initialView: 'dayGridMonth',
     headerToolbar: {
       left: 'prev,next today',
@@ -463,8 +481,6 @@ async function handleCotChange(payload) {
   if (wasApproved || isApproved) {
     try {
       const aprobados = await loadAprobados();
-      renderPalette(aprobados);
-      fillSelectProyectos(aprobados);
       const eventos = fc ? fc.getEvents().map(e => ({
         id: e.id,
         start: e.start,
@@ -472,6 +488,8 @@ async function handleCotChange(payload) {
         title: e.title,
         extendedProps: e.extendedProps
       })) : [];
+      renderPalette(aprobados, eventos);
+      fillSelectProyectos(aprobados);
       renderStats(aprobados, eventos);
     } catch (e) {
       console.warn('No se pudo refrescar paleta/stats tras cambio de cotización', e);
@@ -485,7 +503,7 @@ async function refreshStatsAndLists() {
     const [aprobados, eventosRaw] = await Promise.all([loadAprobados(), loadEventos()]);
     fc?.getEvents().forEach(e => e.remove());
     eventosRaw.forEach(ev => fc?.addEvent(ev));
-    renderPalette(aprobados);
+    renderPalette(aprobados, eventosRaw);
     fillSelectProyectos(aprobados);
     renderStats(aprobados, eventosRaw);
     renderVisitasRect(eventosRaw);
@@ -513,7 +531,7 @@ async function initCronograma() {
   try {
     await getSupa(); // asegura cliente
     const [aprobados, eventos] = await Promise.all([loadAprobados(), loadEventos()]);
-    renderPalette(aprobados);
+    renderPalette(aprobados, eventos);
     fillSelectProyectos(aprobados);
     renderStats(aprobados, eventos);
     renderVisitasRect(eventos);
