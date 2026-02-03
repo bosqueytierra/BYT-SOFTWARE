@@ -1,12 +1,12 @@
 const CRONO_TABLE = 'cronograma_eventos';
 
-let fc = null;                 // FullCalendar instance
-let currentEvent = null;       // Evento seleccionado en modal
-let selectedColor = '#2e5e4e'; // Color picker estado actual
+let fc = null;
+let currentEvent = null;
+let selectedColor = '#2e5e4e';
 let createContext = { tipo: 'visita', preDate: null };
 let channelCrono = null;
 let channelCots = null;
-const localWrites = new Set(); // ids escritos localmente para evitar eco realtime
+const localWrites = new Set();
 
 // ==== Helpers Supabase ====
 async function getSupa() {
@@ -21,12 +21,10 @@ async function getSupa() {
 // ==== Data load ====
 async function loadAprobados() {
   const supa = await getSupa();
-  // Ajustado a columnas reales: numero, project_key, cliente, data
   const { data, error } = await supa
     .from('cotizaciones')
     .select('id, numero, project_key, cliente, data')
     .eq('estado', 'aprobada');
-
   if (error) throw error;
 
   return (data || []).map(c => {
@@ -54,10 +52,7 @@ async function loadAprobados() {
 
 async function loadEventos() {
   const supa = await getSupa();
-  const { data, error } = await supa
-    .from(CRONO_TABLE)
-    .select('*')
-    .order('start', { ascending: true });
+  const { data, error } = await supa.from(CRONO_TABLE).select('*').order('start', { ascending: true });
   if (error) throw error;
   return (data || []).map(mapEventoToCalendar);
 }
@@ -117,7 +112,6 @@ function renderPalette(aprobados, eventos = []) {
   if (!container) return;
   container.innerHTML = '';
 
-  // Conteo de partidas asignadas por proyecto
   const asignadasPorProyecto = new Map();
   eventos
     .filter(e => e.extendedProps?.tipo === 'programacion' && e.extendedProps?.cotizacion_id && e.extendedProps?.partida_id)
@@ -148,7 +142,7 @@ function renderPalette(aprobados, eventos = []) {
 
     (proj.partidas || []).forEach(p => {
       const chip = document.createElement('div');
-      chip.className = 'chip fc-event'; // fc-event para facilitar el drag
+      chip.className = 'chip fc-event';
       chip.draggable = true;
       chip.innerHTML = `<strong>${p.nombre}</strong><span>${proj.cliente?.nombre || proj.cliente?.razon_social || ''}</span>`;
       chip.dataset.payload = JSON.stringify({
@@ -174,7 +168,6 @@ function renderPalette(aprobados, eventos = []) {
     container.appendChild(wrap);
   });
 
-  // habilita draggable externo
   setupPaletteDraggable();
 }
 
@@ -276,28 +269,28 @@ function initCalendar(eventosIniciales = []) {
 
   fc.render();
   bindCreateModals();
-  bindColorPicker(); // inicializa el picker
+  bindColorPicker();
 }
 
 // Drop externo (paleta -> calendario)
 async function onExternalDrop(info) {
   try {
-    // Si viene por Draggable, usamos el extendedProps del evento recibido
     const ext = info.event.extendedProps || {};
     const data = info.draggedEl?.dataset?.payload ? JSON.parse(info.draggedEl.dataset.payload) : {};
+    const startDate = info.event.start || info.date;
     const payload = {
       cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
       partida_id: ext.partida_id || data.partida_id || null,
       tipo: 'programacion',
       title: info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`,
-      start: info.date,
+      start: startDate ? startDate.toISOString() : new Date().toISOString(),
       end: null,
       color: ext.color || data.color || info.event.backgroundColor || '#2e5e4e',
       nota: null,
       cliente: ext.cliente || data.cliente || null
     };
     const ev = await createEvento(payload);
-    info.event.remove(); // quita el placeholder
+    info.event.remove();
     fc.addEvent(ev);
     refreshStatsAndLists();
   } catch (e) {
@@ -312,8 +305,8 @@ async function onEventMoved(info) {
   try {
     const id = info.event.id;
     const patch = {
-      start: info.event.start,
-      end: info.event.end
+      start: info.event.start ? info.event.start.toISOString() : null,
+      end: info.event.end ? info.event.end.toISOString() : null
     };
     const ev = await updateEvento(id, patch);
     info.event.remove();
@@ -332,12 +325,12 @@ function onEventClick(info) {
   openEventModal(info.event);
 }
 
-// Click en fecha vacía: abre modal de crear (visita/rect) con fecha preseleccionada
+// Click en fecha vacía
 function onDateClick(info) {
   openCreateModal({ preDate: info.dateStr });
 }
 
-// ==== Modal de evento (ver/editar/eliminar) ====
+// ==== Modal de evento ====
 function openEventModal(ev) {
   const backdrop = document.getElementById('modalBackdrop');
   if (!backdrop) return;
@@ -562,7 +555,7 @@ function fillSelectProyectos(aprobados) {
 // ==== Init ====
 async function initCronograma() {
   try {
-    await getSupa(); // asegura cliente
+    await getSupa();
     const [aprobados, eventos] = await Promise.all([loadAprobados(), loadEventos()]);
     renderPalette(aprobados, eventos);
     fillSelectProyectos(aprobados);
@@ -580,7 +573,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initCronograma();
 });
 
-// Limpia suscripciones al salir
 window.addEventListener('beforeunload', () => {
   channelCrono?.unsubscribe?.();
   channelCots?.unsubscribe?.();
