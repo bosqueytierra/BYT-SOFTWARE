@@ -29,13 +29,7 @@
       padding: 12px;
       overflow: hidden;
     }
-    /* Panel lateral con scroll y layout en columna */
-    aside.panel {
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-    }
-
+    aside.panel { display: flex; flex-direction: column; overflow-y: auto; }
     .panel h2 { margin: 0 0 8px; font-size: 16px; }
 
     .stats {
@@ -50,11 +44,7 @@
     .stat-row { display: flex; justify-content: space-between; font-weight: 700; color: #2d2d2d; }
     .stat-row span.value { font-size: 18px; }
 
-    .palette-wrapper {
-      flex: 1;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
+    .palette-wrapper { flex: 1; overflow-y: auto; padding-right: 4px; }
     .project-block { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fafbfc; margin-bottom: 8px; }
     .project-header { display: flex; justify-content: space-between; align-items: center; cursor: grab; }
     .project-title { font-weight: 700; color: #2e5e4e; }
@@ -94,42 +84,18 @@
 
     .list-extra { display: grid; gap: 6px; max-height: 140px; overflow-y: auto; margin-top: 8px; }
 
-    /* Modal */
-    .modal-backdrop {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.35);
-      display: none; align-items: center; justify-content: center;
-      z-index: 9999;
-    }
-    .modal {
-      background: #fff;
-      border-radius: 12px;
-      padding: 16px;
-      width: 380px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
-      border: 1px solid #e4e7eb;
-    }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .modal { background: #fff; border-radius: 12px; padding: 16px; width: 380px; box-shadow: 0 12px 30px rgba(0,0,0,0.25); border: 1px solid #e4e7eb; }
     .modal h3 { margin: 0 0 12px; }
     .modal .row { margin-bottom: 10px; color: #2d2d2d; }
     .modal .label { color: #6c7a86; font-size: 13px; display: block; margin-bottom: 4px; }
-    .modal input, .modal select {
-      width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px;
-      background: #f9fbfc;
-    }
-    .modal textarea {
-      width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px;
-      background: #f9fbfc; resize: vertical; min-height: 64px;
-    }
+    .modal input, .modal select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; }
+    .modal textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; resize: vertical; min-height: 64px; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
     .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
 
     .color-picker { display: grid; grid-template-columns: repeat(9, 22px); gap: 6px; margin-top: 6px; }
-    .color-swatch {
-      width: 22px; height: 22px;
-      border-radius: 6px;
-      border: 1px solid #d7dce0;
-      cursor: pointer;
-    }
+    .color-swatch { width: 22px; height: 22px; border-radius: 6px; border: 1px solid #d7dce0; cursor: pointer; }
     .color-swatch.active { outline: 2px solid #2e5e4e; }
   </style>
 </head>
@@ -224,9 +190,16 @@
     </div>
   </div>
 
+  <!-- Scripts: menú y layout -->
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
+  <!-- FullCalendar -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <!-- Supabase: necesarios antes de cronograma.js -->
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/lib/supabaseConfig.js"></script>
+  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/globalSupabase.js" defer></script>
+  <!-- Cronograma -->
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/cronograma.js"></script>
 </body>
 </html>
