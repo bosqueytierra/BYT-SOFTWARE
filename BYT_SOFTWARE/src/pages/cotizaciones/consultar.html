@@ -13,7 +13,7 @@
     }
     body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
     .page-container {
-      padding-left: calc(var(--nav-width) + 12px);
+      padding-left: calc(var(--nav-width) + 16px);
       padding-right: 12px;
       padding-top: 8px;
       background: transparent;
@@ -71,7 +71,7 @@
       min-width: 280px;
       max-width: 300px;
       overflow: visible;
-      z-index: 1;
+      z-index: 0; /* no competir con el menú */
     }
     .sidebar .block {
       border: 1px solid #d7dce0;
