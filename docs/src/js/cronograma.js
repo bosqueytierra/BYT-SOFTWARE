@@ -89,7 +89,6 @@ async function createEvento(payload) {
     .eq('start', payload.start)
     .limit(1);
   if (!errCheck && existing && existing.length > 0) {
-    // Ya existe, devolver el existente mapeado
     const { data: row } = await supa
       .from(CRONO_TABLE)
       .select('*')
@@ -508,21 +507,19 @@ async function onCreateSave() {
 async function subscribeRealtime() {
   const supa = await getSupa();
 
-  supa.realtime.onOpen(() => console.log('realtime open'));
-  supa.realtime.onError((e) => console.error('realtime onError', e));
-  supa.realtime.onClose((e) => console.warn('realtime onClose', e));
+  const logStatus = (tag) => (status) => console.log(`realtime ${tag}`, status);
 
   channelCrono = supa
     .channel('cronograma-events')
     .on('error', (err) => console.error('channel cronograma error', err))
     .on('postgres_changes', { event: '*', schema: 'public', table: CRONO_TABLE }, handleCronoChange)
-    .subscribe((status) => console.log('realtime cronograma', status));
+    .subscribe(logStatus('cronograma'));
 
   channelCots = supa
     .channel('cronograma-cots')
     .on('error', (err) => console.error('channel cotizaciones error', err))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'cotizaciones' }, handleCotChange)
-    .subscribe((status) => console.log('realtime cotizaciones', status));
+    .subscribe(logStatus('cotizaciones'));
 }
 
 async function handleCronoChange(payload) {
