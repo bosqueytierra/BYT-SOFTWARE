@@ -10,6 +10,7 @@ async function initSupabase() {
     try {
         if (window.supabase && typeof window.supabase.from === 'function') {
             supabaseClient = window.supabase;
+            try { supabaseClient?.realtime?.setAuth?.(SUPABASE_ANON_KEY); } catch(e){}
             window.globalSupabase = window.globalSupabase || {};
             window.globalSupabase.client = supabaseClient;
             return true;
@@ -18,6 +19,7 @@ async function initSupabase() {
             // nada
         } else if (supabaseClient && typeof supabaseClient.from === 'function') {
             window.supabase = supabaseClient;
+            try { supabaseClient?.realtime?.setAuth?.(SUPABASE_ANON_KEY); } catch(e){}
             window.globalSupabase = window.globalSupabase || {};
             window.globalSupabase.client = supabaseClient;
             return true;
@@ -29,6 +31,7 @@ async function initSupabase() {
         const onReady = () => {
             if (window.supabase && typeof window.supabase.from === 'function') {
                 supabaseClient = window.supabase;
+                try { supabaseClient?.realtime?.setAuth?.(SUPABASE_ANON_KEY); } catch(e){}
                 window.globalSupabase = window.globalSupabase || {};
                 window.globalSupabase.client = supabaseClient;
                 resolved = true;
@@ -39,6 +42,7 @@ async function initSupabase() {
         while (!resolved && (Date.now() - start) < waitMs) {
             if (window.supabase && typeof window.supabase.from === 'function') {
                 supabaseClient = window.supabase;
+                try { supabaseClient?.realtime?.setAuth?.(SUPABASE_ANON_KEY); } catch(e){}
                 window.globalSupabase = window.globalSupabase || {};
                 window.globalSupabase.client = supabaseClient;
                 resolved = true;
