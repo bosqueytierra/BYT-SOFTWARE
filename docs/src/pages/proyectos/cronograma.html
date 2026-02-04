@@ -28,16 +28,26 @@
       border-radius: 12px;
       box-shadow: 0 6px 12px rgba(0,0,0,0.04);
       padding: 12px;
-      overflow: hidden; /* el scroll queda en la paleta */
+      overflow: hidden;
     }
 
     aside.panel { display: flex; flex-direction: column; overflow: hidden; }
     .panel h2 { margin: 0 0 8px; font-size: 16px; }
 
+    .panel-box {
+      border: 1px solid #e4e7eb;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 12px;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    }
+    .panel-box.stretch { flex: 1; display: flex; flex-direction: column; }
+
     .stats {
       display: grid;
       gap: 8px;
-      margin-bottom: 12px;
+      margin: 0;
       border: 1px solid #e4e7eb;
       border-radius: 10px;
       padding: 10px;
@@ -46,12 +56,16 @@
     .stat-row { display: flex; justify-content: space-between; font-weight: 700; color: #2d2d2d; }
     .stat-row span.value { font-size: 18px; }
 
+    .cloud { background: #fafbfc; border: 1px dashed #d7dce0; border-radius: 10px; padding: 8px; }
+
     .palette-wrapper {
       flex: 1;
-      overflow-y: auto; /* scroll solo aquí */
+      overflow-y: auto;
       min-height: 0;
       padding-right: 4px;
     }
+    #paletteCloud { overflow-y: auto; max-height: 280px; }
+
     .project-block { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fafbfc; margin-bottom: 8px; }
     .project-header { display: flex; justify-content: space-between; align-items: center; cursor: grab; }
     .project-title { font-weight: 700; color: #2e5e4e; }
@@ -69,10 +83,6 @@
     }
     .chip strong { color: #2e5e4e; }
 
-    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-    .dot.assigned { background: #2ecc71; }
-    .dot.unassigned { background: #c0392b; }
-
     #calendar { height: 100%; }
     .fc {
       background: #fff;
@@ -83,13 +93,14 @@
     }
     .fc-toolbar-title { font-size: 16px; }
 
-    .card-lite { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fafbfc; margin: 10px 0; }
-    .card-lite h3 { margin: 0 0 6px; font-size: 14px; }
     .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
     .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
     .btn.full { width: 100%; text-align: center; }
 
     .list-extra { display: grid; gap: 6px; max-height: 140px; overflow-y: auto; margin-top: 8px; }
+
+    .card-lite { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fafbfc; margin: 10px 0; }
+    .card-lite h3 { margin: 0 0 6px; font-size: 14px; }
 
     .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 9999; }
     .modal { background: #fff; border-radius: 12px; padding: 16px; width: 380px; box-shadow: 0 12px 30px rgba(0,0,0,0.25); border: 1px solid #e4e7eb; }
@@ -104,6 +115,30 @@
     .color-picker { display: grid; grid-template-columns: repeat(9, 22px); gap: 6px; margin-top: 6px; }
     .color-swatch { width: 22px; height: 22px; border-radius: 6px; border: 1px solid #d7dce0; cursor: pointer; }
     .color-swatch.active { outline: 2px solid #2e5e4e; }
+
+    .calendar-panel {
+      position: relative;
+      border: 1px solid #e4e7eb;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+      padding: 8px;
+    }
+    .calendar-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      border: 1px solid #d7dce0;
+      background: #f5f7f9;
+      border-radius: 20px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #2d2d2d;
+    }
+    .tab-btn.active { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
   </style>
 </head>
 <body>
@@ -114,36 +149,53 @@
 
   <div class="layout">
     <aside class="panel">
-      <div class="stats">
-        <div class="stat-row">
-          <span>Partidas programadas:</span>
-          <span class="value" id="statProgramadas">0</span>
-        </div>
-        <div class="stat-row">
-          <span>Partidas por programar:</span>
-          <span class="value" id="statNoProgramadas">0</span>
+      <div class="panel-box">
+        <h2>Estado de programación</h2>
+        <div class="stats">
+          <div class="stat-row">
+            <span>Partidas programadas:</span>
+            <span class="value" id="statProgramadas">0</span>
+          </div>
+          <div class="stat-row">
+            <span>Partidas por programar:</span>
+            <span class="value" id="statNoProgramadas">0</span>
+          </div>
         </div>
       </div>
 
-      <h2>Proyectos aprobados</h2>
-      <div class="palette-wrapper">
-        <div id="palette" class="palette"></div>
+      <div class="panel-box stretch">
+        <h2>Instalaciones a programar</h2>
+        <div class="palette-wrapper cloud" id="paletteCloud">
+          <div id="palette" class="palette"></div>
+        </div>
       </div>
 
-      <div class="card-lite">
-        <h3>Agendar visita técnica</h3>
+      <div class="panel-box">
+        <h2>Agendar visita</h2>
         <button class="btn primary full" id="btnAddVisita">Agregar visita</button>
-        <div id="visitasList" class="list-extra"></div>
+        <div id="visitasList" class="list-extra cloud"></div>
       </div>
 
-      <div class="card-lite">
-        <h3>Agendar rectificación</h3>
+      <div class="panel-box">
+        <h2>Agendar rectificación</h2>
         <button class="btn primary full" id="btnAddRect">Agregar rectificación</button>
-        <div id="rectList" class="list-extra"></div>
+        <div id="rectList" class="list-extra cloud"></div>
+      </div>
+
+      <div class="panel-box">
+        <h2>Agendar compra</h2>
+        <button class="btn primary full" id="btnAddCompra">Agregar compra</button>
       </div>
     </aside>
 
-    <section class="panel">
+    <section class="panel calendar-panel">
+      <div class="calendar-tabs">
+        <button data-tab="instalacion" class="tab-btn active">Instalación</button>
+        <button data-tab="fabricacion" class="tab-btn">Fabricación</button>
+        <button data-tab="compra" class="tab-btn">Compras</button>
+        <button data-tab="visita_rect" class="tab-btn">Visita y rectificación</button>
+        <button data-tab="todo" class="tab-btn">Todo</button>
+      </div>
       <div id="calendar"></div>
     </section>
   </div>
@@ -172,7 +224,7 @@
     </div>
   </div>
 
-  <!-- Modal crear visita/rectificación -->
+  <!-- Modal crear visita/rectificación/compra -->
   <div class="modal-backdrop" id="createBackdrop">
     <div class="modal">
       <h3 id="createTitle">Agregar</h3>
@@ -202,8 +254,7 @@
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
   <!-- FullCalendar -->
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-    <!-- Supabase: necesarios antes de cronograma.js -->
-  <!-- (quita supabaseConfig.js y globalSupabase.js para no duplicar cliente ni 404) -->
+  <!-- Supabase: necesarios antes de cronograma.js -->
   <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
   <!-- Cronograma -->
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/cronograma.js"></script>
