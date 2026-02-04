@@ -8,6 +8,25 @@ let channelCrono = null;
 let channelCots = null;
 const localWrites = new Set();
 
+// ==== Helpers ====
+function toIsoDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function dedupeEventos(rows = []) {
+  const seen = new Set();
+  const out = [];
+  for (const r of rows) {
+    const key = `${r.cotizacion_id || ''}|${r.partida_id || ''}|${r.start}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+  }
+  return out;
+}
+
 // ==== Helpers Supabase ====
 async function getSupa() {
   if (!window.globalSupabase?.client && window.supabaseClient?.init) {
@@ -54,12 +73,31 @@ async function loadEventos() {
   const supa = await getSupa();
   const { data, error } = await supa.from(CRONO_TABLE).select('*').order('start', { ascending: true });
   if (error) throw error;
-  return (data || []).map(mapEventoToCalendar);
+  return dedupeEventos(data || []).map(mapEventoToCalendar);
 }
 
 // ==== CRUD eventos ====
 async function createEvento(payload) {
   const supa = await getSupa();
+  // Guard anti-duplicados: misma partida/proyecto y misma fecha
+  const { data: existing, error: errCheck } = await supa
+    .from(CRONO_TABLE)
+    .select('id')
+    .eq('tipo', 'programacion')
+    .eq('cotizacion_id', payload.cotizacion_id || null)
+    .eq('partida_id', payload.partida_id || null)
+    .eq('start', payload.start)
+    .limit(1);
+  if (!errCheck && existing && existing.length > 0) {
+    // Ya existe, devolver el existente mapeado
+    const { data: row } = await supa
+      .from(CRONO_TABLE)
+      .select('*')
+      .eq('id', existing[0].id)
+      .single();
+    return mapEventoToCalendar(row);
+  }
+
   const { error, data } = await supa.from(CRONO_TABLE).insert(payload).select().single();
   if (error) throw error;
   localWrites.add(data.id);
@@ -283,7 +321,7 @@ async function onExternalDrop(info) {
       partida_id: ext.partida_id || data.partida_id || null,
       tipo: 'programacion',
       title: info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`,
-      start: startDate ? startDate.toISOString() : new Date().toISOString(),
+      start: startDate ? toIsoDay(startDate) : new Date().toISOString(),
       end: null,
       color: ext.color || data.color || info.event.backgroundColor || '#2e5e4e',
       nota: null,
@@ -305,8 +343,8 @@ async function onEventMoved(info) {
   try {
     const id = info.event.id;
     const patch = {
-      start: info.event.start ? info.event.start.toISOString() : null,
-      end: info.event.end ? info.event.end.toISOString() : null
+      start: info.event.start ? toIsoDay(info.event.start) : null,
+      end: info.event.end ? toIsoDay(info.event.end) : null
     };
     const ev = await updateEvento(id, patch);
     info.event.remove();
@@ -526,13 +564,13 @@ async function handleCotChange(payload) {
 // ==== Misceláneo ====
 async function refreshStatsAndLists() {
   try {
-    const [aprobados, eventosRaw] = await Promise.all([loadAprobados(), loadEventos()]);
+    const [aprobados, eventosRawDb] = await Promise.all([loadAprobados(), loadEventos()]);
     fc?.getEvents().forEach(e => e.remove());
-    eventosRaw.forEach(ev => fc?.addEvent(ev));
-    renderPalette(aprobados, eventosRaw);
+    eventosRawDb.forEach(ev => fc?.addEvent(ev));
+    renderPalette(aprobados, eventosRawDb);
     fillSelectProyectos(aprobados);
-    renderStats(aprobados, eventosRaw);
-    renderVisitasRect(eventosRaw);
+    renderStats(aprobados, eventosRawDb);
+    renderVisitasRect(eventosRawDb);
   } catch (e) {
     console.warn('No se pudieron refrescar stats/listas', e);
   }
