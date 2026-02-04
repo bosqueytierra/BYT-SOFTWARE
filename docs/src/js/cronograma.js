@@ -525,20 +525,25 @@ async function onCreateSave() {
 // ==== Realtime ====
 async function subscribeRealtime() {
   const supa = await getSupa();
-
   const logStatus = (tag) => (status) => console.log(`realtime ${tag}`, status);
 
-  channelCrono = supa
-    .channel('cronograma-events')
-    .on('error', (err) => console.error('channel cronograma error', err))
-    .on('postgres_changes', { event: '*', schema: 'public', table: CRONO_TABLE }, handleCronoChange)
-    .subscribe(logStatus('cronograma'));
+  const setupChannel = (prevChannel, topic, filter, handler) => {
+    try { prevChannel?.unsubscribe?.(); } catch (_) {}
+    const ch = supa
+      .channel(topic)
+      .on('error', (err) => console.error(`channel ${topic} error`, err))
+      .on('close', (ev) => {
+        console.warn(`channel ${topic} close`, ev);
+        // Reintento simple
+        setTimeout(() => subscribeRealtime(), 500);
+      })
+      .on('postgres_changes', filter, handler)
+      .subscribe(logStatus(topic));
+    return ch;
+  };
 
-  channelCots = supa
-    .channel('cronograma-cots')
-    .on('error', (err) => console.error('channel cotizaciones error', err))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'cotizaciones' }, handleCotChange)
-    .subscribe(logStatus('cotizaciones'));
+  channelCrono = setupChannel(channelCrono, 'cronograma-events', { event: '*', schema: 'public', table: CRONO_TABLE }, handleCronoChange);
+  channelCots = setupChannel(channelCots, 'cronograma-cots', { event: '*', schema: 'public', table: 'cotizaciones' }, handleCotChange);
 }
 
 async function handleCronoChange(payload) {
