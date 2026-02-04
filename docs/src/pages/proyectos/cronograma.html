@@ -22,26 +22,28 @@
     .panel-box {
       border: 1px solid #e4e7eb;
       border-radius: 12px;
-      padding: 10px;
+      padding: 8px;
       background: #fff;
       box-shadow: 0 4px 10px rgba(0,0,0,0.04);
     }
+    .panel-box h2 { margin: 0 0 6px; font-size: 14px; }
     .stats {
       display: grid;
-      gap: 8px;
+      gap: 4px;
       margin: 0;
       border: 1px solid #e4e7eb;
       border-radius: 10px;
-      padding: 10px;
+      padding: 8px;
       background: #fafbfc;
+      font-size: 13px;
     }
     .stat-row { display: flex; justify-content: space-between; font-weight: 700; color: #2d2d2d; }
-    .stat-row span.value { font-size: 18px; }
+    .stat-row span.value { font-size: 16px; }
 
     .layout {
       display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 16px;
+      grid-template-columns: 320px 1fr 220px;
+      gap: 12px;
       padding: 0 16px 20px;
       align-items: stretch;
     }
@@ -51,8 +53,30 @@
       flex-direction: column;
       gap: 12px;
     }
+    .collapsible {
+      border: 1px solid #e4e7eb;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+      overflow: hidden;
+    }
+    .collapsible summary {
+      cursor: pointer;
+      padding: 10px;
+      font-weight: 700;
+      background: #eef2f5;
+      border-bottom: 1px solid #e4e7eb;
+      list-style: none;
+    }
+    .collapsible summary::-webkit-details-marker { display: none; }
+    .collapsible-content {
+      padding: 8px;
+      background: #f9fafb;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
     .cloud { background: #fafbfc; border: 1px dashed #d7dce0; border-radius: 10px; padding: 8px; }
-    .palette-wrapper { flex: 1; overflow-y: auto; min-height: 220px; max-height: 320px; padding-right: 4px; }
     .project-block { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fff; margin-bottom: 8px; }
     .project-header { display: flex; justify-content: space-between; align-items: center; cursor: grab; }
     .project-title { font-weight: 700; color: #2e5e4e; }
@@ -74,13 +98,13 @@
       border: 1px solid #e4e7eb;
       border-radius: 12px;
       box-shadow: 0 6px 12px rgba(0,0,0,0.05);
-      padding: 8px;
+      padding: 8px 8px 8px 48px;
       background: #fff;
     }
     .tabs-vertical {
       position: absolute;
-      left: -40px;
-      top: 60px;
+      left: 8px;
+      top: 40px;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -122,6 +146,20 @@
     .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
     .btn.full { width: 100%; text-align: center; }
     .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
+
+    .mini-cal {
+      border: 1px solid #e4e7eb;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+      height: 280px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #2d2d2d;
+    }
+    .right-column { display: flex; flex-direction: column; gap: 12px; }
   </style>
 </head>
 <body>
@@ -145,31 +183,37 @@
       </div>
     </div>
     <div class="panel-box">
-      <h2>Agendar visita</h2>
-      <button class="btn primary full" id="btnAddVisita">Agregar visita</button>
+      <button class="btn primary full" id="btnAddVisita">Agendar visita</button>
       <div id="visitasList" class="list-extra cloud"></div>
     </div>
     <div class="panel-box">
-      <h2>Agendar rectificación</h2>
-      <button class="btn primary full" id="btnAddRect">Agregar rectificación</button>
+      <button class="btn primary full" id="btnAddRect">Agendar rectificación</button>
       <div id="rectList" class="list-extra cloud"></div>
     </div>
     <div class="panel-box">
-      <h2>Agendar compra</h2>
-      <button class="btn primary full" id="btnAddCompra">Agregar compra</button>
+      <button class="btn primary full" id="btnAddCompra">Agendar compra</button>
     </div>
   </div>
 
   <div class="layout">
     <div class="sidebar">
-      <div class="panel-box">
-        <h2>Instalaciones a programar</h2>
-        <div class="palette-wrapper cloud" id="paletteInst"></div>
-      </div>
-      <div class="panel-box">
-        <h2>Fabricación</h2>
-        <div class="palette-wrapper cloud" id="paletteFab"></div>
-      </div>
+      <details class="collapsible" id="collapInst">
+        <summary>Instalaciones a programar</summary>
+        <div class="collapsible-content">
+          <div class="cloud">
+            <div id="paletteInst"></div>
+          </div>
+        </div>
+      </details>
+
+      <details class="collapsible" id="collapFab">
+        <summary>Fabricación</summary>
+        <div class="collapsible-content">
+          <div class="cloud">
+            <div id="paletteFab"></div>
+          </div>
+        </div>
+      </details>
     </div>
 
     <section class="calendar-panel">
@@ -182,6 +226,11 @@
       </div>
       <div id="calendar"></div>
     </section>
+
+    <div class="right-column">
+      <div class="mini-cal" id="miniPrev">Mes anterior</div>
+      <div class="mini-cal" id="miniNext">Mes siguiente</div>
+    </div>
   </div>
 
   <!-- Modal info evento -->
