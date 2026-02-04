@@ -153,7 +153,12 @@ function mapEventoToCalendar(ev) {
 
 // ==== Render palette & stats ====
 function renderPalette(aprobados, eventos = []) {
-  const container = document.getElementById('palette');
+  renderPaletteByType('paletteInst', aprobados, eventos, 'programacion');
+  renderPaletteByType('paletteFab', aprobados, eventos, 'fabricacion');
+}
+
+function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
+  const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
 
@@ -196,7 +201,8 @@ function renderPalette(aprobados, eventos = []) {
         partida_id: p.id,
         partida_nombre: p.nombre,
         color,
-        cliente: proj.cliente?.nombre || proj.cliente?.razon_social || proj.cliente || ''
+        cliente: proj.cliente?.nombre || proj.cliente?.razon_social || proj.cliente || '',
+        tipoDefault
       });
       chip.addEventListener('dragstart', ev => {
         ev.dataTransfer.setData('text', chip.dataset.payload);
@@ -213,11 +219,11 @@ function renderPalette(aprobados, eventos = []) {
     container.appendChild(wrap);
   });
 
-  setupPaletteDraggable();
+  setupPaletteDraggable(containerId, tipoDefault);
 }
 
-function setupPaletteDraggable() {
-  const paletteEl = document.getElementById('palette');
+function setupPaletteDraggable(containerId, tipoDefault) {
+  const paletteEl = document.getElementById(containerId);
   if (!paletteEl || typeof FullCalendar === 'undefined' || !FullCalendar.Draggable) return;
 
   new FullCalendar.Draggable(paletteEl, {
@@ -232,7 +238,7 @@ function setupPaletteDraggable() {
           backgroundColor: data.color || '#2e5e4e',
           borderColor: data.color || '#2e5e4e',
           extendedProps: {
-            tipo: 'programacion', // en drag se decide en onExternalDrop según tab
+            tipo: data.tipoDefault || tipoDefault || 'programacion',
             cotizacion_id: data.cotizacion_id || null,
             partida_id: data.partida_id || null,
             cliente: data.cliente || null
