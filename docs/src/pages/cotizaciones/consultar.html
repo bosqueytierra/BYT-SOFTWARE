@@ -1,809 +1,322 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Consultar Cotizaciones - BYT SOFTWARE</title>
-  <link rel="stylesheet" href="../../styles/global.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cronograma de proyectos</title>
+  <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css" />
+  <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" />
   <style>
     :root {
-      --bg: #f6f7f8;
-      --card: #ffffff;
-      --border: #e4e7eb;
-      --text: #2d2d2d;
-      --muted: #6c7a86;
-      --primary: #2e5e4e;
-      --primary-soft: #3f705d;
-      --accent: #2e5e4e;
-      --accent-2: #3f705d;
-      --danger: #2e5e4e;
-      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+      --nav-width: 120px; /* ancho del menú lateral */
     }
-    body {
-      margin: 0;
-      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
-      background: var(--bg);
-      color: var(--text);
+    body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
+    .page-container {
+      padding-left: calc(var(--nav-width) + 12px);
+      padding-right: 12px;
+      padding-top: 8px;
+      background: transparent;
     }
-    .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
-    .header-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: center;
+    .page-header { padding: 8px 0 12px; }
+    .page-header .crumb { color: #6c7a86; font-size: 12px; }
+    .page-header h1 { margin: 4px 0 0; font-size: 22px; }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding-bottom: 10px;
     }
-    .logo-row { display: flex; align-items: center; gap: 12px; }
-    .logo {
-      width: 44px; height: 44px;
+    .panel-box {
+      border: 1px solid #e4e7eb;
       border-radius: 12px;
-      object-fit: contain;
-      background: #edf1f3;
-      padding: 6px;
-      border: 1px solid var(--border);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-    }
-    .header-title { margin: 0; font-size: 20px; font-weight: 800; color: var(--text); }
-    .header-subtitle { margin: 0; color: var(--muted); font-size: 13px; }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-    }
-    .card + .card { margin-top: 14px; }
-
-    .filters {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
-      align-items: end;
-    }
-    label { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: block; }
-    input, select {
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fdfdfd;
-      font-family: inherit;
-      font-size: 14px;
-      transition: border 0.15s ease, box-shadow 0.15s ease;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: rgba(46,94,78,0.6);
-      box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
-    }
-
-    .btn {
-      border: 1px solid var(--border);
+      padding: 8px;
       background: #fff;
-      color: #1f2430;
-      padding: 10px 14px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
     }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
-    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-primary:hover { background: var(--primary-soft); }
-    .btn-ghost { background: #f0f3f5; color: #1f2430; }
-    .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
-    .btn-ver      { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
-    .btn-editar   { background: var(--primary-soft); color: #fff; border-color: var(--primary-soft); }
-    .btn-duplicar { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-eliminar { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; position: relative; }
-    .btn-icon { width: 18px; height: 18px; }
-
-    .list { display: flex; flex-direction: column; gap: 12px; }
-    .quote-card { padding: 16px; }
-    .quote-head {
+    .panel-box h2 { margin: 0 0 6px; font-size: 14px; }
+    .stats {
       display: grid;
-      grid-template-columns: 1fr minmax(320px, 420px);
-      gap: 12px;
-      align-items: flex-start;
-    }
-    .quote-title {
+      gap: 4px;
       margin: 0;
-      font-size: 16px;
-      font-weight: 800;
-      color: var(--text);
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      word-break: break-word;
-    }
-    .quote-meta { margin: 6px 0; color: var(--muted); font-size: 13px; }
-    .quote-total { margin: 4px 0 0; font-weight: 700; color: var(--primary); }
-    .quote-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-end;
-      margin-top: 8px;
-    }
-    .quote-status {
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid var(--border);
+      border: 1px solid #e4e7eb;
       border-radius: 10px;
-      background: #fdfdfd;
-      font-size: 14px;
-      color: var(--text);
-      flex-shrink: 0;
+      padding: 8px;
+      background: #fafbfc;
+      font-size: 13px;
+    }
+    .stat-row { display: flex; justify-content: space-between; font-weight: 700; color: #2d2d2d; }
+    .stat-row span.value { font-size: 16px; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr 240px;
+      gap: 12px;
+      align-items: start;
     }
 
-    .state { text-align: center; color: var(--muted); padding: 24px 12px; }
-    .state-icon {
-      width: 54px; height: 54px; margin: 0 auto 8px;
-      display: grid; place-items: center;
+    /* Columna izquierda fija, sin colapsar */
+    .sidebar {
+      position: sticky;
+      top: 10px;
+      align-self: start;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: #f0f2f5;
+      border-radius: 10px;
+      padding: 8px;
+      border: 1px solid #d7dce0;
+      min-width: 280px;
+      max-width: 300px;
+      overflow: visible;
+      z-index: 1;
+    }
+    .sidebar .block {
+      border: 1px solid #d7dce0;
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .sidebar h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #2e5e4e;
+    }
+    .cloud { background: #fafbfc; border: 1px dashed #d7dce0; border-radius: 10px; padding: 8px; }
+    .palette-wrapper { max-height: 520px; overflow-y: auto; }
+    .project-block { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fff; margin-bottom: 8px; }
+    .project-header { display: flex; justify-content: space-between; align-items: center; cursor: grab; }
+    .project-title { font-weight: 700; color: #2e5e4e; }
+    .toggle-btn { border: 1px solid #d7dce0; background: #f4f6f8; border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
+    .partidas-list { margin-top: 8px; display: grid; gap: 6px; }
+    .chip {
+      border: 1px solid #d7dce0;
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #f9fbfc;
+      cursor: grab;
+      display: grid;
+      gap: 2px;
+    }
+    .chip strong { color: #2e5e4e; }
+
+    .calendar-panel {
+      position: relative;
+      border: 1px solid #e4e7eb;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+      padding: 8px 8px 8px 48px;
+      background: #fff;
+      min-height: 80vh;
+    }
+    .tabs-vertical {
+      position: absolute;
+      left: 8px;
+      top: 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .tab-btn {
+      border: 1px solid #d7dce0;
+      background: #f5f7f9;
+      border-radius: 10px;
+      padding: 6px 8px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #2d2d2d;
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+    }
+    .tab-btn.active { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
+
+    #calendar { height: 100%; min-height: 70vh; }
+    .fc {
+      background: #fff;
+      border: 1px solid #e4e7eb;
+      border-radius: 12px;
+      padding: 8px;
+      height: 100%;
+    }
+    .fc-toolbar-title { font-size: 16px; }
+
+    .list-extra { display: grid; gap: 6px; max-height: 140px; overflow-y: auto; margin-top: 8px; }
+
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .modal { background: #fff; border-radius: 12px; padding: 16px; width: 380px; box-shadow: 0 12px 30px rgba(0,0,0,0.25); border: 1px solid #e4e7eb; }
+    .modal h3 { margin: 0 0 12px; }
+    .modal .row { margin-bottom: 10px; color: #2d2d2d; }
+    .modal .label { color: #6c7a86; font-size: 13px; display: block; margin-bottom: 4px; }
+    .modal input, .modal select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; }
+    .modal textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; resize: vertical; min-height: 64px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+    .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; outline: none; }
+    .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
+    .btn.full { width: 100%; text-align: center; }
+    .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
+
+    .right-column { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 10px; }
+    .mini-cal {
+      border: 1px solid #e4e7eb;
       border-radius: 16px;
-      background: #eef2f5;
-      color: var(--primary);
-      font-size: 24px;
-      border: 1px solid var(--border);
-    }
-
-    .loading-spinner {
-      width: 36px; height: 36px;
-      border: 4px solid #e6e9ed;
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-      margin: 0 auto 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      display: none;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+      height: 120px;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 12000;
-      padding: 16px;
+      font-weight: 700;
+      color: #2d2d2d;
+      padding: 6px;
+      gap: 4px;
     }
-    .modal {
-      background: #fff;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.12);
-      width: min(420px, 100%);
-      padding: 18px;
-    }
-    .modal h3 { margin: 0 0 8px; }
-    .modal p { margin: 0 0 14px; color: var(--muted); }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
-    .hold-btn { position: relative; overflow: hidden; }
-    .hold-fill {
-      position: absolute;
-      inset: 0;
-      background: rgba(46,94,78,0.15);
-      width: 0%;
-      pointer-events: none;
-      transition: width 0.1s linear;
-    }
+    .mini-cal .day { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .mini-cal .num { font-size: 28px; line-height: 1; }
 
-    .sidebar a,
-    .sidebar .nav-item,
-    .sidebar .nav-item .nav-label,
-    .sidebar .submenu a { text-decoration: none !important; }
-    .sidebar a:hover,
-    .sidebar .nav-item:hover,
-    .sidebar .nav-item:focus,
-    .sidebar .nav-item:active,
-    .sidebar .submenu a:hover,
-    .sidebar .submenu a:focus,
-    .sidebar .submenu a:active { text-decoration: none !important; }
-
-    @media (max-width: 900px) {
-      .quote-head { grid-template-columns: 1fr; }
-      .quote-actions { justify-content: flex-start; }
-      .quote-status { width: 100%; }
+    .compact-btn {
+      padding: 8px 10px;
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid #d7dce0;
+      background: #2e5e4e;
+      color: #fff;
+      cursor: pointer;
+      width: 100%;
+      text-align: center;
+      outline: none;
     }
+    .compact-btn:focus { outline: none; box-shadow: none; }
   </style>
 </head>
 <body>
-  <div id="page-content">
-    <div class="page">
-      <div class="header-card">
-        <div class="logo-row">
-          <img class="logo" src="../../assets/logo_byt.png" alt="BYT">
-          <div>
-            <h1 class="header-title">Consultar Cotizaciones</h1>
-            <p class="header-subtitle">Historial de Proyectos · Bosque y Tierra</p>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-ghost" onclick="cargarCotizaciones()" title="Actualizar">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 9 9"/><path d="M3 16v-4h4"/></svg>
-            Actualizar
-          </button>
-          <a class="btn btn-primary" href="nueva.html">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
-            Nueva Cotización
-          </a>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="margin:0 0 12px;">Filtros de Búsqueda</h3>
-        <div class="filters">
-          <div>
-            <label>Buscar por Proyecto o Cliente</label>
-            <input id="filtro-busqueda" type="text" placeholder="Escriba el nombre del proyecto o cliente..." oninput="filtrarCotizaciones()">
-          </div>
-          <div>
-            <label>Ordenar por</label>
-            <select id="filtro-orden" onchange="ordenarCotizaciones()">
-              <option value="fecha_desc">Fecha (Más reciente)</option>
-              <option value="fecha_asc">Fecha (Más antigua)</option>
-              <option value="cliente_asc">Cliente (A-Z)</option>
-              <option value="cliente_desc">Cliente (Z-A)</option>
-              <option value="total_desc">Total (Mayor a menor)</option>
-              <option value="total_asc">Total (Menor a mayor)</option>
-            </select>
-          </div>
-          <div>
-            <label>Estado</label>
-            <select id="filtro-estado" onchange="filtrarCotizaciones()">
-              <option value="todos">Todos</option>
-              <option value="borrador">Borrador</option>
-              <option value="enviada">Enviada</option>
-              <option value="en_revision_cliente">En revisión cliente</option>
-              <option value="aprobada">Aprobada</option>
-              <option value="rechazada">Rechazada</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div id="loading-state" class="card state" style="display:none;">
-        <div class="loading-spinner"></div>
-        <div>Cargando cotizaciones...</div>
-      </div>
-
-      <div id="empty-state" class="card state" style="display:none;">
-        <div class="state-icon">📁</div>
-        <h3 style="margin:6px 0 4px; color: var(--text);">No hay cotizaciones</h3>
-        <p style="margin:0; color: var(--muted);">Aún no se han creado cotizaciones. <a href="nueva.html" style="color:var(--primary); font-weight:700;">Crear primera cotización</a></p>
-      </div>
-
-      <div id="cotizaciones-container" class="list" style="display:none;"></div>
+  <div class="page-container">
+    <div class="page-header">
+      <div class="crumb">Proyectos / Cronograma</div>
+      <h1>Cronograma de proyectos</h1>
     </div>
 
-    <!-- Modal eliminar (10s, barra, alerta, nombre proyecto) -->
-    <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
-      <div class="modal">
-        <h3 style="margin:0 0 8px; display:flex; align-items:center; gap:8px;">
-          <span style="color:var(--danger);">⚠️</span> Eliminar cotización
-        </h3>
-        <p id="delete-text">¿Seguro que deseas eliminar esta cotización? Mantén el botón 10 segundos para confirmar.</p>
-        <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
-          <div id="delete-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
-        </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" id="delete-cancel">Cancelar</button>
-          <button class="btn btn-primary hold-btn" id="delete-hold-btn">
-            <span id="delete-hold-text">Mantén 10s para eliminar</span>
-            <div class="hold-fill" id="delete-hold-fill"></div>
-          </button>
+    <div class="top-row">
+      <div class="panel-box">
+        <h2>Estado de programación</h2>
+        <div class="stats">
+          <div class="stat-row">
+            <span>Partidas programadas:</span>
+            <span class="value" id="statProgramadas">0</span>
+          </div>
+          <div class="stat-row">
+            <span>Partidas por programar:</span>
+            <span class="value" id="statNoProgramadas">0</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Modal de confirmación para cambio de estado (custom, 10s) -->
-    <div class="modal-backdrop" id="status-confirm-modal" aria-hidden="true">
-      <div class="modal">
-        <h3 style="margin:0 0 8px; display:flex; align-items:center; gap:8px;">
-          <span style="color:var(--danger);">⚠️</span> Confirmar cambio de estado
-        </h3>
-        <p id="status-confirm-text" style="margin:0 0 12px; color:#555;">Mantén presionado 10s para confirmar.</p>
-        <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
-          <div id="status-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
+    <div class="layout">
+      <div class="sidebar">
+        <div class="block">
+          <h2>Instalaciones a programar</h2>
+          <div class="cloud palette-wrapper">
+            <div id="paletteInst"></div>
+          </div>
         </div>
-        <div style="display:flex; gap:8px; justify-content:flex-end;">
-          <button id="status-cancel" class="btn btn-secondary" type="button">Cancelar</button>
-          <button id="status-hold" class="btn btn-primary hold-btn" type="button" style="touch-action:none;">
-            <span id="status-hold-text">Mantén 10s</span>
-            <div class="hold-fill" id="status-hold-fill"></div>
-          </button>
+        <div class="block">
+          <h2>Fabricación</h2>
+          <div class="cloud palette-wrapper">
+            <div id="paletteFab"></div>
+          </div>
         </div>
+      </div>
+
+      <section class="calendar-panel">
+        <div class="tabs-vertical">
+          <button data-tab="instalacion" class="tab-btn active">Instalación</button>
+          <button data-tab="fabricacion" class="tab-btn">Fabricación</button>
+          <button data-tab="compra" class="tab-btn">Compras</button>
+          <button data-tab="visita_rect" class="tab-btn">Visita y rectificación</button>
+          <button data-tab="todo" class="tab-btn">Todo</button>
+        </div>
+        <div id="calendar"></div>
+      </section>
+
+      <div class="right-column">
+        <div class="mini-cal" id="miniPrev">
+          <div class="day">Mes anterior</div>
+          <div class="num">–</div>
+        </div>
+        <div class="mini-cal" id="miniNext">
+          <div class="day">Mes siguiente</div>
+          <div class="num">–</div>
+        </div>
+        <button class="compact-btn" id="btnAddVisita">Agendar visita</button>
+        <div id="visitasList" class="list-extra cloud"></div>
+        <button class="compact-btn" id="btnAddRect">Agendar rectificación</button>
+        <div id="rectList" class="list-extra cloud"></div>
+        <button class="compact-btn" id="btnAddCompra">Agendar compra</button>
       </div>
     </div>
   </div>
 
+  <!-- Modal info evento -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <h3 id="modalTitle">Detalle de evento</h3>
+      <div class="row"><span class="label">Proyecto:</span> <span id="modalProyecto"></span></div>
+      <div class="row"><span class="label">Partida / Tipo:</span> <span id="modalPartida"></span></div>
+      <div class="row"><span class="label">Cliente:</span> <span id="modalCliente"></span></div>
+      <div class="row"><span class="label">Fecha:</span> <span id="modalFecha"></span></div>
+      <div class="row">
+        <span class="label">Color:</span>
+        <div class="color-picker" id="modalColorPicker"></div>
+      </div>
+      <div class="row">
+        <label class="label" for="modalNota">Nota (se mostrará entre paréntesis):</label>
+        <textarea id="modalNota" placeholder="Ej: Cuarzo / Muebles arriba / Muebles abajo"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn primary" id="modalSave">Guardar cambios</button>
+        <button class="btn danger" id="modalDelete">Eliminar</button>
+        <button class="btn" id="modalClose">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
+  <!-- Modal crear visita/rectificación/compra -->
+  <div class="modal-backdrop" id="createBackdrop">
+    <div class="modal">
+      <h3 id="createTitle">Agregar</h3>
+      <div class="row">
+        <label class="label" for="createProyecto">Proyecto aprobado (opcional)</label>
+        <select id="createProyecto">
+          <option value="">-- Seleccionar --</option>
+        </select>
+      </div>
+      <div class="row">
+        <label class="label" for="createNombre">Nombre / descripción</label>
+        <input id="createNombre" type="text" placeholder="Ej: Visita obra cliente X" />
+      </div>
+      <div class="row">
+        <label class="label" for="createCliente">Cliente (opcional)</label>
+        <input id="createCliente" type="text" placeholder="Cliente" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="createCancel">Cancelar</button>
+        <button class="btn primary" id="createSave">Guardar</button>
+      </div>
+    </div>
+  </div>
 
- <script src="../../js/menuConfig.js"></script>
-<script src="../../js/layout.js"></script>
-  
-  <script src="../../js/layout.js"></script>
-  <script src="../../lib/supabaseConfig.js"></script>
-  <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-  <script src="../../js/globalSupabase.js" defer></script>
-  <script src="../../js/categorias.js" defer></script>
-
-  <script>
-    let cotizacionesData = [];
-    let cotizacionesFiltradas = [];
-    let deleteTargetId = null;
-    let holdTimer = null;
-    let holdInterval = null;
-
-    // Wrap supabase calls para ver respuestas
-    window.__logWrap = async (fn, label, ...args) => {
-      console.log(label, 'IN', args);
-      const out = await fn(...args);
-      console.log(label, 'OUT', out);
-      return out;
-    };
-    const origUpdate = {};
-    const origVenta  = {};
-    const origEliminar = {};
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.supabaseClient) {
-        if (!origUpdate.fn) {
-          origUpdate.fn = window.supabaseClient.actualizarEstadoCotizacion;
-          window.supabaseClient.actualizarEstadoCotizacion = (...a) => __logWrap(origUpdate.fn, 'actualizarEstadoCotizacion', ...a);
-        }
-        if (!origVenta.fn) {
-          origVenta.fn = window.supabaseClient.crearOVincularVentaDesdeCotizacion;
-          window.supabaseClient.crearOVincularVentaDesdeCotizacion = (...a) => __logWrap(origVenta.fn, 'crearOVincularVentaDesdeCotizacion', ...a);
-        }
-        if (!origEliminar.fn) {
-          origEliminar.fn = window.supabaseClient.eliminarVentasPorCotizacion;
-          window.supabaseClient.eliminarVentasPorCotizacion = (...a) => __logWrap(origEliminar.fn, 'eliminarVentasPorCotizacion', ...a);
-        }
-      }
-    });
-
-    if (!localStorage.getItem('byt_logged_in')) {
-      window.location.href = '../login/login.html';
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      cargarCotizaciones();
-      setupDeleteModal();
-    });
-
-    function mostrarEstado(estado) {
-      const loading = document.getElementById('loading-state');
-      const empty = document.getElementById('empty-state');
-      const container = document.getElementById('cotizaciones-container');
-      loading.style.display = estado === 'loading' ? 'block' : 'none';
-      empty.style.display = estado === 'empty' ? 'block' : 'none';
-      container.style.display = estado === 'data' ? 'flex' : 'none';
-    }
-
-    async function cargarCotizaciones() {
-      mostrarEstado('loading');
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const resultado = await window.supabaseClient.obtenerCotizaciones();
-        if (!resultado.success) throw new Error(resultado.error);
-        cotizacionesData = resultado.data || [];
-        cotizacionesFiltradas = [...cotizacionesData];
-        if (cotizacionesData.length === 0) {
-          mostrarEstado('empty');
-        } else {
-          ordenarCotizaciones();
-        }
-      } catch (error) {
-        console.error('Error al cargar cotizaciones:', error);
-        window.utils?.mostrarNotificacion?.('Error al cargar cotizaciones: ' + (error.message || String(error)), 'error');
-        mostrarEstado('empty');
-      }
-    }
-
-    function getClienteNombre(c) {
-      if (!c) return 'N/A';
-      if (typeof c === 'string') return c;
-      if (typeof c === 'object') {
-        return c.nombre || c.nombre_proyecto || c.razon_social || JSON.stringify(c);
-      }
-      return String(c);
-    }
-
-    function filtrarCotizaciones() {
-      const filtroTexto = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
-      const filtroEstado = document.getElementById('filtro-estado').value;
-      let base = [...cotizacionesData];
-
-      if (filtroTexto) {
-        base = base.filter(c => {
-          const proj = (c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || '').toLowerCase();
-          const cli  = (getClienteNombre(c.cliente || c.data?.cliente) || '').toLowerCase();
-          const notas = (c.notas || '').toLowerCase();
-          return proj.includes(filtroTexto) || cli.includes(filtroTexto) || notas.includes(filtroTexto);
-        });
-      }
-
-      if (filtroEstado !== 'todos') {
-        base = base.filter(c => (c.estado || 'borrador') === filtroEstado);
-      }
-
-      cotizacionesFiltradas = base;
-      ordenarCotizaciones();
-    }
-
-    function ordenarCotizaciones() {
-      const orden = document.getElementById('filtro-orden').value;
-      cotizacionesFiltradas.sort((a, b) => {
-        switch(orden) {
-          case 'fecha_asc':  return new Date(a.created_at) - new Date(b.created_at);
-          case 'fecha_desc': return new Date(b.created_at) - new Date(a.created_at);
-          case 'cliente_asc': {
-            const ca = getClienteNombre(a.cliente || a.data?.cliente);
-            const cb = getClienteNombre(b.cliente || b.data?.cliente);
-            return ca.localeCompare(cb);
-          }
-          case 'cliente_desc': {
-            const ca = getClienteNombre(a.cliente || a.data?.cliente);
-            const cb = getClienteNombre(b.cliente || b.data?.cliente);
-            return cb.localeCompare(ca);
-          }
-          case 'total_asc':  return (a.total_proyecto || a.total || 0) - (b.total_proyecto || b.total || 0);
-          case 'total_desc': return (b.total_proyecto || b.total || 0) - (a.total_proyecto || a.total || 0);
-          default: return new Date(b.created_at) - new Date(a.created_at);
-        }
-      });
-      mostrarCotizaciones();
-    }
-
-    function mostrarCotizaciones() {
-      const container = document.getElementById('cotizaciones-container');
-      if (!cotizacionesFiltradas.length) {
-        container.innerHTML = `
-          <div class="card state">
-            <div class="state-icon">🔎</div>
-            <h3 style="margin:6px 0 4px; color: var(--text);">No se encontraron resultados</h3>
-            <p style="margin:0; color: var(--muted);">Intente con otros criterios de búsqueda</p>
-          </div>`;
-        mostrarEstado('data');
-        return;
-      }
-
-      const html = cotizacionesFiltradas.map(c => {
-        const nombreProyecto = c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || 'Sin nombre';
-        const clienteNombre = getClienteNombre(c.cliente || c.data?.cliente);
-        const fecha = c.created_at ? new Date(c.created_at).toLocaleDateString('es-CL') : '-';
-        const totalNum = c.total_proyecto || c.total || 0;
-        const totalFmt = window.categorias?.formatearPrecio ? window.categorias.formatearPrecio(totalNum) : totalNum;
-        const estado = c.estado || 'borrador';
-
-        return `
-          <div class="card quote-card cotizacion-item" data-id="${c.id}">
-            <div class="quote-head">
-              <div>
-                <h4 class="quote-title">
-                  <a href="detalle.html?id=${c.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
-                </h4>
-                <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</p>
-                <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
-              </div>
-              <div>
-                <select class="quote-status estado-cotizacion" data-id="${c.id}">
-                  <option value="borrador" ${estado==='borrador'?'selected':''}>Borrador</option>
-                  <option value="enviada" ${estado==='enviada'?'selected':''}>Enviada</option>
-                  <option value="en_revision_cliente" ${estado==='en_revision_cliente'?'selected':''}>En revisión cliente</option>
-                  <option value="aprobada" ${estado==='aprobada'?'selected':''}>Aprobada</option>
-                  <option value="rechazada" ${estado==='rechazada'?'selected':''}>Rechazada</option>
-                </select>
-                <div class="quote-actions">
-                  <button class="btn btn-ver" onclick="verDetalle('${c.id}')" title="Ver">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M3.5 12s3.5-6 8.5-6 8.5 6 8.5 6-3.5 6-8.5 6-8.5-6-8.5-6Z"/></svg>
-                    Ver
-                  </button>
-                  <button class="btn btn-editar" onclick="editarCotizacion('${c.id}')" title="Editar">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17.5 17.5 4a1.41 1.41 0 0 1 2 2L6 19.5 4 20z"/><path d="M14.5 6.5 17.5 9.5"/></svg>
-                    Editar
-                  </button>
-                  <button class="btn btn-duplicar" onclick="duplicarCotizacion('${c.id}')" title="Duplicar">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v12H7z"/><path d="M5 5h10v12"/></svg>
-                    Duplicar
-                  </button>
-                  <button class="btn btn-eliminar" data-id="${c.id}" title="Eliminar">Eliminar</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      container.innerHTML = html;
-      wireDeleteButtons();
-      wireEstadoSelects();
-      mostrarEstado('data');
-    }
-
-    function verDetalle(id) { window.location.href = `detalle.html?id=${id}`; }
-    function editarCotizacion(id) { window.location.href = `nueva.html?id=${id}`; }
-    function duplicarCotizacion(id) { window.location.href = `nueva.html?duplicate=${id}`; }
-
-    function wireDeleteButtons() {
-      document.querySelectorAll('.btn-eliminar[data-id]').forEach(btn => {
-        btn.onclick = () => openDeleteModal(btn.dataset.id);
-      });
-    }
-
-    // Delete modal con barra, 10s y nombre de proyecto
-    function setupDeleteModal() {
-      const modal = document.getElementById('delete-modal');
-      const cancelBtn = document.getElementById('delete-cancel');
-      const holdBtn = document.getElementById('delete-hold-btn');
-      const holdText = document.getElementById('delete-hold-text');
-      const holdFill = document.getElementById('delete-hold-fill');
-      const bar = document.getElementById('delete-progress');
-      const deleteText = document.getElementById('delete-text');
-      const HOLD_MS = 10000;
-
-      const resetHold = () => {
-        if (holdTimer) clearTimeout(holdTimer);
-        if (holdInterval) clearInterval(holdInterval);
-        holdTimer = null;
-        holdInterval = null;
-        holdFill.style.width = '0%';
-        bar.style.width = '0%';
-        holdText.textContent = 'Mantén 10s para eliminar';
-      };
-
-      const closeModal = () => {
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-        resetHold();
-        deleteTargetId = null;
-      };
-
-      const startHold = () => {
-        if (!deleteTargetId) return;
-        resetHold();
-        const t0 = performance.now();
-        holdInterval = setInterval(() => {
-          const elapsed = performance.now() - t0;
-          const remaining = Math.max(0, HOLD_MS - elapsed);
-          const pct = Math.min(100, (elapsed / HOLD_MS) * 100);
-          holdFill.style.width = pct + '%';
-          bar.style.width = pct + '%';
-          holdText.textContent = `Mantén ${(remaining/1000).toFixed(1)}s para eliminar`;
-        }, 80);
-        holdTimer = setTimeout(async () => {
-          resetHold();
-          await eliminarCotizacion(deleteTargetId, null, { silentRemove: true });
-          closeModal();
-          cargarCotizaciones();
-        }, HOLD_MS);
-      };
-
-      const stopHold = () => resetHold();
-
-      cancelBtn.onclick = closeModal;
-      holdBtn.addEventListener('mousedown', startHold);
-      holdBtn.addEventListener('touchstart', startHold);
-      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => {
-        holdBtn.addEventListener(ev, stopHold);
-      });
-      modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-      window.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') closeModal(); });
-
-      // Insertar nombre del proyecto al abrir
-      window._setDeleteProjectName = (name) => {
-        deleteText.textContent = `¿Seguro que deseas eliminar "${name}"? Mantén el botón 10 segundos para confirmar.`;
-      };
-    }
-
-    function openDeleteModal(id) {
-      deleteTargetId = id;
-      const modal = document.getElementById('delete-modal');
-      // Set project name in modal
-      const cot = cotizacionesData.find(c => c.id === id);
-      const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
-      if (typeof window._setDeleteProjectName === 'function') window._setDeleteProjectName(nombreProyecto);
-
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-    }
-
-    async function eliminarCotizacion(id, btnEl, opts = {}) {
-      const silentRemove = !!opts.silentRemove;
-      if (!silentRemove) {
-        const ok = confirm('Para eliminar, confirma y luego mantén el botón en el modal.');
-        if (!ok) return;
-        openDeleteModal(id);
-        return;
-      }
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const resultado = await window.supabaseClient.eliminarCotizacion(id);
-        if (!resultado.success) throw new Error(resultado.error);
-
-        try { btnEl?.closest('.cotizacion-item')?.remove(); } catch (_) {}
-
-        cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
-        cotizacionesFiltradas = (cotizacionesFiltradas || []).filter(c => c.id !== id);
-        mostrarCotizaciones();
-
-        window.utils?.mostrarNotificacion?.('Cotización eliminada', 'success');
-      } catch (error) {
-        console.error('Error al eliminar cotización:', error);
-        window.utils?.mostrarNotificacion?.('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
-      }
-    }
-
-    function escapeHtml(str) {
-      if (str === undefined || str === null) return '';
-      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
-
-    // Guardamos prev y enganchamos change por elemento, usando modal custom de 10s
-    function wireEstadoSelects() {
-      document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
-        sel.dataset.prev = sel.value;
-        sel.addEventListener('focus', () => { sel.dataset.prev = sel.value; });
-        sel.addEventListener('change', () => {
-          const prev = sel.dataset.prev || sel.value;
-          const newStatus = sel.value;
-          openStatusModal(sel, sel.dataset.id, prev, newStatus);
-        });
-      });
-    }
-
-    // Modal de confirmación 10s con nombre de proyecto y countdown
-    function openStatusModal(selectEl, id, prev, newStatus) {
-      const backdrop = document.getElementById('status-confirm-modal');
-      const txt = document.getElementById('status-confirm-text');
-      const bar = document.getElementById('status-progress');
-      const btnHold = document.getElementById('status-hold');
-      const btnCancel = document.getElementById('status-cancel');
-      const holdFill = document.getElementById('status-hold-fill');
-      const holdLabel = document.getElementById('status-hold-text');
-
-      const cot = cotizacionesData.find(c => c.id === id);
-      const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
-
-      txt.textContent = `Mantén presionado 10s para confirmar cambio de "${nombreProyecto}" a “${newStatus}”.`;
-      holdLabel.textContent = 'Mantén 10s';
-
-      let timer = null;
-      let tick = null;
-      const HOLD_MS = 10000;
-
-      const reset = () => {
-        if (timer) clearTimeout(timer);
-        if (tick) clearInterval(tick);
-        bar.style.width = '0%';
-        holdFill.style.width = '0%';
-        holdLabel.textContent = 'Mantén 10s';
-        timer = tick = null;
-      };
-
-      const close = () => {
-        reset();
-        backdrop.style.display = 'none';
-        backdrop.setAttribute('aria-hidden','true');
-        document.body.style.overflow = '';
-      };
-
-      const startHold = () => {
-        const t0 = performance.now();
-        tick = setInterval(() => {
-          const elapsed = performance.now() - t0;
-          const remaining = Math.max(0, HOLD_MS - elapsed);
-          const pct = Math.min(100, (elapsed / HOLD_MS) * 100);
-          bar.style.width = pct + '%';
-          holdFill.style.width = pct + '%';
-          holdLabel.textContent = `Mantén ${(remaining/1000).toFixed(1)}s`;
-        }, 80);
-        timer = setTimeout(async () => {
-          reset();
-          await confirmChange();
-          close();
-        }, HOLD_MS);
-      };
-      const stopHold = () => reset();
-
-      async function confirmChange() {
-        selectEl.disabled = true;
-        try {
-          await handleEstadoChange(selectEl, id, newStatus);
-          selectEl.value = newStatus;
-          selectEl.dataset.prev = newStatus;
-        } catch (e) {
-          selectEl.value = prev;
-          selectEl.dataset.prev = prev;
-        } finally {
-          selectEl.disabled = false;
-        }
-      }
-
-      btnHold.onmousedown = startHold;
-      btnHold.ontouchstart = (e)=>{ e.preventDefault(); startHold(); };
-      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
-        btnHold.addEventListener(ev, stopHold);
-      });
-      btnCancel.onclick = () => { selectEl.value = prev; selectEl.dataset.prev = prev; close(); };
-      backdrop.onclick = (e) => { if (e.target === backdrop) { selectEl.value = prev; selectEl.dataset.prev = prev; close(); } };
-      window.addEventListener('keydown', escClose);
-      function escClose(e){ if (e.key === 'Escape' && backdrop.style.display === 'flex') { selectEl.value = prev; selectEl.dataset.prev = prev; close(); window.removeEventListener('keydown', escClose);} }
-
-      bar.style.width = '0%';
-      holdFill.style.width = '0%';
-      backdrop.style.display = 'flex';
-      backdrop.setAttribute('aria-hidden','false');
-      document.body.style.overflow = 'hidden';
-    }
-
-    async function handleEstadoChange(selectEl, id, forcedEstado) {
-      const nuevoEstado = forcedEstado || selectEl.value;
-      const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
-        if (!res.success) throw new Error(res.error);
-
-        cotizacionesData = cotizacionesData.map(c =>
-          c.id === id ? { ...c, estado: nuevoEstado } : c
-        );
-
-        const cotizacion = cotizacionesData.find(c => c.id === id);
-        if (nuevoEstado === 'aprobada') {
-          const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
-          console.log('crearOVincularVentaDesdeCotizacion OUT', v);
-        } else {
-          const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
-          console.log('eliminarVentasPorCotizacion OUT', v);
-          if (v?.success && (v.count === 0)) {
-            window.utils?.mostrarNotificacion?.('No se borró ninguna venta (0 filas). Verifica cotizacion_id.', 'warning');
-          }
-          if (!v?.success) {
-            window.utils?.mostrarNotificacion?.('Error al borrar ventas: ' + (v.error || 'desconocido'), 'error');
-            selectEl.value = prevEstado;
-            selectEl.dataset.prev = prevEstado;
-            throw new Error(v.error || 'No se pudieron borrar ventas');
-          }
-        }
-
-        filtrarCotizaciones();
-        window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
-      } catch (err) {
-        console.error('handleEstadoChange error', err);
-        window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
-        selectEl.value = prevEstado;
-        selectEl.dataset.prev = prevEstado;
-        throw err;
-      }
-    }
-
-
-  window.cargarCotizaciones = cargarCotizaciones;
-  window.filtrarCotizaciones = filtrarCotizaciones;
-  window.ordenarCotizaciones = ordenarCotizaciones;
-  window.verDetalle = verDetalle;
-  window.editarCotizacion = editarCotizacion;
-  window.duplicarCotizacion = duplicarCotizacion;
-    
-</script>
+  <!-- Scripts: menú y layout -->
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
+  <!-- FullCalendar -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <!-- Supabase: necesarios antes de cronograma.js -->
+  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
+  <!-- Cronograma -->
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/cronograma.js"></script>
 </body>
 </html>
-
-
-
