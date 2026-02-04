@@ -8,8 +8,16 @@
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" />
   <style>
+    :root {
+      --nav-width: 88px; /* reserva para el menú lateral oscuro */
+    }
     body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
-    .page-header { padding: 16px; }
+    .page-container {
+      padding-left: calc(var(--nav-width) + 12px);
+      padding-right: 12px;
+      padding-top: 8px;
+    }
+    .page-header { padding: 8px 0 12px; }
     .page-header .crumb { color: #6c7a86; font-size: 12px; }
     .page-header h1 { margin: 4px 0 0; font-size: 22px; }
 
@@ -17,7 +25,7 @@
       display: grid;
       grid-template-columns: 1fr;
       gap: 12px;
-      padding: 0 16px 12px;
+      padding-bottom: 10px;
     }
     .panel-box {
       border: 1px solid #e4e7eb;
@@ -42,9 +50,8 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 320px 1fr 240px;
+      grid-template-columns: 300px 1fr 240px;
       gap: 12px;
-      padding: 0 16px 20px;
       align-items: start;
     }
 
@@ -60,9 +67,10 @@
       border-radius: 10px;
       padding: 8px;
       border: 1px solid #d7dce0;
-      min-width: 300px;
-      max-width: 320px;
+      min-width: 280px;
+      max-width: 300px;
       overflow: visible;
+      z-index: 1;
     }
     .sidebar .block {
       border: 1px solid #d7dce0;
@@ -184,68 +192,70 @@
   </style>
 </head>
 <body>
-  <div class="page-header">
-    <div class="crumb">Proyectos / Cronograma</div>
-    <h1>Cronograma de proyectos</h1>
-  </div>
-
-  <div class="top-row">
-    <div class="panel-box">
-      <h2>Estado de programación</h2>
-      <div class="stats">
-        <div class="stat-row">
-          <span>Partidas programadas:</span>
-          <span class="value" id="statProgramadas">0</span>
-        </div>
-        <div class="stat-row">
-          <span>Partidas por programar:</span>
-          <span class="value" id="statNoProgramadas">0</span>
-        </div>
-      </div>
+  <div class="page-container">
+    <div class="page-header">
+      <div class="crumb">Proyectos / Cronograma</div>
+      <h1>Cronograma de proyectos</h1>
     </div>
-  </div>
 
-  <div class="layout">
-    <div class="sidebar">
-      <div class="block">
-        <h2>Instalaciones a programar</h2>
-        <div class="cloud palette-wrapper">
-          <div id="paletteInst"></div>
-        </div>
-      </div>
-      <div class="block">
-        <h2>Fabricación</h2>
-        <div class="cloud palette-wrapper">
-          <div id="paletteFab"></div>
+    <div class="top-row">
+      <div class="panel-box">
+        <h2>Estado de programación</h2>
+        <div class="stats">
+          <div class="stat-row">
+            <span>Partidas programadas:</span>
+            <span class="value" id="statProgramadas">0</span>
+          </div>
+          <div class="stat-row">
+            <span>Partidas por programar:</span>
+            <span class="value" id="statNoProgramadas">0</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <section class="calendar-panel">
-      <div class="tabs-vertical">
-        <button data-tab="instalacion" class="tab-btn active">Instalación</button>
-        <button data-tab="fabricacion" class="tab-btn">Fabricación</button>
-        <button data-tab="compra" class="tab-btn">Compras</button>
-        <button data-tab="visita_rect" class="tab-btn">Visita y rectificación</button>
-        <button data-tab="todo" class="tab-btn">Todo</button>
+    <div class="layout">
+      <div class="sidebar">
+        <div class="block">
+          <h2>Instalaciones a programar</h2>
+          <div class="cloud palette-wrapper">
+            <div id="paletteInst"></div>
+          </div>
+        </div>
+        <div class="block">
+          <h2>Fabricación</h2>
+          <div class="cloud palette-wrapper">
+            <div id="paletteFab"></div>
+          </div>
+        </div>
       </div>
-      <div id="calendar"></div>
-    </section>
 
-    <div class="right-column">
-      <div class="mini-cal" id="miniPrev">
-        <div class="day">Mes anterior</div>
-        <div class="num">–</div>
+      <section class="calendar-panel">
+        <div class="tabs-vertical">
+          <button data-tab="instalacion" class="tab-btn active">Instalación</button>
+          <button data-tab="fabricacion" class="tab-btn">Fabricación</button>
+          <button data-tab="compra" class="tab-btn">Compras</button>
+          <button data-tab="visita_rect" class="tab-btn">Visita y rectificación</button>
+          <button data-tab="todo" class="tab-btn">Todo</button>
+        </div>
+        <div id="calendar"></div>
+      </section>
+
+      <div class="right-column">
+        <div class="mini-cal" id="miniPrev">
+          <div class="day">Mes anterior</div>
+          <div class="num">–</div>
+        </div>
+        <div class="mini-cal" id="miniNext">
+          <div class="day">Mes siguiente</div>
+          <div class="num">–</div>
+        </div>
+        <button class="compact-btn" id="btnAddVisita">Agendar visita</button>
+        <div id="visitasList" class="list-extra cloud"></div>
+        <button class="compact-btn" id="btnAddRect">Agendar rectificación</button>
+        <div id="rectList" class="list-extra cloud"></div>
+        <button class="compact-btn" id="btnAddCompra">Agendar compra</button>
       </div>
-      <div class="mini-cal" id="miniNext">
-        <div class="day">Mes siguiente</div>
-        <div class="num">–</div>
-      </div>
-      <button class="compact-btn" id="btnAddVisita">Agendar visita</button>
-      <div id="visitasList" class="list-extra cloud"></div>
-      <button class="compact-btn" id="btnAddRect">Agendar rectificación</button>
-      <div id="rectList" class="list-extra cloud"></div>
-      <button class="compact-btn" id="btnAddCompra">Agendar compra</button>
     </div>
   </div>
 
