@@ -29,12 +29,31 @@ function dedupeEventos(rows = []) {
 
 // ==== Helpers Supabase ====
 async function getSupa() {
-  if (!window.globalSupabase?.client && window.supabaseClient?.init) {
-    await window.supabaseClient.init();
-  }
-  const supa = window.globalSupabase?.client || window.supabase || window.supabaseClient;
-  if (!supa || typeof supa.from !== 'function') throw new Error('Supabase no disponible');
-  return supa;
+  // Usa el cliente expuesto por supabaseBrowserClient.js; espera hasta 2s por supabase:ready
+  if (window.supabase && typeof window.supabase.from === 'function') return window.supabase;
+
+  const client = await new Promise((resolve) => {
+    let resolved = false;
+    const onReady = () => {
+      if (resolved) return;
+      if (window.supabase && typeof window.supabase.from === 'function') {
+        resolved = true;
+        try { window.removeEventListener('supabase:ready', onReady); } catch (_) {}
+        resolve(window.supabase);
+      }
+    };
+    try { window.addEventListener('supabase:ready', onReady); } catch (_) {}
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        try { window.removeEventListener('supabase:ready', onReady); } catch (_) {}
+        resolve(null);
+      }
+    }, 2000);
+  });
+
+  if (!client || typeof client.from !== 'function') throw new Error('Supabase no disponible');
+  return client;
 }
 
 // ==== Data load ====
