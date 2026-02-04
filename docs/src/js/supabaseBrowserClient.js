@@ -16,8 +16,7 @@ const LS_KEY_KEY = 'byt_supabase_anon_key';
 const SERVER_CONFIG_URL = 'https://raw.githubusercontent.com/bosqueytierra/BYT-SOFTWARE/main/BYT_SOFTWARE/supabase-config.json';
 
 // Poll interval ms to check for remote config changes (set to 0 to disable)
-const CONFIG_POLL_INTERVAL_MS = 0; // 30s
-
+const CONFIG_POLL_INTERVAL_MS = 0; // 30s  
 let _lastServerConfig = null;
 let _configPollerId = null;
 
