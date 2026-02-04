@@ -48,7 +48,7 @@
       align-items: start;
     }
 
-    /* Columna izquierda fija y sin colapsar */
+    /* Columna izquierda fija, sin colapsar */
     .sidebar {
       position: sticky;
       top: 10px;
@@ -144,24 +144,30 @@
     .modal input, .modal select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; }
     .modal textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; resize: vertical; min-height: 64px; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-    .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+    .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; outline: none; }
     .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
     .btn.full { width: 100%; text-align: center; }
     .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
 
-    .right-column { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 10px; }
+    .right-column { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 10px; }
     .mini-cal {
       border: 1px solid #e4e7eb;
       border-radius: 16px;
       background: #fff;
       box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-      height: 180px;
+      height: 120px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       font-weight: 700;
       color: #2d2d2d;
+      padding: 6px;
+      gap: 4px;
     }
+    .mini-cal .day { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .mini-cal .num { font-size: 28px; line-height: 1; }
+
     .compact-btn {
       padding: 8px 10px;
       font-size: 13px;
@@ -172,7 +178,9 @@
       cursor: pointer;
       width: 100%;
       text-align: center;
+      outline: none;
     }
+    .compact-btn:focus { outline: none; box-shadow: none; }
   </style>
 </head>
 <body>
@@ -225,8 +233,14 @@
     </section>
 
     <div class="right-column">
-      <div class="mini-cal" id="miniPrev">Mes anterior</div>
-      <div class="mini-cal" id="miniNext">Mes siguiente</div>
+      <div class="mini-cal" id="miniPrev">
+        <div class="day">Mes anterior</div>
+        <div class="num">–</div>
+      </div>
+      <div class="mini-cal" id="miniNext">
+        <div class="day">Mes siguiente</div>
+        <div class="num">–</div>
+      </div>
       <button class="compact-btn" id="btnAddVisita">Agendar visita</button>
       <div id="visitasList" class="list-extra cloud"></div>
       <button class="compact-btn" id="btnAddRect">Agendar rectificación</button>
