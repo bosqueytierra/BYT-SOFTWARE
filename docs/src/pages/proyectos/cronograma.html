@@ -15,7 +15,7 @@
 
     .top-row {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 12px;
       padding: 0 16px 12px;
     }
@@ -159,6 +159,17 @@
       font-weight: 700;
       color: #2d2d2d;
     }
+    .compact-btn {
+      padding: 8px 10px;
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid #d7dce0;
+      background: #2e5e4e;
+      color: #fff;
+      cursor: pointer;
+      width: 100%;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -180,17 +191,6 @@
           <span class="value" id="statNoProgramadas">0</span>
         </div>
       </div>
-    </div>
-    <div class="panel-box">
-      <button class="btn primary full" id="btnAddVisita">Agendar visita</button>
-      <div id="visitasList" class="list-extra cloud"></div>
-    </div>
-    <div class="panel-box">
-      <button class="btn primary full" id="btnAddRect">Agendar rectificación</button>
-      <div id="rectList" class="list-extra cloud"></div>
-    </div>
-    <div class="panel-box">
-      <button class="btn primary full" id="btnAddCompra">Agendar compra</button>
     </div>
   </div>
 
@@ -224,6 +224,11 @@
     <div class="right-column">
       <div class="mini-cal" id="miniPrev">Mes anterior</div>
       <div class="mini-cal" id="miniNext">Mes siguiente</div>
+      <button class="compact-btn" id="btnAddVisita">Agendar visita</button>
+      <div id="visitasList" class="list-extra cloud"></div>
+      <button class="compact-btn" id="btnAddRect">Agendar rectificación</button>
+      <div id="rectList" class="list-extra cloud"></div>
+      <button class="compact-btn" id="btnAddCompra">Agendar compra</button>
     </div>
   </div>
 
