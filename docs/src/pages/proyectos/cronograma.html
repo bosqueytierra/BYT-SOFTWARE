@@ -42,41 +42,39 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 320px 1fr 220px;
+      grid-template-columns: 300px 1fr 220px;
       gap: 12px;
       padding: 0 16px 20px;
-      align-items: stretch;
+      align-items: start;
     }
 
+    /* Columna izquierda fija */
     .sidebar {
+      position: sticky;
+      top: 10px;
+      align-self: start;
       display: flex;
       flex-direction: column;
       gap: 12px;
-    }
-    .collapsible {
-      border: 1px solid #e4e7eb;
-      border-radius: 12px;
-      background: #fff;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-      overflow: hidden;
-    }
-    .collapsible summary {
-      cursor: pointer;
-      padding: 10px;
-      font-weight: 700;
-      background: #eef2f5;
-      border-bottom: 1px solid #e4e7eb;
-      list-style: none;
-    }
-    .collapsible summary::-webkit-details-marker { display: none; }
-    .collapsible-content {
+      background: #f0f2f5;
+      border-radius: 10px;
       padding: 8px;
-      background: #f9fafb;
-      max-height: 340px;
-      overflow-y: auto;
+      border: 1px solid #d7dce0;
     }
-
+    .sidebar .block {
+      border: 1px solid #d7dce0;
+      border-radius: 10px;
+      padding: 10px;
+      background: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .sidebar h2 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #2e5e4e;
+    }
     .cloud { background: #fafbfc; border: 1px dashed #d7dce0; border-radius: 10px; padding: 8px; }
+    .palette-wrapper { max-height: 480px; overflow-y: auto; }
     .project-block { border: 1px solid #e4e7eb; border-radius: 10px; padding: 10px; background: #fff; margin-bottom: 8px; }
     .project-header { display: flex; justify-content: space-between; align-items: center; cursor: grab; }
     .project-title { font-weight: 700; color: #2e5e4e; }
@@ -100,6 +98,7 @@
       box-shadow: 0 6px 12px rgba(0,0,0,0.05);
       padding: 8px 8px 8px 48px;
       background: #fff;
+      min-height: 80vh;
     }
     .tabs-vertical {
       position: absolute;
@@ -147,19 +146,19 @@
     .btn.full { width: 100%; text-align: center; }
     .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
 
+    .right-column { display: flex; flex-direction: column; gap: 12px; }
     .mini-cal {
       border: 1px solid #e4e7eb;
       border-radius: 16px;
       background: #fff;
       box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-      height: 280px;
+      height: 200px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
       color: #2d2d2d;
     }
-    .right-column { display: flex; flex-direction: column; gap: 12px; }
   </style>
 </head>
 <body>
@@ -197,23 +196,18 @@
 
   <div class="layout">
     <div class="sidebar">
-      <details class="collapsible" id="collapInst">
-        <summary>Instalaciones a programar</summary>
-        <div class="collapsible-content">
-          <div class="cloud">
-            <div id="paletteInst"></div>
-          </div>
+      <div class="block">
+        <h2>Instalaciones a programar</h2>
+        <div class="cloud palette-wrapper">
+          <div id="paletteInst"></div>
         </div>
-      </details>
-
-      <details class="collapsible" id="collapFab">
-        <summary>Fabricación</summary>
-        <div class="collapsible-content">
-          <div class="cloud">
-            <div id="paletteFab"></div>
-          </div>
+      </div>
+      <div class="block">
+        <h2>Fabricación</h2>
+        <div class="cloud palette-wrapper">
+          <div id="paletteFab"></div>
         </div>
-      </details>
+      </div>
     </div>
 
     <section class="calendar-panel">
