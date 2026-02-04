@@ -507,15 +507,16 @@ async function onCreateSave() {
 // ==== Realtime ====
 async function subscribeRealtime() {
   const supa = await getSupa();
+
   channelCrono = supa
     .channel('cronograma-events')
     .on('postgres_changes', { event: '*', schema: 'public', table: CRONO_TABLE }, handleCronoChange)
-    .subscribe();
+    .subscribe((status) => console.log('realtime cronograma', status));
 
   channelCots = supa
     .channel('cronograma-cots')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'cotizaciones' }, handleCotChange)
-    .subscribe();
+    .subscribe((status) => console.log('realtime cotizaciones', status));
 }
 
 async function handleCronoChange(payload) {
