@@ -8,15 +8,12 @@
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" />
   <style>
-    :root {
-      --nav-width: 120px; /* ancho del menú lateral */
-    }
+    :root { --nav-width: 120px; }
     body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
     .page-container {
       padding-left: calc(var(--nav-width) + 16px);
       padding-right: 12px;
       padding-top: 8px;
-      background: transparent;
     }
     .page-header { padding: 8px 0 12px; }
     .page-header .crumb { color: #6c7a86; font-size: 12px; }
@@ -24,9 +21,10 @@
 
     .top-row {
       display: grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr auto;
       gap: 12px;
       padding-bottom: 10px;
+      align-items: stretch;
     }
     .panel-box {
       border: 1px solid #e4e7eb;
@@ -47,16 +45,36 @@
       font-size: 13px;
     }
     .stat-row { display: flex; justify-content: space-between; font-weight: 700; color: #2d2d2d; }
-    .stat-row span.value { font-size: 16px; }
+    .stat-row .value { font-size: 16px; }
+
+    .actions-row {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+    .compact-btn {
+      padding: 8px 10px;
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid #d7dce0;
+      background: #2e5e4e;
+      color: #fff;
+      cursor: pointer;
+      width: 100%;
+      text-align: center;
+      outline: none;
+    }
+    .compact-btn:focus { outline: none; box-shadow: none; }
 
     .layout {
       display: grid;
-      grid-template-columns: 300px 1fr 240px;
+      grid-template-columns: 300px 1fr;
       gap: 12px;
       align-items: start;
     }
 
-    /* Columna izquierda fija, sin colapsar */
     .sidebar {
       position: sticky;
       top: 10px;
@@ -71,7 +89,7 @@
       min-width: 280px;
       max-width: 300px;
       overflow: visible;
-      z-index: 0; /* no competir con el menú */
+      z-index: 0;
     }
     .sidebar .block {
       border: 1px solid #d7dce0;
@@ -157,39 +175,6 @@
     .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
     .btn.full { width: 100%; text-align: center; }
     .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
-
-    .right-column { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 10px; }
-    .mini-cal {
-      border: 1px solid #e4e7eb;
-      border-radius: 16px;
-      background: #fff;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-      height: 120px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: #2d2d2d;
-      padding: 6px;
-      gap: 4px;
-    }
-    .mini-cal .day { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .mini-cal .num { font-size: 28px; line-height: 1; }
-
-    .compact-btn {
-      padding: 8px 10px;
-      font-size: 13px;
-      border-radius: 8px;
-      border: 1px solid #d7dce0;
-      background: #2e5e4e;
-      color: #fff;
-      cursor: pointer;
-      width: 100%;
-      text-align: center;
-      outline: none;
-    }
-    .compact-btn:focus { outline: none; box-shadow: none; }
   </style>
 </head>
 <body>
@@ -212,6 +197,11 @@
             <span class="value" id="statNoProgramadas">0</span>
           </div>
         </div>
+      </div>
+      <div class="actions-row">
+        <button class="compact-btn" id="btnAddVisita">Agendar visita</button>
+        <button class="compact-btn" id="btnAddRect">Agendar rectificación</button>
+        <button class="compact-btn" id="btnAddCompra">Agendar compra</button>
       </div>
     </div>
 
@@ -241,22 +231,6 @@
         </div>
         <div id="calendar"></div>
       </section>
-
-      <div class="right-column">
-        <div class="mini-cal" id="miniPrev">
-          <div class="day">Mes anterior</div>
-          <div class="num">–</div>
-        </div>
-        <div class="mini-cal" id="miniNext">
-          <div class="day">Mes siguiente</div>
-          <div class="num">–</div>
-        </div>
-        <button class="compact-btn" id="btnAddVisita">Agendar visita</button>
-        <div id="visitasList" class="list-extra cloud"></div>
-        <button class="compact-btn" id="btnAddRect">Agendar rectificación</button>
-        <div id="rectList" class="list-extra cloud"></div>
-        <button class="compact-btn" id="btnAddCompra">Agendar compra</button>
-      </div>
     </div>
   </div>
 
