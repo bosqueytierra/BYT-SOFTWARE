@@ -31,7 +31,11 @@ async function _createClient(url, key) {
     const mod = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
     const { createClient } = mod;
     if (typeof createClient !== 'function') return null;
-    const client = createClient(url, key);
+    const client = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      realtime: { params: { eventsPerSecond: 5 } }
+    });
+    try { client?.realtime?.setAuth?.(key); } catch (e) {}
     return client;
   } catch (e) {
     console.error('[supabaseBrowserClient] error importing supabase-js:', e);
@@ -130,19 +134,7 @@ export async function ensureSupabase(timeoutMs = 5000) {
 
   _initializing = true;
   try {
-    try {
-      if (typeof window !== 'undefined') {
-        if (isValidClient(window.supabase)) _realClient = window.supabase;
-        else if (window.globalSupabase && isValidClient(window.globalSupabase.client)) _realClient = window.globalSupabase.client;
-      }
-    } catch (e) {}
-
-    if (isValidClient(_realClient)) {
-      _exposeClientGlobally(_realClient);
-      _dispatchReady();
-      return _realClient;
-    }
-
+    // no reutilizamos window.supabase sin recrear opciones; creamos desde config
     const created = await _createClientFromWindowEnv();
     if (isValidClient(created)) {
       _realClient = created;
@@ -252,18 +244,6 @@ export const supabase = new Proxy({}, {
   if (_autoInitAttempted) return;
   _autoInitAttempted = true;
   try {
-    if (typeof window !== 'undefined') {
-      try {
-        if (isValidClient(window.supabase)) {
-          _realClient = window.supabase;
-          _exposeClientGlobally(_realClient);
-          _dispatchReady();
-          try { const serverCfg = await _fetchConfigFromServer(); if (serverCfg) _lastServerConfig = serverCfg; } catch(e){}
-          if (CONFIG_POLL_INTERVAL_MS > 0) _startConfigPoller();
-          return;
-        }
-      } catch (e) {}
-    }
     const created = await _createClientFromWindowEnv();
     if (isValidClient(created)) {
       _realClient = created;
