@@ -7,6 +7,8 @@ let createContext = { tipo: 'visita', preDate: null };
 let channelCrono = null;
 let channelCots = null;
 const localWrites = new Set();
+let currentTab = 'instalacion'; // instalacion | fabricacion | compra | visita_rect | todo
+let allEventsCache = [];
 
 // ==== Helpers ====
 function toIsoDay(date) {
@@ -29,7 +31,6 @@ function dedupeEventos(rows = []) {
 
 // ==== Helpers Supabase ====
 async function getSupa() {
-  // Usa el cliente expuesto por supabaseBrowserClient.js; espera hasta 2s por supabase:ready
   if (window.supabase && typeof window.supabase.from === 'function') return window.supabase;
 
   const client = await new Promise((resolve) => {
@@ -92,72 +93,60 @@ async function loadEventos() {
   const supa = await getSupa();
   const { data, error } = await supa.from(CRONO_TABLE).select('*').order('start', { ascending: true });
   if (error) throw error;
-  return dedupeEventos(data || []).map(mapEventoToCalendar);
+  allEventsCache = dedupeEventos(data || []);
+  return filterEventsForTab(allEventsCache).map(mapEventoToCalendar);
 }
 
-// ==== CRUD eventos ====
-async function createEvento(payload) {
-  const supa = await getSupa();
-  // Guard anti-duplicados: misma partida/proyecto y misma fecha
-  const { data: existing, error: errCheck } = await supa
-    .from(CRONO_TABLE)
-    .select('id')
-    .eq('tipo', 'programacion')
-    .eq('cotizacion_id', payload.cotizacion_id || null)
-    .eq('partida_id', payload.partida_id || null)
-    .eq('start', payload.start)
-    .limit(1);
-  if (!errCheck && existing && existing.length > 0) {
-    const { data: row } = await supa
-      .from(CRONO_TABLE)
-      .select('*')
-      .eq('id', existing[0].id)
-      .single();
-    return mapEventoToCalendar(row);
+// ==== Filtro por pestaña ====
+function filterEventsForTab(events) {
+  if (currentTab === 'todo') return events;
+  if (currentTab === 'instalacion') return events.filter(ev => ev.tipo === 'programacion' || ev.tipo === 'instalacion');
+  if (currentTab === 'fabricacion') return events.filter(ev => ev.tipo === 'fabricacion');
+  if (currentTab === 'compra') return events.filter(ev => ev.tipo === 'compra');
+  if (currentTab === 'visita_rect') return events.filter(ev => ev.tipo === 'visita' || ev.tipo === 'rectificacion');
+  return events;
+}
+
+// ==== Títulos con prefijo ====
+function prefixTitle(ev) {
+  const base = ev.title || '';
+  if (ev.tipo === 'programacion' || ev.tipo === 'instalacion') {
+    return base.startsWith('INT-') ? base : `INT-${base}`;
   }
-
-  const { error, data } = await supa.from(CRONO_TABLE).insert(payload).select().single();
-  if (error) throw error;
-  localWrites.add(data.id);
-  setTimeout(() => localWrites.delete(data.id), 4000);
-  return mapEventoToCalendar(data);
-}
-
-async function updateEvento(id, patch) {
-  const supa = await getSupa();
-  const { error, data } = await supa.from(CRONO_TABLE).update(patch).eq('id', id).select().single();
-  if (error) throw error;
-  localWrites.add(id);
-  setTimeout(() => localWrites.delete(id), 4000);
-  return mapEventoToCalendar(data);
-}
-
-async function deleteEvento(id) {
-  const supa = await getSupa();
-  const { error } = await supa.from(CRONO_TABLE).delete().eq('id', id);
-  if (error) throw error;
-  localWrites.add(id);
-  setTimeout(() => localWrites.delete(id), 4000);
+  if (ev.tipo === 'fabricacion') {
+    return base.startsWith('FAB-') ? base : `FAB-${base}`;
+  }
+  if (ev.tipo === 'compra') {
+    return base.startsWith('COM-') ? base : `COM-${base}`;
+  }
+  if (ev.tipo === 'visita') {
+    return base.startsWith('Visita -') ? base : `Visita - ${base}`;
+  }
+  if (ev.tipo === 'rectificacion') {
+    return base.startsWith('Rectificación -') ? base : `Rectificación - ${base}`;
+  }
+  return base;
 }
 
 // ==== Mappers ====
 function mapEventoToCalendar(ev) {
-  const title = ev.nota ? `${ev.title} (${ev.nota})` : ev.title;
+  const titled = { ...ev, title: prefixTitle(ev) };
+  const title = titled.nota ? `${titled.title} (${titled.nota})` : titled.title;
   return {
-    id: ev.id,
+    id: titled.id,
     title,
-    start: ev.start,
-    end: ev.end,
-    backgroundColor: ev.color || '#2e5e4e',
-    borderColor: ev.color || '#2e5e4e',
+    start: titled.start,
+    end: titled.end,
+    backgroundColor: titled.color || '#2e5e4e',
+    borderColor: titled.color || '#2e5e4e',
     allDay: true,
     extendedProps: {
-      tipo: ev.tipo,
-      cotizacion_id: ev.cotizacion_id,
-      partida_id: ev.partida_id,
-      cliente: ev.cliente,
-      nota: ev.nota,
-      color: ev.color
+      tipo: titled.tipo,
+      cotizacion_id: titled.cotizacion_id,
+      partida_id: titled.partida_id,
+      cliente: titled.cliente,
+      nota: titled.nota,
+      color: titled.color
     }
   };
 }
@@ -170,7 +159,7 @@ function renderPalette(aprobados, eventos = []) {
 
   const asignadasPorProyecto = new Map();
   eventos
-    .filter(e => e.extendedProps?.tipo === 'programacion' && e.extendedProps?.cotizacion_id && e.extendedProps?.partida_id)
+    .filter(e => (e.extendedProps?.tipo === 'programacion' || e.extendedProps?.tipo === 'instalacion') && e.extendedProps?.cotizacion_id && e.extendedProps?.partida_id)
     .forEach(e => {
       const pid = e.extendedProps.cotizacion_id;
       const set = asignadasPorProyecto.get(pid) || new Set();
@@ -243,7 +232,7 @@ function setupPaletteDraggable() {
           backgroundColor: data.color || '#2e5e4e',
           borderColor: data.color || '#2e5e4e',
           extendedProps: {
-            tipo: 'programacion',
+            tipo: 'programacion', // en drag se decide en onExternalDrop según tab
             cotizacion_id: data.cotizacion_id || null,
             partida_id: data.partida_id || null,
             cliente: data.cliente || null
@@ -266,7 +255,7 @@ function renderStats(aprobados, eventos) {
   const totalPartidas = aprobados.reduce((acc, p) => acc + (p.partidas?.length || 0), 0);
   const programadasSet = new Set(
     (eventos || [])
-      .filter(e => e.extendedProps?.tipo === 'programacion' && e.extendedProps?.partida_id)
+      .filter(e => (e.extendedProps?.tipo === 'programacion' || e.extendedProps?.tipo === 'instalacion') && e.extendedProps?.partida_id)
       .map(e => `${e.extendedProps.cotizacion_id}::${e.extendedProps.partida_id}`)
   );
   const programadas = programadasSet.size;
@@ -312,33 +301,61 @@ function initCalendar(eventosIniciales = []) {
       center: 'title',
       right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
     },
-    selectable: true,
+    selectable: false,
     editable: true,
     droppable: true,
     eventReceive: onExternalDrop,
     eventDrop: onEventMoved,
     eventResize: onEventMoved,
     eventClick: onEventClick,
-    dateClick: onDateClick,
     events: eventosIniciales
   });
 
   fc.render();
   bindCreateModals();
   bindColorPicker();
+  bindTabs();
+}
+
+// ==== Tabs ====
+function bindTabs() {
+  const tabs = document.querySelectorAll('.tab-btn');
+  tabs.forEach(btn => {
+    btn.onclick = () => {
+      tabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTab = btn.dataset.tab;
+      renderCalendarEvents();
+    };
+  });
+}
+
+function renderCalendarEvents() {
+  if (!fc) return;
+  fc.getEvents().forEach(e => e.remove());
+  const filtered = filterEventsForTab(allEventsCache).map(mapEventoToCalendar);
+  filtered.forEach(ev => fc.addEvent(ev));
+  fc.setOption('droppable', currentTab === 'instalacion' || currentTab === 'fabricacion');
 }
 
 // Drop externo (paleta -> calendario)
 async function onExternalDrop(info) {
   try {
+    if (!(currentTab === 'instalacion' || currentTab === 'fabricacion')) {
+      info.revert && info.revert();
+      window.utils?.mostrarNotificacion?.('Solo puedes arrastrar en Instalación o Fabricación', 'warning');
+      return;
+    }
     const ext = info.event.extendedProps || {};
     const data = info.draggedEl?.dataset?.payload ? JSON.parse(info.draggedEl.dataset.payload) : {};
     const startDate = info.event.start || info.date;
+    const tipo = currentTab === 'fabricacion' ? 'fabricacion' : 'programacion';
+    const baseTitle = info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
     const payload = {
       cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
       partida_id: ext.partida_id || data.partida_id || null,
-      tipo: 'programacion',
-      title: info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`,
+      tipo,
+      title: baseTitle,
       start: startDate ? toIsoDay(startDate) : new Date().toISOString(),
       end: null,
       color: ext.color || data.color || info.event.backgroundColor || '#2e5e4e',
@@ -379,11 +396,6 @@ async function onEventMoved(info) {
 function onEventClick(info) {
   currentEvent = info.event;
   openEventModal(info.event);
-}
-
-// Click en fecha vacía
-function onDateClick(info) {
-  openCreateModal({ preDate: info.dateStr });
 }
 
 // ==== Modal de evento ====
@@ -466,12 +478,14 @@ function setColorPicker(color) {
   });
 }
 
-// ==== Modal crear visita/rectificación ====
+// ==== Modal crear visita/rectificación/compra ====
 function bindCreateModals() {
   const btnVisita = document.getElementById('btnAddVisita');
   const btnRect = document.getElementById('btnAddRect');
+  const btnCompra = document.getElementById('btnAddCompra');
   if (btnVisita) btnVisita.onclick = () => openCreateModal({ tipo: 'visita' });
   if (btnRect) btnRect.onclick = () => openCreateModal({ tipo: 'rectificacion' });
+  if (btnCompra) btnCompra.onclick = () => openCreateModal({ tipo: 'compra' });
   const cancel = document.getElementById('createCancel');
   const save = document.getElementById('createSave');
   if (cancel) cancel.onclick = closeCreateModal;
@@ -482,7 +496,14 @@ function openCreateModal({ tipo = 'visita', preDate = null } = {}) {
   createContext = { tipo, preDate };
   const backdrop = document.getElementById('createBackdrop');
   if (!backdrop) return;
-  document.getElementById('createTitle').textContent = tipo === 'rectificacion' ? 'Agregar rectificación' : 'Agregar visita';
+  const titleEl = document.getElementById('createTitle');
+  if (titleEl) {
+    if (tipo === 'rectificacion') titleEl.textContent = 'Agregar rectificación';
+    else if (tipo === 'compra') titleEl.textContent = 'Agregar compra';
+    else titleEl.textContent = 'Agregar visita';
+  }
+  const nombreEl = document.getElementById('createNombre');
+  if (nombreEl) nombreEl.value = (tipo === 'compra') ? 'Compra' : '';
   backdrop.style.display = 'flex';
 }
 
@@ -496,18 +517,31 @@ async function onCreateSave() {
   const nombre = document.getElementById('createNombre')?.value?.trim() || '';
   const cliente = document.getElementById('createCliente')?.value?.trim() || '';
   const proyectoSel = document.getElementById('createProyecto')?.value || '';
-  if (!nombre) {
+  if (!proyectoSel && createContext.tipo === 'compra') {
+    window.utils?.mostrarNotificacion?.('Selecciona un proyecto para la compra', 'warning');
+    return;
+  }
+  if (!nombre && createContext.tipo !== 'compra') {
     window.utils?.mostrarNotificacion?.('Ingresa un nombre/descrición', 'warning');
     return;
   }
+  const tipo = createContext.tipo || 'visita';
+  const baseTitle = tipo === 'visita'
+    ? `Visita - ${proyectoSel || nombre || 'Proyecto'}`
+    : tipo === 'rectificacion'
+      ? `Rectificación - ${proyectoSel || nombre || 'Proyecto'}`
+      : tipo === 'compra'
+        ? `COM-${proyectoSel || 'Proyecto'}`
+        : nombre || 'Evento';
+
   const payload = {
-    tipo: createContext.tipo || 'visita',
+    tipo,
     cotizacion_id: proyectoSel || null,
     partida_id: null,
-    title: nombre,
+    title: baseTitle,
     start: createContext.preDate || new Date().toISOString(),
     end: null,
-    color: '#3f705d',
+    color: tipo === 'compra' ? '#e67e22' : '#3f705d',
     nota: null,
     cliente: cliente || null
   };
@@ -534,7 +568,6 @@ async function subscribeRealtime() {
       .on('error', (err) => console.error(`channel ${topic} error`, err))
       .on('close', (ev) => {
         console.warn(`channel ${topic} close`, ev);
-        // Reintento simple
         setTimeout(() => subscribeRealtime(), 500);
       })
       .on('postgres_changes', filter, handler)
@@ -593,12 +626,11 @@ async function handleCotChange(payload) {
 async function refreshStatsAndLists() {
   try {
     const [aprobados, eventosRawDb] = await Promise.all([loadAprobados(), loadEventos()]);
-    fc?.getEvents().forEach(e => e.remove());
-    eventosRawDb.forEach(ev => fc?.addEvent(ev));
     renderPalette(aprobados, eventosRawDb);
     fillSelectProyectos(aprobados);
     renderStats(aprobados, eventosRawDb);
     renderVisitasRect(eventosRawDb);
+    renderCalendarEvents();
   } catch (e) {
     console.warn('No se pudieron refrescar stats/listas', e);
   }
