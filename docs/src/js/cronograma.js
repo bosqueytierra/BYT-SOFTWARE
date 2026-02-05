@@ -305,7 +305,7 @@ function initCalendar(eventosIniciales = []) {
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+      right: '' // sin botones de vista
     },
     selectable: false,
     editable: true,
