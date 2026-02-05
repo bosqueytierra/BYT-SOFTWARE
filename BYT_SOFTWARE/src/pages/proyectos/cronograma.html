@@ -8,10 +8,10 @@
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" />
   <style>
-    :root { --nav-width: 120px; }
+    :root { --nav-offset: 260px; }
     body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
     .page-container {
-      padding-left: calc(var(--nav-width) + 16px);
+      padding-left: var(--nav-offset);
       padding-right: 12px;
       padding-top: 8px;
     }
@@ -75,7 +75,7 @@
       align-items: start;
     }
 
-    .sidebar {
+    .cron-sidebar {
       position: sticky;
       top: 10px;
       align-self: start;
@@ -91,14 +91,14 @@
       overflow: visible;
       z-index: 0;
     }
-    .sidebar .block {
+    .cron-sidebar .block {
       border: 1px solid #d7dce0;
       border-radius: 10px;
       padding: 10px;
       background: #fff;
       box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
-    .sidebar h2 {
+    .cron-sidebar h2 {
       margin: 0 0 8px;
       font-size: 15px;
       color: #2e5e4e;
@@ -206,7 +206,7 @@
     </div>
 
     <div class="layout">
-      <div class="sidebar">
+      <div class="cron-sidebar">
         <div class="block">
           <h2>Instalaciones a programar</h2>
           <div class="cloud palette-wrapper">
