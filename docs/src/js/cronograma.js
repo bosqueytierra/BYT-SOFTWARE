@@ -17,13 +17,14 @@ function toIsoDay(date) {
   return d.toISOString();
 }
 
+// Deduplica por combinación (cotizacion, partida, start, tipo)
 function dedupeEventos(rows = []) {
   const seen = new Set();
   const out = [];
   for (const r of rows) {
-    if (!r?.id) continue;
-    if (seen.has(r.id)) continue;
-    seen.add(r.id);
+    const key = `${r.cotizacion_id || ''}|${r.partida_id || ''}|${r.start || ''}|${r.tipo || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     out.push(r);
   }
   return out;
@@ -60,6 +61,24 @@ async function getSupa() {
 // ==== CRUD Eventos ====
 async function createEvento(payload) {
   const supa = await getSupa();
+
+  // Evita duplicados: busca si ya existe misma combinación
+  const { data: exists, error: findErr } = await supa
+    .from(CRONO_TABLE)
+    .select('*')
+    .eq('cotizacion_id', payload.cotizacion_id || null)
+    .eq('partida_id', payload.partida_id || null)
+    .eq('start', payload.start || null)
+    .eq('tipo', payload.tipo || null)
+    .limit(1)
+    .maybeSingle();
+
+  if (findErr) throw findErr;
+  if (exists) {
+    localWrites.add(exists.id);
+    return mapEventoToCalendar(exists);
+  }
+
   const { data, error } = await supa
     .from(CRONO_TABLE)
     .insert(payload)
