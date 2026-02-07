@@ -171,7 +171,13 @@ async function actualizarCotizacion(id, datosActualizados) {
     }
 }
 
-// Nuevo: actualizar solo el estado de la cotización
+
+
+
+
+
+
+/// Nuevo: actualizar solo el estado de la cotización
 async function actualizarEstadoCotizacion(id, estado) {
     try {
         if (!supabaseClient || typeof supabaseClient.from !== 'function') {
@@ -179,18 +185,27 @@ async function actualizarEstadoCotizacion(id, estado) {
             if (!ok) throw new Error('Supabase no inicializado');
         }
 
-        const { error } = await supabaseClient
+        const { data, error, status } = await supabaseClient
             .from('cotizaciones')
             .update({ estado })
-            .eq('id', id);
+            .eq('id', id)
+            .select('id, estado')
+            .limit(1); // evitamos .single() para capturar “cero filas”
 
-        if (error) throw error;
-        return { success: true };
+        if (error) return { success: false, error: error.message, status };
+        if (!data || data.length === 0) {
+            return { success: false, error: 'No rows updated', status };
+        }
+        return { success: true, data: data[0], status };
     } catch (error) {
         console.error('Error al actualizar estado de cotización:', error);
         return { success: false, error: error.message || String(error) };
     }
 }
+
+
+
+
 
 async function eliminarCotizacion(id) {
     try {
@@ -448,3 +463,4 @@ window.supabaseClient = {
 };
 
 window.utils = { mostrarNotificacion };
+
