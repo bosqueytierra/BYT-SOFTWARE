@@ -61,26 +61,28 @@ async function getSupa() {
 // ==== CRUD Eventos ====
 async function createEvento(payload) {
   const supa = await getSupa();
-
-  // Evita duplicados: busca si ya existe misma combinación (manejo de null con .is)
-  let q = supa.from(CRONO_TABLE).select('*');
-  if (payload.cotizacion_id == null) q = q.is('cotizacion_id', null); else q = q.eq('cotizacion_id', payload.cotizacion_id);
-  if (payload.partida_id == null) q = q.is('partida_id', null); else q = q.eq('partida_id', payload.partida_id);
-  if (payload.start == null) q = q.is('start', null); else q = q.eq('start', payload.start);
-  if (payload.tipo == null) q = q.is('tipo', null); else q = q.eq('tipo', payload.tipo);
-  const { data: exists, error: findErr } = await q.limit(1).maybeSingle();
-  if (findErr) throw findErr;
-  if (exists) {
-    localWrites.add(exists.id);
-    return mapEventoToCalendar(exists);
-  }
-
   const { data, error } = await supa
     .from(CRONO_TABLE)
-    .insert(payload)
+    .upsert(payload, { onConflict: 'cotizacion_id,partida_id,start,tipo' })
     .select('*')
     .single();
-  if (error) throw error;
+
+  if (error) {
+    // Si ya existe, la buscamos y devolvemos
+    if (error.code === '23505') {
+      const { data: existing, error: errFind } = await supa
+        .from(CRONO_TABLE)
+        .select('*')
+        .eq('cotizacion_id', payload.cotizacion_id || null)
+        .eq('partida_id', payload.partida_id || null)
+        .eq('start', payload.start || null)
+        .eq('tipo', payload.tipo || null)
+        .single();
+      if (!errFind && existing) return mapEventoToCalendar(existing);
+    }
+    throw error;
+  }
+
   localWrites.add(data.id);
   return mapEventoToCalendar(data);
 }
