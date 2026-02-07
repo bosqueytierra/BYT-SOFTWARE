@@ -57,6 +57,43 @@ async function getSupa() {
   return client;
 }
 
+// ==== CRUD Eventos ====
+async function createEvento(payload) {
+  const supa = await getSupa();
+  const { data, error } = await supa
+    .from(CRONO_TABLE)
+    .insert(payload)
+    .select('*')
+    .single();
+  if (error) throw error;
+  localWrites.add(data.id);
+  return mapEventoToCalendar(data);
+}
+
+async function updateEvento(id, patch) {
+  const supa = await getSupa();
+  const { data, error } = await supa
+    .from(CRONO_TABLE)
+    .update(patch)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  localWrites.add(id);
+  return mapEventoToCalendar(data);
+}
+
+async function deleteEvento(id) {
+  const supa = await getSupa();
+  const { error } = await supa
+    .from(CRONO_TABLE)
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  localWrites.add(id);
+  return true;
+}
+
 // ==== Data load ====
 async function loadAprobados() {
   const supa = await getSupa();
