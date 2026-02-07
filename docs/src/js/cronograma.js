@@ -303,6 +303,7 @@ function initCalendar(eventosIniciales = []) {
 
   fc = new FullCalendar.Calendar(calendarEl, {
     locale: 'es',
+    firstDay: 1, // lunes
     buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Lista' },
     initialView: 'dayGridMonth',
     headerToolbar: {
