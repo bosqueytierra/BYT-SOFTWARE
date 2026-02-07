@@ -752,47 +752,60 @@
       document.body.style.overflow = 'hidden';
     }
 
-    async function handleEstadoChange(selectEl, id, forcedEstado) {
-      const nuevoEstado = forcedEstado || selectEl.value;
-      const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
-        if (!res.success) throw new Error(res.error);
 
-        cotizacionesData = cotizacionesData.map(c =>
-          c.id === id ? { ...c, estado: nuevoEstado } : c
-        );
 
-        const cotizacion = cotizacionesData.find(c => c.id === id);
-        if (nuevoEstado === 'aprobada') {
-          const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cotizacion, 'en_ejecucion');
-          console.log('crearOVincularVentaDesdeCotizacion OUT', v);
-        } else {
-          const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
-          console.log('eliminarVentasPorCotizacion OUT', v);
-          if (v?.success && (v.count === 0)) {
-            window.utils?.mostrarNotificacion?.('No se borró ninguna venta (0 filas). Verifica cotizacion_id.', 'warning');
-          }
-          if (!v?.success) {
-            window.utils?.mostrarNotificacion?.('Error al borrar ventas: ' + (v.error || 'desconocido'), 'error');
-            selectEl.value = prevEstado;
-            selectEl.dataset.prev = prevEstado;
-            throw new Error(v.error || 'No se pudieron borrar ventas');
-          }
-        }
 
-        filtrarCotizaciones();
-        window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
-      } catch (err) {
-        console.error('handleEstadoChange error', err);
-        window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
-        selectEl.value = prevEstado;
-        selectEl.dataset.prev = prevEstado;
-        throw err;
+
+    
+async function handleEstadoChange(selectEl, id, forcedEstado) {
+  const nuevoEstado = forcedEstado || selectEl.value;
+  const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
+
+  try {
+    if (window.supabaseClient?.init) await window.supabaseClient.init();
+    const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
+    if (!res?.success) throw new Error(res?.error || 'Error desconocido');
+
+    // actualiza en memoria
+    cotizacionesData = cotizacionesData.map(c =>
+      c.id === id ? { ...c, estado: nuevoEstado } : c
+    );
+
+    let cot = cotizacionesData.find(c => c.id === id);
+    // si no hay cot o no trae partidas, no intentes crear/vincular venta
+    if (!cot || (!cot.partidas && !cot.data?.partidas)) {
+      console.warn('Cotización sin partidas en memoria, salteando vinculación de venta', cot);
+      window.utils?.mostrarNotificacion?.('Estado actualizado. Recarga la lista para gestionar la venta.', 'warning');
+      filtrarCotizaciones();
+      return;
+    }
+
+    if (nuevoEstado === 'aprobada') {
+      const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cot, 'en_ejecucion');
+      if (!v?.success) throw new Error(v?.error || 'No se pudo crear/vincular la venta');
+    } else {
+      const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
+      if (!v?.success) throw new Error(v?.error || 'No se pudieron borrar ventas');
+      if (v?.success && v.count === 0) {
+        window.utils?.mostrarNotificacion?.('No se borró ninguna venta (0 filas). Verifica cotizacion_id.', 'warning');
       }
     }
 
+    filtrarCotizaciones();
+    window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
+  } catch (err) {
+    console.error('handleEstadoChange error', err);
+    window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
+    selectEl.value = prevEstado;
+    selectEl.dataset.prev = prevEstado;
+    throw err;
+  }
+}
+
+
+
+
+    
 
   window.cargarCotizaciones = cargarCotizaciones;
   window.filtrarCotizaciones = filtrarCotizaciones;
@@ -804,3 +817,4 @@
 </script>
 </body>
 </html>
+
