@@ -203,7 +203,7 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
         partida_nombre: p.nombre,
         color,
         cliente: proj.cliente?.nombre || proj.cliente?.razon_social || proj.cliente || '',
-        tipoDefault
+        tipoDefault: tipoDefault
       });
       chip.addEventListener('dragstart', ev => {
         ev.dataTransfer.setData('text', chip.dataset.payload);
@@ -261,14 +261,15 @@ function pickColor(i) {
 }
 
 function renderStats(aprobados, eventos) {
-  const totalPartidas = aprobados.reduce((acc, p) => acc + (p.partidas?.length || 0), 0);
+  // Solo cuentan instalaciones/programación (no fabricación)
+  const totalInstalacion = aprobados.reduce((acc, p) => acc + (p.partidas?.length || 0), 0);
   const programadasSet = new Set(
     (eventos || [])
       .filter(e => (e.extendedProps?.tipo === 'programacion' || e.extendedProps?.tipo === 'instalacion') && e.extendedProps?.partida_id)
       .map(e => `${e.extendedProps.cotizacion_id}::${e.extendedProps.partida_id}`)
   );
   const programadas = programadasSet.size;
-  const porProgramar = Math.max(0, totalPartidas - programadas);
+  const porProgramar = Math.max(0, totalInstalacion - programadas);
   const elProg = document.getElementById('statProgramadas');
   const elNoProg = document.getElementById('statNoProgramadas');
   if (elProg) elProg.textContent = programadas;
@@ -512,8 +513,6 @@ function openCreateModal({ tipo = 'visita', preDate = null } = {}) {
     else if (tipo === 'compra') titleEl.textContent = 'Agregar compra';
     else titleEl.textContent = 'Agregar visita';
   }
-  const nombreEl = document.getElementById('createNombre');
-  if (nombreEl) nombreEl.value = (tipo === 'compra') ? 'Compra' : '';
   backdrop.style.display = 'flex';
 }
 
@@ -524,36 +523,31 @@ function closeCreateModal() {
 }
 
 async function onCreateSave() {
-  const nombre = document.getElementById('createNombre')?.value?.trim() || '';
-  const cliente = document.getElementById('createCliente')?.value?.trim() || '';
   const proyectoSel = document.getElementById('createProyecto')?.value || '';
-  if (!proyectoSel && createContext.tipo === 'compra') {
-    window.utils?.mostrarNotificacion?.('Selecciona un proyecto para la compra', 'warning');
-    return;
-  }
-  if (!nombre && createContext.tipo !== 'compra') {
-    window.utils?.mostrarNotificacion?.('Ingresa un nombre/descrición', 'warning');
+  const proyectoText = document.getElementById('createProyecto')?.selectedOptions?.[0]?.text || 'Proyecto';
+  if (!proyectoSel) {
+    window.utils?.mostrarNotificacion?.('Selecciona un proyecto', 'warning');
     return;
   }
   const tipo = createContext.tipo || 'visita';
   const baseTitle = tipo === 'visita'
-    ? `Visita - ${proyectoSel || nombre || 'Proyecto'}`
+    ? `Visita - ${proyectoText}`
     : tipo === 'rectificacion'
-      ? `Rectificación - ${proyectoSel || nombre || 'Proyecto'}`
+      ? `Rectificación - ${proyectoText}`
       : tipo === 'compra'
-        ? `COM-${proyectoSel || 'Proyecto'}`
-        : nombre || 'Evento';
+        ? `COM-${proyectoText}`
+        : proyectoText;
 
   const payload = {
     tipo,
-    cotizacion_id: proyectoSel || null,
+    cotizacion_id: proyectoSel,
     partida_id: null,
     title: baseTitle,
     start: createContext.preDate || new Date().toISOString(),
     end: null,
     color: tipo === 'compra' ? '#e67e22' : '#3f705d',
     nota: null,
-    cliente: cliente || null
+    cliente: null
   };
   try {
     const ev = await createEvento(payload);
