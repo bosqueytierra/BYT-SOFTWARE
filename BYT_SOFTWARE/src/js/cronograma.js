@@ -183,10 +183,11 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
     header.className = 'project-header';
     header.innerHTML = `
       <div class="project-title">${proj.nombre} <span style="color:#6c7a86;font-size:12px;">(${asignadas}/${totalPart})</span></div>
-      <button class="toggle-btn" type="button">Partidas</button>
+      <button class="toggle-btn" type="button">Ver partidas</button>
     `;
     const body = document.createElement('div');
     body.className = 'partidas-list';
+    body.style.display = 'none'; // CONTRAÍDO POR DEFECTO
 
     const color = pickColor(idx);
 
@@ -211,7 +212,9 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
     });
 
     header.querySelector('.toggle-btn').onclick = () => {
-      body.style.display = body.style.display === 'none' ? 'grid' : 'none';
+      const isHidden = body.style.display === 'none';
+      body.style.display = isHidden ? 'grid' : 'none';
+      header.querySelector('.toggle-btn').textContent = isHidden ? 'Ocultar' : 'Ver partidas';
     };
 
     wrap.appendChild(header);
