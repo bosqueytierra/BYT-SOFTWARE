@@ -143,7 +143,7 @@
     }
     .chip strong { color: #2e5e4e; font-size: 13px; }
 
-    /* Calendario con scroll horizontal y padding menor */
+    /* Calendario con scroll horizontal */
     .calendar-panel {
       position: relative;
       border: 1px solid #e4e7eb;
@@ -152,9 +152,8 @@
       padding: 6px 6px 6px 20px;
       background: #fff;
       min-height: 80vh;
-      overflow-x: auto; /* habilita scroll horizontal */
+      overflow-x: auto;
     }
-    /* Ancho mínimo para forzar la barra si no cabe */
     #calendar { height: 100%; min-height: 70vh; min-width: 1400px; }
     .fc {
       background: #fff;
@@ -194,8 +193,7 @@
     .modal h3 { margin: 0 0 12px; }
     .modal .row { margin-bottom: 10px; color: #2d2d2d; }
     .modal .label { color: #6c7a86; font-size: 13px; display: block; margin-bottom: 4px; }
-    .modal input, .modal select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; }
-    .modal textarea { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; resize: vertical; min-height: 64px; }
+    .modal select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; }
     .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
     .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; outline: none; }
     .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
@@ -284,23 +282,15 @@
     </div>
   </div>
 
-  <!-- Modal crear visita/rectificación/compra -->
+  <!-- Modal crear visita/rectificación/compra (solo selector) -->
   <div class="modal-backdrop" id="createBackdrop">
     <div class="modal">
       <h3 id="createTitle">Agregar</h3>
       <div class="row">
-        <label class="label" for="createProyecto">Proyecto aprobado (opcional)</label>
+        <label class="label" for="createProyecto">Proyecto aprobado</label>
         <select id="createProyecto">
           <option value="">-- Seleccionar --</option>
         </select>
-      </div>
-      <div class="row">
-        <label class="label" for="createNombre">Nombre / descripción</label>
-        <input id="createNombre" type="text" placeholder="Ej: Visita obra cliente X" />
-      </div>
-      <div class="row">
-        <label class="label" for="createCliente">Cliente (opcional)</label>
-        <input id="createCliente" type="text" placeholder="Cliente" />
       </div>
       <div class="modal-footer">
         <button class="btn" id="createCancel">Cancelar</button>
