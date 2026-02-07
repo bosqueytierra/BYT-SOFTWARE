@@ -62,17 +62,13 @@ async function getSupa() {
 async function createEvento(payload) {
   const supa = await getSupa();
 
-  // Evita duplicados: busca si ya existe misma combinación
-  const { data: exists, error: findErr } = await supa
-    .from(CRONO_TABLE)
-    .select('*')
-    .eq('cotizacion_id', payload.cotizacion_id || null)
-    .eq('partida_id', payload.partida_id || null)
-    .eq('start', payload.start || null)
-    .eq('tipo', payload.tipo || null)
-    .limit(1)
-    .maybeSingle();
-
+  // Evita duplicados: busca si ya existe misma combinación (manejo de null con .is)
+  let q = supa.from(CRONO_TABLE).select('*');
+  if (payload.cotizacion_id == null) q = q.is('cotizacion_id', null); else q = q.eq('cotizacion_id', payload.cotizacion_id);
+  if (payload.partida_id == null) q = q.is('partida_id', null); else q = q.eq('partida_id', payload.partida_id);
+  if (payload.start == null) q = q.is('start', null); else q = q.eq('start', payload.start);
+  if (payload.tipo == null) q = q.is('tipo', null); else q = q.eq('tipo', payload.tipo);
+  const { data: exists, error: findErr } = await q.limit(1).maybeSingle();
   if (findErr) throw findErr;
   if (exists) {
     localWrites.add(exists.id);
