@@ -21,9 +21,9 @@ function dedupeEventos(rows = []) {
   const seen = new Set();
   const out = [];
   for (const r of rows) {
-    const key = `${r.cotizacion_id || ''}|${r.partida_id || ''}|${r.start}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (!r?.id) continue;
+    if (seen.has(r.id)) continue;
+    seen.add(r.id);
     out.push(r);
   }
   return out;
