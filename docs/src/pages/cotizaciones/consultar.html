@@ -330,16 +330,11 @@
     </div>
   </div>
 
-
-
- <script src="../../js/menuConfig.js"></script>
-<script src="../../js/layout.js"></script>
-  
+  <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-  <!-- Si usas globalSupabase como UMD, mantener defer; si necesitas los helpers compras en esta página, carga comprasApi como module separado -->
-  <script src="../../js/globalSupabase.js" defer></script>
+  <script type="module" src="../../js/globalSupabase.js"></script>
   <script src="../../js/categorias.js" defer></script>
 
   <script>
@@ -614,7 +609,6 @@
     function openDeleteModal(id) {
       deleteTargetId = id;
       const modal = document.getElementById('delete-modal');
-      // Set project name in modal
       const cot = cotizacionesData.find(c => c.id === id);
       const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
       if (typeof window._setDeleteProjectName === 'function') window._setDeleteProjectName(nombreProyecto);
@@ -655,7 +649,6 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Guardamos prev y enganchamos change por elemento, usando modal custom de 10s
     function wireEstadoSelects() {
       document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
         sel.dataset.prev = sel.value;
@@ -668,7 +661,6 @@
       });
     }
 
-    // Modal de confirmación 10s con nombre de proyecto y countdown
     function openStatusModal(selectEl, id, prev, newStatus) {
       const backdrop = document.getElementById('status-confirm-modal');
       const txt = document.getElementById('status-confirm-text');
@@ -741,10 +733,10 @@
       ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
         btnHold.addEventListener(ev, stopHold);
       });
-      btnCancel.onclick = () => { selectEl.value = prev; selectEl.dataset.prev = prev; close(); };
-      backdrop.onclick = (e) => { if (e.target === backdrop) { selectEl.value = prev; selectEl.dataset.prev = prev; close(); } };
+      btnCancel.onclick = () => { selectEl.value = prev; sel.dataset.prev = prev; close(); };
+      backdrop.onclick = (e) => { if (e.target === backdrop) { selectEl.value = prev; sel.dataset.prev = prev; close(); } };
       window.addEventListener('keydown', escClose);
-      function escClose(e){ if (e.key === 'Escape' && backdrop.style.display === 'flex') { selectEl.value = prev; selectEl.dataset.prev = prev; close(); window.removeEventListener('keydown', escClose);} }
+      function escClose(e){ if (e.key === 'Escape' && backdrop.style.display === 'flex') { selectEl.value = prev; sel.dataset.prev = prev; close(); window.removeEventListener('keydown', escClose);} }
 
       bar.style.width = '0%';
       holdFill.style.width = '0%';
@@ -753,75 +745,61 @@
       document.body.style.overflow = 'hidden';
     }
 
+    async function handleEstadoChange(selectEl, id, forcedEstado) {
+      const nuevoEstado = forcedEstado || selectEl.value;
+      const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
 
-
-
-
-    
-async function handleEstadoChange(selectEl, id, forcedEstado) {
-  const nuevoEstado = forcedEstado || selectEl.value;
-  const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
-
-  try {
-    if (window.supabaseClient?.init) await window.supabaseClient.init();
-    const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
-    if (!res?.success) throw new Error(res?.error || 'Error desconocido');
-
-    // actualiza en memoria
-    cotizacionesData = cotizacionesData.map(c =>
-      c.id === id ? { ...c, estado: nuevoEstado } : c
-    );
-
-    let cot = cotizacionesData.find(c => c.id === id);
-    // si no hay cot o no trae partidas, no intentes crear/vincular venta
-    if (!cot || (!cot.partidas && !cot.data?.partidas)) {
-      console.warn('Cotización sin partidas en memoria, salteando vinculación de venta', cot);
-      window.utils?.mostrarNotificacion?.('Estado actualizado. Recarga la lista para gestionar la venta.', 'warning');
-      filtrarCotizaciones();
-      return;
-    }
-
-    if (nuevoEstado === 'aprobada') {
-      const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cot, 'en_ejecucion');
-      if (!v?.success) throw new Error(v?.error || 'No se pudo crear/vincular la venta');
-
-      // NUEVO: crear bloque de compras si no existe
       try {
-        await window.supabaseClient.crearBloqueComprasDesdeCotizacion(cot);
-      } catch (e) {
-        console.warn('No se pudo crear bloque de compras', e);
-      }
-    } else {
-      const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
-      if (!v?.success) throw new Error(v?.error || 'No se pudieron borrar ventas');
-      if (v?.success && v.count === 0) {
-        window.utils?.mostrarNotificacion?.('No se borró ninguna venta (0 filas). Verifica cotizacion_id.', 'warning');
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
+        if (!res?.success) throw new Error(res?.error || 'Error desconocido');
+
+        cotizacionesData = cotizacionesData.map(c =>
+          c.id === id ? { ...c, estado: nuevoEstado } : c
+        );
+
+        let cot = cotizacionesData.find(c => c.id === id);
+        if (!cot || (!cot.partidas && !cot.data?.partidas)) {
+          console.warn('Cotización sin partidas en memoria, salteando vinculación de venta', cot);
+          window.utils?.mostrarNotificacion?.('Estado actualizado. Recarga la lista para gestionar la venta.', 'warning');
+          filtrarCotizaciones();
+          return;
+        }
+
+        if (nuevoEstado === 'aprobada') {
+          const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cot, 'en_ejecucion');
+          if (!v?.success) throw new Error(v?.error || 'No se pudo crear/vincular la venta');
+
+          try {
+            await window.supabaseClient.crearBloqueComprasDesdeCotizacion(cot);
+          } catch (e) {
+            console.warn('No se pudo crear bloque de compras', e);
+          }
+        } else {
+          const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
+          if (!v?.success) throw new Error(v?.error || 'No se pudieron borrar ventas');
+          if (v?.success && v.count === 0) {
+            window.utils?.mostrarNotificacion?.('No se borró ninguna venta (0 filas). Verifica cotizacion_id.', 'warning');
+          }
+        }
+
+        filtrarCotizaciones();
+        window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
+      } catch (err) {
+        console.error('handleEstadoChange error', err);
+        window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
+        selectEl.value = prevEstado;
+        selectEl.dataset.prev = prevEstado;
+        throw err;
       }
     }
 
-    filtrarCotizaciones();
-    window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
-  } catch (err) {
-    console.error('handleEstadoChange error', err);
-    window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
-    selectEl.value = prevEstado;
-    selectEl.dataset.prev = prevEstado;
-    throw err;
-  }
-}
-
-
-
-
-    
-
-  window.cargarCotizaciones = cargarCotizaciones;
-  window.filtrarCotizaciones = filtrarCotizaciones;
-  window.ordenarCotizaciones = ordenarCotizaciones;
-  window.verDetalle = verDetalle;
-  window.editarCotizacion = editarCotizacion;
-  window.duplicarCotizacion = duplicarCotizacion;
-    
-</script>
+    window.cargarCotizaciones = cargarCotizaciones;
+    window.filtrarCotizaciones = filtrarCotizaciones;
+    window.ordenarCotizaciones = ordenarCotizaciones;
+    window.verDetalle = verDetalle;
+    window.editarCotizacion = editarCotizacion;
+    window.duplicarCotizacion = duplicarCotizacion;
+  </script>
 </body>
 </html>
