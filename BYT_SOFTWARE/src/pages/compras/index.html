@@ -131,11 +131,6 @@
     async function loadCatalogs() {
       if (window.supabaseClient?.init) await window.supabaseClient.init();
 
-      // helper para probar providers / proveedores
-      async function loadTabla(nombreTabla) {
-        return supabase.from(nombreTabla).select('id,nombre').order('nombre');
-      }
-
       const [enc, uni, mod, est] = await Promise.all([
         supabase.from('purchase_catalog_encargados').select('*').order('nombre'),
         supabase.from('purchase_catalog_unidades').select('*').order('nombre'),
@@ -147,15 +142,18 @@
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
 
-      // Proveedores: intenta providers, si 400/404 prueba proveedores
-      let prov = await loadTabla('providers');
+      // Proveedores: intenta 'providers', luego 'proveedores'
+      let prov = await supabase.from('providers').select('id,nombre').order('nombre');
       if (prov.error) {
-        prov = await loadTabla('proveedores');
+        prov = await supabase.from('proveedores').select('id,nombre').order('nombre');
       }
       proveedores = prov.data || [];
 
-      // Materiales: ajusta si tu tabla se llama distinto
-      const mats = await supabase.from('materials').select('id,name,category').order('category');
+      // Materiales: intenta 'materials', luego 'materiales' (ajusta columnas)
+      let mats = await supabase.from('materials').select('id,name,category').order('category');
+      if (mats.error) {
+        mats = await supabase.from('materiales').select('id,nombre as name,categoria as category').order('categoria');
+      }
       materiales  = mats.data || [];
     }
 
