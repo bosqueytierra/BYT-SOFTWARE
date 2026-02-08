@@ -16,7 +16,7 @@ window.BYT_MENU = [
       { label: "Administrar cotizaciones", href: "../cotizaciones/consultar.html" }
     ]
   },
-  { label: "Compras", icon: "cart", href: "" },
+ { label: "Compras", icon: "cart", href: "../compras/index.html" },
   {
     label: "Ventas",
     icon: "tag",
