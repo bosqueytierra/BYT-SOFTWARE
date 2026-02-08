@@ -102,7 +102,7 @@
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-  <!-- IMPORTANTE: globalSupabase es módulo porque usa import -->
+  <!-- globalSupabase usa import, debe cargarse como módulo -->
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
@@ -130,6 +130,12 @@
 
     async function loadCatalogs() {
       if (window.supabaseClient?.init) await window.supabaseClient.init();
+
+      // helper para probar providers / proveedores
+      async function loadTabla(nombreTabla) {
+        return supabase.from(nombreTabla).select('id,nombre').order('nombre');
+      }
+
       const [enc, uni, mod, est] = await Promise.all([
         supabase.from('purchase_catalog_encargados').select('*').order('nombre'),
         supabase.from('purchase_catalog_unidades').select('*').order('nombre'),
@@ -140,11 +146,16 @@
       catUnidades   = uni.data || [];
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
-      const [prov, mats] = await Promise.all([
-        supabase.from('providers').select('id,nombre').order('nombre'),
-        supabase.from('materials').select('id,name,category').order('category'),
-      ]);
+
+      // Proveedores: intenta providers, si 400/404 prueba proveedores
+      let prov = await loadTabla('providers');
+      if (prov.error) {
+        prov = await loadTabla('proveedores');
+      }
       proveedores = prov.data || [];
+
+      // Materiales: ajusta si tu tabla se llama distinto
+      const mats = await supabase.from('materials').select('id,name,category').order('category');
       materiales  = mats.data || [];
     }
 
