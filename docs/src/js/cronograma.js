@@ -7,8 +7,23 @@ let createContext = { tipo: 'visita', preDate: null };
 let channelCrono = null;
 let channelCots = null;
 const localWrites = new Set();
-let currentTab = 'instalacion'; // instalacion | fabricacion | compra | visita_rect | todo
+let currentTab = 'todo'; // "Todo" como pestaña default
 let allEventsCache = [];
+const pendingCreates = new Set();
+
+// Paleta fija de 10 colores (se usan para chips y para el modal)
+const COLOR_PALETTE = [
+  '#2e5e4e',
+  '#3f705d',
+  '#1abc9c',
+  '#3498db',
+  '#9b59b6',
+  '#e67e22',
+  '#e74c3c',
+  '#f1c40f',
+  '#95a5a6',
+  '#8e44ad'
+];
 
 // ==== Helpers ====
 function toIsoDay(date) {
@@ -17,12 +32,16 @@ function toIsoDay(date) {
   return d.toISOString();
 }
 
+function comboKey({ cotizacion_id, partida_id, start, tipo }) {
+  return `${cotizacion_id || ''}|${partida_id || ''}|${start || ''}|${tipo || ''}`;
+}
+
 // Deduplica por combinación (cotizacion, partida, start, tipo)
 function dedupeEventos(rows = []) {
   const seen = new Set();
   const out = [];
   for (const r of rows) {
-    const key = `${r.cotizacion_id || ''}|${r.partida_id || ''}|${r.start || ''}|${r.tipo || ''}`;
+    const key = comboKey(r);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
@@ -310,8 +329,7 @@ function setupPaletteDraggable(containerId, tipoDefault) {
 }
 
 function pickColor(i) {
-  const palette = ['#2e5e4e','#3f705d','#1abc9c','#3498db','#9b59b6','#e67e22','#e74c3c','#f1c40f','#95a5a6'];
-  return palette[i % palette.length];
+  return COLOR_PALETTE[i % COLOR_PALETTE.length];
 }
 
 function renderStats(aprobados, eventos) {
@@ -385,6 +403,14 @@ function initCalendar(eventosIniciales = []) {
 // ==== Tabs ====
 function bindTabs() {
   const tabs = document.querySelectorAll('.tab-btn');
+  const container = document.querySelector('.tabs-vertical');
+  const todoBtn = Array.from(tabs).find(b => b.dataset.tab === 'todo');
+  if (todoBtn && container) {
+    container.prepend(todoBtn);
+  }
+  tabs.forEach(b => b.classList.remove('active'));
+  if (todoBtn) todoBtn.classList.add('active');
+
   tabs.forEach(btn => {
     btn.onclick = () => {
       tabs.forEach(b => b.classList.remove('active'));
@@ -405,36 +431,46 @@ function renderCalendarEvents() {
 
 // Drop externo (paleta -> calendario)
 async function onExternalDrop(info) {
+  const ext = info.event.extendedProps || {};
+  const data = info.draggedEl?.dataset?.payload ? JSON.parse(info.draggedEl.dataset.payload) : {};
+  const startDate = info.event.start || info.date;
+  const tipo = currentTab === 'fabricacion' ? 'fabricacion' : 'programacion';
+  const baseTitle = info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
+  const payload = {
+    cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
+    partida_id: ext.partida_id || data.partida_id || null,
+    tipo,
+    title: baseTitle,
+    start: startDate ? toIsoDay(startDate) : new Date().toISOString(),
+    end: null,
+    color: ext.color || data.color || info.event.backgroundColor || '#2e5e4e',
+    nota: null,
+    cliente: ext.cliente || data.cliente || null
+  };
+  const key = comboKey(payload);
+
+  if (!(currentTab === 'instalacion' || currentTab === 'fabricacion')) {
+    info.revert && info.revert();
+    window.utils?.mostrarNotificacion?.('Solo puedes arrastrar en Instalación o Fabricación', 'warning');
+    return;
+  }
+  if (pendingCreates.has(key)) {
+    info.revert && info.revert();
+    return;
+  }
+
+  pendingCreates.add(key);
   try {
-    if (!(currentTab === 'instalacion' || currentTab === 'fabricacion')) {
-      info.revert && info.revert();
-      window.utils?.mostrarNotificacion?.('Solo puedes arrastrar en Instalación o Fabricación', 'warning');
-      return;
-    }
-    const ext = info.event.extendedProps || {};
-    const data = info.draggedEl?.dataset?.payload ? JSON.parse(info.draggedEl.dataset.payload) : {};
-    const startDate = info.event.start || info.date;
-    const tipo = currentTab === 'fabricacion' ? 'fabricacion' : 'programacion';
-    const baseTitle = info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
-    const payload = {
-      cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
-      partida_id: ext.partida_id || data.partida_id || null,
-      tipo,
-      title: baseTitle,
-      start: startDate ? toIsoDay(startDate) : new Date().toISOString(),
-      end: null,
-      color: ext.color || data.color || info.event.backgroundColor || '#2e5e4e',
-      nota: null,
-      cliente: ext.cliente || data.cliente || null
-    };
     const ev = await createEvento(payload);
     info.event.remove();
     fc.addEvent(ev);
     refreshStatsAndLists();
   } catch (e) {
     console.error('onExternalDrop error', e);
-    window.utils?.mostrarNotificacion?.('Error al crear evento', 'error');
+    window.utils?.mostrarNotificacion?.('Ya existe este evento en esa fecha (INT/FAB)', 'warning');
     info.revert && info.revert();
+  } finally {
+    pendingCreates.delete(key);
   }
 }
 
@@ -529,8 +565,7 @@ function setColorPicker(color) {
   const picker = document.getElementById('modalColorPicker');
   if (!picker) return;
   picker.innerHTML = '';
-  const palette = ['#2e5e4e','#3f705d','#1abc9c','#3498db','#9b59b6','#e67e22','#e74c3c','#f1c40f','#95a5a6'];
-  palette.forEach(c => {
+  COLOR_PALETTE.forEach(c => {
     const sw = document.createElement('div');
     sw.className = 'color-swatch' + (c === color ? ' active' : '');
     sw.style.background = c;
