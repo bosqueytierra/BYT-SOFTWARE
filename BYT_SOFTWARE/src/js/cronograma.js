@@ -51,10 +51,18 @@ function pickColor(i) {
 function pickColorById(id) {
   if (!id) return COLOR_PALETTE[0];
   let hash = 0;
-  for (let i = 0; i < String(id).length; i++) {
-    hash = (hash * 31 + String(id).charCodeAt(i)) >>> 0;
+  const s = String(id);
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
   }
   return COLOR_PALETTE[hash % COLOR_PALETTE.length];
+}
+
+function ensureColor(ev) {
+  if (!ev.color) {
+    ev.color = pickColorById(ev.cotizacion_id || ev.partida_id || ev.id);
+  }
+  return ev;
 }
 
 // ==== Helpers ====
@@ -112,7 +120,6 @@ async function getSupa() {
 // ==== CRUD Eventos ====
 async function createEvento(payload) {
   const supa = await getSupa();
-  // Solo enviamos columnas reales de la tabla
   const dbPayload = {
     cotizacion_id: payload.cotizacion_id ?? null,
     partida_id: payload.partida_id ?? null,
@@ -217,11 +224,12 @@ async function loadAprobados() {
 function enrichWithNames(ev) {
   const proj = aprobadosCache.find(p => p.id === ev.cotizacion_id);
   const partida = proj?.partidas?.find(pt => pt.id === ev.partida_id);
-  return {
+  const withNames = {
     ...ev,
     cotizacion_nombre: proj?.nombre || ev.cotizacion_nombre || '',
     partida_nombre: partida?.nombre || ev.partida_nombre || ''
   };
+  return ensureColor(withNames);
 }
 
 async function loadEventos() {
@@ -264,7 +272,8 @@ function prefixTitle(ev) {
 
 // ==== Mappers ====
 function mapEventoToCalendar(ev) {
-  const titled = { ...ev, title: prefixTitle(ev) };
+  const ensured = ensureColor(ev);
+  const titled = { ...ensured, title: prefixTitle(ensured) };
   const title = titled.nota ? `${titled.title} (${titled.nota})` : titled.title;
   return {
     id: titled.id,
@@ -277,9 +286,9 @@ function mapEventoToCalendar(ev) {
     extendedProps: {
       tipo: titled.tipo,
       cotizacion_id: titled.cotizacion_id,
-      cotizacion_nombre: titled.cotizacion_nombre, // para modal
+      cotizacion_nombre: titled.cotizacion_nombre,
       partida_id: titled.partida_id,
-      partida_nombre: titled.partida_nombre,       // para modal
+      partida_nombre: titled.partida_nombre,
       cliente: titled.cliente,
       nota: titled.nota,
       color: titled.color
@@ -499,7 +508,6 @@ function renderCalendarEvents() {
   fc.getEvents().forEach(e => e.remove());
   const filtered = filterEventsForTab(allEventsCache).map(mapEventoToCalendar);
   filtered.forEach(ev => fc.addEvent(ev));
-  // permitir drop también en "todo"
   fc.setOption('droppable', currentTab === 'instalacion' || currentTab === 'fabricacion' || currentTab === 'todo');
 }
 
@@ -646,14 +654,29 @@ function closeEventModal() {
 }
 
 // ==== Color picker modal ====
+function getOrCreateColorPicker() {
+  let picker = document.getElementById('modalColorPicker');
+  if (!picker) {
+    // fallback: crea el contenedor si no existe en el DOM
+    picker = document.createElement('div');
+    picker.id = 'modalColorPicker';
+    picker.className = 'color-picker';
+    const target = document.getElementById('modalColorWrapper')
+      || document.getElementById('modalColorRow')
+      || document.querySelector('#modalBackdrop .modal-body')
+      || document.body;
+    target.appendChild(picker);
+  }
+  return picker;
+}
+
 function bindColorPicker() {
   setColorPicker(selectedColor);
 }
 
 function setColorPicker(color) {
   selectedColor = color;
-  const picker = document.getElementById('modalColorPicker');
-  if (!picker) return;
+  const picker = getOrCreateColorPicker();
   picker.innerHTML = '';
   COLOR_PALETTE.forEach(c => {
     const sw = document.createElement('div');
@@ -734,7 +757,7 @@ async function onCreateSave() {
     title: baseTitle,
     start: createContext.preDate || new Date().toISOString(),
     end: null,
-    color: selectedColor, // usa color elegido en paleta modal global
+    color: selectedColor,
     nota: null,
     cliente: null
   };
