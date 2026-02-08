@@ -10,6 +10,7 @@ const localWrites = new Set();
 let currentTab = 'todo'; // "Todo" como pestaña default
 let allEventsCache = [];
 const pendingCreates = new Set();
+let aprobadosCache = []; // cache de proyectos/partidas para mostrar nombres
 
 // Paleta fija de 10 colores (chips + modal)
 const COLOR_PALETTE = [
@@ -27,15 +28,15 @@ const COLOR_PALETTE = [
 
 // Iconos por tipo
 const TIPO_ICON = {
-  fabricacion: '🛠',      // martillo
-  programacion: '👷',     // casco
+  fabricacion: '🛠',
+  programacion: '👷',
   instalacion: '👷',
-  compra: '🛒',           // carrito
-  visita: '👤',           // persona
-  rectificacion: '📏'     // regla
+  compra: '🛒',
+  visita: '👤',
+  rectificacion: '📏'
 };
 
-// Circulitos asignada / no asignada (solo instalación/programación; verde/rojo)
+// Circulitos asignada / no asignada SOLO en paleta (no en calendario)
 function asignadaBullet(ev) {
   if (ev.tipo === 'programacion' || ev.tipo === 'instalacion') {
     return ev.partida_id ? '🟢 ' : '🔴 ';
@@ -127,13 +128,13 @@ async function createEvento(payload) {
         .eq('start', dbPayload.start || null)
         .eq('tipo', dbPayload.tipo || null)
         .single();
-      if (!errFind && existing) return mapEventoToCalendar(existing);
+      if (!errFind && existing) return mapEventoToCalendar(enrichWithNames(existing));
     }
     throw error;
   }
 
   localWrites.add(data.id);
-  return mapEventoToCalendar(data);
+  return mapEventoToCalendar(enrichWithNames(data));
 }
 
 async function updateEvento(id, patch) {
@@ -152,7 +153,7 @@ async function updateEvento(id, patch) {
     .single();
   if (error) throw error;
   localWrites.add(id);
-  return mapEventoToCalendar(data);
+  return mapEventoToCalendar(enrichWithNames(data));
 }
 
 async function deleteEvento(id) {
@@ -175,7 +176,7 @@ async function loadAprobados() {
     .eq('estado', 'aprobada');
   if (error) throw error;
 
-  return (data || []).map(c => {
+  aprobadosCache = (data || []).map(c => {
     const nombreProyecto =
       c.project_key ||
       c.numero ||
@@ -196,13 +197,26 @@ async function loadAprobados() {
         : []
     };
   });
+
+  return aprobadosCache;
+}
+
+function enrichWithNames(ev) {
+  const proj = aprobadosCache.find(p => p.id === ev.cotizacion_id);
+  const partida = proj?.partidas?.find(pt => pt.id === ev.partida_id);
+  return {
+    ...ev,
+    cotizacion_nombre: proj?.nombre || ev.cotizacion_nombre || '',
+    partida_nombre: partida?.nombre || ev.partida_nombre || ''
+  };
 }
 
 async function loadEventos() {
   const supa = await getSupa();
   const { data, error } = await supa.from(CRONO_TABLE).select('*').order('start', { ascending: true });
   if (error) throw error;
-  allEventsCache = dedupeEventos(data || []);
+  const enriched = (data || []).map(enrichWithNames);
+  allEventsCache = dedupeEventos(enriched);
   return filterEventsForTab(allEventsCache).map(mapEventoToCalendar);
 }
 
@@ -216,7 +230,7 @@ function filterEventsForTab(events) {
   return events;
 }
 
-// ==== Títulos con prefijo + ícono + bullet asignación (solo instalación/programación) ====
+// ==== Títulos con prefijo + ícono (SIN bullets en calendario) ====
 function prefixTitle(ev) {
   const icon = TIPO_ICON[ev.tipo] || '';
   const base = ev.title || '';
@@ -232,7 +246,7 @@ function prefixTitle(ev) {
   } else if (ev.tipo === 'rectificacion') {
     withPrefix = base.startsWith('Rectificación -') ? base : `Rectificación - ${base}`;
   }
-  return `${icon} ${asignadaBullet(ev)}${withPrefix}`;
+  return `${icon} ${withPrefix}`;
 }
 
 // ==== Mappers ====
@@ -250,9 +264,9 @@ function mapEventoToCalendar(ev) {
     extendedProps: {
       tipo: titled.tipo,
       cotizacion_id: titled.cotizacion_id,
-      cotizacion_nombre: titled.cotizacion_nombre, // podría venir vacío; se usa en modal si está
+      cotizacion_nombre: titled.cotizacion_nombre, // para modal
       partida_id: titled.partida_id,
-      partida_nombre: titled.partida_nombre,       // podría venir vacío; se usa en modal si está
+      partida_nombre: titled.partida_nombre,       // para modal
       cliente: titled.cliente,
       nota: titled.nota,
       color: titled.color
@@ -518,6 +532,9 @@ async function onExternalDrop(info) {
   pendingCreates.add(key);
   try {
     const ev = await createEvento(payload);
+    // tras insertar, enriquecemos con nombres locales
+    ev.extendedProps.cotizacion_nombre = data.cotizacion_nombre || ext.cotizacion_nombre || ev.extendedProps.cotizacion_nombre;
+    ev.extendedProps.partida_nombre = data.partida_nombre || ext.partida_nombre || ev.extendedProps.partida_nombre;
     info.event.remove();
     fc.addEvent(ev);
     refreshStatsAndLists();
@@ -560,7 +577,6 @@ function openEventModal(ev) {
   const backdrop = document.getElementById('modalBackdrop');
   if (!backdrop) return;
   const props = ev.extendedProps || {};
-  // Mostrar nombres si están; si no, el id como fallback
   document.getElementById('modalTitle').textContent = ev.title;
   document.getElementById('modalProyecto').textContent = props.cotizacion_nombre || props.cotizacion_id || '—';
   document.getElementById('modalPartida').textContent = props.partida_nombre || props.partida_id || (props.tipo || '—');
@@ -669,24 +685,35 @@ function closeCreateModal() {
 }
 
 async function onCreateSave() {
+  // Para visita: permitir texto libre en #createProyectoTexto; para otros, select
+  const proyectoInput = document.getElementById('createProyectoTexto')?.value?.trim();
   const proyectoSel = document.getElementById('createProyecto')?.value || '';
-  const proyectoText = document.getElementById('createProyecto')?.selectedOptions?.[0]?.text || 'Proyecto';
-  if (!proyectoSel) {
+  const proyectoTextSel = document.getElementById('createProyecto')?.selectedOptions?.[0]?.text || '';
+  const tipo = createContext.tipo || 'visita';
+
+  const isVisita = tipo === 'visita';
+  const proyectoNombre = isVisita
+    ? (proyectoInput || proyectoTextSel || 'Proyecto')
+    : (proyectoTextSel || 'Proyecto');
+
+  const proyectoId = isVisita ? null : (proyectoSel || null);
+
+  if (!proyectoId && !isVisita) {
     window.utils?.mostrarNotificacion?.('Selecciona un proyecto', 'warning');
     return;
   }
-  const tipo = createContext.tipo || 'visita';
+
   const baseTitle = tipo === 'visita'
-    ? `Visita - ${proyectoText}`
+    ? `Visita - ${proyectoNombre}`
     : tipo === 'rectificacion'
-      ? `Rectificación - ${proyectoText}`
+      ? `Rectificación - ${proyectoNombre}`
       : tipo === 'compra'
-        ? `COM-${proyectoText}`
-        : proyectoText;
+        ? `COM-${proyectoNombre}`
+        : proyectoNombre;
 
   const payload = {
     tipo,
-    cotizacion_id: proyectoSel,
+    cotizacion_id: proyectoId,
     partida_id: null,
     title: baseTitle,
     start: createContext.preDate || new Date().toISOString(),
@@ -697,6 +724,9 @@ async function onCreateSave() {
   };
   try {
     const ev = await createEvento(payload);
+    // Enriquecer con nombres locales
+    ev.extendedProps.cotizacion_nombre = proyectoNombre;
+    ev.extendedProps.partida_nombre = '';
     fc.addEvent(ev);
     refreshStatsAndLists();
     closeCreateModal();
@@ -735,12 +765,12 @@ async function handleCronoChange(payload) {
   if (localWrites.has(id)) return;
 
   if (eventType === 'INSERT') {
-    const ev = mapEventoToCalendar(rowNew);
+    const ev = mapEventoToCalendar(enrichWithNames(rowNew));
     fc?.addEvent(ev);
   } else if (eventType === 'UPDATE') {
     const evExist = fc?.getEventById(id);
     if (evExist) evExist.remove();
-    const ev = mapEventoToCalendar(rowNew);
+    const ev = mapEventoToCalendar(enrichWithNames(rowNew));
     fc?.addEvent(ev);
   } else if (eventType === 'DELETE') {
     const evExist = fc?.getEventById(id);
