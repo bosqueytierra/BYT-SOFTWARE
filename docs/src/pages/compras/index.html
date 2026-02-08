@@ -142,18 +142,12 @@
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
 
-      // Proveedores: intenta providers, luego proveedores; si falla, queda vacío (sin errores en consola)
-      let prov = await supabase.from('providers').select('id,nombre').order('nombre');
-      if (prov.error) {
-        prov = await supabase.from('proveedores').select('id,nombre').order('nombre');
-      }
+      // Proveedores: si la tabla no existe, queda vacío sin repetir intentos
+      const prov = await supabase.from('providers').select('id,nombre').order('nombre');
       proveedores = prov.data || [];
 
-      // Materiales: intenta materials, luego materiales (con columnas mapeadas); si falla, vacío
-      let mats = await supabase.from('materials').select('id,name,category').order('category');
-      if (mats.error) {
-        mats = await supabase.from('materiales').select('id,nombre as name,categoria as category').order('categoria');
-      }
+      // Materiales: si la tabla no existe, queda vacío
+      const mats = await supabase.from('materials').select('id,name,category').order('category');
       materiales  = mats.data || [];
     }
 
