@@ -109,13 +109,46 @@
     const emptyState = document.getElementById('emptyState');
     const statBloques = document.getElementById('statBloques');
 
+    // Catálogos y datos base
+    let catEncargados = [];
+    let catUnidades = [];
+    let catModos = [];
+    let catEstadosPago = [];
+    let proveedores = [];
+    let materiales = []; // {id,name,category}
+
     document.addEventListener('DOMContentLoaded', async () => {
-      await loadBlocks();
+      try {
+        await loadCatalogs();
+        await loadBlocks();
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
     });
+
+    async function loadCatalogs() {
+      if (window.supabaseClient?.init) await window.supabaseClient.init();
+      const [enc, uni, mod, est] = await Promise.all([
+        supabase.from('purchase_catalog_encargados').select('*').order('nombre'),
+        supabase.from('purchase_catalog_unidades').select('*').order('nombre'),
+        supabase.from('purchase_catalog_modos_compra').select('*').order('nombre'),
+        supabase.from('purchase_catalog_estados_pago').select('*').order('nombre'),
+      ]);
+      catEncargados = enc.data || [];
+      catUnidades   = uni.data || [];
+      catModos      = mod.data || [];
+      catEstadosPago= est.data || [];
+      const [prov, mats] = await Promise.all([
+        supabase.from('providers').select('id,nombre').order('nombre'),
+        supabase.from('materials').select('id,name,category').order('category'),
+      ]);
+      proveedores = prov.data || [];
+      materiales  = mats.data || [];
+    }
 
     async function loadBlocks() {
       try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
         const { data, error } = await window.supabaseClient.listarBloquesCompras();
         if (error) throw error;
         renderBlocks(data || []);
@@ -134,7 +167,6 @@
       }
       emptyState.style.display = 'none';
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
-      // bind toggles
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
       });
@@ -161,9 +193,32 @@
           </div>
           <div id="lines-${b.id}" style="display:none; margin-top:8px;">
             <div class="meta" style="margin-bottom:6px;">Líneas de compra</div>
+            ${lineForm(b.id)}
             <div class="lines-table" data-lines-table="${b.id}">Cargando...</div>
           </div>
         </div>
+      `;
+    }
+
+    function lineForm(blockId) {
+      return `
+        <div class="line-form" data-line-form="${blockId}" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:8px; margin-bottom:10px;">
+          <select data-f="encargado">${opts(catEncargados)}</select>
+          <select data-f="proveedor_id">${opts(proveedores, 'id', 'nombre')}</select>
+          <input data-f="direccion" placeholder="Dirección" />
+          <select data-f="categoria" onchange="onCategoriaChange('${blockId}', this.value)">${optsCategorias(materiales)}</select>
+          <select data-f="producto_id" data-productos-for="${blockId}"><option value="">--Producto--</option></select>
+          <input data-f="unidad" placeholder="Unidad" list="unidades-list"/>
+          <input data-f="cantidad" type="number" step="0.01" value="1" />
+          <input data-f="precio_unit" type="number" step="1" value="0" />
+          <select data-f="modo_compra">${opts(catModos)}</select>
+          <select data-f="estado_pago">${opts(catEstadosPago)}</select>
+          <input data-f="observaciones" placeholder="Observaciones" />
+          <button class="btn btn-primary" type="button" onclick="agregarLinea('${blockId}')">Agregar</button>
+        </div>
+        <datalist id="unidades-list">
+          ${catUnidades.map(u => `<option value="${escapeHtml(u.nombre)}">`).join('')}
+        </datalist>
       `;
     }
 
@@ -176,6 +231,13 @@
         return;
       }
       wrap.style.display = 'block';
+      fillProductosSelect(blockId, '');
+      await reloadLines(blockId);
+    }
+
+    async function reloadLines(blockId) {
+      const wrap = document.getElementById(`lines-${blockId}`);
+      if (!wrap) return;
       const tableEl = wrap.querySelector('[data-lines-table]');
       tableEl.textContent = 'Cargando...';
       try {
@@ -194,18 +256,8 @@
       }
       const header = `
         <tr>
-          <th>Encargado</th>
-          <th>Proveedor</th>
-          <th>Dirección</th>
-          <th>Categoría</th>
-          <th>Producto</th>
-          <th>Unidad</th>
-          <th>Cantidad</th>
-          <th>Precio Unit</th>
-          <th>Total</th>
-          <th>Modo</th>
-          <th>Estado pago</th>
-          <th>Obs</th>
+          <th>Encargado</th><th>Proveedor</th><th>Dirección</th><th>Categoría</th><th>Producto</th>
+          <th>Unidad</th><th>Cantidad</th><th>Precio Unit</th><th>Total</th><th>Modo</th><th>Estado pago</th><th>Obs</th><th></th>
         </tr>`;
       const rows = lines.map(l => `
         <tr>
@@ -221,8 +273,64 @@
           <td>${escapeHtml(l.modo_compra || '')}</td>
           <td>${escapeHtml(l.estado_pago || '')}</td>
           <td>${escapeHtml(l.observaciones || '')}</td>
+          <td><button class="btn btn-ghost" onclick="borrarLinea('${l.id}','${l.block_id}')">🗑</button></td>
         </tr>`).join('');
       return `<table>${header}${rows}</table>`;
+    }
+
+    function opts(list, valKey='nombre', labelKey='nombre') {
+      return ['<option value="">--Selecciona--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
+    }
+    function optsCategorias(mats) {
+      const cats = [...new Set(mats.map(m => m.category).filter(Boolean))];
+      return ['<option value="">--Categoría--</option>', ...cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`)].join('');
+    }
+    function fillProductosSelect(blockId, categoria) {
+      const sel = document.querySelector(`[data-productos-for="${blockId}"]`);
+      if (!sel) return;
+      const prods = materiales.filter(m => (!categoria || m.category === categoria));
+      sel.innerHTML = ['<option value="">--Producto--</option>', ...prods.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`)].join('');
+    }
+    function onCategoriaChange(blockId, categoria) {
+      fillProductosSelect(blockId, categoria);
+    }
+
+    async function agregarLinea(blockId) {
+      const form = document.querySelector(`[data-line-form="${blockId}"]`);
+      if (!form) return;
+      const get = (name) => form.querySelector(`[data-f="${name}"]`)?.value || '';
+      const payload = {
+        encargado: get('encargado'),
+        proveedor_id: get('proveedor_id') || null,
+        direccion: get('direccion') || null,
+        categoria: get('categoria') || null,
+        producto_id: get('producto_id') || null,
+        unidad: get('unidad') || null,
+        cantidad: Number(get('cantidad') || 0),
+        precio_unit: Number(get('precio_unit') || 0),
+        modo_compra: get('modo_compra') || null,
+        estado_pago: get('estado_pago') || null,
+        observaciones: get('observaciones') || null,
+      };
+      try {
+        await window.supabaseClient.crearLineaCompra(blockId, payload);
+        window.utils?.mostrarNotificacion?.('Línea agregada', 'success');
+        await reloadLines(blockId);
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al agregar línea', 'error');
+      }
+    }
+
+    async function borrarLinea(id, blockId) {
+      try {
+        await window.supabaseClient.eliminarLineaCompra(id);
+        window.utils?.mostrarNotificacion?.('Línea eliminada', 'success');
+        await reloadLines(blockId);
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al eliminar línea', 'error');
+      }
     }
 
     function fmtCLP(n) {
@@ -237,6 +345,11 @@
       if (str === undefined || str === null) return '';
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
+
+    // Exponer handlers usados en HTML
+    window.onCategoriaChange = onCategoriaChange;
+    window.agregarLinea = agregarLinea;
+    window.borrarLinea = borrarLinea;
   </script>
 </body>
 </html>
