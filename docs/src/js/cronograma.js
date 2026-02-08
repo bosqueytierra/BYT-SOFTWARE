@@ -12,18 +12,18 @@ let allEventsCache = [];
 const pendingCreates = new Set();
 let aprobadosCache = []; // cache de proyectos/partidas para nombres
 
-// Paleta fija de 10 colores (chips + modal)
+// Paleta fija de 10 colores bien diferenciados
 const COLOR_PALETTE = [
-  '#2e5e4e',
-  '#3f705d',
-  '#1abc9c',
-  '#3498db',
-  '#9b59b6',
-  '#e67e22',
-  '#e74c3c',
-  '#f1c40f',
-  '#95a5a6',
-  '#8e44ad'
+  '#2e5e4e', // verde oscuro
+  '#1f7a8c', // teal
+  '#f18f01', // naranja
+  '#e5383b', // rojo
+  '#f9c74f', // amarillo
+  '#90be6d', // verde claro
+  '#577590', // azul grisáceo
+  '#9d4edd', // violeta
+  '#ff6f91', // rosa
+  '#7f5539'  // café
 ];
 
 // Iconos por tipo
@@ -167,8 +167,6 @@ function buildDbPatch(patch) {
   if (patch.end !== undefined) dbPatch.end = patch.end ?? null;
   return dbPatch;
 }
-
-
 
 async function updateEvento(id, patch) {
   const supa = await getSupa();
@@ -707,6 +705,8 @@ function setColorPicker(color) {
 }
 
 // ==== Modal crear visita/rectificación/compra ====
+// Para VISITA: entrada por teclado (input #createProyectoTexto); ignoramos el select.
+// Para rectificación/compra: sigue usando el select existente.
 function bindCreateModals() {
   const btnVisita = document.getElementById('btnAddVisita');
   const btnRect = document.getElementById('btnAddRect');
@@ -730,6 +730,11 @@ function openCreateModal({ tipo = 'visita', preDate = null } = {}) {
     else if (tipo === 'compra') titleEl.textContent = 'Agregar compra';
     else titleEl.textContent = 'Agregar visita';
   }
+  // Mostrar/ocultar UI: para visita, mostrar input texto y ocultar select
+  const sel = document.getElementById('createProyecto');
+  const inp = document.getElementById('createProyectoTexto');
+  if (sel) sel.style.display = (tipo === 'visita') ? 'none' : 'block';
+  if (inp) inp.style.display = (tipo === 'visita') ? 'block' : 'none';
   backdrop.style.display = 'flex';
 }
 
@@ -746,8 +751,14 @@ async function onCreateSave() {
   const tipo = createContext.tipo || 'visita';
 
   const isVisita = tipo === 'visita';
+  // Para visita, solo entrada por teclado; si está vacío, avisamos.
+  if (isVisita && !proyectoInput) {
+    window.utils?.mostrarNotificacion?.('Ingresa un nombre para la visita', 'warning');
+    return;
+  }
+
   const proyectoNombre = isVisita
-    ? (proyectoInput || proyectoTextSel || 'Proyecto')
+    ? proyectoInput
     : (proyectoTextSel || 'Proyecto');
 
   const proyectoId = isVisita ? null : (proyectoSel || null);
