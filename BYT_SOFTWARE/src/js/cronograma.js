@@ -157,15 +157,18 @@ async function createEvento(payload) {
   return mapEventoToCalendar(enrichWithNames(data));
 }
 
-// Construye patch sin sobreescribir con null cuando no viene la clave
+// Construye patch sin tocar start si viene null/undefined
 function buildDbPatch(patch) {
   const dbPatch = {};
-  if ('nota' in patch) dbPatch.nota = patch.nota ?? null;
-  if ('color' in patch) dbPatch.color = patch.color ?? null;
-  if ('start' in patch) dbPatch.start = patch.start ?? null;
-  if ('end' in patch) dbPatch.end = patch.end ?? null;
+  if (patch.nota !== undefined) dbPatch.nota = patch.nota ?? null;
+  if (patch.color !== undefined) dbPatch.color = patch.color ?? null;
+  // Solo enviar start si viene con valor real
+  if (patch.start !== undefined && patch.start !== null) dbPatch.start = patch.start;
+  if (patch.end !== undefined) dbPatch.end = patch.end ?? null;
   return dbPatch;
 }
+
+
 
 async function updateEvento(id, patch) {
   const supa = await getSupa();
