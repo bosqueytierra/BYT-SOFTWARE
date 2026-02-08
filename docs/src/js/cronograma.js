@@ -98,9 +98,22 @@ async function getSupa() {
 // ==== CRUD Eventos ====
 async function createEvento(payload) {
   const supa = await getSupa();
+  // Solo enviamos columnas reales de la tabla
+  const dbPayload = {
+    cotizacion_id: payload.cotizacion_id ?? null,
+    partida_id: payload.partida_id ?? null,
+    tipo: payload.tipo ?? null,
+    title: payload.title ?? '',
+    start: payload.start ?? null,
+    end: payload.end ?? null,
+    color: payload.color ?? null,
+    nota: payload.nota ?? null,
+    cliente: payload.cliente ?? null
+  };
+
   const { data, error } = await supa
     .from(CRONO_TABLE)
-    .upsert(payload, { onConflict: 'cotizacion_id,partida_id,start,tipo' })
+    .upsert(dbPayload, { onConflict: 'cotizacion_id,partida_id,start,tipo' })
     .select('*')
     .single();
 
@@ -109,10 +122,10 @@ async function createEvento(payload) {
       const { data: existing, error: errFind } = await supa
         .from(CRONO_TABLE)
         .select('*')
-        .eq('cotizacion_id', payload.cotizacion_id || null)
-        .eq('partida_id', payload.partida_id || null)
-        .eq('start', payload.start || null)
-        .eq('tipo', payload.tipo || null)
+        .eq('cotizacion_id', dbPayload.cotizacion_id || null)
+        .eq('partida_id', dbPayload.partida_id || null)
+        .eq('start', dbPayload.start || null)
+        .eq('tipo', dbPayload.tipo || null)
         .single();
       if (!errFind && existing) return mapEventoToCalendar(existing);
     }
@@ -125,9 +138,15 @@ async function createEvento(payload) {
 
 async function updateEvento(id, patch) {
   const supa = await getSupa();
+  const dbPatch = {
+    nota: patch.nota ?? null,
+    color: patch.color ?? null,
+    start: patch.start ?? null,
+    end: patch.end ?? null
+  };
   const { data, error } = await supa
     .from(CRONO_TABLE)
-    .update(patch)
+    .update(dbPatch)
     .eq('id', id)
     .select('*')
     .single();
@@ -231,9 +250,9 @@ function mapEventoToCalendar(ev) {
     extendedProps: {
       tipo: titled.tipo,
       cotizacion_id: titled.cotizacion_id,
-      cotizacion_nombre: titled.cotizacion_nombre,
+      cotizacion_nombre: titled.cotizacion_nombre, // podría venir vacío; se usa en modal si está
       partida_id: titled.partida_id,
-      partida_nombre: titled.partida_nombre,
+      partida_nombre: titled.partida_nombre,       // podría venir vacío; se usa en modal si está
       cliente: titled.cliente,
       nota: titled.nota,
       color: titled.color
@@ -244,7 +263,7 @@ function mapEventoToCalendar(ev) {
 // ==== Render palette & stats ====
 function renderPalette(aprobados, eventos = []) {
   renderPaletteByType('paletteInst', aprobados, eventos, 'programacion'); // instalación/programación con bullets verde/rojo
-  renderPaletteByType('paletteFab', aprobados, eventos, 'fabricacion');   // fabricación sin bullets
+  renderPaletteByType('paletteFab', aprobados, eventos, 'fabricacion');   // fabricación sin bullets ni progress
 }
 
 function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
@@ -252,7 +271,6 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
   if (!container) return;
   container.innerHTML = '';
 
-  // Solo cuenta asignadas para instalación/programación
   const asignadasPorProyecto = new Map();
   if (tipoDefault === 'programacion' || tipoDefault === 'instalacion') {
     eventos
@@ -266,18 +284,14 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
   }
 
   aprobados.forEach((proj, idx) => {
-    const totalPart = proj.partidas?.length || 0;
-    const asignadas = asignadasPorProyecto.get(proj.id)?.size || 0;
-
     const wrap = document.createElement('div');
     wrap.className = 'project-block';
 
     const header = document.createElement('div');
     header.className = 'project-header';
-    // En fabricación mostramos x/x en el título; en instalación dejamos el badge existente
-    const progressText = (tipoDefault === 'fabricacion') ? ` (${asignadas}/${totalPart || 1})` : ` (${asignadas}/${totalPart})`;
+    const progressText = (tipoDefault === 'fabricacion') ? '' : ` (${asignadasPorProyecto.get(proj.id)?.size || 0}/${proj.partidas?.length || 0})`;
     header.innerHTML = `
-      <div class="project-title">${proj.nombre} <span style="color:#6c7a86;font-size:12px;">${progressText}</span></div>
+      <div class="project-title">${proj.nombre}${progressText}</div>
       <button class="toggle-btn" type="button">Ver partidas</button>
     `;
     const body = document.createElement('div');
@@ -477,11 +491,10 @@ async function onExternalDrop(info) {
         ? (ext.tipo || data.tipoDefault || 'programacion')
         : 'programacion';
   const baseTitle = info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
+
   const payload = {
     cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
-    cotizacion_nombre: ext.cotizacion_nombre || data.cotizacion_nombre || '',
     partida_id: ext.partida_id || data.partida_id || null,
-    partida_nombre: ext.partida_nombre || data.partida_nombre || '',
     tipo,
     title: baseTitle,
     start: startDate ? toIsoDay(startDate) : new Date().toISOString(),
@@ -547,7 +560,7 @@ function openEventModal(ev) {
   const backdrop = document.getElementById('modalBackdrop');
   if (!backdrop) return;
   const props = ev.extendedProps || {};
-  // Mostrar nombres, no IDs
+  // Mostrar nombres si están; si no, el id como fallback
   document.getElementById('modalTitle').textContent = ev.title;
   document.getElementById('modalProyecto').textContent = props.cotizacion_nombre || props.cotizacion_id || '—';
   document.getElementById('modalPartida').textContent = props.partida_nombre || props.partida_id || (props.tipo || '—');
@@ -674,9 +687,7 @@ async function onCreateSave() {
   const payload = {
     tipo,
     cotizacion_id: proyectoSel,
-    cotizacion_nombre: proyectoText,
     partida_id: null,
-    partida_nombre: null,
     title: baseTitle,
     start: createContext.preDate || new Date().toISOString(),
     end: null,
