@@ -142,19 +142,9 @@
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
 
-      proveedores = await safeSelect('providers', 'id,nombre', 'nombre');
-      materiales  = await safeSelect('materials', 'id,name,category', 'category');
-    }
-
-    // Si la tabla no existe o responde 400/404, devolvemos lista vacía sin loguear error.
-    async function safeSelect(table, cols, orderCol) {
-      try {
-        const { data, error } = await supabase.from(table).select(cols).order(orderCol);
-        if (error) return [];
-        return data || [];
-      } catch (_) {
-        return [];
-      }
+      // Para evitar 400/404: si las tablas no existen, dejamos vacío sin llamar.
+      proveedores = [];
+      materiales  = [];
     }
 
     async function loadBlocks() {
