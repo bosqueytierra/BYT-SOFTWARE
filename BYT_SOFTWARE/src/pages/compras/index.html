@@ -102,7 +102,8 @@
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-  <script src="../../js/globalSupabase.js" defer></script>
+  <!-- IMPORTANTE: globalSupabase es módulo porque usa import -->
+  <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
     const blocksContainer = document.getElementById('blocksContainer');
@@ -350,7 +351,7 @@
         .update({ total_comprado: totalComprado, total_por_comprar: totalPorComprar })
         .eq('id', blockId);
       if (errUp) throw errUp;
-      await loadBlocks(); // refresca las cards
+      await loadBlocks();
     }
 
     function fmtCLP(n) {
@@ -366,7 +367,6 @@
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     }
 
-    // Exponer handlers usados en HTML
     window.onCategoriaChange = onCategoriaChange;
     window.agregarLinea = agregarLinea;
     window.borrarLinea = borrarLinea;
