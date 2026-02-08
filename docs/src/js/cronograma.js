@@ -11,7 +11,7 @@ let currentTab = 'todo'; // "Todo" como pestaña default
 let allEventsCache = [];
 const pendingCreates = new Set();
 
-// Paleta fija de 10 colores (se usan para chips y para el modal)
+// Paleta fija de 10 colores (chips + modal)
 const COLOR_PALETTE = [
   '#2e5e4e',
   '#3f705d',
@@ -24,6 +24,21 @@ const COLOR_PALETTE = [
   '#95a5a6',
   '#8e44ad'
 ];
+
+// Iconos por tipo
+const TIPO_ICON = {
+  fabricacion: '🛠',      // martillo
+  programacion: '👷',     // casco
+  instalacion: '👷',
+  compra: '🛒',           // carrito
+  visita: '👤',           // persona
+  rectificacion: '📏'     // regla
+};
+
+// Circulitos asignada / no asignada
+function asignadaBullet(ev) {
+  return ev.partida_id ? '🔵 ' : '🔴 ';
+}
 
 // ==== Helpers ====
 function toIsoDay(date) {
@@ -87,7 +102,6 @@ async function createEvento(payload) {
     .single();
 
   if (error) {
-    // Si ya existe, la buscamos y devolvemos
     if (error.code === '23505') {
       const { data: existing, error: errFind } = await supa
         .from(CRONO_TABLE)
@@ -180,25 +194,23 @@ function filterEventsForTab(events) {
   return events;
 }
 
-// ==== Títulos con prefijo ====
+// ==== Títulos con prefijo + ícono + bullet asignación ====
 function prefixTitle(ev) {
+  const icon = TIPO_ICON[ev.tipo] || '';
   const base = ev.title || '';
+  let withPrefix = base;
   if (ev.tipo === 'programacion' || ev.tipo === 'instalacion') {
-    return base.startsWith('INT-') ? base : `INT-${base}`;
+    withPrefix = base.startsWith('INT-') ? base : `INT-${base}`;
+  } else if (ev.tipo === 'fabricacion') {
+    withPrefix = base.startsWith('FAB-') ? base : `FAB-${base}`;
+  } else if (ev.tipo === 'compra') {
+    withPrefix = base.startsWith('COM-') ? base : `COM-${base}`;
+  } else if (ev.tipo === 'visita') {
+    withPrefix = base.startsWith('Visita -') ? base : `Visita - ${base}`;
+  } else if (ev.tipo === 'rectificacion') {
+    withPrefix = base.startsWith('Rectificación -') ? base : `Rectificación - ${base}`;
   }
-  if (ev.tipo === 'fabricacion') {
-    return base.startsWith('FAB-') ? base : `FAB-${base}`;
-  }
-  if (ev.tipo === 'compra') {
-    return base.startsWith('COM-') ? base : `COM-${base}`;
-  }
-  if (ev.tipo === 'visita') {
-    return base.startsWith('Visita -') ? base : `Visita - ${base}`;
-  }
-  if (ev.tipo === 'rectificacion') {
-    return base.startsWith('Rectificación -') ? base : `Rectificación - ${base}`;
-  }
-  return base;
+  return `${icon} ${asignadaBullet(ev)}${withPrefix}`;
 }
 
 // ==== Mappers ====
@@ -216,7 +228,9 @@ function mapEventoToCalendar(ev) {
     extendedProps: {
       tipo: titled.tipo,
       cotizacion_id: titled.cotizacion_id,
+      cotizacion_nombre: titled.cotizacion_nombre,
       partida_id: titled.partida_id,
+      partida_nombre: titled.partida_nombre,
       cliente: titled.cliente,
       nota: titled.nota,
       color: titled.color
@@ -268,7 +282,8 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
       const chip = document.createElement('div');
       chip.className = 'chip fc-event';
       chip.draggable = true;
-      chip.innerHTML = `<strong>${p.nombre}</strong><span>${proj.cliente?.nombre || proj.cliente?.razon_social || ''}</span>`;
+      const bullet = asignadasPorProyecto.get(proj.id)?.has(p.id) ? '🔵' : '🔴';
+      chip.innerHTML = `<span class="bullet">${bullet}</span><strong>${p.nombre}</strong><span>${proj.cliente?.nombre || proj.cliente?.razon_social || ''}</span>`;
       chip.dataset.payload = JSON.stringify({
         cotizacion_id: proj.id,
         cotizacion_nombre: proj.nombre,
@@ -276,7 +291,7 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
         partida_nombre: p.nombre,
         color,
         cliente: proj.cliente?.nombre || proj.cliente?.razon_social || proj.cliente || '',
-        tipoDefault: tipoDefault
+        tipoDefault
       });
       chip.addEventListener('dragstart', ev => {
         ev.dataTransfer.setData('text', chip.dataset.payload);
@@ -316,7 +331,9 @@ function setupPaletteDraggable(containerId, tipoDefault) {
           extendedProps: {
             tipo: data.tipoDefault || tipoDefault || 'programacion',
             cotizacion_id: data.cotizacion_id || null,
+            cotizacion_nombre: data.cotizacion_nombre || '',
             partida_id: data.partida_id || null,
+            partida_nombre: data.partida_nombre || '',
             cliente: data.cliente || null
           }
         };
@@ -391,7 +408,8 @@ function initCalendar(eventosIniciales = []) {
     eventDrop: onEventMoved,
     eventResize: onEventMoved,
     eventClick: onEventClick,
-    events: eventosIniciales
+    events: eventosIniciales,
+    eventMinHeight: 22 // algo compacto para evitar cajas gigantes
   });
 
   fc.render();
@@ -405,9 +423,7 @@ function bindTabs() {
   const tabs = document.querySelectorAll('.tab-btn');
   const container = document.querySelector('.tabs-vertical');
   const todoBtn = Array.from(tabs).find(b => b.dataset.tab === 'todo');
-  if (todoBtn && container) {
-    container.prepend(todoBtn);
-  }
+  if (todoBtn && container) container.prepend(todoBtn);
   tabs.forEach(b => b.classList.remove('active'));
   if (todoBtn) todoBtn.classList.add('active');
 
@@ -438,7 +454,9 @@ async function onExternalDrop(info) {
   const baseTitle = info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
   const payload = {
     cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
+    cotizacion_nombre: ext.cotizacion_nombre || data.cotizacion_nombre || '',
     partida_id: ext.partida_id || data.partida_id || null,
+    partida_nombre: ext.partida_nombre || data.partida_nombre || '',
     tipo,
     title: baseTitle,
     start: startDate ? toIsoDay(startDate) : new Date().toISOString(),
@@ -504,9 +522,10 @@ function openEventModal(ev) {
   const backdrop = document.getElementById('modalBackdrop');
   if (!backdrop) return;
   const props = ev.extendedProps || {};
+  // Mostrar nombres, no IDs
   document.getElementById('modalTitle').textContent = ev.title;
-  document.getElementById('modalProyecto').textContent = props.cotizacion_id || '—';
-  document.getElementById('modalPartida').textContent = props.partida_id || (props.tipo || '—');
+  document.getElementById('modalProyecto').textContent = props.cotizacion_nombre || props.cotizacion_id || '—';
+  document.getElementById('modalPartida').textContent = props.partida_nombre || props.partida_id || (props.tipo || '—');
   document.getElementById('modalCliente').textContent = props.cliente || '—';
   document.getElementById('modalFecha').textContent = ev.start ? ev.start.toLocaleString() : '—';
   const notaEl = document.getElementById('modalNota');
@@ -630,7 +649,9 @@ async function onCreateSave() {
   const payload = {
     tipo,
     cotizacion_id: proyectoSel,
+    cotizacion_nombre: proyectoText,
     partida_id: null,
+    partida_nombre: null,
     title: baseTitle,
     start: createContext.preDate || new Date().toISOString(),
     end: null,
