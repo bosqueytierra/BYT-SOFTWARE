@@ -298,8 +298,8 @@ function mapEventoToCalendar(ev) {
 
 // ==== Render palette & stats ====
 function renderPalette(aprobados, eventos = []) {
-  renderPaletteByType('paletteInst', aprobados, eventos, 'programacion'); // instalación/programación con bullets verde/rojo
-  renderPaletteByType('paletteFab', aprobados, eventos, 'fabricacion');   // fabricación sin bullets ni progress
+  renderPaletteByType('paletteInst', aprobados, eventos, 'programacion');
+  renderPaletteByType('paletteFab', aprobados, eventos, 'fabricacion');
 }
 
 function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
@@ -332,7 +332,7 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
     `;
     const body = document.createElement('div');
     body.className = 'partidas-list';
-    body.style.display = 'none'; // contraído por defecto
+    body.style.display = 'none';
 
     const color = pickColor(idx);
 
@@ -410,7 +410,6 @@ function setupPaletteDraggable(containerId, tipoDefault) {
 
 // ==== Render stats ====
 function renderStats(aprobados, eventos) {
-  // Solo cuentan instalaciones/programación (no fabricación)
   const totalInstalacion = aprobados.reduce((acc, p) => acc + (p.partidas?.length || 0), 0);
   const programadasSet = new Set(
     (eventos || [])
@@ -654,10 +653,10 @@ function closeEventModal() {
 }
 
 // ==== Color picker modal ====
+// Forzamos contenedor visible y swatches con tamaño/borde
 function getOrCreateColorPicker() {
   let picker = document.getElementById('modalColorPicker');
   if (!picker) {
-    // fallback: crea el contenedor si no existe en el DOM
     picker = document.createElement('div');
     picker.id = 'modalColorPicker';
     picker.className = 'color-picker';
@@ -667,6 +666,11 @@ function getOrCreateColorPicker() {
       || document.body;
     target.appendChild(picker);
   }
+  // estilos visibles
+  picker.style.display = 'flex';
+  picker.style.flexWrap = 'wrap';
+  picker.style.gap = '6px';
+  picker.style.margin = '8px 0';
   return picker;
 }
 
@@ -682,6 +686,11 @@ function setColorPicker(color) {
     const sw = document.createElement('div');
     sw.className = 'color-swatch' + (c === color ? ' active' : '');
     sw.style.background = c;
+    sw.style.width = '18px';
+    sw.style.height = '18px';
+    sw.style.borderRadius = '4px';
+    sw.style.border = '1px solid #555';
+    sw.style.cursor = 'pointer';
     sw.onclick = () => {
       selectedColor = c;
       picker.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active'));
