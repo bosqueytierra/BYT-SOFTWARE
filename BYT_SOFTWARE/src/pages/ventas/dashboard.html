@@ -51,10 +51,10 @@
   </div>
 
   <script src="../../js/menuConfig.js"></script>
-<script src="../../js/layout.js"></script>
+  <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-  <script src="../../js/globalSupabase.js" defer></script>
+  <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
     let ventasData = [];
@@ -65,7 +65,9 @@
 
     async function cargar() {
       const kpis = document.getElementById('kpis');
+      const dist = document.getElementById('estado-dist');
       kpis.innerHTML = 'Cargando...';
+      dist.innerHTML = 'Cargando...';
       try {
         if (window.supabaseClient?.init) await window.supabaseClient.init();
         const res = await window.supabaseClient.listarVentas();
@@ -75,12 +77,15 @@
       } catch (e) {
         console.error(e);
         kpis.innerHTML = 'Error cargando datos';
+        dist.innerHTML = 'Error cargando datos';
       }
     }
 
     function renderKPIs() {
       const kpis = document.getElementById('kpis');
-      const vigentes = ventasData.filter(v => v.estado !== 'cancelada');
+      const dist = document.getElementById('estado-dist');
+
+      const vigentes = ventasData.filter(v => (v.estado || 'en_ejecucion') !== 'cancelada');
       const suma = (arr, key) => arr.reduce((acc, v) => acc + (Number(v[key]) || 0), 0);
 
       const totalVenta = suma(vigentes, 'total_venta');
@@ -95,12 +100,22 @@
         <div class="kpi"><h4>Ganancia</h4><div class="value">${fmt(ganancia)}</div></div>
       `;
 
-      const dist = document.getElementById('estado-dist');
       const estados = ['en_ejecucion','completada','cancelada','postventa'];
       dist.innerHTML = estados.map(e => {
         const count = ventasData.filter(v => (v.estado || 'en_ejecucion') === e).length;
-        return `<div class="kpi"><h4>${e}</h4><div class="value">${count}</div></div>`;
+        const label = labelEstado(e);
+        return `<div class="kpi"><h4>${label}</h4><div class="value">${count}</div></div>`;
       }).join('');
+    }
+
+    function labelEstado(est) {
+      switch (est) {
+        case 'en_ejecucion': return 'En ejecución';
+        case 'completada': return 'Completada';
+        case 'cancelada': return 'Cancelada';
+        case 'postventa': return 'Postventa';
+        default: return est;
+      }
     }
 
     function fmt(num) {
