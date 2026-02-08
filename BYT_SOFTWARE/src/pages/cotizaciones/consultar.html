@@ -338,6 +338,7 @@
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+  <!-- Si usas globalSupabase como UMD, mantener defer; si necesitas los helpers compras en esta página, carga comprasApi como module separado -->
   <script src="../../js/globalSupabase.js" defer></script>
   <script src="../../js/categorias.js" defer></script>
 
@@ -783,6 +784,13 @@ async function handleEstadoChange(selectEl, id, forcedEstado) {
     if (nuevoEstado === 'aprobada') {
       const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cot, 'en_ejecucion');
       if (!v?.success) throw new Error(v?.error || 'No se pudo crear/vincular la venta');
+
+      // NUEVO: crear bloque de compras si no existe
+      try {
+        await window.supabaseClient.crearBloqueComprasDesdeCotizacion(cot);
+      } catch (e) {
+        console.warn('No se pudo crear bloque de compras', e);
+      }
     } else {
       const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
       if (!v?.success) throw new Error(v?.error || 'No se pudieron borrar ventas');
@@ -817,4 +825,3 @@ async function handleEstadoChange(selectEl, id, forcedEstado) {
 </script>
 </body>
 </html>
-
