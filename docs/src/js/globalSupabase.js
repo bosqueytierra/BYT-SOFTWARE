@@ -1,3 +1,12 @@
+import {
+  crearBloqueComprasDesdeCotizacion,
+  listarBloquesCompras,
+  listarLineasCompra,
+  crearLineaCompra,
+  actualizarLineaCompra,
+  eliminarLineaCompra,
+} from './comprasApi.js';
+
 // ===== CONFIGURACIÓN SUPABASE (modificado para usar el cliente ya creado y evitar duplicados) =====
 
 const SUPABASE_URL = 'https://qwbeectinjasekkjzxls.supabase.co';
@@ -171,12 +180,6 @@ async function actualizarCotizacion(id, datosActualizados) {
     }
 }
 
-
-
-
-
-
-
 /// Nuevo: actualizar solo el estado de la cotización
 async function actualizarEstadoCotizacion(id, estado) {
     try {
@@ -202,10 +205,6 @@ async function actualizarEstadoCotizacion(id, estado) {
         return { success: false, error: error.message || String(error) };
     }
 }
-
-
-
-
 
 async function eliminarCotizacion(id) {
     try {
@@ -462,5 +461,14 @@ window.supabaseClient = {
     listarVentas
 };
 
-window.utils = { mostrarNotificacion };
+// Extender con Compras
+Object.assign(window.supabaseClient, {
+    crearBloqueComprasDesdeCotizacion,
+    listarBloquesCompras,
+    listarLineasCompra,
+    crearLineaCompra,
+    actualizarLineaCompra,
+    eliminarLineaCompra,
+});
 
+window.utils = { mostrarNotificacion };
