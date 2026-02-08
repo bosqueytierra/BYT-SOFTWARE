@@ -35,9 +35,12 @@ const TIPO_ICON = {
   rectificacion: '📏'     // regla
 };
 
-// Circulitos asignada / no asignada
+// Circulitos asignada / no asignada (solo instalación/programación)
 function asignadaBullet(ev) {
-  return ev.partida_id ? '🔵 ' : '🔴 ';
+  if (ev.tipo === 'programacion' || ev.tipo === 'instalacion') {
+    return ev.partida_id ? '🟢 ' : '🔴 ';
+  }
+  return '';
 }
 
 // ==== Helpers ====
@@ -194,7 +197,7 @@ function filterEventsForTab(events) {
   return events;
 }
 
-// ==== Títulos con prefijo + ícono + bullet asignación ====
+// ==== Títulos con prefijo + ícono + bullet asignación (solo instalación/programación) ====
 function prefixTitle(ev) {
   const icon = TIPO_ICON[ev.tipo] || '';
   const base = ev.title || '';
@@ -240,8 +243,8 @@ function mapEventoToCalendar(ev) {
 
 // ==== Render palette & stats ====
 function renderPalette(aprobados, eventos = []) {
-  renderPaletteByType('paletteInst', aprobados, eventos, 'programacion');
-  renderPaletteByType('paletteFab', aprobados, eventos, 'fabricacion');
+  renderPaletteByType('paletteInst', aprobados, eventos, 'programacion'); // instalación/programación con bullets verde/rojo
+  renderPaletteByType('paletteFab', aprobados, eventos, 'fabricacion');   // fabricación sin bullets
 }
 
 function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
@@ -249,15 +252,18 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
   if (!container) return;
   container.innerHTML = '';
 
+  // Solo cuenta asignadas para instalación/programación
   const asignadasPorProyecto = new Map();
-  eventos
-    .filter(e => (e.extendedProps?.tipo === 'programacion' || e.extendedProps?.tipo === 'instalacion') && e.extendedProps?.cotizacion_id && e.extendedProps?.partida_id)
-    .forEach(e => {
-      const pid = e.extendedProps.cotizacion_id;
-      const set = asignadasPorProyecto.get(pid) || new Set();
-      set.add(e.extendedProps.partida_id);
-      asignadasPorProyecto.set(pid, set);
-    });
+  if (tipoDefault === 'programacion' || tipoDefault === 'instalacion') {
+    eventos
+      .filter(e => (e.extendedProps?.tipo === 'programacion' || e.extendedProps?.tipo === 'instalacion') && e.extendedProps?.cotizacion_id && e.extendedProps?.partida_id)
+      .forEach(e => {
+        const pid = e.extendedProps.cotizacion_id;
+        const set = asignadasPorProyecto.get(pid) || new Set();
+        set.add(e.extendedProps.partida_id);
+        asignadasPorProyecto.set(pid, set);
+      });
+  }
 
   aprobados.forEach((proj, idx) => {
     const totalPart = proj.partidas?.length || 0;
@@ -268,13 +274,15 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
 
     const header = document.createElement('div');
     header.className = 'project-header';
+    // En fabricación mostramos x/x en el título; en instalación dejamos el badge existente
+    const progressText = (tipoDefault === 'fabricacion') ? ` (${asignadas}/${totalPart || 1})` : ` (${asignadas}/${totalPart})`;
     header.innerHTML = `
-      <div class="project-title">${proj.nombre} <span style="color:#6c7a86;font-size:12px;">(${asignadas}/${totalPart})</span></div>
+      <div class="project-title">${proj.nombre} <span style="color:#6c7a86;font-size:12px;">${progressText}</span></div>
       <button class="toggle-btn" type="button">Ver partidas</button>
     `;
     const body = document.createElement('div');
     body.className = 'partidas-list';
-    body.style.display = 'none'; // CONTRAÍDO POR DEFECTO
+    body.style.display = 'none'; // contraído por defecto
 
     const color = pickColor(idx);
 
@@ -282,7 +290,12 @@ function renderPaletteByType(containerId, aprobados, eventos, tipoDefault) {
       const chip = document.createElement('div');
       chip.className = 'chip fc-event';
       chip.draggable = true;
-      const bullet = asignadasPorProyecto.get(proj.id)?.has(p.id) ? '🔵' : '🔴';
+
+      let bullet = '';
+      if (tipoDefault === 'programacion' || tipoDefault === 'instalacion') {
+        bullet = asignadasPorProyecto.get(proj.id)?.has(p.id) ? '🟢' : '🔴';
+      }
+
       chip.innerHTML = `<span class="bullet">${bullet}</span><strong>${p.nombre}</strong><span>${proj.cliente?.nombre || proj.cliente?.razon_social || ''}</span>`;
       chip.dataset.payload = JSON.stringify({
         cotizacion_id: proj.id,
@@ -409,7 +422,13 @@ function initCalendar(eventosIniciales = []) {
     eventResize: onEventMoved,
     eventClick: onEventClick,
     events: eventosIniciales,
-    eventMinHeight: 22 // algo compacto para evitar cajas gigantes
+    eventMinHeight: 18,
+    eventDidMount: (info) => {
+      info.el.style.minHeight = '18px';
+      info.el.style.padding = '2px 6px';
+      info.el.style.lineHeight = '1.2';
+      info.el.style.whiteSpace = 'normal';
+    }
   });
 
   fc.render();
