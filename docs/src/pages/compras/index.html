@@ -142,13 +142,19 @@
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
 
-      // Proveedores: si la tabla no existe, queda vacío sin repetir intentos
-      const prov = await supabase.from('providers').select('id,nombre').order('nombre');
-      proveedores = prov.data || [];
+      proveedores = await safeSelect('providers', 'id,nombre', 'nombre');
+      materiales  = await safeSelect('materials', 'id,name,category', 'category');
+    }
 
-      // Materiales: si la tabla no existe, queda vacío
-      const mats = await supabase.from('materials').select('id,name,category').order('category');
-      materiales  = mats.data || [];
+    // Si la tabla no existe o responde 400/404, devolvemos lista vacía sin loguear error.
+    async function safeSelect(table, cols, orderCol) {
+      try {
+        const { data, error } = await supabase.from(table).select(cols).order(orderCol);
+        if (error) return [];
+        return data || [];
+      } catch (_) {
+        return [];
+      }
     }
 
     async function loadBlocks() {
