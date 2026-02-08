@@ -695,10 +695,15 @@ function setColorPicker(color) {
     sw.style.borderRadius = '4px';
     sw.style.border = '1px solid #555';
     sw.style.cursor = 'pointer';
+    sw.style.boxShadow = c === color ? '0 0 0 2px #222, 0 0 0 4px #fff' : 'none';
     sw.onclick = () => {
       selectedColor = c;
-      picker.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('active'));
+      picker.querySelectorAll('.color-swatch').forEach(el => {
+        el.classList.remove('active');
+        el.style.boxShadow = 'none';
+      });
       sw.classList.add('active');
+      sw.style.boxShadow = '0 0 0 2px #222, 0 0 0 4px #fff';
     };
     picker.appendChild(sw);
   });
@@ -720,6 +725,27 @@ function bindCreateModals() {
   if (save) save.onclick = onCreateSave;
 }
 
+// Crea input de texto si no existe (para visitas)
+function ensureVisitaInput() {
+  let inp = document.getElementById('createProyectoTexto');
+  if (!inp) {
+    const wrapper = document.getElementById('createBackdrop') || document.body;
+    inp = document.createElement('input');
+    inp.type = 'text';
+    inp.id = 'createProyectoTexto';
+    inp.placeholder = 'Nombre de la visita';
+    inp.className = 'form-control';
+    // Colócalo antes del select si existe
+    const sel = document.getElementById('createProyecto');
+    if (sel && sel.parentNode) {
+      sel.parentNode.insertBefore(inp, sel);
+    } else {
+      wrapper.appendChild(inp);
+    }
+  }
+  return inp;
+}
+
 function openCreateModal({ tipo = 'visita', preDate = null } = {}) {
   createContext = { tipo, preDate };
   const backdrop = document.getElementById('createBackdrop');
@@ -730,11 +756,21 @@ function openCreateModal({ tipo = 'visita', preDate = null } = {}) {
     else if (tipo === 'compra') titleEl.textContent = 'Agregar compra';
     else titleEl.textContent = 'Agregar visita';
   }
-  // Mostrar/ocultar UI: para visita, mostrar input texto y ocultar select
   const sel = document.getElementById('createProyecto');
-  const inp = document.getElementById('createProyectoTexto');
-  if (sel) sel.style.display = (tipo === 'visita') ? 'none' : 'block';
-  if (inp) inp.style.display = (tipo === 'visita') ? 'block' : 'none';
+  const inp = ensureVisitaInput();
+
+  if (tipo === 'visita') {
+    if (sel) sel.style.display = 'none';
+    if (inp) {
+      inp.style.display = 'block';
+      inp.value = '';
+      setTimeout(() => inp.focus(), 100);
+    }
+  } else {
+    if (sel) sel.style.display = 'block';
+    if (inp) inp.style.display = 'none';
+  }
+
   backdrop.style.display = 'flex';
 }
 
@@ -751,7 +787,6 @@ async function onCreateSave() {
   const tipo = createContext.tipo || 'visita';
 
   const isVisita = tipo === 'visita';
-  // Para visita, solo entrada por teclado; si está vacío, avisamos.
   if (isVisita && !proyectoInput) {
     window.utils?.mostrarNotificacion?.('Ingresa un nombre para la visita', 'warning');
     return;
