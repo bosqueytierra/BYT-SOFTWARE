@@ -157,14 +157,19 @@ async function createEvento(payload) {
   return mapEventoToCalendar(enrichWithNames(data));
 }
 
+// Construye patch sin sobreescribir con null cuando no viene la clave
+function buildDbPatch(patch) {
+  const dbPatch = {};
+  if ('nota' in patch) dbPatch.nota = patch.nota ?? null;
+  if ('color' in patch) dbPatch.color = patch.color ?? null;
+  if ('start' in patch) dbPatch.start = patch.start ?? null;
+  if ('end' in patch) dbPatch.end = patch.end ?? null;
+  return dbPatch;
+}
+
 async function updateEvento(id, patch) {
   const supa = await getSupa();
-  const dbPatch = {
-    nota: patch.nota ?? null,
-    color: patch.color ?? null,
-    start: patch.start ?? null,
-    end: patch.end ?? null
-  };
+  const dbPatch = buildDbPatch(patch);
   const { data, error } = await supa
     .from(CRONO_TABLE)
     .update(dbPatch)
@@ -653,7 +658,6 @@ function closeEventModal() {
 }
 
 // ==== Color picker modal ====
-// Forzamos contenedor visible y swatches con tamaño/borde
 function getOrCreateColorPicker() {
   let picker = document.getElementById('modalColorPicker');
   if (!picker) {
@@ -666,7 +670,6 @@ function getOrCreateColorPicker() {
       || document.body;
     target.appendChild(picker);
   }
-  // estilos visibles
   picker.style.display = 'flex';
   picker.style.flexWrap = 'wrap';
   picker.style.gap = '6px';
