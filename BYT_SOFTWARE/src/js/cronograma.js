@@ -1,5 +1,5 @@
 const CRONO_TABLE = 'cronograma_eventos';
-
+ 
 let fc = null;
 let currentEvent = null;
 let selectedColor = '#2e5e4e';
