@@ -10,7 +10,7 @@ const localWrites = new Set();
 let currentTab = 'todo'; // "Todo" como pestaña default
 let allEventsCache = [];
 const pendingCreates = new Set();
-let aprobadosCache = []; // cache de proyectos/partidas para mostrar nombres
+let aprobadosCache = []; // cache de proyectos/partidas para nombres
 
 // Paleta fija de 10 colores (chips + modal)
 const COLOR_PALETTE = [
@@ -42,6 +42,19 @@ function asignadaBullet(ev) {
     return ev.partida_id ? '🟢 ' : '🔴 ';
   }
   return '';
+}
+
+function pickColor(i) {
+  return COLOR_PALETTE[i % COLOR_PALETTE.length];
+}
+
+function pickColorById(id) {
+  if (!id) return COLOR_PALETTE[0];
+  let hash = 0;
+  for (let i = 0; i < String(id).length; i++) {
+    hash = (hash * 31 + String(id).charCodeAt(i)) >>> 0;
+  }
+  return COLOR_PALETTE[hash % COLOR_PALETTE.length];
 }
 
 // ==== Helpers ====
@@ -386,10 +399,7 @@ function setupPaletteDraggable(containerId, tipoDefault) {
   });
 }
 
-function pickColor(i) {
-  return COLOR_PALETTE[i % COLOR_PALETTE.length];
-}
-
+// ==== Render stats ====
 function renderStats(aprobados, eventos) {
   // Solo cuentan instalaciones/programación (no fabricación)
   const totalInstalacion = aprobados.reduce((acc, p) => acc + (p.partidas?.length || 0), 0);
@@ -434,13 +444,13 @@ function initCalendar(eventosIniciales = []) {
 
   fc = new FullCalendar.Calendar(calendarEl, {
     locale: 'es',
-    firstDay: 1, // lunes
+    firstDay: 1,
     buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Lista' },
     initialView: 'dayGridMonth',
     headerToolbar: {
       left: 'prev,next today',
       center: 'title',
-      right: '' // sin botones de vista
+      right: ''
     },
     selectable: false,
     editable: true,
@@ -489,7 +499,7 @@ function renderCalendarEvents() {
   fc.getEvents().forEach(e => e.remove());
   const filtered = filterEventsForTab(allEventsCache).map(mapEventoToCalendar);
   filtered.forEach(ev => fc.addEvent(ev));
-  // permitir drop también en "todo" (además de instalación / fabricación)
+  // permitir drop también en "todo"
   fc.setOption('droppable', currentTab === 'instalacion' || currentTab === 'fabricacion' || currentTab === 'todo');
 }
 
@@ -506,6 +516,12 @@ async function onExternalDrop(info) {
         : 'programacion';
   const baseTitle = info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
 
+  const chosenColor =
+    ext.color ||
+    data.color ||
+    info.event.backgroundColor ||
+    pickColorById(ext.cotizacion_id || data.cotizacion_id || ext.partida_id || data.partida_id);
+
   const payload = {
     cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
     partida_id: ext.partida_id || data.partida_id || null,
@@ -513,7 +529,7 @@ async function onExternalDrop(info) {
     title: baseTitle,
     start: startDate ? toIsoDay(startDate) : new Date().toISOString(),
     end: null,
-    color: ext.color || data.color || info.event.backgroundColor || '#2e5e4e',
+    color: chosenColor,
     nota: null,
     cliente: ext.cliente || data.cliente || null
   };
@@ -532,7 +548,6 @@ async function onExternalDrop(info) {
   pendingCreates.add(key);
   try {
     const ev = await createEvento(payload);
-    // tras insertar, enriquecemos con nombres locales
     ev.extendedProps.cotizacion_nombre = data.cotizacion_nombre || ext.cotizacion_nombre || ev.extendedProps.cotizacion_nombre;
     ev.extendedProps.partida_nombre = data.partida_nombre || ext.partida_nombre || ev.extendedProps.partida_nombre;
     info.event.remove();
@@ -596,6 +611,8 @@ function openEventModal(ev) {
       const color = selectedColor;
       const patch = { nota, color };
       const updated = await updateEvento(ev.id, patch);
+      updated.extendedProps.cotizacion_nombre = props.cotizacion_nombre;
+      updated.extendedProps.partida_nombre = props.partida_nombre;
       ev.remove();
       fc.addEvent(updated);
       refreshStatsAndLists();
@@ -685,7 +702,6 @@ function closeCreateModal() {
 }
 
 async function onCreateSave() {
-  // Para visita: permitir texto libre en #createProyectoTexto; para otros, select
   const proyectoInput = document.getElementById('createProyectoTexto')?.value?.trim();
   const proyectoSel = document.getElementById('createProyecto')?.value || '';
   const proyectoTextSel = document.getElementById('createProyecto')?.selectedOptions?.[0]?.text || '';
@@ -718,13 +734,12 @@ async function onCreateSave() {
     title: baseTitle,
     start: createContext.preDate || new Date().toISOString(),
     end: null,
-    color: tipo === 'compra' ? '#e67e22' : '#3f705d',
+    color: selectedColor, // usa color elegido en paleta modal global
     nota: null,
     cliente: null
   };
   try {
     const ev = await createEvento(payload);
-    // Enriquecer con nombres locales
     ev.extendedProps.cotizacion_nombre = proyectoNombre;
     ev.extendedProps.partida_nombre = '';
     fc.addEvent(ev);
