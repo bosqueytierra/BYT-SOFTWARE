@@ -1,5 +1,5 @@
 const CRONO_TABLE = 'cronograma_eventos';
- 
+
 let fc = null;
 let currentEvent = null;
 let selectedColor = '#2e5e4e';
@@ -35,7 +35,7 @@ const TIPO_ICON = {
   rectificacion: '📏'     // regla
 };
 
-// Circulitos asignada / no asignada (solo instalación/programación)
+// Circulitos asignada / no asignada (solo instalación/programación; verde/rojo)
 function asignadaBullet(ev) {
   if (ev.tipo === 'programacion' || ev.tipo === 'instalacion') {
     return ev.partida_id ? '🟢 ' : '🔴 ';
@@ -461,7 +461,8 @@ function renderCalendarEvents() {
   fc.getEvents().forEach(e => e.remove());
   const filtered = filterEventsForTab(allEventsCache).map(mapEventoToCalendar);
   filtered.forEach(ev => fc.addEvent(ev));
-  fc.setOption('droppable', currentTab === 'instalacion' || currentTab === 'fabricacion');
+  // permitir drop también en "todo" (además de instalación / fabricación)
+  fc.setOption('droppable', currentTab === 'instalacion' || currentTab === 'fabricacion' || currentTab === 'todo');
 }
 
 // Drop externo (paleta -> calendario)
@@ -469,7 +470,12 @@ async function onExternalDrop(info) {
   const ext = info.event.extendedProps || {};
   const data = info.draggedEl?.dataset?.payload ? JSON.parse(info.draggedEl.dataset.payload) : {};
   const startDate = info.event.start || info.date;
-  const tipo = currentTab === 'fabricacion' ? 'fabricacion' : 'programacion';
+  const tipo =
+    currentTab === 'fabricacion'
+      ? 'fabricacion'
+      : currentTab === 'todo'
+        ? (ext.tipo || data.tipoDefault || 'programacion')
+        : 'programacion';
   const baseTitle = info.event.title || `${data.cotizacion_nombre || 'Proyecto'} - ${data.partida_nombre || 'Partida'}`;
   const payload = {
     cotizacion_id: ext.cotizacion_id || data.cotizacion_id || null,
@@ -486,9 +492,9 @@ async function onExternalDrop(info) {
   };
   const key = comboKey(payload);
 
-  if (!(currentTab === 'instalacion' || currentTab === 'fabricacion')) {
+  if (!(currentTab === 'instalacion' || currentTab === 'fabricacion' || currentTab === 'todo')) {
     info.revert && info.revert();
-    window.utils?.mostrarNotificacion?.('Solo puedes arrastrar en Instalación o Fabricación', 'warning');
+    window.utils?.mostrarNotificacion?.('Solo puedes arrastrar en Instalación, Fabricación o Todo', 'warning');
     return;
   }
   if (pendingCreates.has(key)) {
@@ -504,7 +510,7 @@ async function onExternalDrop(info) {
     refreshStatsAndLists();
   } catch (e) {
     console.error('onExternalDrop error', e);
-    window.utils?.mostrarNotificacion?.('Ya existe este evento en esa fecha (INT/FAB)', 'warning');
+    window.utils?.mostrarNotificacion?.('Ya existe este evento en esa fecha', 'warning');
     info.revert && info.revert();
   } finally {
     pendingCreates.delete(key);
