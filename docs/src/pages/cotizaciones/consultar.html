@@ -481,8 +481,21 @@
         const nombreProyecto = c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || 'Sin nombre';
         const clienteNombre = getClienteNombre(c.cliente || c.data?.cliente);
         const fecha = c.created_at ? new Date(c.created_at).toLocaleDateString('es-CL') : '-';
-        const totalNum = c.total_proyecto || c.total || 0;
-        const totalFmt = window.categorias?.formatearPrecio ? window.categorias.formatearPrecio(totalNum) : totalNum;
+
+        // Totales: neto + IVA
+        const neto = Number(c.total_proyecto ?? c.total ?? 0) || 0;
+        const iva  = Number(c.iva ?? c.total_iva ?? 0) || 0;
+        const totalConIva = neto + iva;
+        const format = window.categorias?.formatearPrecio || (n => n.toLocaleString('es-CL'));
+        const totalFmt = format(totalConIva);
+
+        // Partidas
+        const partidas = c.partidas || c.data?.partidas || [];
+        const partidasTxt = partidas
+          .map(p => p?.nombre || p?.titulo || p?.name || '')
+          .filter(Boolean)
+          .join(' | ') || 'Sin partidas registradas';
+
         const estado = c.estado || 'borrador';
 
         return `
@@ -493,7 +506,8 @@
                   <a href="detalle.html?id=${c.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
                 </h4>
                 <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</p>
-                <p class="quote-total">Total: ${escapeHtml(totalFmt)}</p>
+                <p class="quote-total">Total (neto + IVA): ${escapeHtml(totalFmt)}</p>
+                <p class="quote-meta"><strong>Partidas:</strong> ${escapeHtml(partidasTxt)}</p>
               </div>
               <div>
                 <select class="quote-status estado-cotizacion" data-id="${c.id}">
