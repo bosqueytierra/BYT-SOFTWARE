@@ -149,7 +149,7 @@
       flex-shrink: 0;
     }
 
-    .state { text-align: center; color: var(--muted); padding: 24px 12px; }
+    .state { textán:center; color: var(--muted); padding: 24px 12px; }
     .state-icon {
       width: 54px; height: 54px; margin: 0 auto 8px;
       display: grid; place-items: center;
@@ -482,12 +482,15 @@
         const clienteNombre = getClienteNombre(c.cliente || c.data?.cliente);
         const fecha = c.created_at ? new Date(c.created_at).toLocaleDateString('es-CL') : '-';
 
-        // Totales: neto + IVA
-        const neto = Number(c.total_proyecto ?? c.total ?? 0) || 0;
-        const iva  = Number(c.iva ?? c.total_iva ?? 0) || 0;
-        const totalConIva = neto + iva;
+        // Usar campos guardados (subtotal/neto, iva y total con IVA). Evitar sumar IVA si ya viene incluido.
+        const subtotal = Number(c.subtotal ?? c.total_proyecto ?? c.total ?? 0) || 0;
+        const iva      = Number(c.iva ?? c.total_iva ?? 0) || 0;
+        const totalConIva = Number(c.total ?? (subtotal + iva)) || 0;
+
         const format = window.categorias?.formatearPrecio || (n => n.toLocaleString('es-CL'));
-        const totalFmt = format(totalConIva);
+        const subtotalFmt = format(subtotal);
+        const ivaFmt      = format(iva);
+        const totalFmt    = format(totalConIva);
 
         // Partidas
         const partidas = c.partidas || c.data?.partidas || [];
@@ -506,7 +509,7 @@
                   <a href="detalle.html?id=${c.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
                 </h4>
                 <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</p>
-                <p class="quote-total">Total (neto + IVA): ${escapeHtml(totalFmt)}</p>
+                <p class="quote-total">Neto: ${escapeHtml(subtotalFmt)} · IVA: ${escapeHtml(ivaFmt)} · Total: ${escapeHtml(totalFmt)}</p>
                 <p class="quote-meta"><strong>Partidas:</strong> ${escapeHtml(partidasTxt)}</p>
               </div>
               <div>
