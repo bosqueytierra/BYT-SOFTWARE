@@ -149,12 +149,14 @@
 
     async function loadBlocks() {
       try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
         const { data, error } = await window.supabaseClient.listarBloquesCompras();
         if (error) throw error;
         renderBlocks(data || []);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
+        renderBlocks([]); // evita quedarse en estado inconsistente
       }
     }
 
@@ -162,10 +164,12 @@
       statBloques.textContent = `Bloques: ${blocks.length}`;
       if (!blocks.length) {
         emptyState.style.display = 'block';
+        blocksContainer.style.display = 'none';
         blocksContainer.innerHTML = '';
         return;
       }
       emptyState.style.display = 'none';
+      blocksContainer.style.display = 'flex'; // asegurar que se vea
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
