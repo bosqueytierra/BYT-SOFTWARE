@@ -41,11 +41,7 @@
       padding: 14px;
       box-shadow: var(--shadow);
     }
-    .block-list {
-      display: flex !important;
-      flex-direction: column;
-      gap: 12px;
-    }
+    .block-list { display: flex !important; flex-direction: column; gap: 12px; }
     .block-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
     .meta { color: var(--muted); font-size: 13px; }
     .chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -58,12 +54,7 @@
       font-size: 13px;
     }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td {
-      padding: 8px;
-      border: 1px solid var(--border);
-      font-size: 13px;
-      text-align: left;
-    }
+    th, td { padding: 8px; border: 1px solid var(--border); font-size: 13px; text-align: left; }
     th { background: #f7f9fb; }
     .btn {
       border: 1px solid var(--border);
@@ -123,24 +114,31 @@
     function getClient() {
       return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
     }
-    if (!window.supabase && window.supabaseClient?.client) {
-      window.supabase = window.supabaseClient.client;
+
+    async function waitForClient(timeoutMs = 3000) {
+      const start = performance.now();
+      while (performance.now() - start < timeoutMs) {
+        const c = getClient();
+        if (c) return c;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      throw new Error('Supabase client no inicializado');
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      try { await loadCatalogs(); } catch (e) { console.error(e); }
-      await loadBlocks();
+      try {
+        const client = await waitForClient();
+        if (!window.supabase && client) window.supabase = client;
+        await loadCatalogs();
+        await loadBlocks();
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
     });
 
     async function loadCatalogs() {
-      if (window.supabaseClient?.init) await window.supabaseClient.init();
-      let client = getClient();
-      if (!client) {
-        await new Promise(res => setTimeout(res, 300));
-        client = getClient();
-      }
-      if (!client) throw new Error('Supabase client no inicializado');
-
+      const client = await waitForClient();
       const [enc, uni, mod, est] = await Promise.all([
         client.from('purchase_catalog_encargados').select('*').order('nombre'),
         client.from('purchase_catalog_unidades').select('*').order('nombre'),
@@ -157,7 +155,6 @@
 
     async function loadBlocks() {
       try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
         const { data, error } = await window.supabaseClient.listarBloquesCompras();
         if (error) throw error;
         renderBlocks(data || []);
@@ -265,9 +262,7 @@
     }
 
     function renderLinesTable(lines) {
-      if (!lines.length) {
-        return '<div class="meta">Sin líneas de compra todavía.</div>';
-      }
+      if (!lines.length) return '<div class="meta">Sin líneas de compra todavía.</div>';
       const header = `
         <tr>
           <th>Encargado</th><th>Proveedor</th><th>Dirección</th><th>Categoría</th><th>Producto</th>
@@ -305,9 +300,7 @@
       const prods = materiales.filter(m => (!categoria || m.category === categoria));
       sel.innerHTML = ['<option value="">--Producto--</option>', ...prods.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`)].join('');
     }
-    function onCategoriaChange(blockId, categoria) {
-      fillProductosSelect(blockId, categoria);
-    }
+    function onCategoriaChange(blockId, categoria) { fillProductosSelect(blockId, categoria); }
 
     async function agregarLinea(blockId) {
       const form = document.querySelector(`[data-line-form="${blockId}"]`);
@@ -373,10 +366,7 @@
       const num = Number(n || 0);
       return num.toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
     }
-    function formatDate(d) {
-      if (!d) return '-';
-      return new Date(d).toLocaleDateString('es-CL');
-    }
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
     function escapeHtml(str) {
       if (str === undefined || str === null) return '';
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
