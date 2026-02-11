@@ -42,7 +42,7 @@
       box-shadow: var(--shadow);
     }
     .block-list {
-      display: flex !important;          /* forzamos */
+      display: flex !important;
       flex-direction: column;
       gap: 12px;
     }
@@ -120,8 +120,13 @@
     let proveedores = [];
     let materiales = [];
 
+    // Obtener cliente supabase desde cualquiera de las fuentes cargadas
     function getClient() {
-      return window.supabase || window.globalSupabase?.client || null;
+      return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
+    }
+    // Exponer si ya existe pero no está en window.supabase
+    if (!window.supabase && window.supabaseClient?.client) {
+      window.supabase = window.supabaseClient.client;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -136,7 +141,11 @@
 
     async function loadCatalogs() {
       if (window.supabaseClient?.init) await window.supabaseClient.init();
-      const client = getClient();
+      let client = getClient();
+      if (!client) {
+        await new Promise(res => setTimeout(res, 300));
+        client = getClient();
+      }
       if (!client) throw new Error('Supabase client no inicializado');
 
       const [enc, uni, mod, est] = await Promise.all([
@@ -149,7 +158,6 @@
       catUnidades   = uni.data || [];
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
-
       proveedores = [];
       materiales  = [];
     }
@@ -176,7 +184,7 @@
         return;
       }
       emptyState.style.display = 'none';
-      blocksContainer.style.display = 'flex'; // forzado
+      blocksContainer.style.display = 'flex'; // asegurar visibilidad
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
