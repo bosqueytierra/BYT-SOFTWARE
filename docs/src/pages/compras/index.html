@@ -41,7 +41,11 @@
       padding: 14px;
       box-shadow: var(--shadow);
     }
-    .block-list { display: flex; flex-direction: column; gap: 12px; }
+    .block-list {
+      display: flex !important;          /* forzamos */
+      flex-direction: column;
+      gap: 12px;
+    }
     .block-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
     .meta { color: var(--muted); font-size: 13px; }
     .chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -102,7 +106,6 @@
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-  <!-- globalSupabase usa import, debe cargarse como módulo -->
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
@@ -110,13 +113,12 @@
     const emptyState = document.getElementById('emptyState');
     const statBloques = document.getElementById('statBloques');
 
-    // Catálogos y datos base
     let catEncargados = [];
     let catUnidades = [];
     let catModos = [];
     let catEstadosPago = [];
     let proveedores = [];
-    let materiales = []; // {id,name,category}
+    let materiales = [];
 
     function getClient() {
       return window.supabase || window.globalSupabase?.client || null;
@@ -125,11 +127,11 @@
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         await loadCatalogs();
-        await loadBlocks();
       } catch (e) {
         console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+        window.utils?.mostrarNotificacion?.('Error al iniciar catálogos', 'error');
       }
+      await loadBlocks();
     });
 
     async function loadCatalogs() {
@@ -174,7 +176,7 @@
         return;
       }
       emptyState.style.display = 'none';
-      blocksContainer.style.display = 'flex';
+      blocksContainer.style.display = 'flex'; // forzado
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
