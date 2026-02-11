@@ -118,6 +118,10 @@
     let proveedores = [];
     let materiales = []; // {id,name,category}
 
+    function getClient() {
+      return window.supabase || window.globalSupabase?.client || null;
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
       try {
         await loadCatalogs();
@@ -130,19 +134,20 @@
 
     async function loadCatalogs() {
       if (window.supabaseClient?.init) await window.supabaseClient.init();
+      const client = getClient();
+      if (!client) throw new Error('Supabase client no inicializado');
 
       const [enc, uni, mod, est] = await Promise.all([
-        supabase.from('purchase_catalog_encargados').select('*').order('nombre'),
-        supabase.from('purchase_catalog_unidades').select('*').order('nombre'),
-        supabase.from('purchase_catalog_modos_compra').select('*').order('nombre'),
-        supabase.from('purchase_catalog_estados_pago').select('*').order('nombre'),
+        client.from('purchase_catalog_encargados').select('*').order('nombre'),
+        client.from('purchase_catalog_unidades').select('*').order('nombre'),
+        client.from('purchase_catalog_modos_compra').select('*').order('nombre'),
+        client.from('purchase_catalog_estados_pago').select('*').order('nombre'),
       ]);
       catEncargados = enc.data || [];
       catUnidades   = uni.data || [];
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
 
-      // Para evitar 400/404: si las tablas no existen, dejamos vacío sin llamar.
       proveedores = [];
       materiales  = [];
     }
@@ -156,7 +161,7 @@
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
-        renderBlocks([]); // evita quedarse en estado inconsistente
+        renderBlocks([]);
       }
     }
 
@@ -169,7 +174,7 @@
         return;
       }
       emptyState.style.display = 'none';
-      blocksContainer.style.display = 'flex'; // asegurar que se vea
+      blocksContainer.style.display = 'flex';
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
@@ -340,6 +345,8 @@
     }
 
     async function recalcTotales(blockId) {
+      const client = getClient();
+      if (!client) return;
       const { data: lines, error } = await window.supabaseClient.listarLineasCompra(blockId);
       if (error) throw error;
       const total = (lines || []).reduce((acc, l) => acc + Number(l.total || 0), 0);
@@ -349,7 +356,7 @@
         return acc + (comprado ? Number(l.total || 0) : 0);
       }, 0);
       const totalPorComprar = total - totalComprado;
-      const { error: errUp } = await supabase
+      const { error: errUp } = await client
         .from('purchase_blocks')
         .update({ total_comprado: totalComprado, total_por_comprar: totalPorComprar })
         .eq('id', blockId);
