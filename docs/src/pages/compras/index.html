@@ -98,7 +98,7 @@
       </div>
     </div>
 
-    <div id="blocksContainer" class="block-list" style="margin-top:14px;"></div>
+    <div id="blocksContainer" class="block-list" style="margin-top:14px; display:flex; flex-direction:column; gap:12px; visibility:visible; opacity:1;"></div>
     <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
   </div>
 
@@ -120,22 +120,15 @@
     let proveedores = [];
     let materiales = [];
 
-    // Obtener cliente supabase desde cualquiera de las fuentes cargadas
     function getClient() {
       return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
     }
-    // Exponer si ya existe pero no está en window.supabase
     if (!window.supabase && window.supabaseClient?.client) {
       window.supabase = window.supabaseClient.client;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        await loadCatalogs();
-      } catch (e) {
-        console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al iniciar catálogos', 'error');
-      }
+      try { await loadCatalogs(); } catch (e) { console.error(e); }
       await loadBlocks();
     });
 
@@ -184,7 +177,9 @@
         return;
       }
       emptyState.style.display = 'none';
-      blocksContainer.style.display = 'flex'; // asegurar visibilidad
+      blocksContainer.style.display = 'flex';
+      blocksContainer.style.visibility = 'visible';
+      blocksContainer.style.opacity = '1';
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
