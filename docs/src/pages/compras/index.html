@@ -83,16 +83,24 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
+      console.log('[compras] DOMContentLoaded');
       try {
         const client = await waitForClient();
         if (!window.supabase && client) window.supabase = client;
+        console.log('[compras] client listo');
         await loadCatalogs();
         await loadBlocks();
+        // fallback: recarga en 500ms por si algo quedó a medias
+        setTimeout(() => loadBlocks().catch(console.error), 500);
       } catch (e) {
         console.error(e);
         window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
       }
     });
+    window.onload = () => {
+      console.log('[compras] window.onload -> refuerzo loadBlocks');
+      loadBlocks().catch(console.error);
+    };
 
     async function loadCatalogs() {
       const client = await waitForClient();
@@ -108,16 +116,19 @@
       catEstadosPago= est.data || [];
       proveedores = [];
       materiales  = [];
+      console.log('[compras] catálogos cargados', {enc: catEncargados.length, uni: catUnidades.length, mod: catModos.length, est: catEstadosPago.length});
     }
 
     async function loadBlocks() {
       try {
         const client = await waitForClient();
+        console.log('[compras] loadBlocks: consultando purchase_blocks');
         const { data, error } = await client
           .from('purchase_blocks')
           .select('*')
           .order('created_at', { ascending: false });
         if (error) throw error;
+        console.log('[compras] loadBlocks: recibidos', data?.length);
         renderBlocks(data || []);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -142,6 +153,7 @@
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
       });
+      console.log('[compras] renderBlocks pintó', blocks.length, 'cards');
     }
 
     function blockCard(b) {
@@ -322,6 +334,14 @@
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    // Helper para forzar desde consola
+    window.debugForceCompras = async () => {
+      const client = await waitForClient();
+      const r = await client.from('purchase_blocks').select('*');
+      console.log('[debugForceCompras] filas', r.data?.length, r.data, 'error', r.error);
+      renderBlocks(r.data || []);
+    };
 
     window.onCategoriaChange = onCategoriaChange;
     window.agregarLinea = agregarLinea;
