@@ -16,61 +16,19 @@
       --primary-soft: #3f705d;
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
     }
-    body {
-      margin: 0;
-      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
+    body { margin: 0; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; background: var(--bg); color: var(--text); }
     .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
-    .header-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: center;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      box-shadow: var(--shadow);
-    }
+    .header-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
     .block-list { display: flex !important; flex-direction: column; gap: 12px; }
     .block-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
     .meta { color: var(--muted); font-size: 13px; }
     .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .chip {
-      background: #eef2f5;
-      color: var(--text);
-      border-radius: 10px;
-      padding: 4px 10px;
-      border: 1px solid var(--border);
-      font-size: 13px;
-    }
+    .chip { background: #eef2f5; color: var(--text); border-radius: 10px; padding: 4px 10px; border: 1px solid var(--border); font-size: 13px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { padding: 8px; border: 1px solid var(--border); font-size: 13px; text-align: left; }
     th { background: #f7f9fb; }
-    .btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: #1f2430;
-      padding: 8px 12px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 13px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    }
+    .btn { border: 1px solid var(--border); background: #fff; color: #1f2430; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
     .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
     .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
     .btn-ghost { background: #f0f3f5; color: #1f2430; }
@@ -114,7 +72,6 @@
     function getClient() {
       return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
     }
-
     async function waitForClient(timeoutMs = 3000) {
       const start = performance.now();
       while (performance.now() - start < timeoutMs) {
@@ -155,7 +112,11 @@
 
     async function loadBlocks() {
       try {
-        const { data, error } = await window.supabaseClient.listarBloquesCompras();
+        const client = await waitForClient();
+        const { data, error } = await client
+          .from('purchase_blocks')
+          .select('*')
+          .order('created_at', { ascending: false });
         if (error) throw error;
         renderBlocks(data || []);
       } catch (e) {
@@ -237,10 +198,7 @@
       const wrap = document.getElementById(`lines-${blockId}`);
       if (!wrap) return;
       const isHidden = wrap.style.display === 'none';
-      if (!isHidden) {
-        wrap.style.display = 'none';
-        return;
-      }
+      if (!isHidden) { wrap.style.display = 'none'; return; }
       wrap.style.display = 'block';
       fillProductosSelect(blockId, '');
       await reloadLines(blockId);
@@ -343,8 +301,7 @@
     }
 
     async function recalcTotales(blockId) {
-      const client = getClient();
-      if (!client) return;
+      const client = await waitForClient();
       const { data: lines, error } = await window.supabaseClient.listarLineasCompra(blockId);
       if (error) throw error;
       const total = (lines || []).reduce((acc, l) => acc + Number(l.total || 0), 0);
@@ -362,15 +319,9 @@
       await loadBlocks();
     }
 
-    function fmtCLP(n) {
-      const num = Number(n || 0);
-      return num.toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 });
-    }
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
-    function escapeHtml(str) {
-      if (str === undefined || str === null) return '';
-      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
     window.onCategoriaChange = onCategoriaChange;
     window.agregarLinea = agregarLinea;
