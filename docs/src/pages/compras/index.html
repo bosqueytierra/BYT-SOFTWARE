@@ -16,11 +16,12 @@
       --primary-soft: #3f705d;
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
     }
+    html, body { width: 100%; min-height: 100vh; display: block; }
     body { margin: 0; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; background: var(--bg); color: var(--text); }
-    .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
+    .page { width: 100%; max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; display: block; }
     .header-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); display: flex; justify-content: space-between; gap: 14px; align-items: center; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
-    .block-list { display: flex !important; flex-direction: column; gap: 12px; min-height: 10px; }
+    .block-list { display: flex !important; flex-direction: column; gap: 12px; min-height: 10px; width: 100%; }
     .block-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
     .meta { color: var(--muted); font-size: 13px; }
     .chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -47,7 +48,7 @@
       </div>
     </div>
 
-    <div id="blocksContainer" class="block-list" style="margin-top:14px; display:flex; flex-direction:column; gap:12px; visibility:visible; opacity:1;"></div>
+    <div id="blocksContainer" class="block-list" style="margin-top:14px; display:flex; flex-direction:column; gap:12px; visibility:visible; opacity:1; width:100%;"></div>
     <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
   </div>
 
@@ -90,7 +91,6 @@
         console.log('[compras] client listo');
         await loadCatalogs();
         await loadBlocks();
-        // fallback: recarga en 500ms por si algo quedó a medias
         setTimeout(() => loadBlocks().catch(console.error), 500);
       } catch (e) {
         console.error(e);
@@ -139,16 +139,22 @@
 
     function renderBlocks(blocks) {
       statBloques.textContent = `Bloques: ${blocks.length}`;
+      // Forzar display/size por si algún padre está colapsado
+      blocksContainer.style.setProperty('display','flex','important');
+      blocksContainer.style.setProperty('width','100%','important');
+      blocksContainer.style.setProperty('visibility','visible','important');
+      blocksContainer.style.setProperty('opacity','1','important');
+      if (blocksContainer.parentElement) {
+        blocksContainer.parentElement.style.setProperty('display','block','important');
+        blocksContainer.parentElement.style.setProperty('width','100%','important');
+        blocksContainer.parentElement.style.setProperty('visibility','visible','important');
+      }
       if (!blocks.length) {
         emptyState.style.display = 'block';
-        blocksContainer.style.setProperty('display','none','important');
         blocksContainer.innerHTML = '';
         return;
       }
       emptyState.style.display = 'none';
-      blocksContainer.style.setProperty('display','flex','important');
-      blocksContainer.style.visibility = 'visible';
-      blocksContainer.style.opacity = '1';
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
@@ -335,7 +341,6 @@
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-    // Helper para forzar desde consola
     window.debugForceCompras = async () => {
       const client = await waitForClient();
       const r = await client.from('purchase_blocks').select('*');
