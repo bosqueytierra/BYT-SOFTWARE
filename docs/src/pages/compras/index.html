@@ -20,7 +20,7 @@
     .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
     .header-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); display: flex; justify-content: space-between; gap: 14px; align-items: center; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
-    .block-list { display: flex !important; flex-direction: column; gap: 12px; }
+    .block-list { display: flex !important; flex-direction: column; gap: 12px; min-height: 10px; }
     .block-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
     .meta { color: var(--muted); font-size: 13px; }
     .chips { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -72,7 +72,7 @@
     function getClient() {
       return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
     }
-    async function waitForClient(timeoutMs = 3000) {
+    async function waitForClient(timeoutMs = 4000) {
       const start = performance.now();
       while (performance.now() - start < timeoutMs) {
         const c = getClient();
@@ -130,12 +130,12 @@
       statBloques.textContent = `Bloques: ${blocks.length}`;
       if (!blocks.length) {
         emptyState.style.display = 'block';
-        blocksContainer.style.display = 'none';
+        blocksContainer.style.setProperty('display','none','important');
         blocksContainer.innerHTML = '';
         return;
       }
       emptyState.style.display = 'none';
-      blocksContainer.style.display = 'flex';
+      blocksContainer.style.setProperty('display','flex','important');
       blocksContainer.style.visibility = 'visible';
       blocksContainer.style.opacity = '1';
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
