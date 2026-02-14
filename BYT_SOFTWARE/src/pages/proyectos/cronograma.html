@@ -1,309 +1,362 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cronograma de proyectos</title>
-  <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css" />
-  <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compras - BYT SOFTWARE</title>
+  <link rel="stylesheet" href="../../styles/global.css">
   <style>
-    :root { --nav-offset: 260px; }
-    body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
-    .page-container {
-      padding-left: var(--nav-offset);
-      padding-right: 12px;
-      padding-top: 8px;
+    :root {
+      --bg: #f6f7f8;
+      --card: #ffffff;
+      --border: #e4e7eb;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --primary: #2e5e4e;
+      --primary-soft: #3f705d;
+      --shadow: 0 6px 16px rgba(0,0,0,0.06);
     }
-    .page-header { padding: 8px 0 12px; }
-    .page-header .crumb { color: #6c7a86; font-size: 12px; }
-    .page-header h1 { margin: 4px 0 0; font-size: 22px; }
-
-    .top-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      padding-bottom: 10px;
-      align-items: stretch;
-    }
-    .panel-box {
-      border: 1px solid #e4e7eb;
-      border-radius: 12px;
-      padding: 8px;
-      background: #fff;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.04);
-    }
-    .panel-box h2 { margin: 0 0 6px; font-size: 14px; }
-    .stats {
-      display: grid;
-      gap: 4px;
-      margin: 0;
-      border: 1px solid #e4e7eb;
-      border-radius: 10px;
-      padding: 8px;
-      background: #fafbfc;
-      font-size: 13px;
-    }
-    .stat-row { display: flex; justify-content: space-between; font-weight: 700; color: #2d2d2d; }
-    .stat-row .value { font-size: 16px; }
-
-    .actions-row {
-      display: grid;
-      grid-auto-flow: column;
-      grid-auto-columns: 1fr;
-      gap: 8px;
-      align-items: center;
-    }
-    .compact-btn {
-      padding: 8px 10px;
-      font-size: 13px;
-      border-radius: 8px;
-      border: 1px solid #d7dce0;
-      background: #2e5e4e;
-      color: #fff;
-      cursor: pointer;
-      width: 100%;
-      text-align: center;
-      outline: none;
-    }
-    .compact-btn:focus { outline: none; box-shadow: none; }
-
-    /* Sidebar estrecha para liberar ancho */
-    .layout {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      gap: 4px;
-      align-items: start;
-    }
-
-    .cron-sidebar {
-      min-width: 260px;
-      max-width: 280px;
-      position: sticky;
-      top: 10px;
-      align-self: start;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      background: #f0f2f5;
-      border-radius: 10px;
-      padding: 8px;
-      border: 1px solid #d7dce0;
-      overflow: visible;
-      z-index: 0;
-    }
-    .cron-sidebar .block {
-      border: 1px solid #d7dce0;
-      border-radius: 10px;
-      padding: 8px;
-      background: #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    }
-    .cron-sidebar h2 {
-      margin: 0 0 6px;
-      font-size: 14px;
-      color: #2e5e4e;
-    }
-    .cloud { background: #fafbfc; border: 1px dashed #d7dce0; border-radius: 10px; padding: 8px; }
-    .palette-wrapper { max-height: 520px; overflow-y: auto; }
-    .project-block {
-      border: 1px solid #e4e7eb;
-      border-radius: 10px;
-      padding: 8px;
-      background: #fff;
-      margin-bottom: 8px;
-      font-size: 13px;
-    }
-    .project-header { display: flex; justify-content: space-between; align-items: center; cursor: grab; gap: 6px; }
-    .project-title {
-      font-weight: 700;
-      color: #2e5e4e;
-      font-size: 13px;
-      line-height: 1.3;
-    }
-    .toggle-btn {
-      border: 1px solid #d7dce0;
-      background: #f4f6f8;
-      border-radius: 8px;
-      padding: 4px 8px;
-      font-size: 12px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .partidas-list { margin-top: 8px; display: grid; gap: 6px; }
-    .chip {
-      border: 1px solid #d7dce0;
-      border-radius: 10px;
-      padding: 6px 8px;
-      background: #f9fbfc;
-      cursor: grab;
-      display: grid;
-      gap: 2px;
-      font-size: 13px;
-    }
-    .chip strong { color: #2e5e4e; font-size: 13px; }
-
-    /* Calendario con scroll horizontal */
-    .calendar-panel {
-      position: relative;
-      border: 1px solid #e4e7eb;
-      border-radius: 12px;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.05);
-      padding: 6px 6px 6px 20px;
-      background: #fff;
-      min-height: 80vh;
-      overflow-x: auto;
-    }
-    #calendar { height: 100%; min-height: 70vh; min-width: 1400px; }
-    .fc {
-      background: #fff;
-      border: 1px solid #e4e7eb;
-      border-radius: 12px;
-      padding: 8px;
-      height: 100%;
-      min-width: 1400px;
-    }
-    .fc-toolbar-title { font-size: 16px; }
-
-    .tabs-vertical {
-      position: absolute;
-      left: 2px;
-      top: 40px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    .tab-btn {
-      border: 1px solid #d7dce0;
-      background: #f5f7f9;
-      border-radius: 10px;
-      padding: 6px 8px;
-      cursor: pointer;
-      font-weight: 600;
-      color: #2d2d2d;
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
-    }
-    .tab-btn.active { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
-
-    .list-extra { display: grid; gap: 6px; max-height: 140px; overflow-y: auto; margin-top: 8px; }
-
-    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 9999; }
-    .modal { background: #fff; border-radius: 12px; padding: 16px; width: 380px; box-shadow: 0 12px 30px rgba(0,0,0,0.25); border: 1px solid #e4e7eb; }
-    .modal h3 { margin: 0 0 12px; }
-    .modal .row { margin-bottom: 10px; color: #2d2d2d; }
-    .modal .label { color: #6c7a86; font-size: 13px; display: block; margin-bottom: 4px; }
-    .modal select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #d7dce0; font-size: 14px; background: #f9fbfc; }
-    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
-    .btn { border: 1px solid #d7dce0; background: #f5f7f9; padding: 8px 12px; border-radius: 8px; cursor: pointer; outline: none; }
-    .btn.primary { background: #2e5e4e; color: #fff; border-color: #2e5e4e; }
-    .btn.full { width: 100%; text-align: center; }
-    .btn.danger { background: #c0392b; color: #fff; border-color: #c0392b; }
+    html, body { width: 100%; min-height: 100vh; display: block; }
+    body { margin: 0; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; background: var(--bg); color: var(--text); }
+    .page { width: 100%; max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; display: block; }
+    .header-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); display: flex; justify-content: space-between; gap: 14px; align-items: center; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+    .block-list { display: flex !important; flex-direction: column; gap: 12px; min-height: 10px; width: 100%; }
+    .block-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+    .meta { color: var(--muted); font-size: 13px; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { background: #eef2f5; color: var(--text); border-radius: 10px; padding: 4px 10px; border: 1px solid var(--border); font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; border: 1px solid var(--border); font-size: 13px; text-align: left; }
+    th { background: #f7f9fb; }
+    .btn { border: 1px solid var(--border); background: #fff; color: #1f2430; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-ghost { background: #f0f3f5; color: #1f2430; }
+    .empty { text-align: center; color: var(--muted); padding: 24px 12px; border: 1px dashed var(--border); border-radius: 12px; background: #fff; }
   </style>
 </head>
 <body>
-  <div class="page-container">
-    <div class="page-header">
-      <div class="crumb">Proyectos / Cronograma</div>
-      <h1>Cronograma de proyectos</h1>
-    </div>
-
-    <div class="top-row">
-      <div class="panel-box">
-        <h2>Estado de programación</h2>
-        <div class="stats">
-          <div class="stat-row">
-            <span>Partidas programadas:</span>
-            <span class="value" id="statProgramadas">0</span>
-          </div>
-          <div class="stat-row">
-            <span>Partidas por programar:</span>
-            <span class="value" id="statNoProgramadas">0</span>
-          </div>
-        </div>
+  <div class="page">
+    <div class="header-card">
+      <div>
+        <h1 style="margin:0;">Compras</h1>
+        <p class="meta" style="margin:4px 0 0;">Bloques de compras generados al aprobar cotizaciones</p>
       </div>
-      <div class="actions-row">
-        <button class="compact-btn" id="btnAddVisita">Agendar visita</button>
-        <button class="compact-btn" id="btnAddRect">Agendar rectificación</button>
-        <button class="compact-btn" id="btnAddCompra">Agendar compra</button>
+      <div class="chips">
+        <span class="chip" id="statBloques">Bloques: 0</span>
       </div>
     </div>
 
-    <div class="layout">
-      <div class="cron-sidebar">
-        <div class="block">
-          <h2>Instalaciones a programar</h2>
-          <div class="cloud palette-wrapper">
-            <div id="paletteInst"></div>
-          </div>
-        </div>
-        <div class="block">
-          <h2>Fabricación</h2>
-          <div class="cloud palette-wrapper">
-            <div id="paletteFab"></div>
-          </div>
-        </div>
-      </div>
-
-      <section class="calendar-panel">
-        <div class="tabs-vertical">
-          <button data-tab="instalacion" class="tab-btn active">Instalación</button>
-          <button data-tab="fabricacion" class="tab-btn">Fabricación</button>
-          <button data-tab="compra" class="tab-btn">Compras</button>
-          <button data-tab="visita_rect" class="tab-btn">Visita y rectificación</button>
-          <button data-tab="todo" class="tab-btn">Todo</button>
-        </div>
-        <div id="calendar"></div>
-      </section>
-    </div>
+    <div id="blocksContainer" class="block-list" style="margin-top:14px; display:flex; flex-direction:column; gap:12px; visibility:visible; opacity:1; width:100%;"></div>
+    <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
   </div>
 
-  <!-- Modal info evento -->
-  <div class="modal-backdrop" id="modalBackdrop">
-    <div class="modal">
-      <h3 id="modalTitle">Detalle de evento</h3>
-      <div class="row"><span class="label">Proyecto:</span> <span id="modalProyecto"></span></div>
-      <div class="row"><span class="label">Partida / Tipo:</span> <span id="modalPartida"></span></div>
-      <div class="row"><span class="label">Cliente:</span> <span id="modalCliente"></span></div>
-      <div class="row"><span class="label">Fecha:</span> <span id="modalFecha"></span></div>
-      <div class="row">
-        <span class="label">Color:</span>
-        <div class="color-picker" id="modalColorPicker"></div>
-      </div>
-      <div class="row">
-        <label class="label" for="modalNota">Nota (se mostrará entre paréntesis):</label>
-        <textarea id="modalNota" placeholder="Ej: Cuarzo / Muebles arriba / Muebles abajo"></textarea>
-      </div>
-      <div class="modal-footer">
-        <button class="btn primary" id="modalSave">Guardar cambios</button>
-        <button class="btn danger" id="modalDelete">Eliminar</button>
-        <button class="btn" id="modalClose">Cerrar</button>
-      </div>
-    </div>
-  </div>
+  <script src="../../js/menuConfig.js"></script>
+  <script src="../../js/layout.js"></script>
+  <script src="../../lib/supabaseConfig.js"></script>
+  <script type="module" src="../../js/supabaseBrowserClient.js"></script>
+  <script type="module" src="../../js/globalSupabase.js"></script>
 
-  <!-- Modal crear visita/rectificación/compra (solo selector) -->
-  <div class="modal-backdrop" id="createBackdrop">
-    <div class="modal">
-      <h3 id="createTitle">Agregar</h3>
-      <div class="row">
-        <label class="label" for="createProyecto">Proyecto aprobado</label>
-        <select id="createProyecto">
-          <option value="">-- Seleccionar --</option>
-        </select>
-      </div>
-      <div class="modal-footer">
-        <button class="btn" id="createCancel">Cancelar</button>
-        <button class="btn primary" id="createSave">Guardar</button>
-      </div>
-    </div>
-  </div>
+  <script>
+    let blocksContainer, emptyState, statBloques;
+    function ensureEls() {
+      blocksContainer = document.getElementById('blocksContainer');
+      emptyState = document.getElementById('emptyState');
+      statBloques = document.getElementById('statBloques');
+    }
 
-  <!-- Scripts -->
-  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
-  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
-  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/cronograma.js"></script>
+    let catEncargados = [];
+    let catUnidades = [];
+    let catModos = [];
+    let catEstadosPago = [];
+    let proveedores = [];
+    let materiales = [];
+
+    function getClient() {
+      return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
+    }
+    async function waitForClient(timeoutMs = 4000) {
+      const start = performance.now();
+      while (performance.now() - start < timeoutMs) {
+        const c = getClient();
+        if (c) return c;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      throw new Error('Supabase client no inicializado');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('[compras] DOMContentLoaded');
+      ensureEls();
+      try {
+        const client = await waitForClient();
+        if (!window.supabase && client) window.supabase = client;
+        console.log('[compras] client listo');
+        await loadCatalogs();
+        await loadBlocks();
+        setTimeout(() => loadBlocks().catch(console.error), 500);
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
+    });
+    window.onload = () => {
+      ensureEls();
+      console.log('[compras] window.onload -> refuerzo loadBlocks');
+      loadBlocks().catch(console.error);
+    };
+
+    async function loadCatalogs() {
+      const client = await waitForClient();
+      const [enc, uni, mod, est] = await Promise.all([
+        client.from('purchase_catalog_encargados').select('*').order('nombre'),
+        client.from('purchase_catalog_unidades').select('*').order('nombre'),
+        client.from('purchase_catalog_modos_compra').select('*').order('nombre'),
+        client.from('purchase_catalog_estados_pago').select('*').order('nombre'),
+      ]);
+      catEncargados = enc.data || [];
+      catUnidades   = uni.data || [];
+      catModos      = mod.data || [];
+      catEstadosPago= est.data || [];
+      proveedores = [];
+      materiales  = [];
+      console.log('[compras] catálogos cargados', {enc: catEncargados.length, uni: catUnidades.length, mod: catModos.length, est: catEstadosPago.length});
+    }
+
+    async function loadBlocks() {
+      try {
+        const client = await waitForClient();
+        console.log('[compras] loadBlocks: consultando purchase_blocks');
+        const { data, error } = await client
+          .from('purchase_blocks')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        console.log('[compras] loadBlocks: recibidos', data?.length);
+        renderBlocks(data || []);
+      } catch (e) {
+        console.error('Error cargando bloques de compras', e);
+        window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
+        renderBlocks([]);
+      }
+    }
+
+    function renderBlocks(blocks) {
+      ensureEls();
+      if (!blocksContainer) return;
+      statBloques.textContent = `Bloques: ${blocks.length}`;
+      blocksContainer.style.setProperty('display','flex','important');
+      blocksContainer.style.setProperty('width','100%','important');
+      blocksContainer.style.setProperty('visibility','visible','important');
+      blocksContainer.style.setProperty('opacity','1','important');
+      if (blocksContainer.parentElement) {
+        blocksContainer.parentElement.style.setProperty('display','block','important');
+        blocksContainer.parentElement.style.setProperty('width','100%','important');
+        blocksContainer.parentElement.style.setProperty('visibility','visible','important');
+      }
+      if (!blocks.length) {
+        emptyState.style.display = 'block';
+        blocksContainer.innerHTML = '';
+        return;
+      }
+      emptyState.style.display = 'none';
+      blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
+      document.querySelectorAll('[data-block-toggle]').forEach(btn => {
+        btn.onclick = () => toggleLines(btn.dataset.blockId);
+      });
+      console.log('[compras] renderBlocks pintó', blocks.length, 'cards');
+    }
+
+    function blockCard(b) {
+      const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
+      const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
+      return `
+        <div class="card">
+          <div class="block-header">
+            <div>
+              <h3 style="margin:0 0 4px;">${escapeHtml(b.proyecto_nombre || 'Proyecto')}</h3>
+              <div class="meta">Estado: ${escapeHtml(b.estado || 'en_compra')} · Creado: ${formatDate(b.created_at)}</div>
+            </div>
+            <button class="btn btn-ghost" data-block-toggle data-block-id="${b.id}">Ver detalle</button>
+          </div>
+          <div class="chips" style="margin:8px 0;">
+            <span class="chip">Total cotizado: ${fmtCLP(b.total_cotizado)}</span>
+            <span class="chip">Total cobrado: ${fmtCLP(b.total_cobrado)}</span>
+            <span class="chip">Comprado: ${fmtCLP(b.total_comprado)}</span>
+            <span class="chip">Por comprar: ${fmtCLP(b.total_por_comprar)}</span>
+            <span class="chip">Avance: ${pct}%</span>
+          </div>
+          <div id="lines-${b.id}" style="display:none; margin-top:8px;">
+            <div class="meta" style="margin-bottom:6px;">Líneas de compra</div>
+            ${lineForm(b.id)}
+            <div class="lines-table" data-lines-table="${b.id}">Cargando...</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function lineForm(blockId) {
+      return `
+        <div class="line-form" data-line-form="${blockId}" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:8px; margin-bottom:10px;">
+          <select data-f="encargado">${opts(catEncargados)}</select>
+          <select data-f="proveedor_id">${opts(proveedores, 'id', 'nombre')}</select>
+          <input data-f="direccion" placeholder="Dirección" />
+          <select data-f="categoria" onchange="onCategoriaChange('${blockId}', this.value)">${optsCategorias(materiales)}</select>
+          <select data-f="producto_id" data-productos-for="${blockId}"><option value="">--Producto--</option></select>
+          <input data-f="unidad" placeholder="Unidad" list="unidades-list"/>
+          <input data-f="cantidad" type="number" step="0.01" value="1" />
+          <input data-f="precio_unit" type="number" step="1" value="0" />
+          <select data-f="modo_compra">${opts(catModos)}</select>
+          <select data-f="estado_pago">${opts(catEstadosPago)}</select>
+          <input data-f="observaciones" placeholder="Observaciones" />
+          <button class="btn btn-primary" type="button" onclick="agregarLinea('${blockId}')">Agregar</button>
+        </div>
+        <datalist id="unidades-list">
+          ${catUnidades.map(u => `<option value="${escapeHtml(u.nombre)}">`).join('')}
+        </datalist>
+      `;
+    }
+
+    async function toggleLines(blockId) {
+      const wrap = document.getElementById(`lines-${blockId}`);
+      if (!wrap) return;
+      const isHidden = wrap.style.display === 'none';
+      if (!isHidden) { wrap.style.display = 'none'; return; }
+      wrap.style.display = 'block';
+      fillProductosSelect(blockId, '');
+      await reloadLines(blockId);
+    }
+
+    async function reloadLines(blockId) {
+      const wrap = document.getElementById(`lines-${blockId}`);
+      if (!wrap) return;
+      const tableEl = wrap.querySelector('[data-lines-table]');
+      tableEl.textContent = 'Cargando...';
+      try {
+        const { data, error } = await window.supabaseClient.listarLineasCompra(blockId);
+        if (error) throw error;
+        tableEl.innerHTML = renderLinesTable(data || []);
+      } catch (e) {
+        console.error('Error cargando líneas', e);
+        tableEl.textContent = 'Error al cargar líneas';
+      }
+    }
+
+    function renderLinesTable(lines) {
+      if (!lines.length) return '<div class="meta">Sin líneas de compra todavía.</div>';
+      const header = `
+        <tr>
+          <th>Encargado</th><th>Proveedor</th><th>Dirección</th><th>Categoría</th><th>Producto</th>
+          <th>Unidad</th><th>Cantidad</th><th>Precio Unit</th><th>Total</th><th>Modo</th><th>Estado pago</th><th>Obs</th><th></th>
+        </tr>`;
+      const rows = lines.map(l => `
+        <tr>
+          <td>${escapeHtml(l.encargado || '')}</td>
+          <td>${escapeHtml(l.proveedor_id || '')}</td>
+          <td>${escapeHtml(l.direccion || '')}</td>
+          <td>${escapeHtml(l.categoria || '')}</td>
+          <td>${escapeHtml(l.producto_id || '')}</td>
+          <td>${escapeHtml(l.unidad || '')}</td>
+          <td>${Number(l.cantidad || 0)}</td>
+          <td>${fmtCLP(l.precio_unit)}</td>
+          <td>${fmtCLP(l.total)}</td>
+          <td>${escapeHtml(l.modo_compra || '')}</td>
+          <td>${escapeHtml(l.estado_pago || '')}</td>
+          <td>${escapeHtml(l.observaciones || '')}</td>
+          <td><button class="btn btn-ghost" onclick="borrarLinea('${l.id}','${l.block_id}')">🗑</button></td>
+        </tr>`).join('');
+      return `<table>${header}${rows}</table>`;
+    }
+
+    function opts(list, valKey='nombre', labelKey='nombre') {
+      return ['<option value="">--Selecciona--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
+    }
+    function optsCategorias(mats) {
+      const cats = [...new Set(mats.map(m => m.category).filter(Boolean))];
+      return ['<option value="">--Categoría--</option>', ...cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`)].join('');
+    }
+    function fillProductosSelect(blockId, categoria) {
+      const sel = document.querySelector(`[data-productos-for="${blockId}"]`);
+      if (!sel) return;
+      const prods = materiales.filter(m => (!categoria || m.category === categoria));
+      sel.innerHTML = ['<option value="">--Producto--</option>', ...prods.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`)].join('');
+    }
+    function onCategoriaChange(blockId, categoria) { fillProductosSelect(blockId, categoria); }
+
+    async function agregarLinea(blockId) {
+      const form = document.querySelector(`[data-line-form="${blockId}"]`);
+      if (!form) return;
+      const get = (name) => form.querySelector(`[data-f="${name}"]`)?.value || '';
+      const payload = {
+        encargado: get('encargado'),
+        proveedor_id: get('proveedor_id') || null,
+        direccion: get('direccion') || null,
+        categoria: get('categoria') || null,
+        producto_id: get('producto_id') || null,
+        unidad: get('unidad') || null,
+        cantidad: Number(get('cantidad') || 0),
+        precio_unit: Number(get('precio_unit') || 0),
+        modo_compra: get('modo_compra') || null,
+        estado_pago: get('estado_pago') || null,
+        observaciones: get('observaciones') || null,
+      };
+      try {
+        await window.supabaseClient.crearLineaCompra(blockId, payload);
+        window.utils?.mostrarNotificacion?.('Línea agregada', 'success');
+        await reloadLines(blockId);
+        await recalcTotales(blockId);
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al agregar línea', 'error');
+      }
+    }
+
+    async function borrarLinea(id, blockId) {
+      try {
+        await window.supabaseClient.eliminarLineaCompra(id);
+        window.utils?.mostrarNotificacion?.('Línea eliminada', 'success');
+        await reloadLines(blockId);
+        await recalcTotales(blockId);
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al eliminar línea', 'error');
+      }
+    }
+
+    async function recalcTotales(blockId) {
+      const client = await waitForClient();
+      const { data: lines, error } = await window.supabaseClient.listarLineasCompra(blockId);
+      if (error) throw error;
+      const total = (lines || []).reduce((acc, l) => acc + Number(l.total || 0), 0);
+      const totalComprado = (lines || []).reduce((acc, l) => {
+        const estado = (l.estado_pago || '').toLowerCase();
+        const comprado = estado === 'comprado' || estado === 'en stock';
+        return acc + (comprado ? Number(l.total || 0) : 0);
+      }, 0);
+      const totalPorComprar = total - totalComprado;
+      const { error: errUp } = await client
+        .from('purchase_blocks')
+        .update({ total_comprado: totalComprado, total_por_comprar: totalPorComprar })
+        .eq('id', blockId);
+      if (errUp) throw errUp;
+      await loadBlocks();
+    }
+
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
+    function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    window.debugForceCompras = async () => {
+      const client = await waitForClient();
+      const r = await client.from('purchase_blocks').select('*');
+      console.log('[debugForceCompras] filas', r.data?.length, r.data, 'error', r.error);
+      renderBlocks(r.data || []);
+    };
+
+    window.onCategoriaChange = onCategoriaChange;
+    window.agregarLinea = agregarLinea;
+    window.borrarLinea = borrarLinea;
+  </script>
 </body>
 </html>
