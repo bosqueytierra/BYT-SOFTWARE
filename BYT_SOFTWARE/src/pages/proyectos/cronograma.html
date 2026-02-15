@@ -61,9 +61,25 @@
   <script>
     let blocksContainer, emptyState, statBloques;
     function ensureEls() {
-      blocksContainer = document.getElementById('blocksContainer');
-      emptyState = document.getElementById('emptyState');
-      statBloques = document.getElementById('statBloques');
+      // Reobtén los nodos por si layout reinyectó el contenido
+      const liveBlocks = document.querySelector('#page-content-slot #blocksContainer') || document.getElementById('blocksContainer');
+      const liveEmpty  = document.querySelector('#page-content-slot #emptyState')    || document.getElementById('emptyState');
+      const liveStat   = document.querySelector('#page-content-slot #statBloques')   || document.getElementById('statBloques');
+
+      blocksContainer = liveBlocks;
+      emptyState = liveEmpty;
+      statBloques = liveStat;
+
+      // Si no están dentro del slot, muévelos
+      const slot = document.getElementById('page-content-slot');
+      if (slot && blocksContainer && !slot.contains(blocksContainer)) {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'page-content';
+        wrapper.appendChild(blocksContainer);
+        if (emptyState) wrapper.appendChild(emptyState);
+        if (slot.firstChild) slot.innerHTML = '';
+        slot.appendChild(wrapper);
+      }
     }
 
     let catEncargados = [];
