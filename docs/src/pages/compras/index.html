@@ -24,6 +24,7 @@
     .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
 
     /* Overlay tipo Excel */
+    body.overlay-open { overflow:hidden; }
     .overlay {
       position: fixed;
       inset: 0;
@@ -123,18 +124,21 @@
 
   <script>
     let blocksContainer, emptyState, statBloques;
+    const overlay = document.getElementById('overlay');
+    const overlayForm = document.getElementById('overlayForm');
+    const overlayTable = document.getElementById('overlayTable');
+    const overlayTitle = document.getElementById('overlayTitle');
+    document.getElementById('closeOverlay').onclick = () => {
+      overlay.classList.remove('active');
+      document.body.classList.remove('overlay-open');
+    };
+
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
       blocksContainer = pickLast('#blocksContainer');
       emptyState = pickLast('#emptyState');
       statBloques = pickLast('#statBloques');
     }
-
-    const overlay = document.getElementById('overlay');
-    const overlayForm = document.getElementById('overlayForm');
-    const overlayTable = document.getElementById('overlayTable');
-    const overlayTitle = document.getElementById('overlayTitle');
-    document.getElementById('closeOverlay').onclick = () => overlay.classList.remove('active');
 
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
@@ -158,6 +162,15 @@
       } catch (e) {
         console.error(e);
         window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
+    });
+
+    // Delegación para que "Ver detalle" siempre funcione aunque el DOM se reinyecte
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-block-toggle]');
+      if (btn) {
+        e.preventDefault();
+        openOverlay(btn.dataset.blockId, btn.dataset.blockTitle || '');
       }
     });
 
@@ -201,22 +214,20 @@
       }
       emptyState.style.display = 'none';
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
-      document.querySelectorAll('[data-block-toggle]').forEach(btn => {
-        btn.onclick = () => openOverlay(btn.dataset.blockId);
-      });
     }
 
     function blockCard(b) {
       const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
       const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
+      const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
       return `
         <div class="card">
           <div class="block-header">
             <div>
-              <h3 style="margin:0 0 4px;">${escapeHtml(b.proyecto_nombre || 'Proyecto')}</h3>
+              <h3 style="margin:0 0 4px;">${title}</h3>
               <div class="meta">Estado: ${escapeHtml(b.estado || 'en_compra')} · Creado: ${formatDate(b.created_at)}</div>
             </div>
-            <button class="btn btn-ghost" data-block-toggle data-block-id="${b.id}">Ver detalle</button>
+            <button class="btn btn-ghost" data-block-toggle data-block-id="${b.id}" data-block-title="${title}">Ver detalle</button>
           </div>
           <div class="chips" style="margin:8px 0;">
             <span class="chip">Total cotizado: ${fmtCLP(b.total_cotizado)}</span>
@@ -252,11 +263,12 @@
       `;
     }
 
-    function openOverlay(blockId) {
-      overlayTitle.textContent = 'Líneas de compra - ' + blockId;
+    function openOverlay(blockId, title) {
+      overlayTitle.textContent = 'Líneas de compra - ' + (title || blockId);
       overlayForm.innerHTML = lineForm(blockId);
       overlayTable.textContent = 'Cargando...';
       overlay.classList.add('active');
+      document.body.classList.add('overlay-open');
       fillProductosSelect(blockId, '');
       reloadLines(blockId);
     }
