@@ -25,29 +25,12 @@
     .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
 
     body.overlay-open { overflow:hidden; }
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      padding: 10px;
-    }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 10px; }
     .overlay.active { display: flex; }
     .overlay-content {
-      background: #f8f9fb;
-      border-radius: 10px;
-      box-shadow: 0 18px 60px rgba(0,0,0,0.30);
-      width: 98vw;
-      max-width: 2200px;
-      height: 92vh;
-      padding: 10px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30);
+      width: 98vw; max-width: 2200px; height: 92vh;
+      padding: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 8px;
     }
     .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
     .overlay-title { font-weight: 700; font-size: 15px; }
@@ -58,36 +41,13 @@
       display: grid;
       grid-template-columns:
         140px 160px 220px 150px 200px 120px 80px 110px 110px 150px 150px 240px 90px;
-      gap: 0;
-      align-items: center;
+      gap: 0; align-items: center;
     }
-    .grid-header {
-      font-size:12.5px;
-      font-weight:700;
-      background:#e1e5ec;
-      border:1px solid #d7dbe0;
-      padding:6px 6px;
-    }
-    .grid-row {
-      display: contents;
-    }
-    .cell {
-      border:1px solid #d7dbe0;
-      background:#fff;
-      padding:0;
-      min-height:28px;
-    }
-    .cell:nth-child(13n+1), .grid-row:nth-child(odd) .cell { background:#f7f8fa; }
-    .cell input, .cell select {
-      width:100%;
-      height:28px;
-      font-size:13px;
-      padding:2px 6px;
-      box-sizing:border-box;
-      border:none;
-      background:transparent;
-      outline:none;
-    }
+    .grid-header { font-size:12.5px; font-weight:700; background:#e1e5ec; border:1px solid #d7dbe0; padding:6px 6px; }
+    .grid-row { display: contents; }
+    .cell { border:1px solid #d7dbe0; background:#fff; padding:0; min-height:28px; }
+    .grid-row:nth-child(odd) .cell { background:#f7f8fa; }
+    .cell input, .cell select { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
     .readonly { background:#f3f4f6; }
   </style>
 </head>
@@ -174,10 +134,7 @@
 
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-block-toggle]');
-      if (btn) {
-        e.preventDefault();
-        openOverlay(btn.dataset.blockId, btn.dataset.blockTitle || '');
-      }
+      if (btn) { e.preventDefault(); openOverlay(btn.dataset.blockId, btn.dataset.blockTitle || ''); }
     });
 
     async function loadCatalogs() {
@@ -192,8 +149,14 @@
       catUnidades   = uni.data || [];
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
-      proveedores = []; // cargar si corresponde
-      materiales  = []; // cargar si corresponde
+
+      const { data: provs, error: errProv } = await client.from('providers').select('id,name').order('name');
+      if (errProv) console.error('providers error', errProv);
+      proveedores = provs || [];
+
+      const { data: mats, error: errMat } = await client.from('materials').select('id,name,category').order('name');
+      if (errMat) console.error('materials error', errMat);
+      materiales = mats || [];
     }
 
     async function loadBlocks() {
@@ -258,9 +221,9 @@
         return `
         <div class="grid-row" data-row="${idx}" ${idAttr}>
           <div class="cell"><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></div>
-          <div class="cell"><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','nombre')}</select></div>
+          <div class="cell"><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></div>
           <div class="cell"><input data-f="direccion" data-row="${idx}" value="${escapeHtml(row.direccion||'')}" /></div>
-          <div class="cell"><select data-f="categoria" data-row="${idx}">${makeOptions(materiales.map(m=>({nombre:m.category})),'nombre','nombre')}</select></div>
+          <div class="cell"><select data-f="categoria" data-row="${idx}">${makeOptions([...new Set(materiales.map(m=>m.category).filter(Boolean))].map(c=>({nombre:c})))}</select></div>
           <div class="cell"><select data-f="producto_id" data-row="${idx}">${makeOptions(materiales,'id','name')}</select></div>
           <div class="cell"><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></div>
           <div class="cell"><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></div>
@@ -272,12 +235,7 @@
           <div class="cell readonly"></div>
         </div>`;
       }).join('');
-      overlayGrid.innerHTML = `
-        <div class="line-grid">
-          ${headerHtml}
-          ${body}
-        </div>`;
-      // set values of selects after inject
+      overlayGrid.innerHTML = `<div class="line-grid">${headerHtml}${body}</div>`;
       rows.forEach((row, idx) => {
         setVal(idx,'encargado',row.encargado);
         setVal(idx,'proveedor_id',row.proveedor_id);
@@ -310,7 +268,6 @@
       const { data, error } = await client.from(TABLE).select('*').eq('block_id', blockId).order('created_at', { ascending: true });
       if (error) { console.error(error); currentRows = []; }
       else currentRows = data || [];
-      // pad to MIN_ROWS
       while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: blockId });
       renderGrid(currentRows);
     }
@@ -328,7 +285,6 @@
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
       currentRows[rowIdx] = { ...row, [field]: val, block_id: currentBlockId };
-      // recalc total
       const cantidad = Number(currentRows[rowIdx].cantidad || 0);
       const precio = Number(currentRows[rowIdx].precio_unit || 0);
       currentRows[rowIdx].total = cantidad * precio;
@@ -352,10 +308,6 @@
         }
       } catch (e) { console.error('Persist error', e); }
     }
-
-    function renderPlaceholderTable() { /* no-op; grid already shows placeholders */ }
-
-    function fillProductosSelect(blockId, categoria) { /* dropdowns already static; skip dynamic filter for now */ }
 
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
