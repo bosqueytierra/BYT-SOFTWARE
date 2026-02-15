@@ -40,7 +40,7 @@
         }
         .simple-table-container { overflow-x: auto; }
         .simple-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .simple-table th, .simple-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f0f2f5; }
+        .simple-table th, .simple-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f0f2f5; vertical-align: middle; }
         .simple-table th { background: #f8fafc; color: #2f3e46; font-weight: 700; }
         .simple-table tr:hover { background: #f9fafb; }
         .btn { background: var(--primary); color: white; padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer; font-weight: 600; transition: all .15s; box-shadow: 0 6px 14px rgba(46,125,50,0.22); }
@@ -110,7 +110,7 @@
                         </div>
                         <div class="simple-table-container">
                             <table class="simple-table">
-                                <thead><tr><th>Categoría</th><th>Cantidad de Materiales</th><th>Acciones</th></tr></thead>
+                                <thead><tr><th>Imagen</th><th>Categoría</th><th>Cantidad de Materiales</th><th>Acciones</th></tr></thead>
                                 <tbody id="tablaCategorias"></tbody>
                             </table>
                         </div>
@@ -317,10 +317,13 @@
     <script src="../../js/layout.js"></script>
 
     <script type="module">
+    import * as catApi from '../../lib/cate_material.js';
+
     let materialsApi = null;
     let unitsApi = null;
     let remoteAvailable = false;
     let categoriesData = {};
+    let catImagesMap = {};
     let unidades = [];
     let unitsMap = {};
 
@@ -498,7 +501,22 @@
       try { localStorage.setItem('byt_materials_updated_at', Date.now()); } catch(e){}
     }
 
-    function loadCategories() {
+    async function loadCategoriesImages() {
+      const { data, error } = await catApi.listCategoriesWithImages();
+      if (error) { console.warn('listCategoriesWithImages error', error); return; }
+      catImagesMap = (data || []).reduce((acc, c) => { acc[c.name] = c.image_url; return acc; }, {});
+    }
+
+    function renderThumb(cat) {
+      const img = catImagesMap[cat];
+      if (img) {
+        return `<img src="${escapeHtml(img)}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;">`;
+      }
+      return `<div style="width:48px;height:48px;border:1px dashed #d1d5db;border-radius:8px;display:grid;place-items:center;color:#9ca3af;font-size:12px;">No img</div>`;
+    }
+
+    async function loadCategories() {
+      await loadCategoriesImages();
       const tbody = document.getElementById('tablaCategorias');
       tbody.innerHTML = '';
       Object.keys(categoriesData).forEach(categoria => {
@@ -506,9 +524,12 @@
         const cantidadMateriales = materiales.length;
         const tr = document.createElement('tr');
         tr.innerHTML = `
+            <td>${renderThumb(categoria)}</td>
             <td><strong>${categoria}</strong></td>
             <td>${cantidadMateriales} material(es)</td>
-            <td>
+            <td style="display:flex;flex-wrap:wrap;gap:6px;">
+                <button class="btn-secondary btn-small" onclick="uploadCategoryImage('${escapeJs(categoria)}')" title="Cargar/Editar foto">Cargar/Editar foto</button>
+                <button class="btn-danger btn-small" onclick="removeCategoryImage('${escapeJs(categoria)}')" title="Quitar foto">Quitar foto</button>
                 <button class="btn-secondary btn-small" onclick="editarCategoria('${escapeJs(categoria)}')" title="Editar categoría">Editar</button>
                 <button class="btn-danger btn-small" onclick="eliminarCategoria('${escapeJs(categoria)}')" title="Eliminar categoría">Eliminar</button>
             </td>
@@ -524,7 +545,7 @@
       if (categoriesData[nombre]) { toast('Ya existe una categoría con ese nombre','warning'); return; }
       categoriesData[nombre] = [];
       if (window.categoriasMateriales) window.categoriasMateriales[nombre] = [];
-      loadCategories();
+      await loadCategories();
       actualizarTodosLosSelects();
       toast('Categoría creada','success');
     }
@@ -550,7 +571,7 @@
         }
         await refreshFromRemote();
       }
-      loadCategories();
+      await loadCategories();
       actualizarTodosLosSelects();
       toast('Categoría actualizada','success');
     }
@@ -575,7 +596,7 @@
         if (window.categoriasMateriales) delete window.categoriasMateriales[categoria];
         delete categoriesData[categoria];
       }
-      loadCategories();
+      await loadCategories();
       actualizarTodosLosSelects();
       notifyUpdate();
       toast('Categoría eliminada','success');
@@ -734,7 +755,7 @@
           if (res?.error) { toast('Error creando (ver consola)','error'); return; }
           await refreshFromRemote();
           notifyUpdate();
-          loadCategories();
+          await loadCategories();
           actualizarTodosLosSelects();
           if (document.getElementById('consultar').classList.contains('active')) consultarTodosMateriales();
           showSuccess('El material se creó correctamente.');
@@ -846,7 +867,7 @@
       }
 
       limpiarFormularioEditar();
-      loadCategories();
+      await loadCategories();
       actualizarTodosLosSelects();
     });
 
@@ -940,7 +961,7 @@
       cargarMaterialesParaEliminar();
       document.getElementById('eliminarBuscarCategoria').value = prevCat;
       document.getElementById('materialAEliminar').style.display = 'none';
-      loadCategories();
+      await loadCategories();
       actualizarTodosLosSelects();
       document.getElementById('eliminarBuscarCategoria').value = prevCat;
     }
@@ -990,9 +1011,33 @@
     function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>"']/g, s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
     function escapeJs(s){ return (s+'').replace(/'/g,"\\'"); }
 
+    window.uploadCategoryImage = async (catName) => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = 'image/*';
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const res = await catApi.upsertCategoryImage({ name: catName, file });
+        if (res.error) { console.error(res.error); toast('Error subiendo imagen','error'); return; }
+        toast('Imagen guardada','success');
+        await refreshFromRemote?.();
+        await loadCategories();
+      };
+      input.click();
+    };
+
+    window.removeCategoryImage = async (catName) => {
+      if (!confirm(`Quitar imagen de "${catName}"?`)) return;
+      const res = await catApi.removeCategoryImage(catName);
+      if (res.error) { console.error(res.error); toast('Error al quitar imagen','error'); return; }
+      toast('Imagen quitada','success');
+      await refreshFromRemote?.();
+      await loadCategories();
+    };
+
     (async function init(){
       await initDataLayer();
-      loadCategories();
+      await loadCategories();
       actualizarTodosLosSelects();
       renderUnidades('crearUnidad');
       bindCrearSubmit();
@@ -1000,9 +1045,9 @@
 
       try {
         const bc = new BroadcastChannel('byt-materials');
-        bc.onmessage = (ev) => { if (ev.data?.type === 'materials-updated') refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); };
+        bc.onmessage = (ev) => { if (ev.data?.type === 'materials-updated') refreshFromRemote().then(async ()=>{ await loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); };
       } catch(e){}
-      window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(()=>{ loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); } });
+      window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(async ()=>{ await loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); } });
     })();
 
     window.showTab = showTab;
@@ -1025,5 +1070,3 @@
     </script>
 </body>
 </html>
-
-
