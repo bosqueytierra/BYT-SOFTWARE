@@ -6,41 +6,81 @@
   <title>Compras - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
   <style>
-    :root { --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --primary-soft:#3f705d; --shadow:0 6px 16px rgba(0,0,0,0.06); }
+    :root { --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --shadow:0 6px 16px rgba(0,0,0,0.06); }
     html, body { width:100%; min-height:100vh; display:block; }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
-    .page { width:100%; max-width:1600px; margin:16px auto 48px; padding:0 24px; display:block; }
-    .header-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow); display:flex; justify-content:space-between; gap:14px; align-items:center; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:var(--shadow); width:100%; }
-    .block-list { display:flex !important; flex-direction:column; gap:16px; min-height:10px; width:100%; }
+    .page { width:100%; max-width:1800px; margin:16px auto 48px; padding:0 16px; display:block; }
+    .header-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; box-shadow:var(--shadow); display:flex; justify-content:space-between; gap:14px; align-items:center; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:var(--shadow); width:100%; }
+    .block-list { display:flex !important; flex-direction:column; gap:14px; width:100%; }
     .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; }
     .meta { color:var(--muted); font-size:13px; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
     .chip { background:#eef2f5; color:var(--text); border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
-    table { width:100%; border-collapse:collapse; margin-top:10px; }
-    th, td { padding:8px; border:1px solid var(--border); font-size:13px; text-align:left; }
-    th { background:#f7f9fb; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; box-shadow:0 4px 12px rgba(0,0,0,0.04); height:32px; }
     .btn:hover { transform:translateY(-1px); box-shadow:0 10px 20px rgba(0,0,0,0.08); }
     .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
     .btn-ghost { background:#f0f3f5; color:#1f2430; }
     .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
+
+    /* Overlay tipo Excel */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .overlay.active { display: flex; }
+    .overlay-content {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.28);
+      width: 95vw;
+      max-width: 1900px;
+      max-height: 90vh;
+      padding: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .overlay-header {
+      display:flex; justify-content:space-between; align-items:center; gap:8px;
+    }
+    .overlay-title { font-weight: 700; font-size: 16px; }
+    .lines-wrapper { width:100%; overflow:auto; }
     .line-row {
+      min-width: 1800px;
       display:grid;
       grid-template-columns:
-        140px 160px 200px 150px 180px 100px 90px 110px 110px 140px 140px 200px 90px;
+        140px 160px 220px 150px 200px 120px 80px 110px 110px 150px 150px 240px 90px;
       gap:4px;
       align-items:center;
-      margin-bottom:10px;
-      width:100%;
+      margin-bottom:6px;
     }
     .line-row select, .line-row input {
       width:100%;
-      height:32px;
+      height:30px;
       font-size:13px;
-      padding:4px 8px;
+      padding:4px 6px;
       box-sizing:border-box;
     }
+    .lines-table table {
+      width:100%;
+      min-width:1800px;
+      border-collapse:collapse;
+      font-size:12.5px;
+    }
+    .lines-table th, .lines-table td {
+      padding:6px 6px;
+      border:1px solid var(--border);
+      text-align:left;
+      background:#fff;
+    }
+    .lines-table th { background:#f2f4f7; position: sticky; top: 0; z-index: 1; }
   </style>
 </head>
 <body>
@@ -59,6 +99,22 @@
     <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
   </div>
 
+  <!-- Overlay Excel -->
+  <div id="overlay" class="overlay">
+    <div class="overlay-content">
+      <div class="overlay-header">
+        <div class="overlay-title" id="overlayTitle">Líneas de compra</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn" id="closeOverlay">Cerrar</button>
+        </div>
+      </div>
+      <div class="lines-wrapper">
+        <div id="overlayForm"></div>
+        <div class="lines-table" id="overlayTable">Cargando...</div>
+      </div>
+    </div>
+  </div>
+
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
@@ -74,8 +130,13 @@
       statBloques = pickLast('#statBloques');
     }
 
-    let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
+    const overlay = document.getElementById('overlay');
+    const overlayForm = document.getElementById('overlayForm');
+    const overlayTable = document.getElementById('overlayTable');
+    const overlayTitle = document.getElementById('overlayTitle');
+    document.getElementById('closeOverlay').onclick = () => overlay.classList.remove('active');
 
+    let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
     async function waitForClient(timeoutMs = 4000) {
       const start = performance.now();
@@ -94,16 +155,11 @@
         if (!window.supabase && client) window.supabase = client;
         await loadCatalogs();
         await loadBlocks();
-        setTimeout(() => loadBlocks().catch(console.error), 500);
       } catch (e) {
         console.error(e);
         window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
       }
     });
-    window.onload = () => {
-      ensureEls();
-      loadBlocks().catch(console.error);
-    };
 
     async function loadCatalogs() {
       const client = await waitForClient();
@@ -146,7 +202,7 @@
       emptyState.style.display = 'none';
       blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
-        btn.onclick = () => toggleLines(btn.dataset.blockId);
+        btn.onclick = () => openOverlay(btn.dataset.blockId);
       });
     }
 
@@ -168,11 +224,6 @@
             <span class="chip">Comprado: ${fmtCLP(b.total_comprado)}</span>
             <span class="chip">Por comprar: ${fmtCLP(b.total_por_comprar)}</span>
             <span class="chip">Avance: ${pct}%</span>
-          </div>
-          <div id="lines-${b.id}" style="display:none; margin-top:8px;">
-            <div class="meta" style="margin-bottom:6px;">Líneas de compra</div>
-            ${lineForm(b.id)}
-            <div class="lines-table" data-lines-table="${b.id}">Cargando...</div>
           </div>
         </div>
       `;
@@ -201,20 +252,17 @@
       `;
     }
 
-    async function toggleLines(blockId) {
-      const wrap = document.getElementById(`lines-${blockId}`);
-      if (!wrap) return;
-      const isHidden = wrap.style.display === 'none';
-      if (!isHidden) { wrap.style.display = 'none'; return; }
-      wrap.style.display = 'block';
+    function openOverlay(blockId) {
+      overlayTitle.textContent = 'Líneas de compra - ' + blockId;
+      overlayForm.innerHTML = lineForm(blockId);
+      overlayTable.textContent = 'Cargando...';
+      overlay.classList.add('active');
       fillProductosSelect(blockId, '');
-      await reloadLines(blockId);
+      reloadLines(blockId);
     }
 
     async function reloadLines(blockId) {
-      const wrap = document.getElementById(`lines-${blockId}`);
-      if (!wrap) return;
-      const tableEl = wrap.querySelector('[data-lines-table]');
+      const tableEl = overlayTable;
       tableEl.textContent = 'Cargando...';
       try {
         const { data, error } = await window.supabaseClient.listarLineasCompra(blockId);
@@ -336,7 +384,6 @@
     window.debugForceCompras = async () => {
       const client = await waitForClient();
       const r = await client.from('purchase_blocks').select('*');
-      console.log('[debugForceCompras] filas', r.data?.length, r.data, 'error', r.error);
       renderBlocks(r.data || []);
     };
     window.onCategoriaChange = onCategoriaChange;
