@@ -1,6 +1,11 @@
 // Requiere supabase ya inicializado (supabaseBrowserClient)
 export async function crearBloqueComprasDesdeCotizacion(cot) {
+  // Prioriza el nombre de proyecto (igual que usa Ventas) para que coincidan los IDs
   const proyecto_id =
+    cot.nombre_proyecto ||
+    cot.project_key ||
+    cot.data?.cliente?.nombre_proyecto ||
+    cot.data?.cliente?.nombre ||
     cot.id ||
     cot.cotizacion_id ||
     cot.proyecto_id ||
@@ -15,13 +20,13 @@ export async function crearBloqueComprasDesdeCotizacion(cot) {
 
   const total_cotizado = Number(cot.total_proyecto || cot.total || 0);
   const total_cobrado  = Number(cot.total_cobrado || cot.total_venta || 0);
-  const estado = 'en_compra'; // o 'aprobada' si quieres filtrar luego en compras
+  const estado = 'en_compra'; // o 'aprobada' si quieres filtrar luego
 
   if (!proyecto_id) {
     return { error: 'proyecto_id vacío' };
   }
 
-  // ¿Existe bloque ya? Si existe, actualizamos; si no, insertamos.
+  // Upsert: actualiza si existe, crea si no
   const { data: existing, error: errFind } = await supabase
     .from('purchase_blocks')
     .select('id')
