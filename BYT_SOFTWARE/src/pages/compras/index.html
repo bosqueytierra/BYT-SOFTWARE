@@ -6,13 +6,13 @@
   <title>Compras - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
   <style>
-    :root { --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --shadow:0 6px 16px rgba(0,0,0,0.06); }
+    :root { --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --primary-soft:#3f705d; --shadow:0 6px 16px rgba(0,0,0,0.06); }
     html, body { width:100%; min-height:100vh; display:block; }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
-    .page { width:100%; max-width:1280px; margin:22px auto 48px; padding:0 16px; display:block; }
+    .page { width:100%; max-width:1600px; margin:16px auto 48px; padding:0 24px; display:block; }
     .header-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow); display:flex; justify-content:space-between; gap:14px; align-items:center; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:var(--shadow); }
-    .block-list { display:flex !important; flex-direction:column; gap:12px; min-height:10px; width:100%; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:var(--shadow); width:100%; }
+    .block-list { display:flex !important; flex-direction:column; gap:16px; min-height:10px; width:100%; }
     .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; }
     .meta { color:var(--muted); font-size:13px; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
@@ -20,15 +20,44 @@
     table { width:100%; border-collapse:collapse; margin-top:10px; }
     th, td { padding:8px; border:1px solid var(--border); font-size:13px; text-align:left; }
     th { background:#f7f9fb; }
-    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
+    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; box-shadow:0 4px 12px rgba(0,0,0,0.04); height:32px; }
     .btn:hover { transform:translateY(-1px); box-shadow:0 10px 20px rgba(0,0,0,0.08); }
     .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
     .btn-ghost { background:#f0f3f5; color:#1f2430; }
     .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
+    .line-row {
+      display:grid;
+      grid-template-columns:
+        140px 160px 200px 150px 180px 100px 90px 110px 110px 140px 140px 200px 90px;
+      gap:4px;
+      align-items:center;
+      margin-bottom:10px;
+      width:100%;
+    }
+    .line-row select, .line-row input {
+      width:100%;
+      height:32px;
+      font-size:13px;
+      padding:4px 8px;
+      box-sizing:border-box;
+    }
   </style>
 </head>
 <body>
-  <div id="compras-root"></div>
+  <div class="page">
+    <div class="header-card">
+      <div>
+        <h1 style="margin:0;">Compras</h1>
+        <p class="meta" style="margin:4px 0 0;">Bloques de compras generados al aprobar cotizaciones</p>
+      </div>
+      <div class="chips">
+        <span class="chip" id="statBloques">Bloques: 0</span>
+      </div>
+    </div>
+
+    <div id="blocksContainer" class="block-list"></div>
+    <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
+  </div>
 
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
@@ -37,35 +66,17 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
-    let root, blocksContainer, emptyState, statBloques;
+    let blocksContainer, emptyState, statBloques;
+    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
+    function ensureEls() {
+      blocksContainer = pickLast('#blocksContainer');
+      emptyState = pickLast('#emptyState');
+      statBloques = pickLast('#statBloques');
+    }
+
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
 
-    function mountUI() {
-      const slot = document.getElementById('page-content-slot');
-      root = document.getElementById('compras-root');
-      if (slot && root.parentElement !== slot) slot.appendChild(root);
-      root.innerHTML = `
-        <div class="page">
-          <div class="header-card">
-            <div>
-              <h1 style="margin:0;">Compras</h1>
-              <p class="meta" style="margin:4px 0 0;">Bloques de compras generados al aprobar cotizaciones</p>
-            </div>
-            <div class="chips">
-              <span class="chip" id="statBloques">Bloques: 0</span>
-            </div>
-          </div>
-          <div id="blocksContainer" class="block-list" style="margin-top:14px; display:flex; flex-direction:column; gap:12px; visibility:visible; opacity:1; width:100%;"></div>
-          <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
-        </div>`;
-      blocksContainer = root.querySelector('#blocksContainer');
-      emptyState = root.querySelector('#emptyState');
-      statBloques = root.querySelector('#statBloques');
-    }
-
-    function getClient() {
-      return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
-    }
+    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
     async function waitForClient(timeoutMs = 4000) {
       const start = performance.now();
       while (performance.now() - start < timeoutMs) {
@@ -77,12 +88,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      console.log('[compras] DOMContentLoaded');
-      mountUI();
+      ensureEls();
       try {
         const client = await waitForClient();
         if (!window.supabase && client) window.supabase = client;
-        console.log('[compras] client listo');
         await loadCatalogs();
         await loadBlocks();
         setTimeout(() => loadBlocks().catch(console.error), 500);
@@ -92,8 +101,7 @@
       }
     });
     window.onload = () => {
-      mountUI();
-      console.log('[compras] window.onload -> refuerzo loadBlocks');
+      ensureEls();
       loadBlocks().catch(console.error);
     };
 
@@ -111,19 +119,13 @@
       catEstadosPago= est.data || [];
       proveedores = [];
       materiales  = [];
-      console.log('[compras] catálogos cargados', {enc: catEncargados.length, uni: catUnidades.length, mod: catModos.length, est: catEstadosPago.length});
     }
 
     async function loadBlocks() {
       try {
         const client = await waitForClient();
-        console.log('[compras] loadBlocks: consultando purchase_blocks');
-        const { data, error } = await client
-          .from('purchase_blocks')
-          .select('*')
-          .order('created_at', { ascending: false });
+        const { data, error } = await client.from('purchase_blocks').select('*').order('created_at', { ascending: false });
         if (error) throw error;
-        console.log('[compras] loadBlocks: recibidos', data?.length);
         renderBlocks(data || []);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -133,17 +135,9 @@
     }
 
     function renderBlocks(blocks) {
+      ensureEls();
       if (!blocksContainer || !statBloques || !emptyState) return;
       statBloques.textContent = `Bloques: ${blocks.length}`;
-      blocksContainer.style.setProperty('display','flex','important');
-      blocksContainer.style.setProperty('width','100%','important');
-      blocksContainer.style.setProperty('visibility','visible','important');
-      blocksContainer.style.setProperty('opacity','1','important');
-      if (blocksContainer.parentElement) {
-        blocksContainer.parentElement.style.setProperty('display','block','important');
-        blocksContainer.parentElement.style.setProperty('width','100%','important');
-        blocksContainer.parentElement.style.setProperty('visibility','visible','important');
-      }
       if (!blocks.length) {
         emptyState.style.display = 'block';
         blocksContainer.innerHTML = '';
@@ -154,7 +148,6 @@
       document.querySelectorAll('[data-block-toggle]').forEach(btn => {
         btn.onclick = () => toggleLines(btn.dataset.blockId);
       });
-      console.log('[compras] renderBlocks pintó', blocks.length, 'cards');
     }
 
     function blockCard(b) {
@@ -187,7 +180,7 @@
 
     function lineForm(blockId) {
       return `
-        <div class="line-form" data-line-form="${blockId}" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:8px; margin-bottom:10px;">
+        <div class="line-row" data-line-form="${blockId}">
           <select data-f="encargado">${opts(catEncargados)}</select>
           <select data-f="proveedor_id">${opts(proveedores, 'id', 'nombre')}</select>
           <input data-f="direccion" placeholder="Dirección" />
@@ -196,6 +189,7 @@
           <input data-f="unidad" placeholder="Unidad" list="unidades-list"/>
           <input data-f="cantidad" type="number" step="0.01" value="1" />
           <input data-f="precio_unit" type="number" step="1" value="0" />
+          <input data-f="total" type="text" value="0" readonly />
           <select data-f="modo_compra">${opts(catModos)}</select>
           <select data-f="estado_pago">${opts(catEstadosPago)}</select>
           <input data-f="observaciones" placeholder="Observaciones" />
@@ -277,6 +271,8 @@
       const form = document.querySelector(`[data-line-form="${blockId}"]`);
       if (!form) return;
       const get = (name) => form.querySelector(`[data-f="${name}"]`)?.value || '';
+      const cantidad = Number(get('cantidad') || 0);
+      const precio = Number(get('precio_unit') || 0);
       const payload = {
         encargado: get('encargado'),
         proveedor_id: get('proveedor_id') || null,
@@ -284,8 +280,9 @@
         categoria: get('categoria') || null,
         producto_id: get('producto_id') || null,
         unidad: get('unidad') || null,
-        cantidad: Number(get('cantidad') || 0),
-        precio_unit: Number(get('precio_unit') || 0),
+        cantidad,
+        precio_unit: precio,
+        total: cantidad * precio,
         modo_compra: get('modo_compra') || null,
         estado_pago: get('estado_pago') || null,
         observaciones: get('observaciones') || null,
@@ -342,7 +339,6 @@
       console.log('[debugForceCompras] filas', r.data?.length, r.data, 'error', r.error);
       renderBlocks(r.data || []);
     };
-
     window.onCategoriaChange = onCategoriaChange;
     window.agregarLinea = agregarLinea;
     window.borrarLinea = borrarLinea;
