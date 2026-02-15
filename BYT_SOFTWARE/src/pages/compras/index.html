@@ -169,12 +169,8 @@
           .select('*')
           .order('created_at', { ascending: false });
         if (error) throw error;
-
-        // No filtramos en la query; mostramos todo lo que está en purchase_blocks.
-        // Si quieres solo aprobadas, asegura que estado='aprobada' y filtra aquí:
-        // const blocks = (data || []).filter(b => (b.estado||'').toLowerCase() === 'aprobada');
+        // Mostrar todo lo que haya en purchase_blocks
         const blocks = data || [];
-
         renderBlocks(blocks);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
