@@ -1,12 +1,8 @@
 // Requiere supabase ya inicializado (supabaseBrowserClient)
 export async function crearBloqueComprasDesdeCotizacion(cot) {
-  // Prioriza el nombre de proyecto (igual que usa Ventas) para que coincidan los IDs
+  // Usa el UUID real como key; nombre solo para mostrar
   const proyecto_id =
-    cot.nombre_proyecto ||
-    cot.project_key ||
-    cot.data?.cliente?.nombre_proyecto ||
-    cot.data?.cliente?.nombre ||
-    cot.id ||
+    cot.id ||            // UUID de la cotización/proyecto
     cot.cotizacion_id ||
     cot.proyecto_id ||
     null;
@@ -32,7 +28,6 @@ export async function crearBloqueComprasDesdeCotizacion(cot) {
     .select('id')
     .eq('proyecto_id', proyecto_id)
     .maybeSingle();
-
   if (errFind) return { error: errFind };
 
   if (existing?.id) {
