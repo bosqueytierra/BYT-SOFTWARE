@@ -23,7 +23,6 @@
     .btn-ghost { background:#f0f3f5; color:#1f2430; }
     .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
 
-    /* Overlay tipo Excel */
     body.overlay-open { overflow:hidden; }
     .overlay {
       position: fixed;
@@ -48,9 +47,7 @@
       flex-direction: column;
       gap: 8px;
     }
-    .overlay-header {
-      display:flex; justify-content:space-between; align-items:center; gap:8px;
-    }
+    .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
     .overlay-title { font-weight: 700; font-size: 16px; }
     .lines-wrapper { width:100%; overflow:auto; }
     .line-row {
@@ -62,25 +59,9 @@
       align-items:center;
       margin-bottom:6px;
     }
-    .line-row select, .line-row input {
-      width:100%;
-      height:30px;
-      font-size:13px;
-      padding:4px 6px;
-      box-sizing:border-box;
-    }
-    .lines-table table {
-      width:100%;
-      min-width:1800px;
-      border-collapse:collapse;
-      font-size:12.5px;
-    }
-    .lines-table th, .lines-table td {
-      padding:6px 6px;
-      border:1px solid var(--border);
-      text-align:left;
-      background:#fff;
-    }
+    .line-row select, .line-row input { width:100%; height:30px; font-size:13px; padding:4px 6px; box-sizing:border-box; }
+    .lines-table table { width:100%; min-width:1800px; border-collapse:collapse; font-size:12.5px; }
+    .lines-table th, .lines-table td { padding:6px 6px; border:1px solid var(--border); text-align:left; background:#fff; }
     .lines-table th { background:#f2f4f7; position: sticky; top: 0; z-index: 1; }
   </style>
 </head>
@@ -100,7 +81,6 @@
     <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
   </div>
 
-  <!-- Overlay Excel -->
   <div id="overlay" class="overlay">
     <div class="overlay-content">
       <div class="overlay-header">
@@ -124,20 +104,19 @@
 
   <script>
     let blocksContainer, emptyState, statBloques;
-    const overlay = document.getElementById('overlay');
-    const overlayForm = document.getElementById('overlayForm');
-    const overlayTable = document.getElementById('overlayTable');
-    const overlayTitle = document.getElementById('overlayTitle');
-    document.getElementById('closeOverlay').onclick = () => {
-      overlay.classList.remove('active');
-      document.body.classList.remove('overlay-open');
-    };
+    let overlay, overlayForm, overlayTable, overlayTitle, closeOverlayBtn;
 
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
       blocksContainer = pickLast('#blocksContainer');
       emptyState = pickLast('#emptyState');
       statBloques = pickLast('#statBloques');
+      overlay = pickLast('#overlay');
+      overlayForm = pickLast('#overlayForm');
+      overlayTable = pickLast('#overlayTable');
+      overlayTitle = pickLast('#overlayTitle');
+      closeOverlayBtn = pickLast('#closeOverlay');
+      if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
     }
 
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
@@ -165,7 +144,6 @@
       }
     });
 
-    // Delegación para que "Ver detalle" siempre funcione aunque el DOM se reinyecte
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-block-toggle]');
       if (btn) {
@@ -264,6 +242,8 @@
     }
 
     function openOverlay(blockId, title) {
+      ensureEls(); // reatacha overlay refs en caso de reinyección
+      if (!overlay || !overlayForm || !overlayTable || !overlayTitle) return;
       overlayTitle.textContent = 'Líneas de compra - ' + (title || blockId);
       overlayForm.innerHTML = lineForm(blockId);
       overlayTable.textContent = 'Cargando...';
@@ -274,15 +254,16 @@
     }
 
     async function reloadLines(blockId) {
-      const tableEl = overlayTable;
-      tableEl.textContent = 'Cargando...';
+      ensureEls();
+      if (!overlayTable) return;
+      overlayTable.textContent = 'Cargando...';
       try {
         const { data, error } = await window.supabaseClient.listarLineasCompra(blockId);
         if (error) throw error;
-        tableEl.innerHTML = renderLinesTable(data || []);
+        overlayTable.innerHTML = renderLinesTable(data || []);
       } catch (e) {
         console.error('Error cargando líneas', e);
-        tableEl.textContent = 'Error al cargar líneas';
+        overlayTable.textContent = 'Error al cargar líneas';
       }
     }
 
