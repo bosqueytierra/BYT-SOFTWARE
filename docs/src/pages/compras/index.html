@@ -19,7 +19,7 @@
     .chip { background:#eef2f5; color:var(--text); border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:background .12s ease; height:30px; box-shadow:none; }
     .btn:hover { background:#eef2f5; }
-    .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:none; }
+    .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
     .btn-primary:hover { background:#264d40; }
     .btn-ghost { background:#f4f5f6; color:#1f2430; border-color:#d4d8dd; }
     .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
@@ -53,39 +53,42 @@
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
 
-    .line-row {
-      min-width: 2100px;
-      display:grid;
+    .line-grid {
+      min-width: 2200px;
+      display: grid;
       grid-template-columns:
         140px 160px 220px 150px 200px 120px 80px 110px 110px 150px 150px 240px 90px;
-      gap:2px;
-      align-items:center;
-      margin-bottom:6px;
-      padding:4px;
-      background:#f2f4f7;
-      border:1px solid #e1e5ea;
-      border-radius:6px;
+      gap: 0;
+      align-items: center;
     }
-    .line-row select, .line-row input {
+    .grid-header {
+      font-size:12.5px;
+      font-weight:700;
+      background:#e1e5ec;
+      border:1px solid #d7dbe0;
+      padding:6px 6px;
+    }
+    .grid-row {
+      display: contents;
+    }
+    .cell {
+      border:1px solid #d7dbe0;
+      background:#fff;
+      padding:0;
+      min-height:28px;
+    }
+    .cell:nth-child(13n+1), .grid-row:nth-child(odd) .cell { background:#f7f8fa; }
+    .cell input, .cell select {
       width:100%;
       height:28px;
       font-size:13px;
       padding:2px 6px;
       box-sizing:border-box;
-      border:1px solid #cfd5dc;
-      border-radius:4px;
-      background:#fff;
+      border:none;
+      background:transparent;
+      outline:none;
     }
-
-    .lines-table table { width:100%; min-width:2100px; border-collapse:collapse; font-size:12.5px; }
-    .lines-table th, .lines-table td {
-      padding:6px 6px;
-      border:1px solid #d7dbe0;
-      text-align:left;
-      background:#fff;
-    }
-    .lines-table th { background:#e1e5ec; position: sticky; top: 0; z-index: 1; }
-    .lines-table tr:nth-child(odd) { background:#f7f8fa; }
+    .readonly { background:#f3f4f6; }
   </style>
 </head>
 <body>
@@ -113,8 +116,7 @@
         </div>
       </div>
       <div class="lines-wrapper">
-        <div id="overlayForm"></div>
-        <div class="lines-table" id="overlayTable">Cargando...</div>
+        <div id="overlayGrid"></div>
       </div>
     </div>
   </div>
@@ -127,7 +129,11 @@
 
   <script>
     let blocksContainer, emptyState, statBloques;
-    let overlay, overlayForm, overlayTable, overlayTitle, closeOverlayBtn;
+    let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
+    let currentBlockId = null;
+    let currentRows = [];
+    const MIN_ROWS = 50;
+    const TABLE = 'purchase_lines';
 
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
@@ -135,8 +141,7 @@
       emptyState = pickLast('#emptyState');
       statBloques = pickLast('#statBloques');
       overlay = pickLast('#overlay');
-      overlayForm = pickLast('#overlayForm');
-      overlayTable = pickLast('#overlayTable');
+      overlayGrid = pickLast('#overlayGrid');
       overlayTitle = pickLast('#overlayTitle');
       closeOverlayBtn = pickLast('#closeOverlay');
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
@@ -187,8 +192,8 @@
       catUnidades   = uni.data || [];
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
-      proveedores = [];
-      materiales  = [];
+      proveedores = []; // cargar si corresponde
+      materiales  = []; // cargar si corresponde
     }
 
     async function loadBlocks() {
@@ -241,175 +246,120 @@
       `;
     }
 
-    function lineForm(blockId) {
-      return `
-        <div class="line-row" data-line-form="${blockId}">
-          <select data-f="encargado">${opts(catEncargados)}</select>
-          <select data-f="proveedor_id">${opts(proveedores, 'id', 'nombre')}</select>
-          <input data-f="direccion" placeholder="Dirección" />
-          <select data-f="categoria" onchange="onCategoriaChange('${blockId}', this.value)">${optsCategorias(materiales)}</select>
-          <select data-f="producto_id" data-productos-for="${blockId}"><option value="">--Producto--</option></select>
-          <input data-f="unidad" placeholder="Unidad" list="unidades-list"/>
-          <input data-f="cantidad" type="number" step="0.01" value="1" />
-          <input data-f="precio_unit" type="number" step="1" value="0" />
-          <input data-f="total" type="text" value="0" readonly />
-          <select data-f="modo_compra">${opts(catModos)}</select>
-          <select data-f="estado_pago">${opts(catEstadosPago)}</select>
-          <input data-f="observaciones" placeholder="Observaciones" />
-          <button class="btn btn-primary" type="button" onclick="agregarLinea('${blockId}')">Agregar</button>
-        </div>
-        <datalist id="unidades-list">
-          ${catUnidades.map(u => `<option value="${escapeHtml(u.nombre)}">`).join('')}
-        </datalist>
-      `;
+    function makeOptions(list, valKey='nombre', labelKey='nombre') {
+      return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
 
-    function openOverlay(blockId, title) {
+    function renderGrid(rows) {
+      const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs',''];
+      const headerHtml = headers.map(h => `<div class="grid-header">${h}</div>`).join('');
+      const body = rows.map((row, idx) => {
+        const idAttr = row.id ? `data-id="${row.id}"` : '';
+        return `
+        <div class="grid-row" data-row="${idx}" ${idAttr}>
+          <div class="cell"><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></div>
+          <div class="cell"><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','nombre')}</select></div>
+          <div class="cell"><input data-f="direccion" data-row="${idx}" value="${escapeHtml(row.direccion||'')}" /></div>
+          <div class="cell"><select data-f="categoria" data-row="${idx}">${makeOptions(materiales.map(m=>({nombre:m.category})),'nombre','nombre')}</select></div>
+          <div class="cell"><select data-f="producto_id" data-row="${idx}">${makeOptions(materiales,'id','name')}</select></div>
+          <div class="cell"><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></div>
+          <div class="cell"><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></div>
+          <div class="cell"><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></div>
+          <div class="cell readonly"><input data-f="total" data-row="${idx}" value="${row.total||''}" readonly></div>
+          <div class="cell"><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></div>
+          <div class="cell"><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></div>
+          <div class="cell"><input data-f="observaciones" data-row="${idx}" value="${escapeHtml(row.observaciones||'')}" /></div>
+          <div class="cell readonly"></div>
+        </div>`;
+      }).join('');
+      overlayGrid.innerHTML = `
+        <div class="line-grid">
+          ${headerHtml}
+          ${body}
+        </div>`;
+      // set values of selects after inject
+      rows.forEach((row, idx) => {
+        setVal(idx,'encargado',row.encargado);
+        setVal(idx,'proveedor_id',row.proveedor_id);
+        setVal(idx,'categoria',row.categoria);
+        setVal(idx,'producto_id',row.producto_id);
+        setVal(idx,'unidad',row.unidad);
+        setVal(idx,'modo_compra',row.modo_compra);
+        setVal(idx,'estado_pago',row.estado_pago);
+      });
+    }
+
+    function setVal(idx, field, value) {
+      const el = overlayGrid.querySelector(`[data-row="${idx}"][data-f="${field}"]`);
+      if (el) el.value = value ?? '';
+    }
+
+    async function openOverlay(blockId, title) {
       ensureEls();
-      if (!overlay || !overlayForm || !overlayTable || !overlayTitle) return;
+      if (!overlay || !overlayGrid || !overlayTitle) return;
       overlayTitle.textContent = 'Líneas de compra - ' + (title || blockId);
-      overlayForm.innerHTML = lineForm(blockId);
-      overlayTable.textContent = 'Cargando...';
       overlay.classList.add('active');
       document.body.classList.add('overlay-open');
-      fillProductosSelect(blockId, '');
-      reloadLines(blockId);
+      currentBlockId = blockId;
+      await loadLines(blockId);
+      attachListeners();
     }
 
-    async function reloadLines(blockId) {
-      ensureEls();
-      if (!overlayTable) return;
-      overlayTable.textContent = 'Cargando...';
-      try {
-        const { data, error } = await window.supabaseClient.listarLineasCompra(blockId);
-        if (error) throw error;
-        overlayTable.innerHTML = renderLinesTable(data || []);
-      } catch (e) {
-        console.error('Error cargando líneas', e);
-        overlayTable.textContent = 'Error al cargar líneas';
-      }
-    }
-
-    function renderLinesTable(lines) {
-      const header = `
-        <tr>
-          <th>Encargado</th><th>Proveedor</th><th>Dirección</th><th>Categoría</th><th>Producto</th>
-          <th>Unidad</th><th>Cantidad</th><th>Precio Unit</th><th>Total</th><th>Modo</th><th>Estado pago</th><th>Obs</th><th></th>
-        </tr>`;
-      const actual = lines.map(l => `
-        <tr>
-          <td>${escapeHtml(l.encargado || '')}</td>
-          <td>${escapeHtml(l.proveedor_id || '')}</td>
-          <td>${escapeHtml(l.direccion || '')}</td>
-          <td>${escapeHtml(l.categoria || '')}</td>
-          <td>${escapeHtml(l.producto_id || '')}</td>
-          <td>${escapeHtml(l.unidad || '')}</td>
-          <td>${Number(l.cantidad || 0)}</td>
-          <td>${fmtCLP(l.precio_unit)}</td>
-          <td>${fmtCLP(l.total)}</td>
-          <td>${escapeHtml(l.modo_compra || '')}</td>
-          <td>${escapeHtml(l.estado_pago || '')}</td>
-          <td>${escapeHtml(l.observaciones || '')}</td>
-          <td><button class="btn btn-ghost" onclick="borrarLinea('${l.id}','${l.block_id}')">🗑</button></td>
-        </tr>`).join('');
-      const placeholdersNeeded = Math.max(50 - lines.length, 0);
-      const placeholderRow = `
-        <tr>
-          <td colspan="13" style="height:22px; background:#fafbfc;"></td>
-        </tr>`;
-      const placeholders = placeholderRow.repeat(placeholdersNeeded);
-      return `<table>${header}${actual}${placeholders}</table>`;
-    }
-
-    function opts(list, valKey='nombre', labelKey='nombre') {
-      return ['<option value="">--Selecciona--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
-    }
-    function optsCategorias(mats) {
-      const cats = [...new Set(mats.map(m => m.category).filter(Boolean))];
-      return ['<option value="">--Categoría--</option>', ...cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`)].join('');
-    }
-    function fillProductosSelect(blockId, categoria) {
-      const sel = document.querySelector(`[data-productos-for="${blockId}"]`);
-      if (!sel) return;
-      const prods = materiales.filter(m => (!categoria || m.category === categoria));
-      sel.innerHTML = ['<option value="">--Producto--</option>', ...prods.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`)].join('');
-    }
-    function onCategoriaChange(blockId, categoria) { fillProductosSelect(blockId, categoria); }
-
-    async function agregarLinea(blockId) {
-      const form = document.querySelector(`[data-line-form="${blockId}"]`);
-      if (!form) return;
-      const get = (name) => form.querySelector(`[data-f="${name}"]`)?.value || '';
-      const cantidad = Number(get('cantidad') || 0);
-      const precio = Number(get('precio_unit') || 0);
-      const payload = {
-        encargado: get('encargado'),
-        proveedor_id: get('proveedor_id') || null,
-        direccion: get('direccion') || null,
-        categoria: get('categoria') || null,
-        producto_id: get('producto_id') || null,
-        unidad: get('unidad') || null,
-        cantidad,
-        precio_unit: precio,
-        total: cantidad * precio,
-        modo_compra: get('modo_compra') || null,
-        estado_pago: get('estado_pago') || null,
-        observaciones: get('observaciones') || null,
-      };
-      try {
-        await window.supabaseClient.crearLineaCompra(blockId, payload);
-        window.utils?.mostrarNotificacion?.('Línea agregada', 'success');
-        await reloadLines(blockId);
-        await recalcTotales(blockId);
-      } catch (e) {
-        console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al agregar línea', 'error');
-      }
-    }
-
-    async function borrarLinea(id, blockId) {
-      try {
-        await window.supabaseClient.eliminarLineaCompra(id);
-        window.utils?.mostrarNotificacion?.('Línea eliminada', 'success');
-        await reloadLines(blockId);
-        await recalcTotales(blockId);
-      } catch (e) {
-        console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al eliminar línea', 'error');
-      }
-    }
-
-    async function recalcTotales(blockId) {
+    async function loadLines(blockId) {
       const client = await waitForClient();
-      const { data: lines, error } = await window.supabaseClient.listarLineasCompra(blockId);
-      if (error) throw error;
-      const total = (lines || []).reduce((acc, l) => acc + Number(l.total || 0), 0);
-      const totalComprado = (lines || []).reduce((acc, l) => {
-        const estado = (l.estado_pago || '').toLowerCase();
-        const comprado = estado === 'comprado' || estado === 'en stock';
-        return acc + (comprado ? Number(l.total || 0) : 0);
-      }, 0);
-      const totalPorComprar = total - totalComprado;
-      const { error: errUp } = await client
-        .from('purchase_blocks')
-        .update({ total_comprado: totalComprado, total_por_comprar: totalPorComprar })
-        .eq('id', blockId);
-      if (errUp) throw errUp;
-      await loadBlocks();
+      const { data, error } = await client.from(TABLE).select('*').eq('block_id', blockId).order('created_at', { ascending: true });
+      if (error) { console.error(error); currentRows = []; }
+      else currentRows = data || [];
+      // pad to MIN_ROWS
+      while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: blockId });
+      renderGrid(currentRows);
     }
+
+    function attachListeners() {
+      overlayGrid.addEventListener('change', onCellEdit, { once:false });
+      overlayGrid.addEventListener('input', onCellEdit, { once:false });
+    }
+
+    async function onCellEdit(e) {
+      const field = e.target.getAttribute('data-f');
+      const rowIdx = Number(e.target.getAttribute('data-row'));
+      if (Number.isNaN(rowIdx) || !field) return;
+      const row = currentRows[rowIdx] || {};
+      let val = e.target.value;
+      if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
+      currentRows[rowIdx] = { ...row, [field]: val, block_id: currentBlockId };
+      // recalc total
+      const cantidad = Number(currentRows[rowIdx].cantidad || 0);
+      const precio = Number(currentRows[rowIdx].precio_unit || 0);
+      currentRows[rowIdx].total = cantidad * precio;
+      const totalInput = overlayGrid.querySelector(`[data-row="${rowIdx}"][data-f="total"]`);
+      if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
+      await persistRow(rowIdx);
+    }
+
+    async function persistRow(idx) {
+      const row = currentRows[idx];
+      if (!row) return;
+      const client = await waitForClient();
+      try {
+        if (!row.id) {
+          const { data, error } = await client.from(TABLE).insert([{ ...row, id: row.id || undefined }]).select().single();
+          if (error) throw error;
+          currentRows[idx] = { ...row, id: data.id };
+        } else {
+          const { error } = await client.from(TABLE).update(row).eq('id', row.id);
+          if (error) throw error;
+        }
+      } catch (e) { console.error('Persist error', e); }
+    }
+
+    function renderPlaceholderTable() { /* no-op; grid already shows placeholders */ }
+
+    function fillProductosSelect(blockId, categoria) { /* dropdowns already static; skip dynamic filter for now */ }
 
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-    window.debugForceCompras = async () => {
-      const client = await waitForClient();
-      const r = await client.from('purchase_blocks').select('*');
-      renderBlocks(r.data || []);
-    };
-    window.onCategoriaChange = onCategoriaChange;
-    window.agregarLinea = agregarLinea;
-    window.borrarLinea = borrarLinea;
   </script>
 </body>
 </html>
