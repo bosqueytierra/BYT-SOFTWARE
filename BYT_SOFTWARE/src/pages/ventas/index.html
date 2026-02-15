@@ -155,36 +155,19 @@
 
   <script>
     const ESTADOS = ['en_ejecucion','completada','cancelada','postventa'];
-
     const MOTIVOS_BAJADA = [
-      'Ajuste a presupuesto del cliente',
-      'Descuento comercial aplicado',
-      'Ajuste tributario (IVA u otros impuestos)',
-      'Variación en costos reales de compra',
-      'Modificación de cantidades ejecutadas',
-      'Sustitución de materiales o proveedores',
-      'Error en cotización inicial',
-      'Reajuste por plazos de entrega',
-      'Eliminación de partidas no ejecutadas',
-      'Ajuste por logística o transporte',
-      'Regularización administrativa'
+      'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
+      'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
+      'Error en cotización inicial','Reajuste por plazos de entrega','Eliminación de partidas no ejecutadas',
+      'Ajuste por logística o transporte','Regularización administrativa'
     ];
     const MOTIVOS_SUBIDA = [
-      'Aumento en costo de materiales',
-      'Aumento en costo de mano de obra',
-      'Incorporación de trabajos adicionales',
-      'Cambio en especificaciones del proyecto',
-      'Aumento por proveedor o marca seleccionada',
-      'Ajuste por variación del tipo de cambio',
-      'Incremento por urgencia en plazos',
-      'Costos adicionales de transporte o logística',
-      'Ajuste por condiciones del lugar de instalación',
-      'Reproceso o rectificación solicitada por el cliente',
-      'Diferencia entre mediciones estimadas y reales',
-      'Actualización de precios por vigencia de cotización',
-      'Ajuste por normativa o requerimientos técnicos',
-      'Aumento por disponibilidad de materiales',
-      'Ajuste por condiciones de pago'
+      'Aumento en costo de materiales','Aumento en costo de mano de obra','Incorporación de trabajos adicionales',
+      'Cambio en especificaciones del proyecto','Aumento por proveedor o marca seleccionada','Ajuste por variación del tipo de cambio',
+      'Incremento por urgencia en plazos','Costos adicionales de transporte o logística','Ajuste por condiciones del lugar de instalación',
+      'Reproceso o rectificación solicitada por el cliente','Diferencia entre mediciones estimadas y reales',
+      'Actualización de precios por vigencia de cotización','Ajuste por normativa o requerimientos técnicos',
+      'Aumento por disponibilidad de materiales','Ajuste por condiciones de pago'
     ];
 
     let ventasData = [];
@@ -238,19 +221,29 @@
         map.get(key).push(v);
       });
       proyectos = Array.from(map.entries()).map(([key, items]) => {
-        const sumCobrado = items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
-        const sumCotizado = items.reduce((acc, it) => acc + (Number(it.total_cotizado || 0) || 0), 0);
-        const cobrado = proyectoCobradoMap.has(key) ? proyectoCobradoMap.get(key) : sumCobrado;
-        const cliente = formatCliente(items[0]?.cliente);
-        const fechaCierre = items[0]?.fecha_aprobacion || items[0]?.fecha_cierre || items[0]?.fecha_cierre_max || '';
-        const cotizacionId = items[0]?.cotizacion_id;
-        const proyectoId = items[0]?.proyecto_id || key;
+        const first = items[0] || {};
+        const totalCotizadoBase = Number(first.total_cotizado || 0);
+        const totalCobradoBase = Number(first.total_venta || 0);
+        const totalCobrado = proyectoCobradoMap.has(key) ? proyectoCobradoMap.get(key) : totalCobradoBase;
+        const cliente = formatCliente(first.cliente);
+        const fechaCierre = first.fecha_aprobacion || first.fecha_cierre || first.fecha_cierre_max || '';
+        const cotizacionId = first.cotizacion_id;
+        const proyectoId = first.proyecto_id || key;
         const allGreen = items.every(it => ['completada','cancelada'].includes(it.estado || 'en_ejecucion'));
-
-        const motivo = items[0]?.motivo_variacion;
+        const motivo = first.motivo_variacion;
         if (motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key, motivo);
 
-        return { key, proyectoId, cotizacionId, cliente, fechaCierre, totalCobrado: cobrado, totalCotizado: sumCotizado, items, allGreen };
+        return {
+          key,
+          proyectoId,
+          cotizacionId,
+          cliente,
+          fechaCierre,
+          totalCobrado,      // usar solo un total por proyecto (no suma por partida)
+          totalCotizado: totalCotizadoBase,
+          items,
+          allGreen
+        };
       });
       if (!selectedProyectoKey && proyectos.length) selectedProyectoKey = proyectos[0].key;
       if (selectedProyectoKey && !proyectos.find(p => p.key === selectedProyectoKey)) selectedProyectoKey = null;
@@ -265,9 +258,7 @@
       const rows = proyectos.map(p => {
         const isSel = p.key === selectedProyectoKey;
         const dotClass = p.allGreen ? 'dot-ok' : 'dot-bad';
-        const totalCobrado = proyectoCobradoMap.has(p.key)
-          ? proyectoCobradoMap.get(p.key)
-          : p.items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
+        const totalCobrado = proyectoCobradoMap.has(p.key) ? proyectoCobradoMap.get(p.key) : p.totalCobrado;
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
             <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
@@ -404,10 +395,10 @@
       const totalCotizado = proyecto.totalCotizado || 0;
       const totalCobrado = proyectoCobradoMap.has(proyecto.key)
         ? proyectoCobradoMap.get(proyecto.key)
-        : proyecto.items.reduce((acc, it) => acc + (Number(it.total_venta || 0) || 0), 0);
+        : proyecto.totalCobrado || 0;
 
       const diffRaw = totalCobrado - totalCotizado;
-      const diferencia = Math.abs(diffRaw) < 1e-6 ? 0 : diffRaw; // evita -0 por flotantes
+      const diferencia = Math.abs(diffRaw) < 1e-6 ? 0 : diffRaw;
       const diffSign = diferencia > 0 ? '+' : (diferencia < 0 ? '−' : '±');
       const diffClass = diferencia > 0 ? 'diff-pos' : (diferencia < 0 ? 'diff-neg' : 'diff-neutral');
       const diffAbs = Math.abs(diferencia);
@@ -520,8 +511,8 @@
       const num = parseMoney(value);
       const proyecto = proyectos.find(p => p.key === key);
       if (proyecto && proyecto.items?.length) {
-        const it = proyecto.items[0];
-        const pid = it.id || it.partida_id || it.partida_nombre || it.partida;
+        const first = proyecto.items[0];
+        const pid = first.id || first.partida_id || first.partida_nombre || first.partida;
         ventasData = ventasData.map(v => {
           const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
           return idv === pid ? { ...v, total_venta: num } : v;
@@ -529,6 +520,7 @@
         await persistVenta(pid, { total_venta: num });
       }
       proyectoCobradoMap.set(key, num);
+      buildProyectos();
       renderProyectos();
       renderResumen();
     }
@@ -550,8 +542,8 @@
       motivoVariacionMap.set(proyectoKey, value);
       const proyecto = proyectos.find(p => p.key === proyectoKey);
       if (proyecto && proyecto.items?.length) {
-        const it = proyecto.items[0];
-        const pid = it.id || it.partida_id || it.partida_nombre || it.partida;
+        const first = proyecto.items[0];
+        const pid = first.id || first.partida_id || first.partida_nombre || first.partida;
         ventasData = ventasData.map(v => {
           const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
           return idv === pid ? { ...v, motivo_variacion: value } : v;
