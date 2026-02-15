@@ -6,7 +6,7 @@
   <title>Compras - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
   <style>
-    :root { --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --shadow:0 6px 16px rgba(0,0,0,0.06); }
+    :root { --bg:#f6f7f8; --card:#fff; --border:#d4d8dd; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --shadow:0 6px 16px rgba(0,0,0,0.06); }
     html, body { width:100%; min-height:100vh; display:block; }
     body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
     .page { width:100%; max-width:1800px; margin:16px auto 48px; padding:0 16px; display:block; }
@@ -17,52 +17,75 @@
     .meta { color:var(--muted); font-size:13px; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
     .chip { background:#eef2f5; color:var(--text); border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
-    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; box-shadow:0 4px 12px rgba(0,0,0,0.04); height:32px; }
-    .btn:hover { transform:translateY(-1px); box-shadow:0 10px 20px rgba(0,0,0,0.08); }
-    .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
-    .btn-ghost { background:#f0f3f5; color:#1f2430; }
+    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:background .12s ease; height:30px; box-shadow:none; }
+    .btn:hover { background:#eef2f5; }
+    .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); box-shadow:none; }
+    .btn-primary:hover { background:#264d40; }
+    .btn-ghost { background:#f4f5f6; color:#1f2430; border-color:#d4d8dd; }
     .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
 
     body.overlay-open { overflow:hidden; }
     .overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.35);
+      background: rgba(0,0,0,0.45);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 9999;
+      padding: 10px;
     }
     .overlay.active { display: flex; }
     .overlay-content {
-      background: #fff;
-      border-radius: 14px;
-      box-shadow: 0 18px 60px rgba(0,0,0,0.28);
-      width: 95vw;
-      max-width: 1900px;
-      max-height: 90vh;
-      padding: 14px;
+      background: #f8f9fb;
+      border-radius: 10px;
+      box-shadow: 0 18px 60px rgba(0,0,0,0.30);
+      width: 98vw;
+      max-width: 2200px;
+      height: 92vh;
+      padding: 10px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
     .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-    .overlay-title { font-weight: 700; font-size: 16px; }
-    .lines-wrapper { width:100%; overflow:auto; }
+    .overlay-title { font-weight: 700; font-size: 15px; }
+    .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
+
     .line-row {
-      min-width: 1800px;
+      min-width: 2100px;
       display:grid;
       grid-template-columns:
         140px 160px 220px 150px 200px 120px 80px 110px 110px 150px 150px 240px 90px;
-      gap:4px;
+      gap:2px;
       align-items:center;
       margin-bottom:6px;
+      padding:4px;
+      background:#f2f4f7;
+      border:1px solid #e1e5ea;
+      border-radius:6px;
     }
-    .line-row select, .line-row input { width:100%; height:30px; font-size:13px; padding:4px 6px; box-sizing:border-box; }
-    .lines-table table { width:100%; min-width:1800px; border-collapse:collapse; font-size:12.5px; }
-    .lines-table th, .lines-table td { padding:6px 6px; border:1px solid var(--border); text-align:left; background:#fff; }
-    .lines-table th { background:#f2f4f7; position: sticky; top: 0; z-index: 1; }
+    .line-row select, .line-row input {
+      width:100%;
+      height:28px;
+      font-size:13px;
+      padding:2px 6px;
+      box-sizing:border-box;
+      border:1px solid #cfd5dc;
+      border-radius:4px;
+      background:#fff;
+    }
+    .lines-table table { width:100%; min-width:2100px; border-collapse:collapse; font-size:12.5px; }
+    .lines-table th, .lines-table td {
+      padding:6px 6px;
+      border:1px solid #d7dbe0;
+      text-align:left;
+      background:#fff;
+    }
+    .lines-table th { background:#e9edf2; position: sticky; top: 0; z-index: 1; }
+    .lines-table tr:nth-child(every) { background:#fff; }
+    .lines-table tr:nth-child(odd) { background:#f7f8fa; }
   </style>
 </head>
 <body>
@@ -242,7 +265,7 @@
     }
 
     function openOverlay(blockId, title) {
-      ensureEls(); // reatacha overlay refs en caso de reinyección
+      ensureEls();
       if (!overlay || !overlayForm || !overlayTable || !overlayTitle) return;
       overlayTitle.textContent = 'Líneas de compra - ' + (title || blockId);
       overlayForm.innerHTML = lineForm(blockId);
