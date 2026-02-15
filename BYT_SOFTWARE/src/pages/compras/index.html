@@ -171,8 +171,12 @@
           .select('*')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        // Filtra aquí en el front, para evitar .eq cuando el cliente no es el builder nativo
-        const filtered = (data || []).filter(b => (b.estado || '').toLowerCase() === 'aprobada');
+        // Filtra solo las aprobadas o en_compra; si no hay estado, se incluyen
+        const filtered = (data || []).filter(b => {
+          const st = (b.estado || '').toLowerCase();
+          if (!st) return true;
+          return st === 'aprobada' || st === 'en_compra';
+        });
         renderBlocks(filtered);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
