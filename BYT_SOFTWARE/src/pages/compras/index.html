@@ -76,6 +76,7 @@
       border-radius:4px;
       background:#fff;
     }
+
     .lines-table table { width:100%; min-width:2100px; border-collapse:collapse; font-size:12.5px; }
     .lines-table th, .lines-table td {
       padding:6px 6px;
@@ -83,8 +84,7 @@
       text-align:left;
       background:#fff;
     }
-    .lines-table th { background:#e9edf2; position: sticky; top: 0; z-index: 1; }
-    .lines-table tr:nth-child(every) { background:#fff; }
+    .lines-table th { background:#e1e5ec; position: sticky; top: 0; z-index: 1; }
     .lines-table tr:nth-child(odd) { background:#f7f8fa; }
   </style>
 </head>
@@ -291,13 +291,12 @@
     }
 
     function renderLinesTable(lines) {
-      if (!lines.length) return '<div class="meta">Sin líneas de compra todavía.</div>';
       const header = `
         <tr>
           <th>Encargado</th><th>Proveedor</th><th>Dirección</th><th>Categoría</th><th>Producto</th>
           <th>Unidad</th><th>Cantidad</th><th>Precio Unit</th><th>Total</th><th>Modo</th><th>Estado pago</th><th>Obs</th><th></th>
         </tr>`;
-      const rows = lines.map(l => `
+      const actual = lines.map(l => `
         <tr>
           <td>${escapeHtml(l.encargado || '')}</td>
           <td>${escapeHtml(l.proveedor_id || '')}</td>
@@ -313,7 +312,13 @@
           <td>${escapeHtml(l.observaciones || '')}</td>
           <td><button class="btn btn-ghost" onclick="borrarLinea('${l.id}','${l.block_id}')">🗑</button></td>
         </tr>`).join('');
-      return `<table>${header}${rows}</table>`;
+      const placeholdersNeeded = Math.max(50 - lines.length, 0);
+      const placeholderRow = `
+        <tr>
+          <td colspan="13" style="height:22px; background:#fafbfc;"></td>
+        </tr>`;
+      const placeholders = placeholderRow.repeat(placeholdersNeeded);
+      return `<table>${header}${actual}${placeholders}</table>`;
     }
 
     function opts(list, valKey='nombre', labelKey='nombre') {
