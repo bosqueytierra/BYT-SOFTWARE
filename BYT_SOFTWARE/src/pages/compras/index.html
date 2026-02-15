@@ -171,13 +171,8 @@
           .select('*')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        // Filtra solo las aprobadas o en_compra; si no hay estado, se incluyen
-        const filtered = (data || []).filter(b => {
-          const st = (b.estado || '').toLowerCase();
-          if (!st) return true;
-          return st === 'aprobada' || st === 'en_compra';
-        });
-        renderBlocks(filtered);
+        // Mostrar todos los bloques (sin filtrar) para no ocultar aprobadas por campo/estado desconocido
+        renderBlocks(data || []);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
@@ -202,12 +197,13 @@
       const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
       const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
       const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
+      const estadoLabel = escapeHtml(b.estado || b.cotizacion_estado || '—');
       return `
         <div class="card">
           <div class="block-header">
             <div>
               <h3 style="margin:0 0 4px;">${title}</h3>
-              <div class="meta">Estado: ${escapeHtml(b.estado || 'en_compra')} · Creado: ${formatDate(b.created_at)}</div>
+              <div class="meta">Estado: ${estadoLabel} · Creado: ${formatDate(b.created_at)}</div>
             </div>
             <button class="btn btn-ghost" data-block-toggle data-block-id="${b.id}" data-block-title="${title}">Ver detalle</button>
           </div>
