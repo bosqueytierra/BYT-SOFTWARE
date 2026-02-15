@@ -1,6 +1,11 @@
 // Requiere supabase ya inicializado (supabaseBrowserClient)
 export async function crearBloqueComprasDesdeCotizacion(cot) {
-  const proyecto_id = cot.id || cot.cotizacion_id || cot.proyecto_id || null;
+  const proyecto_id =
+    cot.id ||
+    cot.cotizacion_id ||
+    cot.proyecto_id ||
+    null;
+
   const proyecto_nombre =
     cot.nombre_proyecto ||
     cot.project_key ||
@@ -10,28 +15,48 @@ export async function crearBloqueComprasDesdeCotizacion(cot) {
 
   const total_cotizado = Number(cot.total_proyecto || cot.total || 0);
   const total_cobrado  = Number(cot.total_cobrado || cot.total_venta || 0);
+  const estado = 'en_compra'; // o 'aprobada' si quieres filtrar luego en compras
 
-  // ¿Existe bloque ya?
+  if (!proyecto_id) {
+    return { error: 'proyecto_id vacío' };
+  }
+
+  // ¿Existe bloque ya? Si existe, actualizamos; si no, insertamos.
   const { data: existing, error: errFind } = await supabase
     .from('purchase_blocks')
-    .select('*')
+    .select('id')
     .eq('proyecto_id', proyecto_id)
     .maybeSingle();
-  if (errFind) throw errFind;
-  if (existing) return { data: existing, error: null };
 
-  const { data, error } = await supabase
-    .from('purchase_blocks')
-    .insert([{
-      proyecto_id,
-      proyecto_nombre,
-      total_cotizado,
-      total_cobrado,
-      estado: 'en_compra',
-    }])
-    .select('*')
-    .single();
-  return { data, error };
+  if (errFind) return { error: errFind };
+
+  if (existing?.id) {
+    const { data, error } = await supabase
+      .from('purchase_blocks')
+      .update({
+        proyecto_nombre,
+        total_cotizado,
+        total_cobrado,
+        estado,
+      })
+      .eq('id', existing.id)
+      .select('*')
+      .single();
+    return { data, error };
+  } else {
+    const { data, error } = await supabase
+      .from('purchase_blocks')
+      .insert([{
+        proyecto_id,
+        proyecto_nombre,
+        total_cotizado,
+        total_cobrado,
+        estado,
+      }])
+      .select('*')
+      .single();
+    return { data, error };
+  }
 }
 
 export async function listarBloquesCompras() {
