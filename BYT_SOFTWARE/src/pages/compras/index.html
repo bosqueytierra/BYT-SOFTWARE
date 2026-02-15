@@ -168,11 +168,12 @@
         const client = await waitForClient();
         const { data, error } = await client
           .from('purchase_blocks')
-          // Solo mostrar bloques de cotizaciones aprobadas (ajusta el campo/valor si tu estado difiere)
-          .eq('estado', 'aprobada')
+          .select('*')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        renderBlocks(data || []);
+        // Filtra aquí en el front, para evitar .eq cuando el cliente no es el builder nativo
+        const filtered = (data || []).filter(b => (b.estado || '').toLowerCase() === 'aprobada');
+        renderBlocks(filtered);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
