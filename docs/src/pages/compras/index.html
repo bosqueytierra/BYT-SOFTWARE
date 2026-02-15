@@ -6,51 +6,29 @@
   <title>Compras - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
   <style>
-    :root {
-      --bg: #f6f7f8;
-      --card: #ffffff;
-      --border: #e4e7eb;
-      --text: #2d2d2d;
-      --muted: #6c7a86;
-      --primary: #2e5e4e;
-      --primary-soft: #3f705d;
-      --shadow: 0 6px 16px rgba(0,0,0,0.06);
-    }
-    html, body { width: 100%; min-height: 100vh; display: block; }
-    body { margin: 0; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; background: var(--bg); color: var(--text); }
-    .page { width: 100%; max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; display: block; }
-    .header-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); display: flex; justify-content: space-between; gap: 14px; align-items: center; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
-    .block-list { display: flex !important; flex-direction: column; gap: 12px; min-height: 10px; width: 100%; }
-    .block-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
-    .meta { color: var(--muted); font-size: 13px; }
-    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .chip { background: #eef2f5; color: var(--text); border-radius: 10px; padding: 4px 10px; border: 1px solid var(--border); font-size: 13px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { padding: 8px; border: 1px solid var(--border); font-size: 13px; text-align: left; }
-    th { background: #f7f9fb; }
-    .btn { border: 1px solid var(--border); background: #fff; color: #1f2430; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
-    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-ghost { background: #f0f3f5; color: #1f2430; }
-    .empty { text-align: center; color: var(--muted); padding: 24px 12px; border: 1px dashed var(--border); border-radius: 12px; background: #fff; }
+    :root { --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --shadow:0 6px 16px rgba(0,0,0,0.06); }
+    html, body { width:100%; min-height:100vh; display:block; }
+    body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
+    .page { width:100%; max-width:1280px; margin:22px auto 48px; padding:0 16px; display:block; }
+    .header-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; box-shadow:var(--shadow); display:flex; justify-content:space-between; gap:14px; align-items:center; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; box-shadow:var(--shadow); }
+    .block-list { display:flex !important; flex-direction:column; gap:12px; min-height:10px; width:100%; }
+    .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .meta { color:var(--muted); font-size:13px; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; }
+    .chip { background:#eef2f5; color:var(--text); border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
+    table { width:100%; border-collapse:collapse; margin-top:10px; }
+    th, td { padding:8px; border:1px solid var(--border); font-size:13px; text-align:left; }
+    th { background:#f7f9fb; }
+    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
+    .btn:hover { transform:translateY(-1px); box-shadow:0 10px 20px rgba(0,0,0,0.08); }
+    .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .btn-ghost { background:#f0f3f5; color:#1f2430; }
+    .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="header-card">
-      <div>
-        <h1 style="margin:0;">Compras</h1>
-        <p class="meta" style="margin:4px 0 0;">Bloques de compras generados al aprobar cotizaciones</p>
-      </div>
-      <div class="chips">
-        <span class="chip" id="statBloques">Bloques: 0</span>
-      </div>
-    </div>
-
-    <div id="blocksContainer" class="block-list" style="margin-top:14px; display:flex; flex-direction:column; gap:12px; visibility:visible; opacity:1; width:100%;"></div>
-    <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
-  </div>
+  <div id="compras-root"></div>
 
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
@@ -59,16 +37,31 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
-    const blocksContainer = document.getElementById('blocksContainer');
-    const emptyState = document.getElementById('emptyState');
-    const statBloques = document.getElementById('statBloques');
+    let root, blocksContainer, emptyState, statBloques;
+    let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
 
-    let catEncargados = [];
-    let catUnidades = [];
-    let catModos = [];
-    let catEstadosPago = [];
-    let proveedores = [];
-    let materiales = [];
+    function mountUI() {
+      const slot = document.getElementById('page-content-slot');
+      root = document.getElementById('compras-root');
+      if (slot && root.parentElement !== slot) slot.appendChild(root);
+      root.innerHTML = `
+        <div class="page">
+          <div class="header-card">
+            <div>
+              <h1 style="margin:0;">Compras</h1>
+              <p class="meta" style="margin:4px 0 0;">Bloques de compras generados al aprobar cotizaciones</p>
+            </div>
+            <div class="chips">
+              <span class="chip" id="statBloques">Bloques: 0</span>
+            </div>
+          </div>
+          <div id="blocksContainer" class="block-list" style="margin-top:14px; display:flex; flex-direction:column; gap:12px; visibility:visible; opacity:1; width:100%;"></div>
+          <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
+        </div>`;
+      blocksContainer = root.querySelector('#blocksContainer');
+      emptyState = root.querySelector('#emptyState');
+      statBloques = root.querySelector('#statBloques');
+    }
 
     function getClient() {
       return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
@@ -85,6 +78,7 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('[compras] DOMContentLoaded');
+      mountUI();
       try {
         const client = await waitForClient();
         if (!window.supabase && client) window.supabase = client;
@@ -98,6 +92,7 @@
       }
     });
     window.onload = () => {
+      mountUI();
       console.log('[compras] window.onload -> refuerzo loadBlocks');
       loadBlocks().catch(console.error);
     };
@@ -138,8 +133,8 @@
     }
 
     function renderBlocks(blocks) {
+      if (!blocksContainer || !statBloques || !emptyState) return;
       statBloques.textContent = `Bloques: ${blocks.length}`;
-      // Forzar display/size por si algún padre está colapsado
       blocksContainer.style.setProperty('display','flex','important');
       blocksContainer.style.setProperty('width','100%','important');
       blocksContainer.style.setProperty('visibility','visible','important');
