@@ -6,34 +6,25 @@
   <title>Compras - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
   <style>
-    :root {
-      --bg: #f6f7f8;
-      --card: #ffffff;
-      --border: #e4e7eb;
-      --text: #2d2d2d;
-      --muted: #6c7a86;
-      --primary: #2e5e4e;
-      --primary-soft: #3f705d;
-      --shadow: 0 6px 16px rgba(0,0,0,0.06);
-    }
-    html, body { width: 100%; min-height: 100vh; display: block; }
-    body { margin: 0; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; background: var(--bg); color: var(--text); }
-    .page { width: 100%; max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; display: block; }
-    .header-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); display: flex; justify-content: space-between; gap: 14px; align-items: center; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
-    .block-list { display: flex !important; flex-direction: column; gap: 12px; min-height: 10px; width: 100%; }
-    .block-header { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
-    .meta { color: var(--muted); font-size: 13px; }
-    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .chip { background: #eef2f5; color: var(--text); border-radius: 10px; padding: 4px 10px; border: 1px solid var(--border); font-size: 13px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { padding: 8px; border: 1px solid var(--border); font-size: 13px; text-align: left; }
-    th { background: #f7f9fb; }
-    .btn { border: 1px solid var(--border); background: #fff; color: #1f2430; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
-    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-ghost { background: #f0f3f5; color: #1f2430; }
-    .empty { text-align: center; color: var(--muted); padding: 24px 12px; border: 1px dashed var(--border); border-radius: 12px; background: #fff; }
+    :root { --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --primary-soft:#3f705d; --shadow:0 6px 16px rgba(0,0,0,0.06); }
+    html,body{width:100%;min-height:100vh;display:block;}
+    body{margin:0;font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif;background:var(--bg);color:var(--text);}
+    .page{width:100%;max-width:1280px;margin:22px auto 48px;padding:0 16px;display:block;}
+    .header-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:14px;align-items:center;}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow);}
+    .block-list{display:flex !important;flex-direction:column;gap:12px;min-height:10px;width:100%;}
+    .block-header{display:flex;justify-content:space-between;gap:12px;align-items:center;}
+    .meta{color:var(--muted);font-size:13px;}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;}
+    .chip{background:#eef2f5;color:var(--text);border-radius:10px;padding:4px 10px;border:1px solid var(--border);font-size:13px;}
+    table{width:100%;border-collapse:collapse;margin-top:10px;}
+    th,td{padding:8px;border:1px solid var(--border);font-size:13px;text-align:left;}
+    th{background:#f7f9fb;}
+    .btn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:transform .12s ease, box-shadow .12s ease, background .12s ease;box-shadow:0 4px 12px rgba(0,0,0,0.04);}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(0,0,0,0.08);}
+    .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary);}
+    .btn-ghost{background:#f0f3f5;color:#1f2430;}
+    .empty{text-align:center;color:var(--muted);padding:24px 12px;border:1px dashed var(--border);border-radius:12px;background:#fff;}
   </style>
 </head>
 <body>
@@ -60,34 +51,17 @@
 
   <script>
     let blocksContainer, emptyState, statBloques;
+    function pickLast(sel) {
+      const all = document.querySelectorAll(sel);
+      return all.length ? all[all.length - 1] : null;
+    }
     function ensureEls() {
-      // Reobtén los nodos por si layout reinyectó el contenido
-      const liveBlocks = document.querySelector('#page-content-slot #blocksContainer') || document.getElementById('blocksContainer');
-      const liveEmpty  = document.querySelector('#page-content-slot #emptyState')    || document.getElementById('emptyState');
-      const liveStat   = document.querySelector('#page-content-slot #statBloques')   || document.getElementById('statBloques');
-
-      blocksContainer = liveBlocks;
-      emptyState = liveEmpty;
-      statBloques = liveStat;
-
-      // Si no están dentro del slot, muévelos
-      const slot = document.getElementById('page-content-slot');
-      if (slot && blocksContainer && !slot.contains(blocksContainer)) {
-        const wrapper = document.createElement('div');
-        wrapper.id = 'page-content';
-        wrapper.appendChild(blocksContainer);
-        if (emptyState) wrapper.appendChild(emptyState);
-        if (slot.firstChild) slot.innerHTML = '';
-        slot.appendChild(wrapper);
-      }
+      blocksContainer = pickLast('#blocksContainer');
+      emptyState = pickLast('#emptyState');
+      statBloques = pickLast('#statBloques');
     }
 
-    let catEncargados = [];
-    let catUnidades = [];
-    let catModos = [];
-    let catEstadosPago = [];
-    let proveedores = [];
-    let materiales = [];
+    let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
 
     function getClient() {
       return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null;
@@ -160,7 +134,7 @@
 
     function renderBlocks(blocks) {
       ensureEls();
-      if (!blocksContainer) return;
+      if (!blocksContainer || !statBloques || !emptyState) return;
       statBloques.textContent = `Bloques: ${blocks.length}`;
       blocksContainer.style.setProperty('display','flex','important');
       blocksContainer.style.setProperty('width','100%','important');
