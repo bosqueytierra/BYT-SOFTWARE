@@ -16,7 +16,7 @@
     .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; }
     .meta { color:var(--muted); font-size:13px; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
-    .chip { background:#eef2f5; color:var(--text); border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
+    .chip { background:#eef2f5; color:#2d2d2d; border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:background .12s ease; height:30px; box-shadow:none; }
     .btn:hover { background:#eef2f5; }
     .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
@@ -212,6 +212,10 @@
     function makeOptions(list, valKey='nombre', labelKey='nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
+    function productOptions(category) {
+      const list = materiales.filter(m => !category || m.category === category);
+      return makeOptions(list, 'id', 'name');
+    }
 
     function renderGrid(rows) {
       const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs',''];
@@ -224,7 +228,7 @@
           <div class="cell"><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></div>
           <div class="cell"><input data-f="direccion" data-row="${idx}" value="${escapeHtml(row.direccion||'')}" /></div>
           <div class="cell"><select data-f="categoria" data-row="${idx}">${makeOptions([...new Set(materiales.map(m=>m.category).filter(Boolean))].map(c=>({nombre:c})))}</select></div>
-          <div class="cell"><select data-f="producto_id" data-row="${idx}">${makeOptions(materiales,'id','name')}</select></div>
+          <div class="cell"><select data-f="producto_id" data-row="${idx}"></select></div>
           <div class="cell"><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></div>
           <div class="cell"><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></div>
           <div class="cell"><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></div>
@@ -240,11 +244,23 @@
         setVal(idx,'encargado',row.encargado);
         setVal(idx,'proveedor_id',row.proveedor_id);
         setVal(idx,'categoria',row.categoria);
+        rebuildProductOptions(idx); // set options based on category
         setVal(idx,'producto_id',row.producto_id);
         setVal(idx,'unidad',row.unidad);
         setVal(idx,'modo_compra',row.modo_compra);
         setVal(idx,'estado_pago',row.estado_pago);
       });
+    }
+
+    function rebuildProductOptions(rowIdx) {
+      const row = currentRows[rowIdx] || {};
+      const sel = overlayGrid.querySelector(`[data-row="${rowIdx}"][data-f="producto_id"]`);
+      if (!sel) return;
+      sel.innerHTML = productOptions(row.categoria || '');
+      if (row.producto_id) {
+        sel.value = row.producto_id;
+        if (sel.value !== String(row.producto_id)) sel.value = '';
+      }
     }
 
     function setVal(idx, field, value) {
@@ -285,6 +301,10 @@
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
       currentRows[rowIdx] = { ...row, [field]: val, block_id: currentBlockId };
+      if (field === 'categoria') {
+        currentRows[rowIdx].producto_id = null;
+        rebuildProductOptions(rowIdx);
+      }
       const cantidad = Number(currentRows[rowIdx].cantidad || 0);
       const precio = Number(currentRows[rowIdx].precio_unit || 0);
       currentRows[rowIdx].total = cantidad * precio;
