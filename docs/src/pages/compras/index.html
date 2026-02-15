@@ -166,7 +166,11 @@
     async function loadBlocks() {
       try {
         const client = await waitForClient();
-        const { data, error } = await client.from('purchase_blocks').select('*').order('created_at', { ascending: false });
+        const { data, error } = await client
+          .from('purchase_blocks')
+          // Solo mostrar bloques de cotizaciones aprobadas (ajusta el campo/valor si tu estado difiere)
+          .eq('estado', 'aprobada')
+          .order('created_at', { ascending: false });
         if (error) throw error;
         renderBlocks(data || []);
       } catch (e) {
