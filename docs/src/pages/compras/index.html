@@ -51,6 +51,12 @@
     .cell input::-webkit-outer-spin-button, .cell input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .cell input, .cell select { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
     .readonly { background:#f3f4f6; }
+
+    /* Lista de compras (cards con imagen) */
+    .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
+    .item-card { border:1px solid #d7dbe0; border-radius:10px; background:#fff; padding:8px; display:flex; gap:10px; box-shadow:0 4px 10px rgba(0,0,0,0.04); }
+    .item-thumb { width:72px; height:72px; border:1px solid #e2e5ea; border-radius:8px; background:#f5f7fa; object-fit:cover; flex-shrink:0; }
+    .item-body { flex:1; display:flex; flex-direction:column; gap:4px; }
   </style>
 </head>
 <body>
@@ -69,6 +75,7 @@
     <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
   </div>
 
+  <!-- Overlay resumen por categoría -->
   <div id="overlay" class="overlay">
     <div class="overlay-content">
       <div class="overlay-header">
@@ -83,19 +90,40 @@
     </div>
   </div>
 
+  <!-- Overlay Lista de compras (galería) -->
+  <div id="overlayLC" class="overlay">
+    <div class="overlay-content">
+      <div class="overlay-header">
+        <div class="overlay-title" id="overlayLCTitle">Lista de compras</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn" id="closeOverlayLC">Cerrar</button>
+        </div>
+      </div>
+      <div class="lines-wrapper">
+        <div id="overlayLCGrid"></div>
+      </div>
+    </div>
+  </div>
+
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
   <script type="module" src="../../js/globalSupabase.js"></script>
 
-  <script>
+  <script type="module">
+    import * as catApi from '../../lib/cate_material.js';
+
     let blocksContainer, emptyState, statBloques;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
+    let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC;
     let currentBlockId = null;
     let currentRows = [];
     const MIN_ROWS = 50;
     const TABLE = 'purchase_lines';
+    let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
+    let catImagesMap = {};
+    const PLACEHOLDER_IMG = 'https://via.placeholder.com/120?text=LC';
 
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
@@ -106,10 +134,14 @@
       overlayGrid = pickLast('#overlayGrid');
       overlayTitle = pickLast('#overlayTitle');
       closeOverlayBtn = pickLast('#closeOverlay');
+      overlayLC = pickLast('#overlayLC');
+      overlayLCGrid = pickLast('#overlayLCGrid');
+      overlayLCTitle = pickLast('#overlayLCTitle');
+      closeOverlayLC = pickLast('#closeOverlayLC');
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
+      if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
     }
 
-    let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
     async function waitForClient(timeoutMs = 4000) {
       const start = performance.now();
@@ -134,9 +166,14 @@
       }
     });
 
+    // Clicks para overlays
     document.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-block-toggle]');
-      if (btn) { e.preventDefault(); openOverlay(btn.dataset.blockId, btn.dataset.blockTitle || ''); }
+      const btnToggle = e.target.closest('[data-block-toggle]');
+      const btnLC = e.target.closest('[data-block-lc]');
+      const btnSummary = e.target.closest('[data-block-summary]');
+      if (btnToggle) { e.preventDefault(); openOverlay(btnToggle.dataset.blockId, btnToggle.dataset.blockTitle || ''); }
+      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
+      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
     });
 
     async function loadCatalogs() {
@@ -169,9 +206,7 @@
           .select('*')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        // Mostrar todo lo que haya en purchase_blocks
-        const blocks = data || [];
-        renderBlocks(blocks);
+        renderBlocks(data || []);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
@@ -204,7 +239,10 @@
               <h3 style="margin:0 0 4px;">${title}</h3>
               <div class="meta">Estado: ${estadoLabel} · Creado: ${formatDate(b.created_at)} · Coti: ${escapeHtml(b.cotizacion_id || b.proyecto_id || '')}</div>
             </div>
-            <button class="btn btn-ghost" data-block-toggle data-block-id="${b.id}" data-block-title="${title}">Ver detalle</button>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">LC</button>
+              <button class="btn btn-primary" data-block-summary data-block-id="${b.id}" data-block-title="${title}">Ver detalle</button>
+            </div>
           </div>
           <div class="chips" style="margin:8px 0;">
             <span class="chip">Total cotizado: ${fmtCLP(b.total_cotizado)}</span>
@@ -279,12 +317,22 @@
     async function openOverlay(blockId, title) {
       ensureEls();
       if (!overlay || !overlayGrid || !overlayTitle) return;
-      overlayTitle.textContent = 'Líneas de compra - ' + (title || blockId);
+      overlayTitle.textContent = 'Resumen por categoría - ' + (title || blockId);
       overlay.classList.add('active');
       document.body.classList.add('overlay-open');
       currentBlockId = blockId;
-      await loadLines(blockId);
-      attachListeners();
+      await renderSummaryForBlock(blockId);
+    }
+
+    async function renderSummaryForBlock(blockId) {
+      try {
+        await loadCategoryImages();
+        const lines = await fetchLines(blockId);
+        renderSummary(lines);
+      } catch (e) {
+        console.error(e);
+        overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>';
+      }
     }
 
     async function loadLines(blockId) {
@@ -336,6 +384,106 @@
         }
       } catch (e) { console.error('Persist error', e); }
     }
+
+    // --- Lista de compras (LC) y resumen con fotos ---
+    async function loadCategoryImages() {
+      try {
+        const { data } = await catApi.listCategoriesWithImages();
+        catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{});
+      } catch(e) { console.warn('cat images', e); }
+    }
+    function pickCategoryImage(cat) {
+      return catImagesMap[cat] || PLACEHOLDER_IMG;
+    }
+    async function fetchLines(blockId) {
+      const client = await waitForClient();
+      const { data, error } = await client
+        .from(TABLE)
+        .select('id,categoria,producto_id,producto_nombre,unidad,cantidad,precio_unit,total,observaciones')
+        .eq('block_id', blockId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    }
+    function renderLC(lines) {
+      if (!overlayLCGrid) return;
+      overlayLCGrid.innerHTML = `
+        <div class="item-grid">
+          ${lines.map(l => `
+            <div class="item-card">
+              <img class="item-thumb" src="${escapeHtml(pickCategoryImage(l.categoria || ''))}" alt="">
+              <div class="item-body">
+                <div style="font-weight:700;">${escapeHtml(l.producto_nombre || l.producto_id || 'Producto')}</div>
+                <div style="color:#6c7a86; font-size:12px;">Cat: ${escapeHtml(l.categoria || '—')} · ${escapeHtml(l.unidad || '')}</div>
+                <div style="font-size:13px;">Cant: ${l.cantidad ?? 0} · P.U: ${fmtCLP(l.precio_unit)} · Total: ${fmtCLP(l.total)}</div>
+                ${l.observaciones ? `<div style="color:#6c7a86; font-size:12px;">${escapeHtml(l.observaciones)}</div>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>`;
+    }
+    function renderSummary(lines) {
+      const byCat = {};
+      for (const l of lines) {
+        const k = l.categoria || 'Sin categoría';
+        byCat[k] = byCat[k] || { total: 0, count: 0 };
+        byCat[k].total += Number(l.total || 0);
+        byCat[k].count += 1;
+      }
+      const rows = Object.entries(byCat).map(([cat, info]) => `
+        <tr>
+          <td style="display:flex;align-items:center;gap:10px;">
+            <img src="${escapeHtml(pickCategoryImage(cat))}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #e2e5ea;">
+            <span>${escapeHtml(cat)}</span>
+          </td>
+          <td style="text-align:right;">${info.count}</td>
+          <td style="text-align:right;">${fmtCLP(info.total)}</td>
+        </tr>
+      `).join('');
+      overlayGrid.innerHTML = `
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+          <thead>
+            <tr style="background:#e1e5ec;">
+              <th style="text-align:left; padding:6px;">Categoría</th>
+              <th style="text-align:right; padding:6px; width:80px;">Items</th>
+              <th style="text-align:right; padding:6px; width:140px;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="3" style="padding:8px; text-align:center; color:#6c7a86;">Sin líneas</td></tr>'}
+          </tbody>
+        </table>
+      `;
+    }
+    async function openLC(blockId, title) {
+      ensureEls();
+      if (!overlayLC || !overlayLCGrid || !overlayLCTitle) return;
+      overlayLCTitle.textContent = 'Lista de compras - ' + (title || blockId);
+      overlayLC.classList.add('active'); document.body.classList.add('overlay-open');
+      try {
+        await loadCategoryImages();
+        const lines = await fetchLines(blockId);
+        renderLC(lines);
+      } catch (e) {
+        console.error(e);
+        overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>';
+      }
+    }
+    async function openSummary(blockId, title) {
+      ensureEls();
+      if (!overlay || !overlayGrid || !overlayTitle) return;
+      overlayTitle.textContent = 'Resumen por categoría - ' + (title || blockId);
+      overlay.classList.add('active'); document.body.classList.add('overlay-open');
+      try {
+        await loadCategoryImages();
+        const lines = await fetchLines(blockId);
+        renderSummary(lines);
+      } catch (e) {
+        console.error(e);
+        overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>';
+      }
+    }
+    // --- fin LC/resumen ---
 
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
