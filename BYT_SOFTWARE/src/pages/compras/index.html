@@ -22,7 +22,7 @@
     .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
     .btn-primary:hover { background:#264d40; }
     .btn-ghost { background:#f4f5f6; color:#1f2430; border-color:#d4d8dd; }
-    .empty { text-align:center; color:var(--muted); padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
+    .empty { text-align:center; color:#6c7a86; padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
 
     body.overlay-open { overflow:hidden; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 10px; }
@@ -53,7 +53,7 @@
     .cell input, .cell select { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
     .readonly { background:#f3f4f6; }
 
-    /* Resumen/LC tarjetas (si se requiere) */
+    /* Resumen tarjetas (no grid editable) */
     .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
     .item-card { border:1px solid #d7dbe0; border-radius:10px; background:#fff; padding:8px; display:flex; gap:10px; box-shadow:0 4px 10px rgba(0,0,0,0.04); }
     .item-thumb { width:72px; height:72px; border:1px solid #e2e5ea; border-radius:8px; background:#f5f7fa; object-fit:cover; flex-shrink:0; }
@@ -347,26 +347,45 @@
         currentRows[rowIdx].producto_id = null;
         rebuildProductOptions(rowIdx);
       }
-      const cantidad = Number(currentRows[rowIdx].cantidad || 0);
-      const precio = Number(currentRows[rowIdx].precio_unit || 0);
-      currentRows[rowIdx].total = cantidad * precio;
+      // calcula local, pero no se envía al servidor (total es generado)
+      currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
       await persistRow(rowIdx);
+    }
+
+    function buildPayload(row) {
+      return {
+        block_id: row.block_id || currentBlockId,
+        encargado: row.encargado || null,
+        proveedor_id: row.proveedor_id || null,
+        direccion: row.direccion || null,
+        categoria: row.categoria || null,
+        producto_id: row.producto_id || null,
+        unidad: row.unidad || null,
+        cantidad: row.cantidad || null,
+        precio_unit: row.precio_unit || null,
+        modo_compra: row.modo_compra || null,
+        estado_pago: row.estado_pago || null,
+        observaciones: row.observaciones || null
+      };
     }
 
     async function persistRow(idx) {
       const row = currentRows[idx];
       if (!row) return;
       const client = await waitForClient();
+      const payload = buildPayload(row); // NO incluye total (generado)
       try {
         if (!row.id) {
-          const { data, error } = await client.from(TABLE).insert([{ ...row, id: row.id || undefined }]).select().single();
+          const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, id: data.id };
+          currentRows[idx] = { ...row, ...data }; // refresca total generado
+          setVal(idx,'total', data.total);
         } else {
-          const { error } = await client.from(TABLE).update(row).eq('id', row.id);
+          const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
+          if (data) { currentRows[idx] = { ...row, ...data }; setVal(idx,'total', data.total); }
         }
       } catch (e) { console.error('Persist error', e); }
     }
@@ -379,6 +398,16 @@
     }
     function pickCategoryImage(cat) {
       return catImagesMap[cat] || PLACEHOLDER_IMG;
+    }
+    async function fetchLines(blockId) {
+      const client = await waitForClient();
+      const { data, error } = await client
+        .from(TABLE)
+        .select('id,categoria,producto_id,unidad,cantidad,precio_unit,total,observaciones,created_at')
+        .eq('block_id', blockId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
     }
     function renderSummary(lines) {
       if (!lines.length) {
