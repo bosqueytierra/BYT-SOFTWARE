@@ -36,23 +36,6 @@
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
 
-    /* Grid (ya existente para líneas detalladas si se reusa) */
-    .line-grid {
-      min-width: 2200px;
-      display: grid;
-      grid-template-columns:
-        140px 160px 220px 150px 200px 120px 80px 110px 110px 150px 150px 240px 90px;
-      gap: 0; align-items: center;
-    }
-    .grid-header { font-size:12.5px; font-weight:700; background:#e1e5ec; border:1px solid #d7dbe0; padding:6px 6px; }
-    .grid-row { display: contents; }
-    .cell { border:1px solid #d7dbe0; background:#fff; padding:0; min-height:28px; }
-    .grid-row:nth-child(odd) .cell { background:#f7f8fa; }
-    .cell select, .cell input[type=number] { appearance:none; -moz-appearance:textfield; }
-    .cell input::-webkit-outer-spin-button, .cell input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .cell input, .cell select { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
-    .readonly { background:#f3f4f6; }
-
     /* Lista de compras (cards con imagen) */
     .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
     .item-card { border:1px solid #d7dbe0; border-radius:10px; background:#fff; padding:8px; display:flex; gap:10px; box-shadow:0 4px 10px rgba(0,0,0,0.04); }
@@ -118,7 +101,6 @@
     let blocksContainer, emptyState, statBloques;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC;
-    let currentBlockId = null;
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
@@ -252,67 +234,6 @@
       `;
     }
 
-    // ------ Helpers y catálogos -------
-    function makeOptions(list, valKey='nombre', labelKey='nombre') {
-      return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
-    }
-    function productOptions(category) {
-      const list = materiales.filter(m => !category || m.category === category);
-      return makeOptions(list, 'id', 'name');
-    }
-
-    // (La grid de edición se deja por si se reusa; no se usa en los botones actuales)
-    function renderGrid(rows) {
-      const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs',''];
-      const headerHtml = headers.map(h => `<div class="grid-header">${h}</div>`).join('');
-      const body = rows.map((row, idx) => {
-        const idAttr = row.id ? `data-id="${row.id}"` : '';
-        return `
-        <div class="grid-row" data-row="${idx}" ${idAttr}>
-          <div class="cell"><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></div>
-          <div class="cell"><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></div>
-          <div class="cell"><input data-f="direccion" data-row="${idx}" value="${escapeHtml(row.direccion||'')}" /></div>
-          <div class="cell"><select data-f="categoria" data-row="${idx}">${makeOptions([...new Set(materiales.map(m=>m.category).filter(Boolean))].map(c=>({nombre:c})))}</select></div>
-          <div class="cell"><select data-f="producto_id" data-row="${idx}"></select></div>
-          <div class="cell"><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></div>
-          <div class="cell"><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></div>
-          <div class="cell"><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></div>
-          <div class="cell readonly"><input data-f="total" data-row="${idx}" value="${row.total||''}" readonly></div>
-          <div class="cell"><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></div>
-          <div class="cell"><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></div>
-          <div class="cell"><input data-f="observaciones" data-row="${idx}" value="${escapeHtml(row.observaciones||'')}" /></div>
-          <div class="cell readonly"></div>
-        </div>`;
-      }).join('');
-      overlayGrid.innerHTML = `<div class="line-grid">${headerHtml}${body}</div>`;
-      rows.forEach((row, idx) => {
-        setVal(idx,'encargado',row.encargado);
-        setVal(idx,'proveedor_id',row.proveedor_id);
-        setVal(idx,'categoria',row.categoria);
-        rebuildProductOptions(idx);
-        setVal(idx,'producto_id',row.producto_id);
-        setVal(idx,'unidad',row.unidad);
-        setVal(idx,'modo_compra',row.modo_compra);
-        setVal(idx,'estado_pago',row.estado_pago);
-      });
-    }
-
-    function rebuildProductOptions(rowIdx) {
-      const row = currentRows[rowIdx] || {};
-      const sel = overlayGrid?.querySelector?.(`[data-row="${rowIdx}"][data-f="producto_id"]`);
-      if (!sel) return;
-      sel.innerHTML = productOptions(row.categoria || '');
-      if (row.producto_id) {
-        sel.value = row.producto_id;
-        if (sel.value !== String(row.producto_id)) sel.value = '';
-      }
-    }
-
-    function setVal(idx, field, value) {
-      const el = overlayGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
-      if (el) el.value = value ?? '';
-    }
-
     // ---------- Lista de compras (LC) y Resumen ----------
     async function loadCategoryImages() {
       try {
@@ -325,17 +246,21 @@
     }
     async function fetchLines(blockId) {
       const client = await waitForClient();
-      // Quitar producto_nombre (no existe en tabla)
       const { data, error } = await client
         .from(TABLE)
-        .select('id,categoria,producto_id,unidad,cantidad,precio_unit,total,observaciones')
+        .select('id,categoria,producto_id,unidad,cantidad,precio_unit,total,observaciones,created_at')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
       if (error) throw error;
       return data || [];
     }
+
     function renderLC(lines) {
       if (!overlayLCGrid) return;
+      if (!lines.length) {
+        overlayLCGrid.innerHTML = '<div style="padding:12px; text-align:center; color:#6c7a86;">Sin líneas</div>';
+        return;
+      }
       overlayLCGrid.innerHTML = `
         <div class="item-grid">
           ${lines.map(l => `
@@ -352,6 +277,10 @@
         </div>`;
     }
     function renderSummary(lines) {
+      if (!lines.length) {
+        overlayGrid.innerHTML = '<div style="padding:12px; text-align:center; color:#6c7a86;">Sin líneas</div>';
+        return;
+      }
       const byCat = {};
       for (const l of lines) {
         const k = l.categoria || 'Sin categoría';
@@ -379,7 +308,7 @@
             </tr>
           </thead>
           <tbody>
-            ${rows || '<tr><td colspan="3" style="padding:8px; text-align:center; color:#6c7a86;">Sin líneas</td></tr>'}
+            ${rows}
           </tbody>
         </table>
       `;
