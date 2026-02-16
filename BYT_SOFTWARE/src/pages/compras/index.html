@@ -53,11 +53,13 @@
     .cell input, .cell select { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
     .readonly { background:#f3f4f6; }
 
-    /* Resumen tarjetas (no grid editable) */
-    .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
-    .item-card { border:1px solid #d7dbe0; border-radius:10px; background:#fff; padding:8px; display:flex; gap:10px; box-shadow:0 4px 10px rgba(0,0,0,0.04); }
-    .item-thumb { width:72px; height:72px; border:1px solid #e2e5ea; border-radius:8px; background:#f5f7fa; object-fit:cover; flex-shrink:0; }
-    .item-body { flex:1; display:flex; flex-direction:column; gap:4px; }
+    /* Resumen: tarjetas grandes */
+    .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:18px; }
+    .item-card { border:1px solid #d7dbe0; border-radius:12px; background:#fff; padding:10px; display:flex; gap:12px; box-shadow:0 6px 16px rgba(0,0,0,0.05); min-height:180px; }
+    .item-thumb { width:120px; height:120px; border:1px solid #e2e5ea; border-radius:10px; background:#f5f7fa; object-fit:cover; flex-shrink:0; }
+    .item-body { flex:1; display:flex; flex-direction:column; gap:6px; justify-content:center; }
+    .item-body h4 { margin:0; font-size:16px; }
+    .item-body .muted { color:#6c7a86; font-size:13px; }
   </style>
 </head>
 <body>
@@ -76,7 +78,7 @@
     <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
   </div>
 
-  <!-- Overlay resumen por categoría -->
+  <!-- Overlay resumen -->
   <div id="overlay" class="overlay">
     <div class="overlay-content">
       <div class="overlay-header">
@@ -91,7 +93,7 @@
     </div>
   </div>
 
-  <!-- Overlay Lista de compras (GRID/EXCEL) -->
+  <!-- Overlay Lista de compras (grid editable) -->
   <div id="overlayLC" class="overlay">
     <div class="overlay-content">
       <div class="overlay-header">
@@ -124,7 +126,7 @@
     let catImagesMap = {};
     let currentRows = [];
     let currentBlockId = null;
-    const PLACEHOLDER_IMG = 'https://via.placeholder.com/120?text=LC';
+    const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
 
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
@@ -167,7 +169,6 @@
       }
     });
 
-    // Clicks
     document.addEventListener('click', (e) => {
       const btnLC = e.target.closest('[data-block-lc]');
       const btnSummary = e.target.closest('[data-block-summary]');
@@ -188,12 +189,9 @@
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
 
-      const { data: provs, error: errProv } = await client.from('providers').select('id,name').order('name');
-      if (errProv) console.error('providers error', errProv);
+      const { data: provs } = await client.from('providers').select('id,name').order('name');
       proveedores = provs || [];
-
-      const { data: mats, error: errMat } = await client.from('materials').select('id,name,category').order('name');
-      if (errMat) console.error('materials error', errMat);
+      const { data: mats } = await client.from('materials').select('id,name,category').order('name');
       materiales = mats || [];
     }
 
@@ -254,7 +252,7 @@
       `;
     }
 
-    // GRID (excel) for LC overlay
+    // GRID (excel) para Lista de compras
     function renderGrid(rows) {
       const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs',''];
       const headerHtml = headers.map(h => `<div class="grid-header">${h}</div>`).join('');
@@ -347,7 +345,7 @@
         currentRows[rowIdx].producto_id = null;
         rebuildProductOptions(rowIdx);
       }
-      // calcula local, pero no se envía al servidor (total es generado)
+      // total local
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
@@ -375,12 +373,12 @@
       const row = currentRows[idx];
       if (!row) return;
       const client = await waitForClient();
-      const payload = buildPayload(row); // NO incluye total (generado)
+      const payload = buildPayload(row);
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data }; // refresca total generado
+          currentRows[idx] = { ...row, ...data };
           setVal(idx,'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
@@ -390,6 +388,7 @@
       } catch (e) { console.error('Persist error', e); }
     }
 
+    // Resumen (tarjetas grandes)
     async function loadCategoryImages() {
       try {
         const { data } = await catApi.listCategoriesWithImages();
@@ -405,6 +404,7 @@
         .from(TABLE)
         .select('id,categoria,producto_id,unidad,cantidad,precio_unit,total,observaciones,created_at')
         .eq('block_id', blockId)
+        .neq('categoria', 'Sin categoría')  // no mostrar sin categoría
         .order('created_at', { ascending: true });
       if (error) throw error;
       return data || [];
@@ -417,34 +417,22 @@
       const byCat = {};
       for (const l of lines) {
         const k = l.categoria || 'Sin categoría';
+        if (k === 'Sin categoría') continue;
         byCat[k] = byCat[k] || { total: 0, count: 0 };
         byCat[k].total += Number(l.total || 0);
         byCat[k].count += 1;
       }
-      const rows = Object.entries(byCat).map(([cat, info]) => `
-        <tr>
-          <td style="display:flex;align-items:center;gap:10px;">
-            <img src="${escapeHtml(pickCategoryImage(cat))}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #e2e5ea;">
-            <span>${escapeHtml(cat)}</span>
-          </td>
-          <td style="text-align:right;">${info.count}</td>
-          <td style="text-align:right;">${fmtCLP(info.total)}</td>
-        </tr>
+      const cards = Object.entries(byCat).map(([cat, info]) => `
+        <div class="item-card">
+          <img class="item-thumb" src="${escapeHtml(pickCategoryImage(cat))}" alt="">
+          <div class="item-body">
+            <h4>${escapeHtml(cat)}</h4>
+            <div class="muted">Items: ${info.count}</div>
+            <div><strong>${fmtCLP(info.total)}</strong></div>
+          </div>
+        </div>
       `).join('');
-      overlayGrid.innerHTML = `
-        <table style="width:100%; border-collapse:collapse; font-size:13px;">
-          <thead>
-            <tr style="background:#e1e5ec;">
-              <th style="text-align:left; padding:6px;">Categoría</th>
-              <th style="text-align:right; padding:6px; width:80px;">Items</th>
-              <th style="text-align:right; padding:6px; width:140px;">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows}
-          </tbody>
-        </table>
-      `;
+      overlayGrid.innerHTML = `<div class="item-grid">${cards}</div>`;
     }
 
     async function openLC(blockId, title) {
@@ -454,7 +442,7 @@
       overlayLCTitle.textContent = 'Lista de compras - ' + (title || blockId);
       overlayLC.classList.add('active'); document.body.classList.add('overlay-open');
       try {
-        await loadLines(blockId); // renderGrid + listeners
+        await loadLines(blockId);
       } catch (e) {
         console.error(e);
         overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>';
