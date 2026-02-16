@@ -36,6 +36,7 @@
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
 
+    /* Grid (ya existente para líneas detalladas si se reusa) */
     .line-grid {
       min-width: 2200px;
       display: grid;
@@ -79,7 +80,7 @@
   <div id="overlay" class="overlay">
     <div class="overlay-content">
       <div class="overlay-header">
-        <div class="overlay-title" id="overlayTitle">Líneas de compra</div>
+        <div class="overlay-title" id="overlayTitle">Ver resumen</div>
         <div style="display:flex; gap:8px; align-items:center;">
           <button class="btn" id="closeOverlay">Cerrar</button>
         </div>
@@ -118,8 +119,6 @@
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC;
     let currentBlockId = null;
-    let currentRows = [];
-    const MIN_ROWS = 50;
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
@@ -168,10 +167,8 @@
 
     // Clicks para overlays
     document.addEventListener('click', (e) => {
-      const btnToggle = e.target.closest('[data-block-toggle]');
       const btnLC = e.target.closest('[data-block-lc]');
       const btnSummary = e.target.closest('[data-block-summary]');
-      if (btnToggle) { e.preventDefault(); openOverlay(btnToggle.dataset.blockId, btnToggle.dataset.blockTitle || ''); }
       if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
       if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
     });
@@ -240,8 +237,8 @@
               <div class="meta">Estado: ${estadoLabel} · Creado: ${formatDate(b.created_at)} · Coti: ${escapeHtml(b.cotizacion_id || b.proyecto_id || '')}</div>
             </div>
             <div style="display:flex; gap:6px;">
-              <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">LC</button>
-              <button class="btn btn-primary" data-block-summary data-block-id="${b.id}" data-block-title="${title}">Ver detalle</button>
+              <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
+              <button class="btn btn-primary" data-block-summary data-block-id="${b.id}" data-block-title="${title}">Ver resumen</button>
             </div>
           </div>
           <div class="chips" style="margin:8px 0;">
@@ -255,6 +252,7 @@
       `;
     }
 
+    // ------ Helpers y catálogos -------
     function makeOptions(list, valKey='nombre', labelKey='nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
@@ -263,6 +261,7 @@
       return makeOptions(list, 'id', 'name');
     }
 
+    // (La grid de edición se deja por si se reusa; no se usa en los botones actuales)
     function renderGrid(rows) {
       const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs',''];
       const headerHtml = headers.map(h => `<div class="grid-header">${h}</div>`).join('');
@@ -300,7 +299,7 @@
 
     function rebuildProductOptions(rowIdx) {
       const row = currentRows[rowIdx] || {};
-      const sel = overlayGrid.querySelector(`[data-row="${rowIdx}"][data-f="producto_id"]`);
+      const sel = overlayGrid?.querySelector?.(`[data-row="${rowIdx}"][data-f="producto_id"]`);
       if (!sel) return;
       sel.innerHTML = productOptions(row.categoria || '');
       if (row.producto_id) {
@@ -310,82 +309,11 @@
     }
 
     function setVal(idx, field, value) {
-      const el = overlayGrid.querySelector(`[data-row="${idx}"][data-f="${field}"]`);
+      const el = overlayGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
       if (el) el.value = value ?? '';
     }
 
-    async function openOverlay(blockId, title) {
-      ensureEls();
-      if (!overlay || !overlayGrid || !overlayTitle) return;
-      overlayTitle.textContent = 'Resumen por categoría - ' + (title || blockId);
-      overlay.classList.add('active');
-      document.body.classList.add('overlay-open');
-      currentBlockId = blockId;
-      await renderSummaryForBlock(blockId);
-    }
-
-    async function renderSummaryForBlock(blockId) {
-      try {
-        await loadCategoryImages();
-        const lines = await fetchLines(blockId);
-        renderSummary(lines);
-      } catch (e) {
-        console.error(e);
-        overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>';
-      }
-    }
-
-    async function loadLines(blockId) {
-      const client = await waitForClient();
-      const { data, error } = await client.from(TABLE).select('*').eq('block_id', blockId).order('created_at', { ascending: true });
-      if (error) { console.error(error); currentRows = []; }
-      else currentRows = data || [];
-      while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: blockId });
-      renderGrid(currentRows);
-    }
-
-    function attachListeners() {
-      overlayGrid.addEventListener('change', onCellEdit, { once:false });
-      overlayGrid.addEventListener('input', onCellEdit, { once:false });
-    }
-
-    async function onCellEdit(e) {
-      const field = e.target.getAttribute('data-f');
-      const rowIdx = Number(e.target.getAttribute('data-row'));
-      if (Number.isNaN(rowIdx) || !field) return;
-      const row = currentRows[rowIdx] || {};
-      let val = e.target.value;
-      if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
-      currentRows[rowIdx] = { ...row, [field]: val, block_id: currentBlockId };
-      if (field === 'categoria') {
-        currentRows[rowIdx].producto_id = null;
-        rebuildProductOptions(rowIdx);
-      }
-      const cantidad = Number(currentRows[rowIdx].cantidad || 0);
-      const precio = Number(currentRows[rowIdx].precio_unit || 0);
-      currentRows[rowIdx].total = cantidad * precio;
-      const totalInput = overlayGrid.querySelector(`[data-row="${rowIdx}"][data-f="total"]`);
-      if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
-      await persistRow(rowIdx);
-    }
-
-    async function persistRow(idx) {
-      const row = currentRows[idx];
-      if (!row) return;
-      const client = await waitForClient();
-      try {
-        if (!row.id) {
-          const { data, error } = await client.from(TABLE).insert([{ ...row, id: row.id || undefined }]).select().single();
-          if (error) throw error;
-          currentRows[idx] = { ...row, id: data.id };
-        } else {
-          const { error } = await client.from(TABLE).update(row).eq('id', row.id);
-          if (error) throw error;
-        }
-      } catch (e) { console.error('Persist error', e); }
-    }
-
-    // --- Lista de compras (LC) y resumen con fotos ---
+    // ---------- Lista de compras (LC) y Resumen ----------
     async function loadCategoryImages() {
       try {
         const { data } = await catApi.listCategoriesWithImages();
@@ -397,9 +325,10 @@
     }
     async function fetchLines(blockId) {
       const client = await waitForClient();
+      // Quitar producto_nombre (no existe en tabla)
       const { data, error } = await client
         .from(TABLE)
-        .select('id,categoria,producto_id,producto_nombre,unidad,cantidad,precio_unit,total,observaciones')
+        .select('id,categoria,producto_id,unidad,cantidad,precio_unit,total,observaciones')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
       if (error) throw error;
@@ -413,7 +342,7 @@
             <div class="item-card">
               <img class="item-thumb" src="${escapeHtml(pickCategoryImage(l.categoria || ''))}" alt="">
               <div class="item-body">
-                <div style="font-weight:700;">${escapeHtml(l.producto_nombre || l.producto_id || 'Producto')}</div>
+                <div style="font-weight:700;">${escapeHtml(l.producto_id || 'Producto')}</div>
                 <div style="color:#6c7a86; font-size:12px;">Cat: ${escapeHtml(l.categoria || '—')} · ${escapeHtml(l.unidad || '')}</div>
                 <div style="font-size:13px;">Cant: ${l.cantidad ?? 0} · P.U: ${fmtCLP(l.precio_unit)} · Total: ${fmtCLP(l.total)}</div>
                 ${l.observaciones ? `<div style="color:#6c7a86; font-size:12px;">${escapeHtml(l.observaciones)}</div>` : ''}
@@ -472,7 +401,7 @@
     async function openSummary(blockId, title) {
       ensureEls();
       if (!overlay || !overlayGrid || !overlayTitle) return;
-      overlayTitle.textContent = 'Resumen por categoría - ' + (title || blockId);
+      overlayTitle.textContent = 'Ver resumen - ' + (title || blockId);
       overlay.classList.add('active'); document.body.classList.add('overlay-open');
       try {
         await loadCategoryImages();
@@ -483,7 +412,7 @@
         overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>';
       }
     }
-    // --- fin LC/resumen ---
+    // -----------------------------------------------------
 
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
