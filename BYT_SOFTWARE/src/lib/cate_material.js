@@ -35,21 +35,23 @@ export async function upsertCategoryImage({ name, file }) {
 export async function removeCategoryImage(name) {
   if (!name) return { error: 'Falta name' };
 
+  // Busca la fila (si no existe, no falla)
   const { data: row } = await supabase
     .from('material_categories')
     .select('image_url')
     .eq('name', name)
     .maybeSingle();
 
+  // Borra del bucket si existe URL
   if (row?.image_url) {
     const key = row.image_url.split('/').slice(-1)[0];
     await supabase.storage.from(BUCKET).remove([key]);
   }
 
+  // Asegura que quede image_url null (upsert para no fallar si no había fila)
   const { data, error } = await supabase
     .from('material_categories')
-    .update({ image_url: null })
-    .eq('name', name)
+    .upsert({ name, image_url: null })
     .select()
     .single();
   return { data, error };
