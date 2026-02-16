@@ -6,18 +6,7 @@
     <title>Gestión de Materiales - BYT SOFTWARE</title>
     <link rel="stylesheet" href="../../styles/global.css">
     <style>
-        :root {
-            --primary: #2e7d32;
-            --primary-dark: #245f28;
-            --secondary: #6c757d;
-            --danger: #c62828;
-            --warning: #f5a524;
-            --muted: #4a5568;
-            --bg: #f5f6f7;
-            --card: #ffffff;
-            --shadow: 0 10px 30px rgba(0,0,0,0.08);
-            --radius: 12px;
-        }
+        :root { --primary:#2e7d32; --primary-dark:#245f28; --secondary:#6c757d; --danger:#c62828; --warning:#f5a524; --muted:#4a5568; --bg:#f5f6f7; --card:#ffffff; --shadow:0 10px 30px rgba(0,0,0,0.08); --radius:12px; }
         body { background: var(--bg); color: #2b2d42; }
         h1,h2,h3,h4 { color: #1f2937; margin: 0; }
         .header-title { font-size: 22px; }
@@ -32,12 +21,8 @@
         .search-row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
         .form-group { flex: 1; min-width: 220px; }
         .form-group label { display: block; margin-bottom: 6px; color: #374151; font-weight: 600; font-size: 14px; }
-        .form-group input, .form-group select, .form-group textarea {
-            width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; background: #fff;
-        }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-            outline: 2px solid rgba(46,125,50,0.15); border-color: var(--primary);
-        }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; background: #fff; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: 2px solid rgba(46,125,50,0.15); border-color: var(--primary); }
         .simple-table-container { overflow-x: auto; }
         .simple-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .simple-table th, .simple-table td { padding: 12px; text-align: left; border-bottom: 1px solid #f0f2f5; vertical-align: middle; }
@@ -53,22 +38,18 @@
         .material-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f0f0f0; background: #fff; margin-bottom: 5px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .material-info { flex: 1; }
         .muted { color: #6b7280; }
-
         .toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { min-width: 260px; background: #fff; color: #1f2937; padding: 14px 16px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12); border-left: 5px solid var(--primary); font-size: 14px; }
         .toast.success { border-left-color: #4caf50; }
         .toast.error { border-left-color: #e53935; }
         .toast.warning { border-left-color: #f5a524; }
         .toast.info { border-left-color: #2196f3; }
-
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 9998; }
         .modal { background: #fff; padding: 22px; border-radius: 14px; width: 420px; max-width: 90%; box-shadow: 0 16px 40px rgba(0,0,0,0.25); border: 1px solid #e5e7eb; }
         .modal h3 { margin: 0 0 8px 0; font-size: 18px; color: #111827; }
         .modal p { margin: 0 0 14px 0; color: #374151; line-height: 1.5; }
         .modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
-
         #successBackdrop { z-index: 9997; }
-
         .hold-zone { width: 100%; background: #f3f4f6; border-radius: 10px; padding: 10px; border: 1px solid #e5e7eb; }
         .hold-btn { position: relative; overflow: hidden; width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 8px; }
         .hold-progress { position: absolute; inset: 0; background: rgba(0,0,0,0.12); width: 0%; transition: width linear; pointer-events: none; border-radius: 10px; }
@@ -425,7 +406,8 @@
         const mod = await import('../../lib/materialsApi.js');
         materialsApi = mod;
         try {
-          const res = await materialsApi.listMaterials({ onlyActive: false });
+          // Solo activos
+          const res = await materialsApi.listMaterials({ onlyActive: true });
           if (!res?.error) {
             remoteAvailable = true;
             buildCategoriesFromMaterialsArray(res.data || []);
@@ -585,9 +567,10 @@
       const ok = await confirmDialog({ title:'Eliminar categoría', message: mensaje, okText:'Eliminar', cancelText:'Cancelar' });
       if (!ok) return;
       if (remoteAvailable) {
+        // HARD delete
         for (const m of materiales) {
           if (m.id) {
-            try { await materialsApi.deleteMaterial(m.id, { soft: true }); }
+            try { await materialsApi.deleteMaterial(m.id, { soft: false }); }
             catch(e){ console.warn('Failed deleting material remotely', m.id, e); }
           }
         }
@@ -713,7 +696,6 @@
       mostrarMateriales(materiales);
     }
 
-    
     function mostrarMateriales(materiales) {
       const resultsDiv = document.getElementById('consultarResultados');
       resultsDiv.innerHTML = materiales.map(item => `
@@ -724,7 +706,6 @@
           </div>
       `).join('');
     }
-
 
     function limpiarConsulta() {
       document.getElementById('consultarCategoria').value = '';
@@ -803,7 +784,7 @@
 
     async function resolveMaterialId(categoria, nombre) {
       try {
-        const res = await materialsApi.listMaterials({ onlyActive: false });
+        const res = await materialsApi.listMaterials({ onlyActive: true });
         if (res?.data) {
           const row = res.data.find(r => r.category === categoria && r.name === nombre);
           return row?.id || null;
@@ -983,7 +964,8 @@
     async function refreshFromRemote() {
       if (!remoteAvailable || !materialsApi) return;
       try {
-        const res = await materialsApi.listMaterials({ onlyActive: false });
+        // Solo activos
+        const res = await materialsApi.listMaterials({ onlyActive: true });
         if (!res?.error) {
           buildCategoriesFromMaterialsArray(res.data || []);
         } else {
