@@ -60,7 +60,7 @@
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
     .state-select.st-aprobada     { background: var(--st-aprobada); }
-    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -157,6 +157,22 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
+    // LISTAS DE MOTIVOS (se usan en renderResumen)
+    const MOTIVOS_BAJADA = [
+      'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
+      'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
+      'Error en cotización inicial','Reajuste por plazos de entrega','Eliminación de partidas no ejecutadas',
+      'Ajuste por logística o transporte','Regularización administrativa'
+    ];
+    const MOTIVOS_SUBIDA = [
+      'Aumento en costo de materiales','Aumento en costo de mano de obra','Incorporación de trabajos adicionales',
+      'Cambio en especificaciones del proyecto','Aumento por proveedor o marca seleccionada','Ajuste por variación del tipo de cambio',
+      'Incremento por urgencia en plazos','Costos adicionales de transporte o logística','Ajuste por condiciones del lugar de instalación',
+      'Reproceso o rectificación solicitada por el cliente','Diferencia entre mediciones estimadas y reales',
+      'Actualización de precios por vigencia de cotización','Ajuste por normativa o requerimientos técnicos',
+      'Aumento por disponibilidad de materiales','Ajuste por condiciones de pago'
+    ];
+
     const ESTADOS = ['aprobada','en_ejecucion','completada','cancelada','postventa'];
     let ventasData = [];
     let ventasFiltradas = [];
@@ -170,7 +186,6 @@
 
     function normalizeEstado(v) { return (v.estado || '').trim(); }
 
-    // Espera hasta 15s a que esté supabaseClient
     async function waitForSupabaseClient(maxMs = 15000) {
       const start = Date.now();
       while (Date.now() - start < maxMs) {
@@ -179,7 +194,6 @@
       }
       throw new Error('supabaseClient no disponible tras esperar');
     }
-    // Espera hasta 15s a que esté supabase global
     async function waitForSupabase(maxMs = 15000) {
       const start = Date.now();
       while (Date.now() - start < maxMs) {
@@ -198,15 +212,15 @@
     document.addEventListener('DOMContentLoaded', () => {
       const filtro = document.getElementById('filtro-estado');
       if (filtro) filtro.value = 'todos';
-      bootstrapVentas(12); // reintenta hasta 12 veces con backoff
-      window.addEventListener('storage', (e) => { if (e.key === 'ventas_updated_at') bootstrapVentas(3); });
+      bootstrapVentas(4);
+      window.addEventListener('storage', (e) => { if (e.key === 'ventas_updated_at') bootstrapVentas(2); });
       try {
         const bc = new BroadcastChannel('byt-ventas');
-        bc.onmessage = (ev) => { if (ev.data?.type === 'ventas-updated') bootstrapVentas(3); };
+        bc.onmessage = (ev) => { if (ev.data?.type === 'ventas-updated') bootstrapVentas(2); };
       } catch {}
     });
 
-    async function bootstrapVentas(retries = 5) {
+    async function bootstrapVentas(retries = 2) {
       try {
         await cargarVentas();
       } catch (e) {
@@ -243,7 +257,7 @@
       const res = await sbClient.listarVentas();
       if (!res.success) throw new Error(res.error || 'listarVentas sin éxito');
 
-      // 3) filtrar y deduplicar
+      // 3) filtrar por cot aprob y deduplicar por cotizacion_id
       const base = (res.data || []).filter(shouldIncludeVenta);
       const uniq = new Map();
       base.forEach(v => { if (!uniq.has(v.cotizacion_id)) uniq.set(v.cotizacion_id, v); });
@@ -261,7 +275,6 @@
         const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
-        // si pides “aprobada”, no filtres por st (venta viene en en_ejecucion); se basa en cotización aprobada
         const matchEst = est === 'todos' ? true : (est === 'aprobada' ? true : st === est);
         return matchTxt && matchEst;
       });
@@ -473,7 +486,7 @@
 
       let optionsHtml = '';
       if (diferencia > 0) {
-        optionsHtml = MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
+        optionsHtml = MOTIVOS_SUBIDA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
       } else if (diferencia < 0) {
         optionsHtml = MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
       }
