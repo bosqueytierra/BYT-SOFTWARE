@@ -60,7 +60,7 @@
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
     .state-select.st-aprobada     { background: var(--st-aprobada); }
-    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -184,14 +184,12 @@
     const motivoVariacionMap = new Map();
     let approvedCotIds = new Set();
 
-    function normalizeEstado(v) {
-      return (v.estado || '').trim();
-    }
+    function normalizeEstado(v) { return (v.estado || '').trim(); }
 
     function shouldIncludeVenta(v) {
       if (v.deleted_at || v.eliminada || v.activa === false) return false;
-      // mostrar ventas cuya cotización esté aprobada
-      if (approvedCotIds.size === 0) return true; // fallback si falla la consulta de cotizaciones
+      // solo ventas cuya cotización sigue aprobada
+      if (approvedCotIds.size === 0) return false;
       return approvedCotIds.has(v.cotizacion_id);
     }
 
@@ -210,19 +208,26 @@
       try {
         if (window.supabaseClient?.init) await window.supabaseClient.init();
 
-        // 1) Traer cotizaciones aprobadas (solo IDs)
-        approvedCotIds = new Set();
+        // 1) IDs de cotizaciones aprobadas
         const { data: cotAprob, error: errCot } = await window.supabase
           .from('cotizaciones')
           .select('id')
           .eq('estado','aprobada');
-        if (!errCot && cotAprob) cotAprob.forEach(c => approvedCotIds.add(c.id));
+        if (errCot) throw errCot;
+        approvedCotIds = new Set((cotAprob || []).map(c => c.id));
 
-        // 2) Traer ventas
+        // 2) Ventas
         const res = await window.supabaseClient.listarVentas();
         if (!res.success) throw new Error(res.error);
 
-        ventasData = (res.data || []).filter(shouldIncludeVenta);
+        // 3) Filtrar por cotización aprobada y eliminar duplicados por cotizacion_id
+        const base = (res.data || []).filter(shouldIncludeVenta);
+        const uniq = new Map(); // cotizacion_id -> venta
+        base.forEach(v => {
+          if (!v.cotizacion_id) return;
+          if (!uniq.has(v.cotizacion_id)) uniq.set(v.cotizacion_id, v);
+        });
+        ventasData = Array.from(uniq.values());
         ventasFiltradas = ventasData;
         aplicarFiltros();
       } catch (e) {
@@ -249,14 +254,15 @@
     }
 
     function buildProyectos() {
-      const map = new Map();
+      const map = new Map(); // clave: cotizacion_id
       ventasFiltradas.forEach(v => {
-        const key = (v.proyecto || 'Sin proyecto').trim();
+        const key = v.cotizacion_id || v.proyecto || 'Sin proyecto';
         if (!map.has(key)) map.set(key, []);
         map.get(key).push(v);
       });
       proyectos = Array.from(map.entries()).map(([key, items]) => {
         const first = items[0] || {};
+        const displayName = (first.proyecto || 'Sin proyecto').trim();
         const totalCotizadoBase = Number(first.total_cotizado || 0);
         const totalCobradoBase = Number(first.total_venta || 0);
         const totalCobrado = proyectoCobradoMap.has(key) ? proyectoCobradoMap.get(key) : totalCobradoBase;
@@ -269,7 +275,8 @@
         if (motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key, motivo);
 
         return {
-          key,
+          key,                   // cotizacion_id
+          displayName,           // nombre de proyecto para mostrar
           proyectoId,
           cotizacionId,
           cliente,
@@ -297,7 +304,7 @@
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
             <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
-            <td>${escapeHtml(p.key)}</td>
+            <td>${escapeHtml(p.displayName)}</td>
             <td>${p.fechaCierre ? escapeHtml(formatDate(p.fechaCierre)) : '-'}</td>
             <td>${escapeHtml(p.cliente || '')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
@@ -360,7 +367,7 @@
         return;
       }
 
-      title.textContent = `Partidas del proyecto: ${proyecto.key}`;
+      title.textContent = `Partidas del proyecto: ${proyecto.displayName}`;
       subtitle.textContent = `${proyecto.items.length} partida(s)`;
 
       if (!proyecto.items.length) {
@@ -384,7 +391,7 @@
             <td><input type="date" value="${item.fecha_instalacion || ''}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','fecha_instalacion', this.value)"></td>
             <td><input type="number" min="0" step="1000" value="${Number(item.precio_individual_estimado||0)}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','precio_individual_estimado', this.value)"></td>
             <td>
-              <button class="btn btn-ghost" onclick="openNotesModal('${escapeHtmlAttr(partidaId)}','${escapeHtmlAttr(selectedProyectoKey)}','${escapeHtmlAttr(proyecto.key)}')">Notas</button>
+              <button class="btn btn-ghost" onclick="openNotesModal('${escapeHtmlAttr(partidaId)}','${escapeHtmlAttr(selectedProyectoKey)}','${escapeHtmlAttr(proyecto.displayName)}')">Notas</button>
               ${nota ? `<span class="note-indicator">📝</span>` : ''}
             </td>
           </tr>
@@ -426,7 +433,7 @@
         rw.innerHTML = '<div class="empty"><span class="state-icon">ℹ️</span>Selecciona un proyecto para ver el resumen.</div>';
         return;
       }
-      title.textContent = `Resumen del proyecto: ${proyecto.key}`;
+      title.textContent = `Resumen del proyecto: ${proyecto.displayName}`;
 
       const totalCotizado = proyecto.totalCotizado || 0;
       const totalCobrado = proyectoCobradoMap.has(proyecto.key)
