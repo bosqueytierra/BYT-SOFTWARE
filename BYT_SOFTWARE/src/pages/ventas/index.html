@@ -92,6 +92,7 @@
         <p style="margin:2px 0 0; color:var(--muted); font-size:13px;">Cotizaciones aprobadas. Selecciona un proyecto para ver sus partidas.</p>
       </div>
       <div class="actions">
+        <button class="btn btn-ghost" type="button" onclick="cargarVentas()">Recargar</button>
         <a class="btn btn-ghost" href="dashboard.html">Ir a Dashboard</a>
       </div>
     </div>
@@ -155,6 +156,7 @@
 
   <script>
     const ESTADOS = ['en_ejecucion','completada','cancelada','postventa'];
+    const ESTADOS_PERMITIDOS = new Set(ESTADOS);
     const MOTIVOS_BAJADA = [
       'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
       'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
@@ -179,7 +181,22 @@
     const proyectoCobradoMap = new Map();
     const motivoVariacionMap = new Map();
 
-    document.addEventListener('DOMContentLoaded', async () => { await cargarVentas(); });
+    function shouldIncludeVenta(v) {
+      if (v.deleted_at || v.eliminada || v.activa === false) return false;
+      if (v.estado && !ESTADOS_PERMITIDOS.has(v.estado)) return false;
+      return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await cargarVentas();
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'ventas_updated_at') cargarVentas();
+      });
+      try {
+        const bc = new BroadcastChannel('byt-ventas');
+        bc.onmessage = (ev) => { if (ev.data?.type === 'ventas-updated') cargarVentas(); };
+      } catch {}
+    });
 
     async function cargarVentas() {
       const pw = document.getElementById('proyectos-wrapper');
@@ -188,7 +205,7 @@
         if (window.supabaseClient?.init) await window.supabaseClient.init();
         const res = await window.supabaseClient.listarVentas();
         if (!res.success) throw new Error(res.error);
-        ventasData = res.data || [];
+        ventasData = (res.data || []).filter(shouldIncludeVenta);
         ventasFiltradas = ventasData;
         aplicarFiltros();
       } catch (e) {
@@ -239,7 +256,7 @@
           cotizacionId,
           cliente,
           fechaCierre,
-          totalCobrado,      // usar solo un total por proyecto (no suma por partida)
+          totalCobrado,
           totalCotizado: totalCotizadoBase,
           items,
           allGreen
