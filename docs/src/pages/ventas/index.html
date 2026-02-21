@@ -60,7 +60,7 @@
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
     .state-select.st-aprobada     { background: var(--st-aprobada); }
-    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -109,12 +109,12 @@
         <div>
           <label>Estado</label>
           <select id="filtro-estado" onchange="aplicarFiltros()">
-            <option value="aprobada" selected>Aprobada</option>
+            <option value="todos" selected>Todos</option>
+            <option value="aprobada">Aprobada</option>
             <option value="en_ejecucion">En ejecución</option>
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
             <option value="postventa">Postventa</option>
-            <option value="todos">Todos</option>
           </select>
         </div>
       </div>
@@ -184,18 +184,22 @@
     const proyectoCobradoMap = new Map();
     const motivoVariacionMap = new Map();
 
+    function normalizeEstado(v) {
+      const st = (v.estado || '').trim();
+      // si viene vacío, trátalo como 'aprobada'
+      return st || 'aprobada';
+    }
+
     function shouldIncludeVenta(v) {
-      // Solo aprobadas; descarta eliminadas/inactivas
       if (v.deleted_at || v.eliminada || v.activa === false) return false;
-      if (v.estado !== 'aprobada') return false;
+      const st = normalizeEstado(v);
+      if (!ESTADOS_PERMITIDOS.has(st)) return false;
       return true;
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
       await cargarVentas();
-      window.addEventListener('storage', (e) => {
-        if (e.key === 'ventas_updated_at') cargarVentas();
-      });
+      window.addEventListener('storage', (e) => { if (e.key === 'ventas_updated_at') cargarVentas(); });
       try {
         const bc = new BroadcastChannel('byt-ventas');
         bc.onmessage = (ev) => { if (ev.data?.type === 'ventas-updated') cargarVentas(); };
@@ -222,10 +226,11 @@
       const txt = document.getElementById('filtro-texto').value.toLowerCase().trim();
       const est = document.getElementById('filtro-estado').value;
       ventasFiltradas = ventasData.filter(v => {
+        const st = normalizeEstado(v);
         const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
-        const matchEst = est === 'todos' ? true : (v.estado || 'aprobada') === est;
+        const matchEst = est === 'todos' ? true : st === est;
         return matchTxt && matchEst;
       });
       buildProyectos();
@@ -237,7 +242,7 @@
     function buildProyectos() {
       const map = new Map();
       ventasFiltradas.forEach(v => {
-        const key = v.proyecto || 'Sin proyecto';
+        const key = (v.proyecto || 'Sin proyecto').trim();
         if (!map.has(key)) map.set(key, []);
         map.get(key).push(v);
       });
@@ -250,7 +255,7 @@
         const fechaCierre = first.fecha_aprobacion || first.fecha_cierre || first.fecha_cierre_max || '';
         const cotizacionId = first.cotizacion_id;
         const proyectoId = first.proyecto_id || key;
-        const allGreen = items.every(it => ['completada','cancelada'].includes(it.estado || 'aprobada'));
+        const allGreen = items.every(it => ['completada','cancelada'].includes(normalizeEstado(it)));
         const motivo = first.motivo_variacion;
         if (motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key, motivo);
 
@@ -360,8 +365,8 @@
         return `
           <tr>
             <td style="width:170px;">
-              <select class="state-select ${stateClass(item.estado)}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
-                ${ESTADOS.map(st => `<option value="${st}" ${item.estado===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
+              <select class="state-select ${stateClass(normalizeEstado(item))}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
+                ${ESTADOS.map(st => `<option value="${st}" ${normalizeEstado(item)===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
             <td>${escapeHtml(item.partida_nombre || item.partida || 'Partida')}</td>
