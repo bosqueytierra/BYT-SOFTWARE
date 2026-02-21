@@ -60,7 +60,7 @@
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
     .state-select.st-aprobada     { background: var(--st-aprobada); }
-    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -108,7 +108,7 @@
         </div>
         <div>
           <label>Estado</label>
-          <!-- Default TODOS para no ocultar los registros cuyo estado de venta es en_ejecucion -->
+          <!-- Default en TODOS para no vaciar la lista -->
           <select id="filtro-estado" onchange="aplicarFiltros()">
             <option value="todos" selected>Todos</option>
             <option value="aprobada">Aprobada (cotización)</option>
@@ -181,6 +181,10 @@
 
     document.addEventListener('DOMContentLoaded', async () => {
       await cargarVentas();
+      // Forzar filtro a "todos" al cargar (evita quedarse en 'aprobada')
+      const filtro = document.getElementById('filtro-estado');
+      if (filtro) filtro.value = 'todos';
+
       window.addEventListener('storage', (e) => { if (e.key === 'ventas_updated_at') cargarVentas(); });
       try {
         const bc = new BroadcastChannel('byt-ventas');
@@ -227,7 +231,7 @@
         const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
-        // si el filtro es "aprobada", no uses st (venta está en_ejecucion); deja pasar todas las aprobadas por cotización
+        // Si el filtro es "aprobada", no usamos st (venta viene en_ejecucion); dejamos pasar las aprobadas por cotización
         const matchEst = est === 'todos' ? true : (est === 'aprobada' ? true : st === est);
         return matchTxt && matchEst;
       });
