@@ -109,8 +109,8 @@
         <div>
           <label>Estado</label>
           <select id="filtro-estado" onchange="aplicarFiltros()">
-            <option value="aprobada" selected>Aprobada</option>
-            <option value="todos">Todos</option>
+            <option value="todos" selected>Todos</option>
+            <option value="aprobada">Aprobada (cotización)</option>
             <option value="en_ejecucion">En ejecución</option>
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
@@ -139,7 +139,6 @@
     </div>
   </div>
 
-  <!-- Modal de notas -->
   <div class="modal-backdrop" id="notes-modal">
     <div class="modal">
       <h3 id="notes-title">Observaciones</h3>
@@ -159,21 +158,6 @@
 
   <script>
     const ESTADOS = ['aprobada','en_ejecucion','completada','cancelada','postventa'];
-    const MOTIVOS_BAJADA = [
-      'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
-      'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
-      'Error en cotización inicial','Reajuste por plazos de entrega','Eliminación de partidas no ejecutadas',
-      'Ajuste por logística o transporte','Regularización administrativa'
-    ];
-    const MOTIVOS_SUBIDA = [
-      'Aumento en costo de materiales','Aumento en costo de mano de obra','Incorporación de trabajos adicionales',
-      'Cambio en especificaciones del proyecto','Aumento por proveedor o marca seleccionada','Ajuste por variación del tipo de cambio',
-      'Incremento por urgencia en plazos','Costos adicionales de transporte o logística','Ajuste por condiciones del lugar de instalación',
-      'Reproceso o rectificación solicitada por el cliente','Diferencia entre mediciones estimadas y reales',
-      'Actualización de precios por vigencia de cotización','Ajuste por normativa o requerimientos técnicos',
-      'Aumento por disponibilidad de materiales','Ajuste por condiciones de pago'
-    ];
-
     let ventasData = [];
     let ventasFiltradas = [];
     let proyectos = [];
@@ -182,51 +166,103 @@
     let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
     const proyectoCobradoMap = new Map();
     const motivoVariacionMap = new Map();
+    let approvedCotIds = new Set();
 
-    function normalizeEstado(v) {
-      return (v.estado || '').trim();
+    function normalizeEstado(v) { return (v.estado || '').trim(); }
+
+    // Espera hasta 15s a que esté supabaseClient
+    async function waitForSupabaseClient(maxMs = 15000) {
+      const start = Date.now();
+      while (Date.now() - start < maxMs) {
+        if (window.supabaseClient && typeof window.supabaseClient.listarVentas === 'function') return window.supabaseClient;
+        await new Promise(r => setTimeout(r, 300));
+      }
+      throw new Error('supabaseClient no disponible tras esperar');
+    }
+    // Espera hasta 15s a que esté supabase global
+    async function waitForSupabase(maxMs = 15000) {
+      const start = Date.now();
+      while (Date.now() - start < maxMs) {
+        if (window.supabase && typeof window.supabase.from === 'function') return window.supabase;
+        await new Promise(r => setTimeout(r, 300));
+      }
+      throw new Error('window.supabase no disponible tras esperar');
     }
 
     function shouldIncludeVenta(v) {
-      // Solo aprobadas; descarta eliminadas/inactivas
       if (v.deleted_at || v.eliminada || v.activa === false) return false;
-      return normalizeEstado(v) === 'aprobada';
+      if (!v.cotizacion_id) return false;
+      return approvedCotIds.has(v.cotizacion_id);
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      await cargarVentas();
-      window.addEventListener('storage', (e) => { if (e.key === 'ventas_updated_at') cargarVentas(); });
+    document.addEventListener('DOMContentLoaded', () => {
+      const filtro = document.getElementById('filtro-estado');
+      if (filtro) filtro.value = 'todos';
+      bootstrapVentas(12); // reintenta hasta 12 veces con backoff
+      window.addEventListener('storage', (e) => { if (e.key === 'ventas_updated_at') bootstrapVentas(3); });
       try {
         const bc = new BroadcastChannel('byt-ventas');
-        bc.onmessage = (ev) => { if (ev.data?.type === 'ventas-updated') cargarVentas(); };
+        bc.onmessage = (ev) => { if (ev.data?.type === 'ventas-updated') bootstrapVentas(3); };
       } catch {}
     });
+
+    async function bootstrapVentas(retries = 5) {
+      try {
+        await cargarVentas();
+      } catch (e) {
+        console.error('cargarVentas fallo:', e);
+        if (retries > 0) {
+          setTimeout(() => bootstrapVentas(retries - 1), 800);
+        } else {
+          const pw = document.getElementById('proyectos-wrapper');
+          pw.innerHTML = '<div class="empty"><span class="state-icon">⚠️</span>Error cargando ventas</div>';
+        }
+      }
+    }
 
     async function cargarVentas() {
       const pw = document.getElementById('proyectos-wrapper');
       pw.innerHTML = '<div class="empty"><span class="state-icon">⏳</span>Cargando ventas...</div>';
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const res = await window.supabaseClient.listarVentas();
-        if (!res.success) throw new Error(res.error);
-        ventasData = (res.data || []).filter(shouldIncludeVenta);
-        ventasFiltradas = ventasData;
-        aplicarFiltros();
-      } catch (e) {
-        console.error(e);
-        pw.innerHTML = '<div class="empty"><span class="state-icon">⚠️</span>Error cargando ventas</div>';
+      const sbClient = await waitForSupabaseClient();
+      const sb = await waitForSupabase();
+
+      if (sbClient.init) await sbClient.init();
+
+      // 1) cotizaciones aprobadas
+      const { data: cotAprob, error: errCot } = await sb.from('cotizaciones').select('id').eq('estado','aprobada');
+      if (errCot) throw errCot;
+      approvedCotIds = new Set((cotAprob || []).map(c => c.id));
+      if (approvedCotIds.size === 0) {
+        pw.innerHTML = '<div class="empty"><span class="state-icon">📁</span>No hay cotizaciones aprobadas</div>';
+        ventasData = ventasFiltradas = [];
+        buildProyectos(); renderProyectos(); renderPartidas(); renderResumen();
+        return;
       }
+
+      // 2) ventas
+      const res = await sbClient.listarVentas();
+      if (!res.success) throw new Error(res.error || 'listarVentas sin éxito');
+
+      // 3) filtrar y deduplicar
+      const base = (res.data || []).filter(shouldIncludeVenta);
+      const uniq = new Map();
+      base.forEach(v => { if (!uniq.has(v.cotizacion_id)) uniq.set(v.cotizacion_id, v); });
+      ventasData = Array.from(uniq.values());
+      ventasFiltradas = ventasData;
+
+      aplicarFiltros();
     }
 
     function aplicarFiltros() {
       const txt = document.getElementById('filtro-texto').value.toLowerCase().trim();
       const est = document.getElementById('filtro-estado').value;
       ventasFiltradas = ventasData.filter(v => {
-        const st = normalizeEstado(v);
+        const st = normalizeEstado(v) || 'en_ejecucion';
         const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
-        const matchEst = est === 'todos' ? true : st === est;
+        // si pides “aprobada”, no filtres por st (venta viene en en_ejecucion); se basa en cotización aprobada
+        const matchEst = est === 'todos' ? true : (est === 'aprobada' ? true : st === est);
         return matchTxt && matchEst;
       });
       buildProyectos();
@@ -236,14 +272,15 @@
     }
 
     function buildProyectos() {
-      const map = new Map();
+      const map = new Map(); // clave: cotizacion_id
       ventasFiltradas.forEach(v => {
-        const key = (v.proyecto || 'Sin proyecto').trim();
+        const key = v.cotizacion_id || v.proyecto || 'Sin proyecto';
         if (!map.has(key)) map.set(key, []);
         map.get(key).push(v);
       });
       proyectos = Array.from(map.entries()).map(([key, items]) => {
         const first = items[0] || {};
+        const displayName = (first.proyecto || 'Sin proyecto').trim();
         const totalCotizadoBase = Number(first.total_cotizado || 0);
         const totalCobradoBase = Number(first.total_venta || 0);
         const totalCobrado = proyectoCobradoMap.has(key) ? proyectoCobradoMap.get(key) : totalCobradoBase;
@@ -257,6 +294,7 @@
 
         return {
           key,
+          displayName,
           proyectoId,
           cotizacionId,
           cliente,
@@ -284,7 +322,7 @@
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
             <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
-            <td>${escapeHtml(p.key)}</td>
+            <td>${escapeHtml(p.displayName)}</td>
             <td>${p.fechaCierre ? escapeHtml(formatDate(p.fechaCierre)) : '-'}</td>
             <td>${escapeHtml(p.cliente || '')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
@@ -347,7 +385,7 @@
         return;
       }
 
-      title.textContent = `Partidas del proyecto: ${proyecto.key}`;
+      title.textContent = `Partidas del proyecto: ${proyecto.displayName}`;
       subtitle.textContent = `${proyecto.items.length} partida(s)`;
 
       if (!proyecto.items.length) {
@@ -371,7 +409,7 @@
             <td><input type="date" value="${item.fecha_instalacion || ''}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','fecha_instalacion', this.value)"></td>
             <td><input type="number" min="0" step="1000" value="${Number(item.precio_individual_estimado||0)}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','precio_individual_estimado', this.value)"></td>
             <td>
-              <button class="btn btn-ghost" onclick="openNotesModal('${escapeHtmlAttr(partidaId)}','${escapeHtmlAttr(selectedProyectoKey)}','${escapeHtmlAttr(proyecto.key)}')">Notas</button>
+              <button class="btn btn-ghost" onclick="openNotesModal('${escapeHtmlAttr(partidaId)}','${escapeHtmlAttr(selectedProyectoKey)}','${escapeHtmlAttr(proyecto.displayName)}')">Notas</button>
               ${nota ? `<span class="note-indicator">📝</span>` : ''}
             </td>
           </tr>
@@ -413,7 +451,7 @@
         rw.innerHTML = '<div class="empty"><span class="state-icon">ℹ️</span>Selecciona un proyecto para ver el resumen.</div>';
         return;
       }
-      title.textContent = `Resumen del proyecto: ${proyecto.key}`;
+      title.textContent = `Resumen del proyecto: ${proyecto.displayName}`;
 
       const totalCotizado = proyecto.totalCotizado || 0;
       const totalCobrado = proyectoCobradoMap.has(proyecto.key)
@@ -435,7 +473,7 @@
 
       let optionsHtml = '';
       if (diferencia > 0) {
-        optionsHtml = MOTIVOS_SUBIDA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
+        optionsHtml = MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
       } else if (diferencia < 0) {
         optionsHtml = MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
       }
@@ -513,7 +551,7 @@
       const row = ventasData.find(v => (v.id || v.partida_id || v.partida_nombre || v.partida) === partidaId);
       if (!row || !row.id) return false;
       try {
-        const res = await window.supabaseClient.actualizarVenta(row.id, patch);
+        const res = await (await waitForSupabaseClient()).actualizarVenta(row.id, patch);
         if (!res?.success) throw new Error(res?.error || 'Error desconocido');
         return true;
       } catch (e) {
