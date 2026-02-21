@@ -108,9 +108,10 @@
         </div>
         <div>
           <label>Estado</label>
+          <!-- Por defecto TODOS para no ocultar las ventas que están en en_ejecucion/completada -->
           <select id="filtro-estado" onchange="aplicarFiltros()">
-            <option value="aprobada" selected>Aprobada</option>
-            <option value="todos">Todos</option>
+            <option value="todos" selected>Todos</option>
+            <option value="aprobada">Aprobada</option>
             <option value="en_ejecucion">En ejecución</option>
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
@@ -159,6 +160,16 @@
 
   <script>
     const ESTADOS = ['aprobada','en_ejecucion','completada','cancelada','postventa'];
+    let ventasData = [];
+    let ventasFiltradas = [];
+    let proyectos = [];
+    let selectedProyectoKey = null;
+    const notesStore = new Map();
+    let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
+    const proyectoCobradoMap = new Map();
+    const motivoVariacionMap = new Map();
+    let approvedCotIds = new Set();
+
     const MOTIVOS_BAJADA = [
       'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
       'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
@@ -174,22 +185,12 @@
       'Aumento por disponibilidad de materiales','Ajuste por condiciones de pago'
     ];
 
-    let ventasData = [];
-    let ventasFiltradas = [];
-    let proyectos = [];
-    let selectedProyectoKey = null;
-    const notesStore = new Map();
-    let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
-    const proyectoCobradoMap = new Map();
-    const motivoVariacionMap = new Map();
-    let approvedCotIds = new Set();
-
     function normalizeEstado(v) { return (v.estado || '').trim(); }
 
     function shouldIncludeVenta(v) {
       if (v.deleted_at || v.eliminada || v.activa === false) return false;
-      // solo ventas cuya cotización sigue aprobada
-      if (approvedCotIds.size === 0) return false;
+      // solo ventas cuya cotización está aprobada
+      if (!v.cotizacion_id) return false;
       return approvedCotIds.has(v.cotizacion_id);
     }
 
@@ -220,13 +221,10 @@
         const res = await window.supabaseClient.listarVentas();
         if (!res.success) throw new Error(res.error);
 
-        // 3) Filtrar por cotización aprobada y eliminar duplicados por cotizacion_id
+        // 3) Filtrar por cotización aprobada y deduplicar por cotizacion_id (una por cotización)
         const base = (res.data || []).filter(shouldIncludeVenta);
-        const uniq = new Map(); // cotizacion_id -> venta
-        base.forEach(v => {
-          if (!v.cotizacion_id) return;
-          if (!uniq.has(v.cotizacion_id)) uniq.set(v.cotizacion_id, v);
-        });
+        const uniq = new Map();
+        base.forEach(v => { if (!uniq.has(v.cotizacion_id)) uniq.set(v.cotizacion_id, v); });
         ventasData = Array.from(uniq.values());
         ventasFiltradas = ventasData;
         aplicarFiltros();
@@ -238,13 +236,14 @@
 
     function aplicarFiltros() {
       const txt = document.getElementById('filtro-texto').value.toLowerCase().trim();
-      const est = document.getElementById('filtro-estado').value;
+      const est = document.getElementById('filtro-estado').value; // ahora default "todos"
       ventasFiltradas = ventasData.filter(v => {
         const st = normalizeEstado(v) || 'en_ejecucion';
         const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
-        const matchEst = est === 'todos' ? true : st === est;
+        // si el filtro es "aprobada", no depender del estado de venta (que es en_ejecucion); mostrar todo
+        const matchEst = est === 'todos' ? true : (est === 'aprobada' ? true : st === est);
         return matchTxt && matchEst;
       });
       buildProyectos();
@@ -275,8 +274,8 @@
         if (motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key, motivo);
 
         return {
-          key,                   // cotizacion_id
-          displayName,           // nombre de proyecto para mostrar
+          key,
+          displayName,
           proyectoId,
           cotizacionId,
           cliente,
