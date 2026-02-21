@@ -19,6 +19,7 @@
       --selected: #e9f2ed;
       --dot-ok: #1f9d55;
       --dot-bad: #d64545;
+      --st-aprobada: #e3f2fd;
       --st-en-ejecucion: #f6e0a3;
       --st-completada: #d6f5d6;
       --st-postventa: #f8d0d0;
@@ -58,7 +59,8 @@
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
-    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
+    .state-select.st-aprobada     { background: var(--st-aprobada); }
+    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -108,6 +110,7 @@
           <label>Estado</label>
           <select id="filtro-estado" onchange="aplicarFiltros()">
             <option value="todos">Todos</option>
+            <option value="aprobada">Aprobada</option>
             <option value="en_ejecucion">En ejecución</option>
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
@@ -155,7 +158,7 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
-    const ESTADOS = ['en_ejecucion','completada','cancelada','postventa'];
+    const ESTADOS = ['aprobada','en_ejecucion','completada','cancelada','postventa'];
     const ESTADOS_PERMITIDOS = new Set(ESTADOS);
     const MOTIVOS_BAJADA = [
       'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
@@ -221,7 +224,7 @@
         const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
-        const matchEst = est === 'todos' ? true : (v.estado || 'en_ejecucion') === est;
+        const matchEst = est === 'todos' ? true : (v.estado || 'aprobada') === est;
         return matchTxt && matchEst;
       });
       buildProyectos();
@@ -246,7 +249,7 @@
         const fechaCierre = first.fecha_aprobacion || first.fecha_cierre || first.fecha_cierre_max || '';
         const cotizacionId = first.cotizacion_id;
         const proyectoId = first.proyecto_id || key;
-        const allGreen = items.every(it => ['completada','cancelada'].includes(it.estado || 'en_ejecucion'));
+        const allGreen = items.every(it => ['completada','cancelada'].includes(it.estado || 'aprobada'));
         const motivo = first.motivo_variacion;
         if (motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key, motivo);
 
@@ -478,6 +481,7 @@
 
     function labelEstado(st) {
       switch(st) {
+        case 'aprobada': return 'Aprobada';
         case 'en_ejecucion': return 'En ejecución';
         case 'completada': return 'Completada';
         case 'cancelada': return 'Cancelada';
@@ -487,6 +491,7 @@
     }
     function stateClass(st) {
       switch(st) {
+        case 'aprobada': return 'st-aprobada';
         case 'en_ejecucion': return 'st-en_ejecucion';
         case 'completada': return 'st-completada';
         case 'cancelada': return 'st-cancelada';
@@ -496,7 +501,7 @@
     }
     function applyStateStyles() {
       document.querySelectorAll('select.state-select').forEach(sel => {
-        sel.classList.remove('st-en_ejecucion','st-completada','st-cancelada','st-postventa');
+        sel.classList.remove('st-aprobada','st-en_ejecucion','st-completada','st-cancelada','st-postventa');
         sel.classList.add(stateClass(sel.value));
       });
     }
