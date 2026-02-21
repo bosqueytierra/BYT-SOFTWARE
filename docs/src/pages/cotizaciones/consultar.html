@@ -60,7 +60,7 @@
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
     .state-select.st-aprobada     { background: var(--st-aprobada); }
-    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -108,10 +108,10 @@
         </div>
         <div>
           <label>Estado</label>
-          <!-- Por defecto TODOS para no ocultar las ventas que están en en_ejecucion/completada -->
+          <!-- Default TODOS para no ocultar los registros cuyo estado de venta es en_ejecucion -->
           <select id="filtro-estado" onchange="aplicarFiltros()">
             <option value="todos" selected>Todos</option>
-            <option value="aprobada">Aprobada</option>
+            <option value="aprobada">Aprobada (cotización)</option>
             <option value="en_ejecucion">En ejecución</option>
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
@@ -170,26 +170,11 @@
     const motivoVariacionMap = new Map();
     let approvedCotIds = new Set();
 
-    const MOTIVOS_BAJADA = [
-      'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
-      'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
-      'Error en cotización inicial','Reajuste por plazos de entrega','Eliminación de partidas no ejecutadas',
-      'Ajuste por logística o transporte','Regularización administrativa'
-    ];
-    const MOTIVOS_SUBIDA = [
-      'Aumento en costo de materiales','Aumento en costo de mano de obra','Incorporación de trabajos adicionales',
-      'Cambio en especificaciones del proyecto','Aumento por proveedor o marca seleccionada','Ajuste por variación del tipo de cambio',
-      'Incremento por urgencia en plazos','Costos adicionales de transporte o logística','Ajuste por condiciones del lugar de instalación',
-      'Reproceso o rectificación solicitada por el cliente','Diferencia entre mediciones estimadas y reales',
-      'Actualización de precios por vigencia de cotización','Ajuste por normativa o requerimientos técnicos',
-      'Aumento por disponibilidad de materiales','Ajuste por condiciones de pago'
-    ];
-
     function normalizeEstado(v) { return (v.estado || '').trim(); }
 
+    // Solo ventas cuya cotización está aprobada
     function shouldIncludeVenta(v) {
       if (v.deleted_at || v.eliminada || v.activa === false) return false;
-      // solo ventas cuya cotización está aprobada
       if (!v.cotizacion_id) return false;
       return approvedCotIds.has(v.cotizacion_id);
     }
@@ -221,7 +206,7 @@
         const res = await window.supabaseClient.listarVentas();
         if (!res.success) throw new Error(res.error);
 
-        // 3) Filtrar por cotización aprobada y deduplicar por cotizacion_id (una por cotización)
+        // 3) Filtrar por cotización aprobada y deduplicar por cotizacion_id
         const base = (res.data || []).filter(shouldIncludeVenta);
         const uniq = new Map();
         base.forEach(v => { if (!uniq.has(v.cotizacion_id)) uniq.set(v.cotizacion_id, v); });
@@ -236,13 +221,13 @@
 
     function aplicarFiltros() {
       const txt = document.getElementById('filtro-texto').value.toLowerCase().trim();
-      const est = document.getElementById('filtro-estado').value; // ahora default "todos"
+      const est = document.getElementById('filtro-estado').value;
       ventasFiltradas = ventasData.filter(v => {
         const st = normalizeEstado(v) || 'en_ejecucion';
         const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
-        // si el filtro es "aprobada", no depender del estado de venta (que es en_ejecucion); mostrar todo
+        // si el filtro es "aprobada", no uses st (venta está en_ejecucion); deja pasar todas las aprobadas por cotización
         const matchEst = est === 'todos' ? true : (est === 'aprobada' ? true : st === est);
         return matchTxt && matchEst;
       });
