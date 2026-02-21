@@ -60,7 +60,7 @@
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
     .state-select.st-aprobada     { background: var(--st-aprobada); }
-    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -109,12 +109,12 @@
         <div>
           <label>Estado</label>
           <select id="filtro-estado" onchange="aplicarFiltros()">
-            <option value="todos">Todos</option>
-            <option value="aprobada">Aprobada</option>
+            <option value="aprobada" selected>Aprobada</option>
             <option value="en_ejecucion">En ejecución</option>
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
             <option value="postventa">Postventa</option>
+            <option value="todos">Todos</option>
           </select>
         </div>
       </div>
@@ -185,8 +185,9 @@
     const motivoVariacionMap = new Map();
 
     function shouldIncludeVenta(v) {
+      // Solo aprobadas; descarta eliminadas/inactivas
       if (v.deleted_at || v.eliminada || v.activa === false) return false;
-      if (v.estado && !ESTADOS_PERMITIDOS.has(v.estado)) return false;
+      if (v.estado !== 'aprobada') return false;
       return true;
     }
 
