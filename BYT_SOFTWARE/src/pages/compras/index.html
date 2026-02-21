@@ -36,7 +36,6 @@
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
 
-    /* Grid tipo "excel" */
     .line-grid {
       min-width: 2200px;
       display: grid;
@@ -53,7 +52,6 @@
     .cell input, .cell select { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
     .readonly { background:#f3f4f6; }
 
-    /* Resumen: tarjetas grandes */
     .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:18px; }
     .item-card { border:1px solid #d7dbe0; border-radius:12px; background:#fff; padding:10px; display:flex; gap:12px; box-shadow:0 6px 16px rgba(0,0,0,0.05); min-height:180px; }
     .item-thumb { width:120px; height:120px; border:1px solid #e2e5ea; border-radius:10px; background:#f5f7fa; object-fit:cover; flex-shrink:0; }
@@ -78,7 +76,6 @@
     <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
   </div>
 
-  <!-- Overlay resumen -->
   <div id="overlay" class="overlay">
     <div class="overlay-content">
       <div class="overlay-header">
@@ -93,7 +90,6 @@
     </div>
   </div>
 
-  <!-- Overlay Lista de compras (grid editable) -->
   <div id="overlayLC" class="overlay">
     <div class="overlay-content">
       <div class="overlay-header">
@@ -195,15 +191,29 @@
       materiales = mats || [];
     }
 
+    // Filtra bloques: descarta eliminados/inactivos y cotizaciones no aprobadas
+    function filterBlocks(blocks) {
+      return (blocks || []).filter(b => {
+        if (b.deleted_at) return false;
+        if (b.activa === false) return false;
+        const cot = Array.isArray(b.cotizaciones) ? b.cotizaciones[0] : b.cotizaciones;
+        const estadoCot = cot?.estado || b.cotizacion_estado;
+        if (estadoCot && estadoCot !== 'aprobada') return false;
+        return true;
+      });
+    }
+
     async function loadBlocks() {
       try {
         const client = await waitForClient();
+        // Incluimos estado de la cotización para filtrar aprobadas
         const { data, error } = await client
           .from('purchase_blocks')
-          .select('*')
+          .select('*, cotizaciones:cotizacion_id(estado)')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        renderBlocks(data || []);
+        const filtered = filterBlocks(data || []);
+        renderBlocks(filtered);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
@@ -228,7 +238,7 @@
       const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
       const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
       const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
-      const estadoLabel = escapeHtml(b.estado || b.cotizacion_estado || '—');
+      const estadoLabel = escapeHtml((Array.isArray(b.cotizaciones) ? b.cotizaciones[0]?.estado : b.cotizaciones?.estado) || b.estado || b.cotizacion_estado || '—');
       return `
         <div class="card">
           <div class="block-header">
@@ -252,7 +262,6 @@
       `;
     }
 
-    // GRID (excel) para Lista de compras
     function renderGrid(rows) {
       const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs',''];
       const headerHtml = headers.map(h => `<div class="grid-header">${h}</div>`).join('');
@@ -345,7 +354,6 @@
         currentRows[rowIdx].producto_id = null;
         rebuildProductOptions(rowIdx);
       }
-      // total local
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
@@ -388,7 +396,6 @@
       } catch (e) { console.error('Persist error', e); }
     }
 
-    // Resumen (tarjetas grandes)
     async function loadCategoryImages() {
       try {
         const { data } = await catApi.listCategoriesWithImages();
@@ -404,7 +411,7 @@
         .from(TABLE)
         .select('id,categoria,producto_id,unidad,cantidad,precio_unit,total,observaciones,created_at')
         .eq('block_id', blockId)
-        .neq('categoria', 'Sin categoría')  // no mostrar sin categoría
+        .neq('categoria', 'Sin categoría')
         .order('created_at', { ascending: true });
       if (error) throw error;
       return data || [];
