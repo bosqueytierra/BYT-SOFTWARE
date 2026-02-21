@@ -54,7 +54,7 @@
     @media (max-width: 1100px) { .layout-grid { grid-template-columns: 1fr; } }
     .empty { padding:14px; color:var(--muted); text-align:center; }
     .state-icon { font-size:20px; display:inline-block; margin-right:6px; }
-    .money { font-weight:700; color:var(--primary); }
+    .money { font-weight:700; color:#2e5e4e; }
     .table-title { margin:0 0 8px; font-size:16px; font-weight:800; }
     .subtext { color:var(--muted); font-size:13px; margin:0 0 8px; }
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
@@ -109,8 +109,8 @@
         <div>
           <label>Estado</label>
           <select id="filtro-estado" onchange="aplicarFiltros()">
-            <option value="todos" selected>Todos</option>
-            <option value="aprobada">Aprobada</option>
+            <option value="aprobada" selected>Aprobada</option>
+            <option value="todos">Todos</option>
             <option value="en_ejecucion">En ejecución</option>
             <option value="completada">Completada</option>
             <option value="cancelada">Cancelada</option>
@@ -159,7 +159,6 @@
 
   <script>
     const ESTADOS = ['aprobada','en_ejecucion','completada','cancelada','postventa'];
-    const ESTADOS_PERMITIDOS = new Set(ESTADOS);
     const MOTIVOS_BAJADA = [
       'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
       'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
@@ -185,16 +184,13 @@
     const motivoVariacionMap = new Map();
 
     function normalizeEstado(v) {
-      const st = (v.estado || '').trim();
-      // si viene vacío, trátalo como 'aprobada'
-      return st || 'aprobada';
+      return (v.estado || '').trim();
     }
 
     function shouldIncludeVenta(v) {
+      // Solo aprobadas; descarta eliminadas/inactivas
       if (v.deleted_at || v.eliminada || v.activa === false) return false;
-      const st = normalizeEstado(v);
-      if (!ESTADOS_PERMITIDOS.has(st)) return false;
-      return true;
+      return normalizeEstado(v) === 'aprobada';
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -362,11 +358,12 @@
       const rows = proyecto.items.map(item => {
         const partidaId = item.id || item.partida_id || item.partida_nombre || item.partida;
         const nota = notesStore.get(partidaId) || '';
+        const stNorm = normalizeEstado(item);
         return `
           <tr>
             <td style="width:170px;">
-              <select class="state-select ${stateClass(normalizeEstado(item))}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
-                ${ESTADOS.map(st => `<option value="${st}" ${normalizeEstado(item)===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
+              <select class="state-select ${stateClass(stNorm)}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
+                ${ESTADOS.map(st => `<option value="${st}" ${stNorm===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
             <td>${escapeHtml(item.partida_nombre || item.partida || 'Partida')}</td>
