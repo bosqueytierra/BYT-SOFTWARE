@@ -60,7 +60,7 @@
     .note-indicator { font-size:12px; color:var(--muted); display:inline-block; margin-left:6px; }
     select.state-select { min-width: 150px; background:#fff; }
     .state-select.st-aprobada     { background: var(--st-aprobada); }
-    .state-select.st-en_ejecucion { background: var(--st-en_ejecucion); }
+    .state-select.st-en_ejecucion { background: var(--st-en-ejecucion); }
     .state-select.st-completada   { background: var(--st-completada); }
     .state-select.st-postventa    { background: var(--st-postventa); }
     .state-select.st-cancelada    { background: #fff; }
@@ -108,7 +108,6 @@
         </div>
         <div>
           <label>Estado</label>
-          <!-- Default en TODOS para no vaciar la lista -->
           <select id="filtro-estado" onchange="aplicarFiltros()">
             <option value="todos" selected>Todos</option>
             <option value="aprobada">Aprobada (cotización)</option>
@@ -172,7 +171,24 @@
 
     function normalizeEstado(v) { return (v.estado || '').trim(); }
 
-    // Solo ventas cuya cotización está aprobada
+    async function waitForSupabaseClient() {
+      for (let i = 0; i < 40; i++) {
+        if (window.supabaseClient && typeof window.supabaseClient.listarVentas === 'function') {
+          return window.supabaseClient;
+        }
+        await new Promise(r => setTimeout(r, 100));
+      }
+      throw new Error('supabaseClient no disponible');
+    }
+
+    async function waitForSupabase() {
+      for (let i = 0; i < 40; i++) {
+        if (window.supabase && typeof window.supabase.from === 'function') return window.supabase;
+        await new Promise(r => setTimeout(r, 100));
+      }
+      throw new Error('supabase global no disponible');
+    }
+
     function shouldIncludeVenta(v) {
       if (v.deleted_at || v.eliminada || v.activa === false) return false;
       if (!v.cotizacion_id) return false;
@@ -180,11 +196,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      await cargarVentas();
-      // Forzar filtro a "todos" al cargar (evita quedarse en 'aprobada')
+      // Forzar filtro a "todos"
       const filtro = document.getElementById('filtro-estado');
       if (filtro) filtro.value = 'todos';
-
+      await cargarVentas();
       window.addEventListener('storage', (e) => { if (e.key === 'ventas_updated_at') cargarVentas(); });
       try {
         const bc = new BroadcastChannel('byt-ventas');
@@ -196,18 +211,18 @@
       const pw = document.getElementById('proyectos-wrapper');
       pw.innerHTML = '<div class="empty"><span class="state-icon">⏳</span>Cargando ventas...</div>';
       try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
+        const client = await waitForSupabaseClient();
+        const sb = await waitForSupabase();
+
+        if (client.init) await client.init();
 
         // 1) IDs de cotizaciones aprobadas
-        const { data: cotAprob, error: errCot } = await window.supabase
-          .from('cotizaciones')
-          .select('id')
-          .eq('estado','aprobada');
+        const { data: cotAprob, error: errCot } = await sb.from('cotizaciones').select('id').eq('estado','aprobada');
         if (errCot) throw errCot;
         approvedCotIds = new Set((cotAprob || []).map(c => c.id));
 
         // 2) Ventas
-        const res = await window.supabaseClient.listarVentas();
+        const res = await client.listarVentas();
         if (!res.success) throw new Error(res.error);
 
         // 3) Filtrar por cotización aprobada y deduplicar por cotizacion_id
@@ -231,7 +246,6 @@
         const matchTxt = !txt ||
           (v.proyecto || '').toLowerCase().includes(txt) ||
           (v.partida_nombre || v.partida || '').toLowerCase().includes(txt);
-        // Si el filtro es "aprobada", no usamos st (venta viene en_ejecucion); dejamos pasar las aprobadas por cotización
         const matchEst = est === 'todos' ? true : (est === 'aprobada' ? true : st === est);
         return matchTxt && matchEst;
       });
@@ -443,7 +457,7 @@
 
       let optionsHtml = '';
       if (diferencia > 0) {
-        optionsHtml = MOTIVOS_SUBIDA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
+        optionsHtml = MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
       } else if (diferencia < 0) {
         optionsHtml = MOTIVOS_BAJADA.map(m => `<option value="${escapeHtmlAttr(m)}" ${motivoSel===m?'selected':''}>${escapeHtml(m)}</option>`).join('');
       }
@@ -521,7 +535,7 @@
       const row = ventasData.find(v => (v.id || v.partida_id || v.partida_nombre || v.partida) === partidaId);
       if (!row || !row.id) return false;
       try {
-        const res = await window.supabaseClient.actualizarVenta(row.id, patch);
+        const res = await (await waitForSupabaseClient()).actualizarVenta(row.id, patch);
         if (!res?.success) throw new Error(res?.error || 'Error desconocido');
         return true;
       } catch (e) {
