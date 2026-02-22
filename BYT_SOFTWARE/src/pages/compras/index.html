@@ -110,7 +110,7 @@
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 50; // vuelve a 50 filas estilo "excel"
+    const MIN_ROWS = 50; // relleno tipo “excel”
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
     let currentRows = [];
@@ -133,7 +133,7 @@
       addRowBtn = pickLast('#addRowBtn');
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
-      if (addRowBtn) addRowBtn.onclick = () => { addEmptyRow(); };
+      if (addRowBtn) addRowBtn.onclick = addEmptyRow;
     }
 
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
@@ -302,11 +302,12 @@
       while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
     }
 
-    function ensureTrailingPlaceholder() {
-      const withData = currentRows.filter(r => !r.placeholder);
-      currentRows = [...withData];
-      fillPlaceholdersToMin();
-      renderGrid(currentRows);
+    function pruneExtraPlaceholders() {
+      // deja máximo los necesarios para llegar a MIN_ROWS
+      const dataRows = currentRows.filter(r => !r.placeholder);
+      const need = Math.max(0, MIN_ROWS - dataRows.length);
+      currentRows = [...dataRows];
+      for (let i = 0; i < need; i++) currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
     }
 
     function renderGrid(rows) {
@@ -380,7 +381,7 @@
       } else {
         currentRows = (data || []).filter(r => isMeaningful(r));
       }
-      fillPlaceholdersToMin();
+      pruneExtraPlaceholders();
       renderGrid(currentRows);
     }
 
@@ -391,16 +392,34 @@
       const row = currentRows[rowIdx] || {};
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
-      currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder: false };
-      if (field === 'categoria') {
-        currentRows[rowIdx].producto_id = null;
-        rebuildProductOptions(rowIdx);
+      const draft = { ...row, [field]: val, block_id: row.block_id || currentBlockId };
+      const meaningful = isMeaningful(buildPayload(draft));
+
+      // si no hay datos y no hay id, mantenlo como placeholder
+      if (!meaningful && !row.id) {
+        currentRows[rowIdx] = { ...draft, placeholder: true, id: null, total: draft.total || null };
+        pruneExtraPlaceholders();
+        renderGrid(currentRows);
+        return;
       }
+
+      // si no hay datos pero tiene id, bórralo
+      if (!meaningful && row.id) {
+        try { await (await waitForClient()).from(TABLE).delete().eq('id', row.id); } catch(e){ console.error(e); }
+        currentRows.splice(rowIdx, 1);
+        pruneExtraPlaceholders();
+        renderGrid(currentRows);
+        return;
+      }
+
+      // hay datos -> persistir
+      currentRows[rowIdx] = { ...draft, placeholder: false };
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
       await persistRow(rowIdx);
-      ensureTrailingPlaceholder();
+      pruneExtraPlaceholders();
+      renderGrid(currentRows);
     }
 
     function buildPayload(row) {
@@ -430,9 +449,6 @@
 
       if (row.id && !meaningful) {
         try { await client.from(TABLE).delete().eq('id', row.id); } catch (e) { console.error('delete empty error', e); }
-        currentRows.splice(idx, 1);
-        fillPlaceholdersToMin();
-        renderGrid(currentRows);
         return;
       }
 
