@@ -110,7 +110,7 @@
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 5; // relleno mínimo y moderado
+    const MIN_ROWS = 5;
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
     let currentRows = [];
@@ -210,7 +210,7 @@
         if (error) throw error;
 
         const filtered = filterBlocks(data || [], approved);
-        const toRender = filtered.length ? filtered : (data || []); // fallback
+        const toRender = filtered.length ? filtered : (data || []);
         renderBlocks(toRender);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -260,9 +260,53 @@
       `;
     }
 
-    // ---------- Tabla estable (no grid) ----------
+    function makeOptions(list, valKey='nombre', labelKey='nombre') {
+      return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
+    }
+    function productOptions(category) {
+      const list = materiales.filter(m => !category || m.category === category);
+      return makeOptions(list, 'id', 'name');
+    }
+    function rebuildProductOptions(rowIdx) {
+      const row = currentRows[rowIdx] || {};
+      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="producto_id"]`);
+      if (!sel) return;
+      sel.innerHTML = productOptions(row.categoria || '');
+      if (row.producto_id) {
+        sel.value = row.producto_id;
+        if (sel.value !== String(row.producto_id)) sel.value = '';
+      }
+    }
+    function setVal(idx, field, value) {
+      const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
+      if (el) el.value = value ?? '';
+    }
+
+    function isMeaningful(payload) {
+      return (
+        (payload.proveedor_id && payload.proveedor_id !== '') ||
+        (payload.producto_id && payload.producto_id !== '') ||
+        (payload.cantidad && Number(payload.cantidad) > 0) ||
+        (payload.precio_unit && Number(payload.precio_unit) > 0) ||
+        (payload.observaciones && payload.observaciones.trim() !== '')
+      );
+    }
+
+    function addEmptyRow() {
+      if (!currentBlockId) return;
+      currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
+      renderGrid(currentRows);
+    }
+
+    function ensureTrailingPlaceholder() {
+      const withData = currentRows.filter(r => !r.placeholder);
+      const placeholders = currentRows.filter(r => r.placeholder);
+      currentRows = [...withData];
+      if (placeholders.length === 0) currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
+      renderGrid(currentRows);
+    }
+
     function renderGrid(rows) {
-      // limpiar listeners antiguos
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
         overlayLCGrid = document.getElementById('overlayLCGrid');
@@ -320,40 +364,6 @@
       overlayLCGrid._listenersSet = true;
     }
 
-    function makeOptions(list, valKey='nombre', labelKey='nombre') {
-      return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
-    }
-    function productOptions(category) {
-      const list = materiales.filter(m => !category || m.category === category);
-      return makeOptions(list, 'id', 'name');
-    }
-    function rebuildProductOptions(rowIdx) {
-      const row = currentRows[rowIdx] || {};
-      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="producto_id"]`);
-      if (!sel) return;
-      sel.innerHTML = productOptions(row.categoria || '');
-      if (row.producto_id) {
-        sel.value = row.producto_id;
-        if (sel.value !== String(row.producto_id)) sel.value = '';
-      }
-    }
-    function setVal(idx, field, value) {
-      const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
-      if (el) el.value = value ?? '';
-    }
-
-    function addEmptyRow() {
-      if (!currentBlockId) return;
-      currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
-      renderGrid(currentRows);
-    }
-    function ensureTrailingPlaceholder() {
-      const placeholders = currentRows.filter(r => r.placeholder);
-      if (placeholders.length === 0) {
-        addEmptyRow();
-      }
-    }
-
     async function loadLines(blockId) {
       const client = await waitForClient();
       const { data, error } = await client
@@ -365,7 +375,7 @@
         console.error('loadLines', error);
         currentRows = [];
       } else {
-        currentRows = data || [];
+        currentRows = (data || []).filter(r => isMeaningful(r)); // limpia filas vacías ya guardadas
       }
       while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: blockId, placeholder: true });
       renderGrid(currentRows);
@@ -412,8 +422,17 @@
       if (!row) return;
       const client = await waitForClient();
       const payload = buildPayload(row);
-      const hasData = Object.keys(payload).some(k => k !== 'block_id' && payload[k] !== null && payload[k] !== '' && !(typeof payload[k] === 'number' && isNaN(payload[k])));
-      if (row.placeholder && !hasData) return; // no guardar placeholders vacíos
+      const meaningful = isMeaningful(payload);
+      if (!row.id && !meaningful) return; // no insertes vacío
+
+      if (row.id && !meaningful) {
+        try { await client.from(TABLE).delete().eq('id', row.id); } catch (e) { console.error('delete empty error', e); }
+        currentRows.splice(idx, 1);
+        renderGrid(currentRows);
+        ensureTrailingPlaceholder();
+        return;
+      }
+
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
