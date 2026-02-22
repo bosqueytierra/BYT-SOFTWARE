@@ -87,6 +87,7 @@
       <div class="overlay-header">
         <div class="overlay-title" id="overlayLCTitle">Lista de compras</div>
         <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn" id="addRowBtn">Agregar fila</button>
           <button class="btn" id="closeOverlayLC">Cerrar</button>
         </div>
       </div>
@@ -107,9 +108,9 @@
 
     let blocksContainer, emptyState, statBloques;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
-    let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC;
+    let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 5; // reducir relleno
+    const MIN_ROWS = 5; // relleno mínimo y moderado
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
     let currentRows = [];
@@ -129,8 +130,10 @@
       overlayLCGrid = pickLast('#overlayLCGrid');
       overlayLCTitle = pickLast('#overlayLCTitle');
       closeOverlayLC = pickLast('#closeOverlayLC');
+      addRowBtn = pickLast('#addRowBtn');
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
+      if (addRowBtn) addRowBtn.onclick = () => { addEmptyRow(); };
     }
 
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
@@ -188,7 +191,7 @@
       return (blocks || []).filter(b => {
         if (b.deleted_at) return false;
         if (b.activa === false) return false;
-        if (!b.proyecto_id) return false; // aquí está el id de cotización
+        if (!b.proyecto_id) return false;
         return approvedSet.has(b.proyecto_id);
       });
     }
@@ -199,7 +202,6 @@
         const { data: cotAprob, error: errCot } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
         if (errCot) throw errCot;
         const approved = new Set((cotAprob || []).map(c => c.id));
-        console.log('cot aprob size', approved.size);
 
         const { data, error } = await client
           .from('purchase_blocks')
@@ -209,7 +211,6 @@
 
         const filtered = filterBlocks(data || [], approved);
         const toRender = filtered.length ? filtered : (data || []); // fallback
-        console.log('blocks total', (data||[]).length, 'filtered', filtered.length, 'render', toRender.length);
         renderBlocks(toRender);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -259,9 +260,9 @@
       `;
     }
 
-    // ---- Tabla (no grid) para evitar celdas corridas y filas fantasma ----
+    // ---------- Tabla estable (no grid) ----------
     function renderGrid(rows) {
-      // limpiar listeners antiguos (evita duplicados)
+      // limpiar listeners antiguos
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
         overlayLCGrid = document.getElementById('overlayLCGrid');
@@ -303,7 +304,6 @@
         </div>
       `;
 
-      // set values post render
       rows.forEach((row, idx) => {
         setVal(idx,'encargado',row.encargado);
         setVal(idx,'proveedor_id',row.proveedor_id);
@@ -315,7 +315,6 @@
         setVal(idx,'estado_pago',row.estado_pago);
       });
 
-      // listeners (una sola vez)
       overlayLCGrid.querySelector('table.lc-table')?.addEventListener('change', onCellEdit, false);
       overlayLCGrid.querySelector('table.lc-table')?.addEventListener('input', onCellEdit, false);
       overlayLCGrid._listenersSet = true;
@@ -343,6 +342,18 @@
       if (el) el.value = value ?? '';
     }
 
+    function addEmptyRow() {
+      if (!currentBlockId) return;
+      currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
+      renderGrid(currentRows);
+    }
+    function ensureTrailingPlaceholder() {
+      const placeholders = currentRows.filter(r => r.placeholder);
+      if (placeholders.length === 0) {
+        addEmptyRow();
+      }
+    }
+
     async function loadLines(blockId) {
       const client = await waitForClient();
       const { data, error } = await client
@@ -356,7 +367,6 @@
       } else {
         currentRows = data || [];
       }
-      // relleno al final
       while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: blockId, placeholder: true });
       renderGrid(currentRows);
     }
@@ -377,6 +387,7 @@
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
       await persistRow(rowIdx);
+      ensureTrailingPlaceholder();
     }
 
     function buildPayload(row) {
@@ -399,9 +410,10 @@
     async function persistRow(idx) {
       const row = currentRows[idx];
       if (!row) return;
-      if (row.placeholder) return; // no persistas placeholders
       const client = await waitForClient();
       const payload = buildPayload(row);
+      const hasData = Object.keys(payload).some(k => k !== 'block_id' && payload[k] !== null && payload[k] !== '' && !(typeof payload[k] === 'number' && isNaN(payload[k])));
+      if (row.placeholder && !hasData) return; // no guardar placeholders vacíos
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
