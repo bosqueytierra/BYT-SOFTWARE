@@ -110,7 +110,7 @@
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 5;
+    const MIN_ROWS = 50; // vuelve a 50 filas estilo "excel"
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
     let currentRows = [];
@@ -298,11 +298,14 @@
       renderGrid(currentRows);
     }
 
+    function fillPlaceholdersToMin() {
+      while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
+    }
+
     function ensureTrailingPlaceholder() {
       const withData = currentRows.filter(r => !r.placeholder);
-      const placeholders = currentRows.filter(r => r.placeholder);
       currentRows = [...withData];
-      if (placeholders.length === 0) currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
+      fillPlaceholdersToMin();
       renderGrid(currentRows);
     }
 
@@ -375,9 +378,9 @@
         console.error('loadLines', error);
         currentRows = [];
       } else {
-        currentRows = (data || []).filter(r => isMeaningful(r)); // limpia filas vacías ya guardadas
+        currentRows = (data || []).filter(r => isMeaningful(r));
       }
-      while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: blockId, placeholder: true });
+      fillPlaceholdersToMin();
       renderGrid(currentRows);
     }
 
@@ -428,8 +431,8 @@
       if (row.id && !meaningful) {
         try { await client.from(TABLE).delete().eq('id', row.id); } catch (e) { console.error('delete empty error', e); }
         currentRows.splice(idx, 1);
+        fillPlaceholdersToMin();
         renderGrid(currentRows);
-        ensureTrailingPlaceholder();
         return;
       }
 
