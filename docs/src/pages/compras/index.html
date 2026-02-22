@@ -191,28 +191,31 @@
       materiales = mats || [];
     }
 
-    // Filtra bloques: descarta eliminados/inactivos y cotizaciones no aprobadas
-    function filterBlocks(blocks) {
+    function filterBlocks(blocks, approvedSet) {
       return (blocks || []).filter(b => {
         if (b.deleted_at) return false;
         if (b.activa === false) return false;
-        const cot = Array.isArray(b.cotizaciones) ? b.cotizaciones[0] : b.cotizaciones;
-        const estadoCot = cot?.estado || b.cotizacion_estado;
-        if (estadoCot && estadoCot !== 'aprobada') return false;
-        return true;
+        if (!b.cotizacion_id) return false;
+        return approvedSet.has(b.cotizacion_id);
       });
     }
 
     async function loadBlocks() {
       try {
         const client = await waitForClient();
-        // Incluimos estado de la cotización para filtrar aprobadas
+        // 1) ids de cotizaciones aprobadas
+        const { data: cotAprob, error: errCot } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
+        if (errCot) throw errCot;
+        const approved = new Set((cotAprob || []).map(c => c.id));
+
+        // 2) bloques
         const { data, error } = await client
           .from('purchase_blocks')
-          .select('*, cotizaciones:cotizacion_id(estado)')
+          .select('*')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        const filtered = filterBlocks(data || []);
+
+        const filtered = filterBlocks(data || [], approved);
         renderBlocks(filtered);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -238,7 +241,7 @@
       const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
       const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
       const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
-      const estadoLabel = escapeHtml((Array.isArray(b.cotizaciones) ? b.cotizaciones[0]?.estado : b.cotizaciones?.estado) || b.estado || b.cotizacion_estado || '—');
+      const estadoLabel = escapeHtml(b.cotizacion_estado || b.estado || 'aprobada');
       return `
         <div class="card">
           <div class="block-header">
@@ -402,9 +405,7 @@
         catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{});
       } catch(e) { console.warn('cat images', e); }
     }
-    function pickCategoryImage(cat) {
-      return catImagesMap[cat] || PLACEHOLDER_IMG;
-    }
+    function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
     async function fetchLines(blockId) {
       const client = await waitForClient();
       const { data, error } = await client
