@@ -192,13 +192,12 @@
     }
 
     function filterBlocks(blocks, approvedSet) {
-      // si approvedSet está vacío, no filtramos (fallback)
       if (!approvedSet || approvedSet.size === 0) return blocks || [];
       return (blocks || []).filter(b => {
         if (b.deleted_at) return false;
         if (b.activa === false) return false;
-        if (!b.cotizacion_id) return false;
-        return approvedSet.has(b.cotizacion_id);
+        if (!b.proyecto_id) return false; // aquí está el id de cotización
+        return approvedSet.has(b.proyecto_id);
       });
     }
 
@@ -217,8 +216,9 @@
         if (error) throw error;
 
         const filtered = filterBlocks(data || [], approved);
-        console.log('blocks total', (data||[]).length, 'filtered', filtered.length);
-        renderBlocks(filtered);
+        const toRender = filtered.length ? filtered : (data || []); // fallback: muestra todo si filtro deja 0
+        console.log('blocks total', (data||[]).length, 'filtered', filtered.length, 'render', toRender.length);
+        renderBlocks(toRender);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
@@ -249,7 +249,7 @@
           <div class="block-header">
             <div>
               <h3 style="margin:0 0 4px;">${title}</h3>
-              <div class="meta">Estado: ${estadoLabel} · Creado: ${formatDate(b.created_at)} · Coti: ${escapeHtml(b.cotizacion_id || b.proyecto_id || '')}</div>
+              <div class="meta">Estado: ${estadoLabel} · Creado: ${formatDate(b.created_at)} · Coti: ${escapeHtml(b.proyecto_id || '')}</div>
             </div>
             <div style="display:flex; gap:6px;">
               <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
