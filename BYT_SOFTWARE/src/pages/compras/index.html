@@ -35,23 +35,15 @@
     .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
-
-    .line-grid {
-      min-width: 2200px;
-      display: grid;
-      grid-template-columns:
-        140px 160px 220px 150px 200px 120px 80px 110px 110px 150px 150px 240px 90px;
-      gap: 0; align-items: center;
-    }
-    .grid-header { font-size:12.5px; font-weight:700; background:#e1e5ec; border:1px solid #d7dbe0; padding:6px 6px; }
-    .grid-row { display: contents; }
-    .cell { border:1px solid #d7dbe0; background:#fff; padding:0; min-height:28px; }
-    .grid-row:nth-child(odd) .cell { background:#f7f8fa; }
-    .cell select, .cell input[type=number] { appearance:none; -moz-appearance:textfield; }
-    .cell input::-webkit-outer-spin-button, .cell input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .cell input, .cell select { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
-    .readonly { background:#f3f4f6; }
-
+    .table-wrapper { width:100%; overflow:auto; }
+    table.lc-table { border-collapse: collapse; width: 100%; min-width: 1400px; }
+    table.lc-table thead th { position: sticky; top: 0; background:#e1e5ec; border:1px solid #d7dbe0; padding:6px 6px; font-size:12.5px; font-weight:700; }
+    table.lc-table tbody td { border:1px solid #d7dbe0; background:#fff; padding:0; min-height:28px; }
+    table.lc-table tbody tr:nth-child(odd) td { background:#f7f8fa; }
+    table.lc-table select, table.lc-table input[type=number], table.lc-table input[type=text] { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
+    table.lc-table input[type=number] { appearance:none; -moz-appearance:textfield; }
+    table.lc-table input::-webkit-outer-spin-button, table.lc-table input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .readonly-cell { background:#f3f4f6; }
     .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:18px; }
     .item-card { border:1px solid #d7dbe0; border-radius:12px; background:#fff; padding:10px; display:flex; gap:12px; box-shadow:0 6px 16px rgba(0,0,0,0.05); min-height:180px; }
     .item-thumb { width:120px; height:120px; border:1px solid #e2e5ea; border-radius:10px; background:#f5f7fa; object-fit:cover; flex-shrink:0; }
@@ -117,7 +109,7 @@
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 50;
+    const MIN_ROWS = 5; // reducir relleno
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
     let currentRows = [];
@@ -216,7 +208,7 @@
         if (error) throw error;
 
         const filtered = filterBlocks(data || [], approved);
-        const toRender = filtered.length ? filtered : (data || []); // fallback: muestra todo si filtro deja 0
+        const toRender = filtered.length ? filtered : (data || []); // fallback
         console.log('blocks total', (data||[]).length, 'filtered', filtered.length, 'render', toRender.length);
         renderBlocks(toRender);
       } catch (e) {
@@ -267,29 +259,51 @@
       `;
     }
 
+    // ---- Tabla (no grid) para evitar celdas corridas y filas fantasma ----
     function renderGrid(rows) {
-      const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs',''];
-      const headerHtml = headers.map(h => `<div class="grid-header">${h}</div>`).join('');
-      const body = rows.map((row, idx) => {
+      // limpiar listeners antiguos (evita duplicados)
+      if (overlayLCGrid && overlayLCGrid._listenersSet) {
+        overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
+        overlayLCGrid = document.getElementById('overlayLCGrid');
+      }
+
+      const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs'];
+      const thead = `
+        <thead>
+          <tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>
+        </thead>
+      `;
+
+      const bodyRows = rows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
         return `
-        <div class="grid-row" data-row="${idx}" ${idAttr}>
-          <div class="cell"><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></div>
-          <div class="cell"><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></div>
-          <div class="cell"><input data-f="direccion" data-row="${idx}" value="${escapeHtml(row.direccion||'')}" /></div>
-          <div class="cell"><select data-f="categoria" data-row="${idx}">${makeOptions([...new Set(materiales.map(m=>m.category).filter(Boolean))].map(c=>({nombre:c})))}</select></div>
-          <div class="cell"><select data-f="producto_id" data-row="${idx}"></select></div>
-          <div class="cell"><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></div>
-          <div class="cell"><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></div>
-          <div class="cell"><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></div>
-          <div class="cell readonly"><input data-f="total" data-row="${idx}" value="${row.total||''}" readonly></div>
-          <div class="cell"><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></div>
-          <div class="cell"><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></div>
-          <div class="cell"><input data-f="observaciones" data-row="${idx}" value="${escapeHtml(row.observaciones||'')}" /></div>
-          <div class="cell readonly"></div>
-        </div>`;
+          <tr data-row="${idx}" ${idAttr}>
+            <td><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></td>
+            <td><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></td>
+            <td><input data-f="direccion" data-row="${idx}" type="text" value="${escapeHtml(row.direccion||'')}"></td>
+            <td><select data-f="categoria" data-row="${idx}">${makeOptions([...new Set(materiales.map(m=>m.category).filter(Boolean))].map(c=>({nombre:c})))}</select></td>
+            <td><select data-f="producto_id" data-row="${idx}"></select></td>
+            <td><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></td>
+            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></td>
+            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></td>
+            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total||''}" readonly></td>
+            <td><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></td>
+            <td><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></td>
+            <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones||'')}"></td>
+          </tr>
+        `;
       }).join('');
-      overlayLCGrid.innerHTML = `<div class="line-grid">${headerHtml}${body}</div>`;
+
+      overlayLCGrid.innerHTML = `
+        <div class="table-wrapper">
+          <table class="lc-table">
+            ${thead}
+            <tbody>${bodyRows}</tbody>
+          </table>
+        </div>
+      `;
+
+      // set values post render
       rows.forEach((row, idx) => {
         setVal(idx,'encargado',row.encargado);
         setVal(idx,'proveedor_id',row.proveedor_id);
@@ -300,6 +314,11 @@
         setVal(idx,'modo_compra',row.modo_compra);
         setVal(idx,'estado_pago',row.estado_pago);
       });
+
+      // listeners (una sola vez)
+      overlayLCGrid.querySelector('table.lc-table')?.addEventListener('change', onCellEdit, false);
+      overlayLCGrid.querySelector('table.lc-table')?.addEventListener('input', onCellEdit, false);
+      overlayLCGrid._listenersSet = true;
     }
 
     function makeOptions(list, valKey='nombre', labelKey='nombre') {
@@ -311,7 +330,7 @@
     }
     function rebuildProductOptions(rowIdx) {
       const row = currentRows[rowIdx] || {};
-      const sel = overlayLCGrid?.querySelector?.(`[data-row="${rowIdx}"][data-f="producto_id"]`);
+      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="producto_id"]`);
       if (!sel) return;
       sel.innerHTML = productOptions(row.categoria || '');
       if (row.producto_id) {
@@ -337,14 +356,9 @@
       } else {
         currentRows = data || [];
       }
-      while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: blockId });
+      // relleno al final
+      while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: blockId, placeholder: true });
       renderGrid(currentRows);
-      attachListeners();
-    }
-
-    function attachListeners() {
-      overlayLCGrid?.addEventListener('change', onCellEdit, { once:false });
-      overlayLCGrid?.addEventListener('input', onCellEdit, { once:false });
     }
 
     async function onCellEdit(e) {
@@ -354,13 +368,13 @@
       const row = currentRows[rowIdx] || {};
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
-      currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId };
+      currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder: false };
       if (field === 'categoria') {
         currentRows[rowIdx].producto_id = null;
         rebuildProductOptions(rowIdx);
       }
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
-      const totalInput = overlayLCGrid.querySelector(`[data-row="${rowIdx}"][data-f="total"]`);
+      const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
       await persistRow(rowIdx);
     }
@@ -385,18 +399,19 @@
     async function persistRow(idx) {
       const row = currentRows[idx];
       if (!row) return;
+      if (row.placeholder) return; // no persistas placeholders
       const client = await waitForClient();
       const payload = buildPayload(row);
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data };
+          currentRows[idx] = { ...row, ...data, placeholder: false };
           setVal(idx,'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
-          if (data) { currentRows[idx] = { ...row, ...data }; setVal(idx,'total', data.total); }
+          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false }; setVal(idx,'total', data.total); }
         }
       } catch (e) { console.error('Persist error', e); }
     }
