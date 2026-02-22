@@ -110,7 +110,7 @@
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 50; // relleno tipo “excel”
+    const MIN_ROWS = 50; // se mantienen 50 filas estilo excel
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
     let currentRows = [];
@@ -302,14 +302,6 @@
       while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
     }
 
-    function pruneExtraPlaceholders() {
-      // deja máximo los necesarios para llegar a MIN_ROWS
-      const dataRows = currentRows.filter(r => !r.placeholder);
-      const need = Math.max(0, MIN_ROWS - dataRows.length);
-      currentRows = [...dataRows];
-      for (let i = 0; i < need; i++) currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
-    }
-
     function renderGrid(rows) {
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
@@ -381,7 +373,7 @@
       } else {
         currentRows = (data || []).filter(r => isMeaningful(r));
       }
-      pruneExtraPlaceholders();
+      fillPlaceholdersToMin(); // siempre exacto 50 filas: datos + placeholders
       renderGrid(currentRows);
     }
 
@@ -395,30 +387,27 @@
       const draft = { ...row, [field]: val, block_id: row.block_id || currentBlockId };
       const meaningful = isMeaningful(buildPayload(draft));
 
-      // si no hay datos y no hay id, mantenlo como placeholder
+      // Si no hay datos y no tiene id -> placeholder
       if (!meaningful && !row.id) {
         currentRows[rowIdx] = { ...draft, placeholder: true, id: null, total: draft.total || null };
-        pruneExtraPlaceholders();
         renderGrid(currentRows);
         return;
       }
-
-      // si no hay datos pero tiene id, bórralo
+      // Si no hay datos pero tiene id -> borrar de BD y de memoria
       if (!meaningful && row.id) {
         try { await (await waitForClient()).from(TABLE).delete().eq('id', row.id); } catch(e){ console.error(e); }
         currentRows.splice(rowIdx, 1);
-        pruneExtraPlaceholders();
+        fillPlaceholdersToMin();
         renderGrid(currentRows);
         return;
       }
 
-      // hay datos -> persistir
+      // Hay datos -> calcular total y persistir
       currentRows[rowIdx] = { ...draft, placeholder: false };
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
       await persistRow(rowIdx);
-      pruneExtraPlaceholders();
       renderGrid(currentRows);
     }
 
