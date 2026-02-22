@@ -110,12 +110,16 @@
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 50; // se mantienen 50 filas estilo excel
+    const MIN_ROWS = 50; // seguimos mostrando 50 filas visibles; placeholders no se guardan
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
     let currentRows = [];
     let currentBlockId = null;
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
+
+    // Debug helpers
+    window._getRows = () => currentRows;
+    window._getBlockId = () => currentBlockId;
 
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
@@ -355,8 +359,11 @@
         setVal(idx,'estado_pago',row.estado_pago);
       });
 
-      overlayLCGrid.querySelector('table.lc-table')?.addEventListener('change', onCellEdit, false);
-      overlayLCGrid.querySelector('table.lc-table')?.addEventListener('input', onCellEdit, false);
+      const tbl = overlayLCGrid.querySelector('table.lc-table');
+      if (tbl) {
+        tbl.addEventListener('change', onCellEdit, false);
+        tbl.addEventListener('input', onCellEdit, false);
+      }
       overlayLCGrid._listenersSet = true;
     }
 
@@ -371,9 +378,9 @@
         console.error('loadLines', error);
         currentRows = [];
       } else {
-        currentRows = (data || []).filter(r => isMeaningful(r));
+        currentRows = (data || []);
       }
-      fillPlaceholdersToMin(); // siempre exacto 50 filas: datos + placeholders
+      fillPlaceholdersToMin(); // mantiene 50 visibles
       renderGrid(currentRows);
     }
 
@@ -384,31 +391,18 @@
       const row = currentRows[rowIdx] || {};
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
-      const draft = { ...row, [field]: val, block_id: row.block_id || currentBlockId };
-      const meaningful = isMeaningful(buildPayload(draft));
 
-      // Si no hay datos y no tiene id -> placeholder
-      if (!meaningful && !row.id) {
-        currentRows[rowIdx] = { ...draft, placeholder: true, id: null, total: draft.total || null };
-        renderGrid(currentRows);
-        return;
-      }
-      // Si no hay datos pero tiene id -> borrar de BD y de memoria
-      if (!meaningful && row.id) {
-        try { await (await waitForClient()).from(TABLE).delete().eq('id', row.id); } catch(e){ console.error(e); }
-        currentRows.splice(rowIdx, 1);
-        fillPlaceholdersToMin();
-        renderGrid(currentRows);
-        return;
-      }
+      // actualiza en memoria
+      currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder: false };
 
-      // Hay datos -> calcular total y persistir
-      currentRows[rowIdx] = { ...draft, placeholder: false };
+      // recalcula total solo en UI
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
+
+      // persistir
       await persistRow(rowIdx);
-      renderGrid(currentRows);
+      // no se re-renderiza la tabla completa para evitar “corrimientos”
     }
 
     function buildPayload(row) {
@@ -434,12 +428,9 @@
       const client = await waitForClient();
       const payload = buildPayload(row);
       const meaningful = isMeaningful(payload);
-      if (!row.id && !meaningful) return; // no insertes vacío
 
-      if (row.id && !meaningful) {
-        try { await client.from(TABLE).delete().eq('id', row.id); } catch (e) { console.error('delete empty error', e); }
-        return;
-      }
+      // no guardamos filas vacías si no tienen id
+      if (!row.id && !meaningful) return;
 
       try {
         if (!row.id) {
