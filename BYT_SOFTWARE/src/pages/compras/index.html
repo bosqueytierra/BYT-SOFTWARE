@@ -192,6 +192,8 @@
     }
 
     function filterBlocks(blocks, approvedSet) {
+      // si approvedSet está vacío, no filtramos (fallback)
+      if (!approvedSet || approvedSet.size === 0) return blocks || [];
       return (blocks || []).filter(b => {
         if (b.deleted_at) return false;
         if (b.activa === false) return false;
@@ -203,12 +205,11 @@
     async function loadBlocks() {
       try {
         const client = await waitForClient();
-        // 1) ids de cotizaciones aprobadas
         const { data: cotAprob, error: errCot } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
         if (errCot) throw errCot;
         const approved = new Set((cotAprob || []).map(c => c.id));
+        console.log('cot aprob size', approved.size);
 
-        // 2) bloques
         const { data, error } = await client
           .from('purchase_blocks')
           .select('*')
@@ -216,6 +217,7 @@
         if (error) throw error;
 
         const filtered = filterBlocks(data || [], approved);
+        console.log('blocks total', (data||[]).length, 'filtered', filtered.length);
         renderBlocks(filtered);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
