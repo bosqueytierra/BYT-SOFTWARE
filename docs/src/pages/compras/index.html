@@ -83,7 +83,7 @@
   </div>
 
   <div id="overlayLC" class="overlay">
-    <div class="overlay-content">
+    <div class="overlay-content" data-current-block="">
       <div class="overlay-header">
         <div class="overlay-title" id="overlayLCTitle">Lista de compras</div>
         <div style="display:flex; gap:8px; align-items:center;">
@@ -340,7 +340,7 @@
       const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs'];
       const thead = `
         <thead>
-          <tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>
+          <tr>${headers.map(h => `<th>${escapeHtml(h)}</th}`).join('')}</tr>
         </thead>
       `;
 
@@ -496,6 +496,10 @@
     async function openLC(blockId, title) {
       ensureEls();
       currentBlockId = blockId;
+      // guarda el blockId en el overlay, no uses pickLast luego
+      const wrapper = overlayLC?.querySelector?.('.overlay-content');
+      if (wrapper) wrapper.dataset.currentBlock = blockId;
+
       currentRows = [];
       if (overlayLCGrid) overlayLCGrid.innerHTML = '';
       if (overlayLC && overlayLCGrid && overlayLCTitle) {
