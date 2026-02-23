@@ -110,7 +110,7 @@
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 50; // placeholders solo UI
+    const MIN_ROWS = 0; // sin placeholders de relleno
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catImagesMap = {};
     let currentRows = [];
@@ -301,9 +301,7 @@
       renderGrid(currentRows);
     }
 
-    function fillPlaceholdersToMin() {
-      while (currentRows.length < MIN_ROWS) currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
-    }
+    // fillPlaceholdersToMin eliminado; no más relleno masivo
 
     async function cleanupEmptiesInDB(lines, client) {
       const empties = (lines || []).filter(r => !isMeaningful(r) && r.id);
@@ -327,7 +325,6 @@
         await cleanupEmptiesInDB(data, client);
         currentRows = (data || []).filter(r => isMeaningful(r));
       }
-      fillPlaceholdersToMin();
       renderGrid(currentRows);
     }
 
@@ -340,7 +337,7 @@
       const headers = ['Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs'];
       const thead = `
         <thead>
-          <tr>${headers.map(h => `<th>${escapeHtml(h)}</th}`).join('')}</tr>
+          <tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>
         </thead>
       `;
 
@@ -496,7 +493,6 @@
     async function openLC(blockId, title) {
       ensureEls();
       currentBlockId = blockId;
-      // guarda el blockId en el overlay, no uses pickLast luego
       const wrapper = overlayLC?.querySelector?.('.overlay-content');
       if (wrapper) wrapper.dataset.currentBlock = blockId;
 
