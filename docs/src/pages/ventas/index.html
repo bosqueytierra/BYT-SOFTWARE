@@ -235,7 +235,6 @@
       const res = await sbClient.listarVentas();
       if (!res.success) throw new Error(res.error || 'listarVentas sin éxito');
 
-      // mantener todas las partidas
       ventasData = (res.data || []).filter(shouldIncludeVenta);
       ventasFiltradas = ventasData;
 
@@ -576,6 +575,10 @@
           const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
           return idv === pid ? { ...v, total_venta: num } : v;
         });
+        ventasFiltradas = ventasFiltradas.map(v => {
+          const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
+          return idv === pid ? { ...v, total_venta: num } : v;
+        });
         await persistVenta(pid, { total_venta: num });
       }
       proyectoCobradoMap.set(key, num);
@@ -585,15 +588,21 @@
     }
 
     async function handleEntregaBlur(key, value) {
-      const proyecto = proyectos.find(p => p.key === key);
       const val = value || null;
+      const proyecto = proyectos.find(p => p.key === key);
       if (proyecto && proyecto.items?.length) {
         const first = proyecto.items[0];
         const pid = first.id || first.partida_id || first.partida_nombre || first.partida;
+
         ventasData = ventasData.map(v => {
           const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
           return idv === pid ? { ...v, fecha_entrega_limite: val } : v;
         });
+        ventasFiltradas = ventasFiltradas.map(v => {
+          const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
+          return idv === pid ? { ...v, fecha_entrega_limite: val } : v;
+        });
+
         await persistVenta(pid, { fecha_entrega_limite: val });
       }
       buildProyectos();
@@ -611,6 +620,14 @@
         }
         return v;
       });
+      ventasFiltradas = ventasFiltradas.map(v => {
+        const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
+        if (idv === partidaId) {
+          const patch = field === 'precio_individual_estimado' ? Number(value || 0) : value;
+          return { ...v, [field]: patch };
+        }
+        return v;
+      });
       aplicarFiltros();
     }
 
@@ -621,6 +638,10 @@
         const first = proyecto.items[0];
         const pid = first.id || first.partida_id || first.partida_nombre || first.partida;
         ventasData = ventasData.map(v => {
+          const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
+          return idv === pid ? { ...v, motivo_variacion: value } : v;
+        });
+        ventasFiltradas = ventasFiltradas.map(v => {
           const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
           return idv === pid ? { ...v, motivo_variacion: value } : v;
         });
