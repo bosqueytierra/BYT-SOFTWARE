@@ -136,6 +136,7 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
+    // === Listas y constantes ===
     const MOTIVOS_BAJADA = [
       'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
       'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
@@ -150,8 +151,9 @@
       'Actualización de precios por vigencia de cotización','Ajuste por normativa o requerimientos técnicos',
       'Aumento por disponibilidad de materiales','Ajuste por condiciones de pago'
     ];
-
     const ESTADOS = ['aprobada','en_ejecucion','completada','cancelada','postventa'];
+
+    // === Estado en memoria ===
     let ventasData = [];
     let ventasFiltradas = [];
     let proyectos = [];
@@ -160,10 +162,29 @@
     let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
     const proyectoCobradoMap = new Map();
     const motivoVariacionMap = new Map();
-    const proyectoFechaEntregaMap = new Map();
+    const proyectoFechaEntregaMap = new Map(); // cache local por cotización
     let approvedCotIds = new Set();
 
-    function normalizeEstado(v){return (v.estado || '').trim();}
+    // === Utilidades básicas ===
+    function normalizeEstado(v){ return (v.estado || '').trim(); }
+    function fmt(num){ if(num==null) return '$0'; return new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(num); }
+    function parseMoney(val){
+      if(typeof val==='number') return val;
+      const cleaned=String(val||'').replace(/[^0-9,-.]/g,'');
+      const noThousand=cleaned.replace(/[.,](?=.*[0-9]{3}\b)/g,'');
+      const n=Number(noThousand.replace(',','.'));
+      return Number.isFinite(n)?Math.round(n):0;
+    }
+    function formatCliente(cli){
+      if(!cli) return '';
+      if(typeof cli==='string'){
+        try{const o=JSON.parse(cli);return o.nombre||o.name||o.cliente||'';}catch{return cli;}
+      }
+      if(typeof cli==='object') return cli.nombre||cli.name||cli.cliente||'';
+      return String(cli);
+    }
+    function escapeHtml(str){ if(str==null) return ''; return String(str).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function escapeHtmlAttr(str){ return escapeHtml(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
     async function waitForSupabaseClient(maxMs=15000){
       const start=Date.now();
@@ -188,37 +209,38 @@
       return approvedCotIds.has(v.cotizacion_id);
     }
 
-    document.addEventListener('DOMContentLoaded',()=>{
+    // === Bootstrap ===
+    document.addEventListener('DOMContentLoaded', ()=>{
       const filtro=document.getElementById('filtro-estado');
       if(filtro) filtro.value='todos';
       bootstrapVentas(4);
-      window.addEventListener('storage',(e)=>{if(e.key==='ventas_updated_at') bootstrapVentas(2);});
+      window.addEventListener('storage', e=>{ if(e.key==='ventas_updated_at') bootstrapVentas(2); });
       try{
         const bc=new BroadcastChannel('byt-ventas');
-        bc.onmessage=(ev)=>{if(ev.data?.type==='ventas-updated') bootstrapVentas(2);};
+        bc.onmessage=ev=>{ if(ev.data?.type==='ventas-updated') bootstrapVentas(2); };
       }catch{}
     });
 
     async function bootstrapVentas(retries=2){
-      try{await cargarVentas();}
+      try{ await cargarVentas(); }
       catch(e){
         console.error('cargarVentas fallo:',e);
-        if(retries>0){setTimeout(()=>bootstrapVentas(retries-1),800);}
-        else{
-          const pw=document.getElementById('proyectos-wrapper');
-          pw.innerHTML='<div class="empty"><span class="state-icon">⚠️</span>Error cargando ventas</div>';
-        }
+        if(retries>0) setTimeout(()=>bootstrapVentas(retries-1),800);
+        else document.getElementById('proyectos-wrapper').innerHTML='<div class="empty"><span class="state-icon">⚠️</span>Error cargando ventas</div>';
       }
     }
 
+    // === Carga principal ===
     async function cargarVentas(){
       const pw=document.getElementById('proyectos-wrapper');
       pw.innerHTML='<div class="empty"><span class="state-icon">⏳</span>Cargando ventas...</div>';
+
       const sbClient=await waitForSupabaseClient();
       const sb=await waitForSupabase();
 
       if(sbClient.init) await sbClient.init();
 
+      // Solo IDs aprobados (sin fecha)
       const {data:cotAprob,error:errCot}=await sb.from('cotizaciones').select('id').eq('estado','aprobada');
       if(errCot) throw errCot;
       approvedCotIds=new Set((cotAprob||[]).map(c=>c.id));
@@ -229,12 +251,12 @@
         return;
       }
 
+      // Traer ventas
       const res=await sbClient.listarVentas();
-      if(!res.success) throw new Error(res.error || 'listarVentas sin éxito');
-
+      if(!res.success) throw new Error(res.error||'listarVentas sin éxito');
       ventasData=(res.data||[]).filter(shouldIncludeVenta);
 
-      // cache local de fecha si existe en BD
+      // Si el backend ya devuelve fecha_entrega_limite en ventas, cachéala
       ventasData.forEach(v=>{
         if(v.cotizacion_id && v.fecha_entrega_limite){
           proyectoFechaEntregaMap.set(v.cotizacion_id, v.fecha_entrega_limite);
@@ -245,11 +267,12 @@
       aplicarFiltros();
     }
 
+    // === Filtros y armado de proyectos ===
     function aplicarFiltros(){
       const txt=document.getElementById('filtro-texto').value.toLowerCase().trim();
       const est=document.getElementById('filtro-estado').value;
       ventasFiltradas=ventasData.filter(v=>{
-        const st=normalizeEstado(v) || 'en_ejecucion';
+        const st=normalizeEstado(v)||'en_ejecucion';
         const matchTxt=!txt ||
           (v.proyecto||'').toLowerCase().includes(txt) ||
           (v.partida_nombre||v.partida||'').toLowerCase().includes(txt);
@@ -276,15 +299,15 @@
         const totalCobradoBase=Number(first.total_venta||0);
         const totalCobrado=proyectoCobradoMap.has(key)?proyectoCobradoMap.get(key):totalCobradoBase;
         const cliente=formatCliente(first.cliente);
-        const fechaEntrega=
+        const fechaEntrega =
           proyectoFechaEntregaMap.get(key) ??
           (items.find(i=>i.fecha_entrega_limite)?.fecha_entrega_limite) ??
-          first.fecha_cierre ?? first.fecha_cierre_max ?? '';
+          ''; // valor manual guardado en ventas
         const cotizacionId=first.cotizacion_id;
         const proyectoId=first.proyecto_id || key;
         const allGreen=items.every(it=>['completada','cancelada'].includes(normalizeEstado(it)));
         const motivo=first.motivo_variacion;
-        if(motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key,motivo);
+        if(motivo && !motivoVariacionMap.has(key)) motivoVariacionMap.set(key, motivo);
 
         return {
           key, displayName, proyectoId, cotizacionId, cliente, fechaEntrega,
@@ -295,6 +318,7 @@
       if(selectedProyectoKey && !proyectos.find(p=>p.key===selectedProyectoKey)) selectedProyectoKey=null;
     }
 
+    // === Render proyectos ===
     function renderProyectos(){
       const pw=document.getElementById('proyectos-wrapper');
       if(!proyectos.length){
@@ -358,6 +382,7 @@
       `;
     }
 
+    // === Render partidas ===
     function renderPartidas(){
       const pw=document.getElementById('partidas-wrapper');
       const title=document.getElementById('partidas-title');
@@ -429,6 +454,7 @@
       applyStateStyles();
     }
 
+    // === Render resumen ===
     function renderResumen(){
       const rw=document.getElementById('resumen-wrapper');
       const title=document.getElementById('resumen-title');
@@ -511,7 +537,8 @@
       `;
     }
 
-    function selectProyecto(key){selectedProyectoKey=key;renderProyectos();renderPartidas();renderResumen();}
+    // === Handlers ===
+    function selectProyecto(key){ selectedProyectoKey=key; renderProyectos(); renderPartidas(); renderResumen(); }
 
     function labelEstado(st){
       switch(st){
@@ -586,18 +613,18 @@
     }
 
     async function handleEntregaChange(key, value){
-      const val=value||'';
+      // Guardamos la fecha manual solo en ventas.fecha_entrega_limite
+      const val=value || '';
       proyectoFechaEntregaMap.set(key, val);
 
-      ventasData=ventasData.map(v=>v.cotizacion_id===key?{...v,fecha_entrega_limite:val}:v);
-      ventasFiltradas=ventasFiltradas.map(v=>v.cotizacion_id===key?{...v,fecha_entrega_limite:val}:v);
+      // actualizar en memoria
+      ventasData=ventasData.map(v=>v.cotizacion_id===key ? {...v, fecha_entrega_limite: val} : v);
+      ventasFiltradas=ventasFiltradas.map(v=>v.cotizacion_id===key ? {...v, fecha_entrega_limite: val} : v);
 
-      // persistir en cotizaciones (requiere columna creada)
-      try{
-        const sb=await waitForSupabase();
-        await sb.from('cotizaciones').update({fecha_entrega_limite: val || null}).eq('id', key);
-      }catch(e){
-        console.warn('update cotizaciones fecha_entrega_limite', e);
+      // persistir en la primera venta de esa cotización
+      const rowToSave=ventasData.find(v=>v.cotizacion_id===key);
+      if(rowToSave){
+        await persistVenta(rowToSave.id, {fecha_entrega_limite: val || null});
       }
 
       buildProyectos();
@@ -645,10 +672,12 @@
       renderResumen();
     }
 
+    // === Navegación simple ===
     function verCotizacion(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}`; }
     function verAdjuntos(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}#adjuntos`; }
     function imprimirContrato(id){ window.utils?.mostrarNotificacion?.('Imprimir contrato aún no está disponible','info'); }
 
+    // === Notas modal ===
     function openNotesModal(partidaId, proyectoKey, proyectoNombre){
       notesModalState={partidaId, proyectoKey, proyectoNombre};
       const modal=document.getElementById('notes-modal');
@@ -678,32 +707,6 @@
       closeNotesModal();
       renderPartidas();
     }
-
-    function fmt(num){
-      if(num===null||num===undefined) return '$0';
-      return new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(num);
-    }
-    function parseMoney(val){
-      if(typeof val==='number') return val;
-      const cleaned=String(val||'').replace(/[^0-9,-.]/g,'');
-      const noThousand=cleaned.replace(/[.,](?=.*[0-9]{3}\b)/g,'');
-      const n=Number(noThousand.replace(',','.'));
-      return Number.isFinite(n)?Math.round(n):0;
-    }
-    function formatCliente(cli){
-      if(!cli) return '';
-      if(typeof cli==='string'){
-        try{const o=JSON.parse(cli);return o.nombre||o.name||o.cliente||'';}
-        catch{return cli;}
-      }
-      if(typeof cli==='object') return cli.nombre||cli.name||cli.cliente||'';
-      return String(cli);
-    }
-    function escapeHtml(str){
-      if(str===undefined||str===null) return '';
-      return String(str).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    }
-    function escapeHtmlAttr(str){return escapeHtml(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
   </script>
 </body>
 </html>
