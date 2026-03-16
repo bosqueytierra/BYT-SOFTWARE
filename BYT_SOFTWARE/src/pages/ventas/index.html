@@ -602,12 +602,22 @@
       const val = value || '';
       proyectoFechaEntregaMap.set(key, val);
 
+      // Actualiza todas las filas de ventas con ese cotizacion_id
       ventasData = ventasData.map(v => v.cotizacion_id === key ? { ...v, fecha_entrega_limite: val } : v);
       ventasFiltradas = ventasFiltradas.map(v => v.cotizacion_id === key ? { ...v, fecha_entrega_limite: val } : v);
 
-      const rowToSave = ventasData.find(v => v.cotizacion_id === key) || ventasFiltradas.find(v => v.cotizacion_id === key);
+      // Persistir en tabla ventas (primer registro de la cotización)
+      const rowToSave = ventasData.find(v => v.cotizacion_id === key);
       if (rowToSave) {
         await persistVenta(rowToSave.id, { fecha_entrega_limite: val || null });
+      }
+
+      // Persistir también en cotizaciones para asegurar la fecha se recupere al recargar
+      try {
+        const sb = await waitForSupabase();
+        await sb.from('cotizaciones').update({ fecha_entrega_limite: val || null }).eq('id', key);
+      } catch (e) {
+        console.warn('update cotizaciones fecha_entrega_limite', e);
       }
 
       buildProyectos();
