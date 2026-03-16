@@ -10,7 +10,7 @@
       --bg: #f6f7f8; --card: #ffffff; --border: #e4e7eb; --text: #2d2d2d; --muted: #6c7a86;
       --primary: #2e5e4e; --primary-soft: #3f705d; --danger: #c0392b; --shadow: 0 6px 16px rgba(0,0,0,0.06);
       --selected: #e9f2ed; --dot-ok: #1f9d55; --dot-bad: #d64545;
-      --st-aprobada: #e3f2fd; --st-en-ejecucion: #f6e0a3; --st-completada: #d6f5d6; --st-postventa: #f8d0d0;
+      --st-aprobada: #e3f2fd; --st-en_ejecucion: #f6e0a3; --st-completada: #d6f5d6; --st-postventa: #f8d0d0;
       --chip-green: #e9f7ef; --chip-red: #fdeceb; --chip-green-text: #1f9d55; --chip-red-text: #d64545;
       --chip-neutral: #f2f3f5; --chip-neutral-text: #6c7a86;
     }
@@ -162,6 +162,7 @@
     let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
     const proyectoCobradoMap = new Map();
     const motivoVariacionMap = new Map();
+    const proyectoFechaEntregaMap = new Map(); // cache local de fecha entrega
     let approvedCotIds = new Set();
 
     function normalizeEstado(v) { return (v.estado || '').trim(); }
@@ -236,8 +237,15 @@
       if (!res.success) throw new Error(res.error || 'listarVentas sin éxito');
 
       ventasData = (res.data || []).filter(shouldIncludeVenta);
-      ventasFiltradas = ventasData;
 
+      // pre-cache fechas de entrega existentes para no perderlas en rerender
+      ventasData.forEach(v => {
+        if (v.cotizacion_id && v.fecha_entrega_limite) {
+          proyectoFechaEntregaMap.set(v.cotizacion_id, v.fecha_entrega_limite);
+        }
+      });
+
+      ventasFiltradas = ventasData;
       aplicarFiltros();
     }
 
@@ -259,7 +267,7 @@
     }
 
     function buildProyectos() {
-      const map = new Map(); // clave: cotizacion_id
+      const map = new Map();
       ventasFiltradas.forEach(v => {
         const key = v.cotizacion_id || v.proyecto || 'Sin proyecto';
         if (!map.has(key)) map.set(key, []);
@@ -272,7 +280,13 @@
         const totalCobradoBase = Number(first.total_venta || 0);
         const totalCobrado = proyectoCobradoMap.has(key) ? proyectoCobradoMap.get(key) : totalCobradoBase;
         const cliente = formatCliente(first.cliente);
-        const fechaEntrega = first.fecha_entrega_limite || first.fecha_cierre || first.fecha_cierre_max || '';
+        // si está en cache, úsala; luego en DB si existe
+        const fechaEntrega =
+          proyectoFechaEntregaMap.get(key) ??
+          first.fecha_entrega_limite ??
+          first.fecha_cierre ??
+          first.fecha_cierre_max ??
+          '';
         const cotizacionId = first.cotizacion_id;
         const proyectoId = first.proyecto_id || key;
         const allGreen = items.every(it => ['completada','cancelada'].includes(normalizeEstado(it)));
@@ -306,7 +320,8 @@
         const isSel = p.key === selectedProyectoKey;
         const dotClass = p.allGreen ? 'dot-ok' : 'dot-bad';
         const totalCobrado = proyectoCobradoMap.has(p.key) ? proyectoCobradoMap.get(p.key) : p.totalCobrado;
-        const fechaInput = formatInputDate(p.fechaEntrega);
+        // no convertir a Date; mantener string yyyy-mm-dd si viene así
+        const fechaInput = (p.fechaEntrega || '').slice(0,10);
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
             <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
@@ -316,8 +331,7 @@
                      value="${escapeHtmlAttr(fechaInput)}"
                      onclick="event.stopPropagation();"
                      onmousedown="event.stopPropagation();"
-                     onfocus="event.stopPropagation();"
-                     onblur="handleEntregaBlur('${escapeHtmlAttr(p.key)}', this.value)">
+                     onchange="handleEntregaChange('${escapeHtmlAttr(p.key)}', this.value)">
             </td>
             <td>${escapeHtml(p.cliente || '')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
@@ -587,8 +601,9 @@
       renderResumen();
     }
 
-    async function handleEntregaBlur(key, value) {
-      const val = value || null;
+    async function handleEntregaChange(key, value) {
+      const val = value || '';
+      proyectoFechaEntregaMap.set(key, val);
       const proyecto = proyectos.find(p => p.key === key);
       if (proyecto && proyecto.items?.length) {
         const first = proyecto.items[0];
@@ -603,7 +618,7 @@
           return idv === pid ? { ...v, fecha_entrega_limite: val } : v;
         });
 
-        await persistVenta(pid, { fecha_entrega_limite: val });
+        await persistVenta(pid, { fecha_entrega_limite: val || null });
       }
       buildProyectos();
       renderProyectos();
@@ -704,16 +719,6 @@
       if (typeof cli === 'object') return cli.nombre || cli.name || cli.cliente || '';
       return String(cli);
     }
-    function formatDate(d) { try { return new Date(d).toLocaleDateString('es-CL'); } catch { return ''; } }
-    function formatInputDate(d) {
-      if (!d) return '';
-      const dt = new Date(d);
-      if (isNaN(dt)) return '';
-      const m = String(dt.getMonth()+1).padStart(2,'0');
-      const day = String(dt.getDate()).padStart(2,'0');
-      return `${dt.getFullYear()}-${m}-${day}`;
-    }
-
     function escapeHtml(str) {
       if (str === undefined || str === null) return '';
       return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
