@@ -47,15 +47,13 @@
     .item-body h4 { margin:0; font-size:16px; }
     .item-body .muted { color:#6c7a86; font-size:13px; }
 
-    /* Colores de columnas solicitados */
-    /* Con acción al inicio, índices: 1 acción, 2 Encargado, 3 Proveedor, 4 Dirección, 5 Categoría, 6 Producto, 7 Obs, 8 Unidad */
+    /* Column colors (indices after moving Obs next to Producto) */
     table.lc-table tbody td:nth-child(3), /* Proveedor */
     table.lc-table tbody td:nth-child(5), /* Categoría */
     table.lc-table tbody td:nth-child(8)  /* Unidad */
       { background:#e8eaed; }
     table.lc-table tbody td:nth-child(6) { background:#daf2d0; } /* Producto */
 
-    /* Botones de acción estilo sidebar */
     .action-cell { display:flex; gap:6px; justify-content:center; align-items:center; }
     .icon-btn {
       width:32px; height:32px; border:1px solid #d4d8dd; border-radius:8px;
@@ -66,7 +64,6 @@
     .icon-btn:hover { background:#eef2f7; border-color:#c6cbd3; color:#e6ebf2; }
     .icon-btn svg { width:17px; height:17px; stroke: currentColor; fill: none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 
-    /* Estado de Pago colores */
     .estado-comprado { background:#d9ecc1 !important; color:#1f2a37 !important; }
     .estado-stock     { background:#35714e !important; color:#ffffff !important; }
     .estado-porcomprar{ background:#a22116 !important; color:#ffffff !important; }
@@ -291,13 +288,11 @@
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
 
-    // Filtra productos por categoría
     function productOptions(category) {
       const list = materiales.filter(m => !category || m.category === category);
       return makeOptions(list, 'id', 'name');
     }
 
-    // Reconstruye y valida el producto al cambiar categoría o al pintar la fila
     function rebuildProductOptions(rowIdx) {
       const row = currentRows[rowIdx] || {};
       const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="producto_id"]`);
@@ -362,6 +357,31 @@
       renderGrid(currentRows);
     }
 
+    async function recomputeBlockTotals(blockId) {
+      if (!blockId) return;
+      const client = await waitForClient();
+      const { data, error } = await client
+        .from(TABLE)
+        .select('cantidad,precio_unit,estado_pago')
+        .eq('block_id', blockId);
+      if (error) { console.error('totals', error); return; }
+      let totalSum = 0, comprado = 0;
+      (data || []).forEach(l => {
+        const lineTotal = Number(l.cantidad || 0) * Number(l.precio_unit || 0);
+        totalSum += lineTotal;
+        const st = (l.estado_pago || '').toLowerCase();
+        if (st.includes('comprado') || st.includes('stock')) comprado += lineTotal;
+      });
+      const porComprar = Math.max(0, totalSum - comprado);
+      try {
+        await client.from('purchase_blocks').update({
+          total_comprado: comprado,
+          total_por_comprar: porComprar
+        }).eq('id', blockId);
+        await loadBlocks(); // refresca chips externos
+      } catch (e) { console.error('update block totals', e); }
+    }
+
     function renderGrid(rows) {
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
@@ -416,7 +436,7 @@
         setVal(idx,'encargado',row.encargado);
         setVal(idx,'proveedor_id',row.proveedor_id);
         setVal(idx,'categoria',row.categoria);
-        rebuildProductOptions(idx);          // filtra productos según categoría
+        rebuildProductOptions(idx);
         setVal(idx,'producto_id',row.producto_id);
         setVal(idx,'observaciones',row.observaciones);
         setVal(idx,'unidad',row.unidad);
@@ -455,6 +475,7 @@
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
       await persistRow(rowIdx);
+      await recomputeBlockTotals(currentBlockId);
     }
 
     function buildPayload(row) {
@@ -511,6 +532,7 @@
         if (row.id) { await client.from(TABLE).delete().eq('id', row.id); }
         currentRows.splice(idx,1);
         renderGrid(currentRows);
+        await recomputeBlockTotals(currentBlockId);
       } catch (e) { console.error('Delete error', e); }
     }
 
@@ -520,7 +542,7 @@
       const clone = { ...src, id: null, block_id: currentBlockId, created_at: null, placeholder: false, _saving: false };
       currentRows.splice(idx + 1, 0, clone);
       renderGrid(currentRows);
-      if (isMeaningful(buildPayload(clone))) persistRow(idx + 1);
+      if (isMeaningful(buildPayload(clone))) persistRow(idx + 1).then(() => recomputeBlockTotals(currentBlockId));
     }
 
     function applyEstadoStyle(rowIdx) {
