@@ -162,7 +162,7 @@
     let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
     const proyectoCobradoMap = new Map();
     const motivoVariacionMap = new Map();
-    const proyectoFechaEntregaMap = new Map(); // cache local de fecha entrega
+    const proyectoFechaEntregaMap = new Map();
     let approvedCotIds = new Set();
 
     function normalizeEstado(v) { return (v.estado || '').trim(); }
@@ -238,7 +238,6 @@
 
       ventasData = (res.data || []).filter(shouldIncludeVenta);
 
-      // pre-cache fechas de entrega existentes para no perderlas en rerender
       ventasData.forEach(v => {
         if (v.cotizacion_id && v.fecha_entrega_limite) {
           proyectoFechaEntregaMap.set(v.cotizacion_id, v.fecha_entrega_limite);
@@ -280,10 +279,9 @@
         const totalCobradoBase = Number(first.total_venta || 0);
         const totalCobrado = proyectoCobradoMap.has(key) ? proyectoCobradoMap.get(key) : totalCobradoBase;
         const cliente = formatCliente(first.cliente);
-        // si está en cache, úsala; luego en DB si existe
         const fechaEntrega =
           proyectoFechaEntregaMap.get(key) ??
-          first.fecha_entrega_limite ??
+          (items.find(i => i.fecha_entrega_limite)?.fecha_entrega_limite) ??
           first.fecha_cierre ??
           first.fecha_cierre_max ??
           '';
@@ -320,7 +318,6 @@
         const isSel = p.key === selectedProyectoKey;
         const dotClass = p.allGreen ? 'dot-ok' : 'dot-bad';
         const totalCobrado = proyectoCobradoMap.has(p.key) ? proyectoCobradoMap.get(p.key) : p.totalCobrado;
-        // no convertir a Date; mantener string yyyy-mm-dd si viene así
         const fechaInput = (p.fechaEntrega || '').slice(0,10);
         return `
           <tr class="project-row ${isSel ? 'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
@@ -604,22 +601,15 @@
     async function handleEntregaChange(key, value) {
       const val = value || '';
       proyectoFechaEntregaMap.set(key, val);
-      const proyecto = proyectos.find(p => p.key === key);
-      if (proyecto && proyecto.items?.length) {
-        const first = proyecto.items[0];
-        const pid = first.id || first.partida_id || first.partida_nombre || first.partida;
 
-        ventasData = ventasData.map(v => {
-          const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
-          return idv === pid ? { ...v, fecha_entrega_limite: val } : v;
-        });
-        ventasFiltradas = ventasFiltradas.map(v => {
-          const idv = v.id || v.partida_id || v.partida_nombre || v.partida;
-          return idv === pid ? { ...v, fecha_entrega_limite: val } : v;
-        });
+      ventasData = ventasData.map(v => v.cotizacion_id === key ? { ...v, fecha_entrega_limite: val } : v);
+      ventasFiltradas = ventasFiltradas.map(v => v.cotizacion_id === key ? { ...v, fecha_entrega_limite: val } : v);
 
-        await persistVenta(pid, { fecha_entrega_limite: val || null });
+      const rowToSave = ventasData.find(v => v.cotizacion_id === key) || ventasFiltradas.find(v => v.cotizacion_id === key);
+      if (rowToSave) {
+        await persistVenta(rowToSave.id, { fecha_entrega_limite: val || null });
       }
+
       buildProyectos();
       renderProyectos();
       renderPartidas();
