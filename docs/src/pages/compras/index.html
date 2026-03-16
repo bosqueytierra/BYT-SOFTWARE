@@ -27,11 +27,7 @@
     body.overlay-open { overflow:hidden; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 10px; }
     .overlay.active { display: flex; }
-    .overlay-content {
-      background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30);
-      width: 98vw; max-width: 2200px; height: 92vh;
-      padding: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 8px;
-    }
+    .overlay-content { background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30); width: 98vw; max-width: 2200px; height: 92vh; padding: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
     .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
@@ -292,20 +288,32 @@
     function makeOptions(list, valKey='nombre', labelKey='nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
+
+    // Filtra productos por categoría
     function productOptions(category) {
       const list = materiales.filter(m => !category || m.category === category);
       return makeOptions(list, 'id', 'name');
     }
+
+    // Reconstruye y valida el producto al cambiar categoría o al pintar la fila
     function rebuildProductOptions(rowIdx) {
       const row = currentRows[rowIdx] || {};
       const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="producto_id"]`);
       if (!sel) return;
       sel.innerHTML = productOptions(row.categoria || '');
       if (row.producto_id) {
-        sel.value = row.producto_id;
-        if (sel.value !== String(row.producto_id)) sel.value = '';
+        const valid = materiales.find(m => m.id === row.producto_id && (!row.categoria || m.category === row.categoria));
+        if (valid) {
+          sel.value = row.producto_id;
+        } else {
+          sel.value = '';
+          currentRows[rowIdx].producto_id = null;
+        }
+      } else {
+        sel.value = '';
       }
     }
+
     function setVal(idx, field, value) {
       const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
       if (el) el.value = value ?? '';
@@ -406,7 +414,7 @@
         setVal(idx,'encargado',row.encargado);
         setVal(idx,'proveedor_id',row.proveedor_id);
         setVal(idx,'categoria',row.categoria);
-        rebuildProductOptions(idx);
+        rebuildProductOptions(idx);          // filtra productos según categoría
         setVal(idx,'producto_id',row.producto_id);
         setVal(idx,'unidad',row.unidad);
         setVal(idx,'modo_compra',row.modo_compra);
@@ -431,6 +439,12 @@
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
 
       currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder: false };
+
+      // Si cambia la categoría, resetear producto si no pertenece y volver a cargar opciones filtradas
+      if (field === 'categoria') {
+        currentRows[rowIdx].producto_id = null;
+        rebuildProductOptions(rowIdx);
+      }
 
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
