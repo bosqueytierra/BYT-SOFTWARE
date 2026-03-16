@@ -157,7 +157,6 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
-    // LISTAS DE MOTIVOS (se usan en renderResumen)
     const MOTIVOS_BAJADA = [
       'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
       'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
@@ -242,7 +241,6 @@
 
       if (sbClient.init) await sbClient.init();
 
-      // 1) cotizaciones aprobadas
       const { data: cotAprob, error: errCot } = await sb.from('cotizaciones').select('id').eq('estado','aprobada');
       if (errCot) throw errCot;
       approvedCotIds = new Set((cotAprob || []).map(c => c.id));
@@ -253,15 +251,11 @@
         return;
       }
 
-      // 2) ventas
       const res = await sbClient.listarVentas();
       if (!res.success) throw new Error(res.error || 'listarVentas sin éxito');
 
-      // 3) filtrar por cot aprob y deduplicar por cotizacion_id
-      const base = (res.data || []).filter(shouldIncludeVenta);
-      const uniq = new Map();
-      base.forEach(v => { if (!uniq.has(v.cotizacion_id)) uniq.set(v.cotizacion_id, v); });
-      ventasData = Array.from(uniq.values());
+      // NO deduplicamos: mantenemos todas las partidas de la cotización
+      ventasData = (res.data || []).filter(shouldIncludeVenta);
       ventasFiltradas = ventasData;
 
       aplicarFiltros();
