@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ventas - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
-  <!-- NUEVO: flatpickr para mostrar 2 meses en el calendario -->
+  <!-- flatpickr para 2 meses -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     :root {
@@ -47,7 +47,7 @@
     .state-select.st-completada{background:var(--st-completada);}
     .state-select.st-postventa{background:var(--st-postventa);}
     .state-select.st-cancelada{background:#fff;}
-    select.state-select option{background:#fff;color:var(--text);}
+    select.state-select option{background:#fff;color:#2d2d2d;}
     .dot-status{width:14px;height:14px;border-radius:50%;display:inline-block;}
     .dot-ok{background:var(--dot-ok);}
     .dot-bad{background:var(--dot-bad);}
@@ -131,8 +131,8 @@
     </div>
   </div>
 
-  <!-- NUEVO: flatpickr -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
@@ -167,7 +167,7 @@
     const motivoVariacionMap = new Map();
     const proyectoFechaEntregaMap = new Map();
     let approvedCotIds = new Set();
-    let fpInstances = []; // instancias flatpickr para destrucción en rerender
+    let fpInstances = [];
 
     function normalizeEstado(v){ return (v.estado || '').trim(); }
     function fmt(num){ if(num==null) return '$0'; return new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(num); }
@@ -228,7 +228,7 @@
       catch(e){
         console.error('cargarVentas fallo:',e);
         if(retries>0) setTimeout(()=>bootstrapVentas(retries-1),800);
-        else document.getElementById('proyectos-wrapper').innerHTML='<div class="empty"><span class="state-icon">⚠️</span>Error cargando ventas</div>';
+        else document.getElementById('proyectos-wrapper').innerHTML='<div class="empty"><span class="state-icon">��️</span>Error cargando ventas</div>';
       }
     }
 
@@ -534,7 +534,6 @@
       `;
     }
 
-    // --- Flatpickr (2 meses) ---
     function initFechaPickers(){
       fpInstances.forEach(inst=>inst.destroy());
       fpInstances=[];
@@ -546,13 +545,13 @@
           showMonths:2,
           allowInput:true,
           position:'auto center',
+          locale: {...flatpickr.l10ns.es, firstDayOfWeek:1},
           onChange:(selectedDates,dateStr)=>handleEntregaChange(key,dateStr)
         });
         fpInstances.push(inst);
       });
     }
 
-    // === Handlers ===
     function selectProyecto(key){ selectedProyectoKey=key; renderProyectos(); renderPartidas(); renderResumen(); }
 
     function labelEstado(st){ switch(st){
