@@ -52,6 +52,9 @@
     .item-body .muted { color:#6c7a86; font-size:13px; }
     .btn-icon { background:transparent; border:none; cursor:pointer; width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:#b12a2a; }
     .btn-icon:hover { background:#fde6e6; }
+    .btn-icon-blue { color:#1d4ed8; }
+    .btn-icon-blue:hover { background:#e3ebff; }
+    .action-cell { display:flex; gap:6px; justify-content:center; }
   </style>
 </head>
 <body>
@@ -169,9 +172,11 @@
       const btnLC = e.target.closest('[data-block-lc]');
       const btnSummary = e.target.closest('[data-block-summary]');
       const delBtn = e.target.closest('[data-action="del-row"]');
+      const dupBtn = e.target.closest('[data-action="dup-row"]');
       if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
       if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
       if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
+      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
     });
 
     async function loadCatalogs() {
@@ -289,7 +294,6 @@
       if (el) el.value = value ?? '';
     }
 
-    // Validación estricta: solo inserta/actualiza si hay datos reales
     function isMeaningful(payload) {
       return (
         (payload.producto_id && payload.producto_id !== '') ||
@@ -340,7 +344,7 @@
       const headers = ['','Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs'];
       const thead = `
         <thead>
-          <tr>${headers.map((h,idx) => idx===0 ? `<th style="width:38px;">${h}</th>` : `<th>${escapeHtml(h)}</th>`).join('')}</tr>
+          <tr>${headers.map((h,idx) => idx===0 ? `<th style="width:70px;">${h}</th>` : `<th>${escapeHtml(h)}</th>`).join('')}</tr>
         </thead>
       `;
 
@@ -348,8 +352,9 @@
         const idAttr = row.id ? `data-id="${row.id}"` : '';
         return `
           <tr data-row="${idx}" ${idAttr}>
-            <td style="text-align:center;">
+            <td class="action-cell">
               <button class="btn-icon" type="button" title="Eliminar" data-action="del-row" data-row="${idx}">🗑️</button>
+              <button class="btn-icon btn-icon-blue" type="button" title="Duplicar" data-action="dup-row" data-row="${idx}">⧉</button>
             </td>
             <td><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></td>
             <td><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></td>
@@ -470,6 +475,25 @@
         renderGrid(currentRows);
       } catch (e) {
         console.error('Delete error', e);
+      }
+    }
+
+    function duplicateRow(idx) {
+      const src = currentRows[idx];
+      if (!src) return;
+      const clone = {
+        ...src,
+        id: null,
+        block_id: currentBlockId,
+        created_at: null,
+        placeholder: false,
+        _saving: false
+      };
+      currentRows.splice(idx + 1, 0, clone);
+      renderGrid(currentRows);
+      // Opcional: persistir automáticamente la copia si tiene datos significativos
+      if (isMeaningful(buildPayload(clone))) {
+        persistRow(idx + 1);
       }
     }
 
