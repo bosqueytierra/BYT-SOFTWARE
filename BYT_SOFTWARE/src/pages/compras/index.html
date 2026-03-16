@@ -289,7 +289,7 @@
       if (el) el.value = value ?? '';
     }
 
-    // VALIDACIÓN MÁS ESTRICTA: solo se considera fila "con datos" si tiene producto, categoría, cantidad, precio o comentario
+    // Validación estricta: solo inserta/actualiza si hay datos reales
     function isMeaningful(payload) {
       return (
         (payload.producto_id && payload.producto_id !== '') ||
@@ -302,7 +302,7 @@
 
     function addEmptyRow() {
       if (!currentBlockId) return;
-      currentRows.push({ id: null, block_id: currentBlockId, placeholder: true });
+      currentRows.push({ id: null, block_id: currentBlockId, placeholder: true, _saving: false });
       renderGrid(currentRows);
     }
 
@@ -432,24 +432,30 @@
     async function persistRow(idx) {
       const row = currentRows[idx];
       if (!row) return;
+      if (row._saving) return; // evita doble persist simultánea
       const client = await waitForClient();
       const payload = buildPayload(row);
       const meaningful = isMeaningful(payload);
 
       if (!row.id && !meaningful) return;
 
+      currentRows[idx] = { ...row, _saving: true };
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data, placeholder: false };
+          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false };
           setVal(idx,'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
-          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false }; setVal(idx,'total', data.total); }
+          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total); }
         }
-      } catch (e) { console.error('Persist error', e); }
+      } catch (e) {
+        console.error('Persist error', e);
+      } finally {
+        if (currentRows[idx]) currentRows[idx]._saving = false;
+      }
     }
 
     async function deleteRow(idx) {
