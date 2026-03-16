@@ -47,7 +47,7 @@
     .item-body h4 { margin:0; font-size:16px; }
     .item-body .muted { color:#6c7a86; font-size:13px; }
 
-    /* Column colors (indices after moving Obs next to Producto) */
+    /* Column colors (indices after moving Obs) */
     table.lc-table tbody td:nth-child(3), /* Proveedor */
     table.lc-table tbody td:nth-child(5), /* Categoría */
     table.lc-table tbody td:nth-child(8)  /* Unidad */
@@ -220,6 +220,17 @@
       });
     }
 
+    async function fetchCobradoMap() {
+      const client = await waitForClient();
+      const { data, error } = await client.from('ventas').select('cotizacion_id,total_venta').not('cotizacion_id','is',null);
+      if (error) { console.error('ventas fetch', error); return new Map(); }
+      const map = new Map();
+      (data||[]).forEach(v => {
+        if (v.cotizacion_id && v.total_venta != null) map.set(v.cotizacion_id, Number(v.total_venta));
+      });
+      return map;
+    }
+
     async function loadBlocks() {
       try {
         const client = await waitForClient();
@@ -233,9 +244,15 @@
           .order('created_at', { ascending: false });
         if (error) throw error;
 
+        const cobradoMap = await fetchCobradoMap();
+
         const filtered = filterBlocks(data || [], approved);
         const toRender = filtered.length ? filtered : (data || []);
-        renderBlocks(toRender);
+        const merged = toRender.map(b => ({
+          ...b,
+          total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
+        }));
+        renderBlocks(merged);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
@@ -274,7 +291,6 @@
             </div>
           </div>
           <div class="chips" style="margin:8px 0;">
-            <span class="chip">Total cotizado: ${fmtCLP(b.total_cotizado)}</span>
             <span class="chip">Total cobrado: ${fmtCLP(b.total_cobrado)}</span>
             <span class="chip">Comprado: ${fmtCLP(b.total_comprado)}</span>
             <span class="chip">Por comprar: ${fmtCLP(b.total_por_comprar)}</span>
@@ -378,7 +394,7 @@
           total_comprado: comprado,
           total_por_comprar: porComprar
         }).eq('id', blockId);
-        await loadBlocks(); // refresca chips externos
+        await loadBlocks();
       } catch (e) { console.error('update block totals', e); }
     }
 
