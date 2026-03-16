@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ventas - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
+  <!-- NUEVO: flatpickr para mostrar 2 meses en el calendario -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
     :root {
       --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2d2d2d; --muted:#6c7a86;
@@ -129,6 +131,9 @@
     </div>
   </div>
 
+  <!-- NUEVO: flatpickr -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
@@ -136,7 +141,6 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
-    // === Listas y constantes ===
     const MOTIVOS_BAJADA = [
       'Ajuste a presupuesto del cliente','Descuento comercial aplicado','Ajuste tributario (IVA u otros impuestos)',
       'Variación en costos reales de compra','Modificación de cantidades ejecutadas','Sustitución de materiales o proveedores',
@@ -153,7 +157,6 @@
     ];
     const ESTADOS = ['aprobada','en_ejecucion','completada','cancelada','postventa'];
 
-    // === Estado en memoria ===
     let ventasData = [];
     let ventasFiltradas = [];
     let proyectos = [];
@@ -162,10 +165,10 @@
     let notesModalState = { partidaId: null, proyectoKey: null, proyectoNombre: '' };
     const proyectoCobradoMap = new Map();
     const motivoVariacionMap = new Map();
-    const proyectoFechaEntregaMap = new Map(); // cache local por cotización
+    const proyectoFechaEntregaMap = new Map();
     let approvedCotIds = new Set();
+    let fpInstances = []; // instancias flatpickr para destrucción en rerender
 
-    // === Utilidades básicas ===
     function normalizeEstado(v){ return (v.estado || '').trim(); }
     function fmt(num){ if(num==null) return '$0'; return new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(num); }
     function parseMoney(val){
@@ -209,7 +212,6 @@
       return approvedCotIds.has(v.cotizacion_id);
     }
 
-    // === Bootstrap ===
     document.addEventListener('DOMContentLoaded', ()=>{
       const filtro=document.getElementById('filtro-estado');
       if(filtro) filtro.value='todos';
@@ -230,7 +232,6 @@
       }
     }
 
-    // === Carga principal ===
     async function cargarVentas(){
       const pw=document.getElementById('proyectos-wrapper');
       pw.innerHTML='<div class="empty"><span class="state-icon">⏳</span>Cargando ventas...</div>';
@@ -240,7 +241,6 @@
 
       if(sbClient.init) await sbClient.init();
 
-      // Solo IDs aprobados (sin fecha)
       const {data:cotAprob,error:errCot}=await sb.from('cotizaciones').select('id').eq('estado','aprobada');
       if(errCot) throw errCot;
       approvedCotIds=new Set((cotAprob||[]).map(c=>c.id));
@@ -251,12 +251,10 @@
         return;
       }
 
-      // Traer ventas
       const res=await sbClient.listarVentas();
       if(!res.success) throw new Error(res.error||'listarVentas sin éxito');
       ventasData=(res.data||[]).filter(shouldIncludeVenta);
 
-      // Si el backend ya devuelve fecha_entrega_limite en ventas, cachéala
       ventasData.forEach(v=>{
         if(v.cotizacion_id && v.fecha_entrega_limite){
           proyectoFechaEntregaMap.set(v.cotizacion_id, v.fecha_entrega_limite);
@@ -267,7 +265,6 @@
       aplicarFiltros();
     }
 
-    // === Filtros y armado de proyectos ===
     function aplicarFiltros(){
       const txt=document.getElementById('filtro-texto').value.toLowerCase().trim();
       const est=document.getElementById('filtro-estado').value;
@@ -302,7 +299,7 @@
         const fechaEntrega =
           proyectoFechaEntregaMap.get(key) ??
           (items.find(i=>i.fecha_entrega_limite)?.fecha_entrega_limite) ??
-          ''; // valor manual guardado en ventas
+          '';
         const cotizacionId=first.cotizacion_id;
         const proyectoId=first.proyecto_id || key;
         const allGreen=items.every(it=>['completada','cancelada'].includes(normalizeEstado(it)));
@@ -318,7 +315,6 @@
       if(selectedProyectoKey && !proyectos.find(p=>p.key===selectedProyectoKey)) selectedProyectoKey=null;
     }
 
-    // === Render proyectos ===
     function renderProyectos(){
       const pw=document.getElementById('proyectos-wrapper');
       if(!proyectos.length){
@@ -335,11 +331,12 @@
             <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
             <td>${escapeHtml(p.displayName)}</td>
             <td>
-              <input type="date"
+              <input class="fecha-entrega-input"
+                     type="text"
+                     data-proyecto-key="${escapeHtmlAttr(p.key)}"
                      value="${escapeHtmlAttr(fechaInput)}"
                      onclick="event.stopPropagation();"
-                     onmousedown="event.stopPropagation();"
-                     onchange="handleEntregaChange('${escapeHtmlAttr(p.key)}', this.value)">
+                     onmousedown="event.stopPropagation();">
             </td>
             <td>${escapeHtml(p.cliente||'')}</td>
             <td>${escapeHtml(fmt(p.totalCotizado))}</td>
@@ -380,9 +377,10 @@
           </table>
         </div>
       `;
+
+      initFechaPickers();
     }
 
-    // === Render partidas ===
     function renderPartidas(){
       const pw=document.getElementById('partidas-wrapper');
       const title=document.getElementById('partidas-title');
@@ -454,7 +452,6 @@
       applyStateStyles();
     }
 
-    // === Render resumen ===
     function renderResumen(){
       const rw=document.getElementById('resumen-wrapper');
       const title=document.getElementById('resumen-title');
@@ -537,29 +534,43 @@
       `;
     }
 
+    // --- Flatpickr (2 meses) ---
+    function initFechaPickers(){
+      fpInstances.forEach(inst=>inst.destroy());
+      fpInstances=[];
+      document.querySelectorAll('.fecha-entrega-input').forEach(inp=>{
+        const key=inp.dataset.proyectoKey;
+        const inst=flatpickr(inp,{
+          dateFormat:'Y-m-d',
+          defaultDate: inp.value || null,
+          showMonths:2,
+          allowInput:true,
+          position:'auto center',
+          onChange:(selectedDates,dateStr)=>handleEntregaChange(key,dateStr)
+        });
+        fpInstances.push(inst);
+      });
+    }
+
     // === Handlers ===
     function selectProyecto(key){ selectedProyectoKey=key; renderProyectos(); renderPartidas(); renderResumen(); }
 
-    function labelEstado(st){
-      switch(st){
-        case 'aprobada': return 'Aprobada';
-        case 'en_ejecucion': return 'En ejecución';
-        case 'completada': return 'Completada';
-        case 'cancelada': return 'Cancelada';
-        case 'postventa': return 'Postventa';
-        default: return st;
-      }
-    }
-    function stateClass(st){
-      switch(st){
-        case 'aprobada': return 'st-aprobada';
-        case 'en_ejecucion': return 'st-en_ejecucion';
-        case 'completada': return 'st-completada';
-        case 'cancelada': return 'st-cancelada';
-        case 'postventa': return 'st-postventa';
-        default: return '';
-      }
-    }
+    function labelEstado(st){ switch(st){
+      case 'aprobada': return 'Aprobada';
+      case 'en_ejecucion': return 'En ejecución';
+      case 'completada': return 'Completada';
+      case 'cancelada': return 'Cancelada';
+      case 'postventa': return 'Postventa';
+      default: return st;
+    }}
+    function stateClass(st){ switch(st){
+      case 'aprobada': return 'st-aprobada';
+      case 'en_ejecucion': return 'st-en_ejecucion';
+      case 'completada': return 'st-completada';
+      case 'cancelada': return 'st-cancelada';
+      case 'postventa': return 'st-postventa';
+      default: return '';
+    }}
     function applyStateStyles(){
       document.querySelectorAll('select.state-select').forEach(sel=>{
         sel.classList.remove('st-aprobada','st-en_ejecucion','st-completada','st-cancelada','st-postventa');
@@ -613,15 +624,12 @@
     }
 
     async function handleEntregaChange(key, value){
-      // Guardamos la fecha manual solo en ventas.fecha_entrega_limite
       const val=value || '';
       proyectoFechaEntregaMap.set(key, val);
 
-      // actualizar en memoria
       ventasData=ventasData.map(v=>v.cotizacion_id===key ? {...v, fecha_entrega_limite: val} : v);
       ventasFiltradas=ventasFiltradas.map(v=>v.cotizacion_id===key ? {...v, fecha_entrega_limite: val} : v);
 
-      // persistir en la primera venta de esa cotización
       const rowToSave=ventasData.find(v=>v.cotizacion_id===key);
       if(rowToSave){
         await persistVenta(rowToSave.id, {fecha_entrega_limite: val || null});
@@ -672,12 +680,10 @@
       renderResumen();
     }
 
-    // === Navegación simple ===
     function verCotizacion(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}`; }
     function verAdjuntos(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}#adjuntos`; }
     function imprimirContrato(id){ window.utils?.mostrarNotificacion?.('Imprimir contrato aún no está disponible','info'); }
 
-    // === Notas modal ===
     function openNotesModal(partidaId, proyectoKey, proyectoNombre){
       notesModalState={partidaId, proyectoKey, proyectoNombre};
       const modal=document.getElementById('notes-modal');
