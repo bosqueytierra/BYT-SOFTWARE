@@ -50,11 +50,20 @@
     .item-body { flex:1; display:flex; flex-direction:column; gap:6px; justify-content:center; }
     .item-body h4 { margin:0; font-size:16px; }
     .item-body .muted { color:#6c7a86; font-size:13px; }
-    .btn-icon { background:transparent; border:none; cursor:pointer; width:28px; height:28px; display:flex; align-items:center; justify-content:center; color:#b12a2a; }
-    .btn-icon:hover { background:#fde6e6; }
-    .btn-icon-blue { color:#1d4ed8; }
-    .btn-icon-blue:hover { background:#e3ebff; }
-    .action-cell { display:flex; gap:6px; justify-content:center; }
+
+    .action-cell { display:flex; gap:6px; justify-content:center; align-items:center; }
+    .icon-btn {
+      width:28px; height:28px; border:1px solid #d7dbe0; border-radius:6px;
+      background:#f8f9fb; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; padding:0; transition:background .12s ease, border-color .12s ease, color .12s ease;
+      color:#45505d;
+    }
+    .icon-btn:hover { background:#e8edf3; border-color:#c6cbd2; }
+    .icon-btn.danger { color:#b42318; border-color:#e4c3c1; }
+    .icon-btn.danger:hover { background:#fdeceb; }
+    .icon-btn.primary { color:#1d4ed8; border-color:#cbd5ff; }
+    .icon-btn.primary:hover { background:#e8edff; }
+    .icon-btn svg { width:16px; height:16px; stroke: currentColor; fill: none; stroke-width:1.7; }
   </style>
 </head>
 <body>
@@ -344,7 +353,7 @@
       const headers = ['','Encargado','Proveedor','Dirección','Categoría','Producto','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago','Obs'];
       const thead = `
         <thead>
-          <tr>${headers.map((h,idx) => idx===0 ? `<th style="width:70px;">${h}</th>` : `<th>${escapeHtml(h)}</th>`).join('')}</tr>
+          <tr>${headers.map((h,idx) => idx===0 ? `<th style="width:80px;">${h}</th>` : `<th>${escapeHtml(h)}</th>`).join('')}</tr>
         </thead>
       `;
 
@@ -353,8 +362,12 @@
         return `
           <tr data-row="${idx}" ${idAttr}>
             <td class="action-cell">
-              <button class="btn-icon" type="button" title="Eliminar" data-action="del-row" data-row="${idx}">🗑️</button>
-              <button class="btn-icon btn-icon-blue" type="button" title="Duplicar" data-action="dup-row" data-row="${idx}">⧉</button>
+              <button class="icon-btn danger" type="button" title="Eliminar" data-action="del-row" data-row="${idx}">
+                <svg viewBox="0 0 24 24"><path d="M9 11v6M15 11v6M5 7h14M10 5h4l1 2H9l1-2Z"/><rect x="6" y="9" width="12" height="10" rx="1.5"/></svg>
+              </button>
+              <button class="icon-btn primary" type="button" title="Duplicar" data-action="dup-row" data-row="${idx}">
+                <svg viewBox="0 0 24 24"><rect x="7" y="5" width="12" height="14" rx="2"/><path d="M5 17V7a2 2 0 0 1 2-2h8"/></svg>
+              </button>
             </td>
             <td><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></td>
             <td><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></td>
@@ -491,7 +504,6 @@
       };
       currentRows.splice(idx + 1, 0, clone);
       renderGrid(currentRows);
-      // Opcional: persistir automáticamente la copia si tiene datos significativos
       if (isMeaningful(buildPayload(clone))) {
         persistRow(idx + 1);
       }
