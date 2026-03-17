@@ -1,23 +1,15 @@
 // Wrapper CRUD para tabla public.providers
 // Ruta: BYT_SOFTWARE/src/lib/providersApi.js
-// Ahora espera explícitamente a que exista un cliente Supabase real (ensureSupabase).
-// Si no hay cliente disponible devuelve un error { data: null, error } evitando que la app se rompa.
-// Además: NOTIFICA globalmente (window.dispatchEvent) cuando una mutación termina OK,
-// despachando 'providers:changed' con detalle { action, id, row } para que consumidores (wizard) se actualicen.
-
-// Reemplazar la import existente por esta línea (línea única a cambiar)
-import { supabase, ensureSupabase, getClient } from 'https://raw.githack.com/bosqueytierra/BYT-SOFTWARE/main/BYT_SOFTWARE/src/js/supabaseBrowserClient.js';
+// Usa el mismo cliente de supabase ya inicializado en la app para evitar duplicados de GoTrueClient.
+import { supabase, ensureSupabase, getClient } from '../js/supabaseBrowserClient.js';
 
 /**
  * Obtiene el cliente real (no el proxy) o devuelve error si no está inicializado.
  * Retorna: { client, error }
  */
 async function _getRealClientOrError() {
-  // Intentar asegurar la inicialización
   const client = await ensureSupabase();
   if (client && typeof client.from === 'function') return { client, error: null };
-
-  // Si ensureSupabase no pudo obtener cliente, devolver error controlado
   return { client: null, error: new Error('no-supabase') };
 }
 
@@ -75,7 +67,6 @@ export async function createProvider(payload) {
 
     const { data, error: qerr } = await client.from('providers').insert([payload]).select().single();
     if (!qerr && data) {
-      // Notificar cambios globalmente
       _dispatchProvidersChanged({ action: 'create', id: data.id, row: data });
     }
     return { data, error: qerr };
@@ -112,11 +103,15 @@ export async function deleteProvider(id, { soft = true } = {}) {
       }
       return { data, error: qerr };
     } else {
-      const { data, error: qerr } = await client.from('providers').delete().eq('id', id).select().single();
-      if (!qerr && data) {
-        _dispatchProvidersChanged({ action: 'delete', id: data.id, row: data });
+      // Preferencia mínima para evitar 406 cuando no hay permiso de select después de borrar
+      const { error: qerr } = await client
+        .from('providers')
+        .delete({ returning: 'minimal' })
+        .eq('id', id);
+      if (!qerr) {
+        _dispatchProvidersChanged({ action: 'delete', id });
       }
-      return { data, error: qerr };
+      return { data: null, error: qerr };
     }
   } catch (error) {
     return { data: null, error };
@@ -124,6 +119,5 @@ export async function deleteProvider(id, { soft = true } = {}) {
 }
 
 export function getClientExport() {
-  // devuelve el cliente real (o null) de forma síncrona
   return getClient();
 }
