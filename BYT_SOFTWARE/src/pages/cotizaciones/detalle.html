@@ -22,21 +22,13 @@
       --chip-border: #7fbf90;
       --viewer-scale: 1;
     }
-
     body {
       margin: 0;
       font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--text);
     }
-
-    .page-content {
-      padding: 18px 22px 32px 22px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
+    .page-content { padding: 18px 22px 32px 22px; display: flex; flex-direction: column; gap: 16px; }
     .btn {
       border: 1px solid var(--border);
       background: #fff;
@@ -64,48 +56,19 @@
       padding: 18px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.05);
     }
-    .card-title {
-      margin: 0 0 10px 0;
-      color: var(--primary);
-      font-size: 18px;
-      font-weight: 800;
-    }
+    .card-title { margin: 0 0 10px 0; color: var(--primary); font-size: 18px; font-weight: 800; }
 
     /* Ocultamos la barra KPI superior tachada */
     #topbar-kpis { display: none !important; }
 
     /* Info / detalle */
-    .detalle-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-    }
-    .detalle-item {
-      padding: 12px;
-      background: #f8faf9;
-      border-radius: 10px;
-      border-left: 4px solid var(--primary);
-    }
-    .detalle-label {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .detalle-value {
-      font-size: 15px;
-      color: var(--text);
-      font-weight: 600;
-      word-break: break-word;
-    }
+    .detalle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .detalle-item { padding: 12px; background: #f8faf9; border-radius: 10px; border-left: 4px solid var(--primary); }
+    .detalle-label { font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .detalle-value { font-size: 15px; color: var(--text); font-weight: 600; word-break: break-word; }
 
     /* Resumen financiero compacto tipo mock */
-    .fin-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-    }
+    .fin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     @media (min-width: 1024px) {
       .fin-grid {
         grid-template-areas:
@@ -133,35 +96,16 @@
       padding: 12px;
       box-shadow: 0 8px 18px rgba(0,0,0,0.04);
     }
-    .fin-card h4 {
-      margin: 0 0 6px;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      color: var(--muted);
-    }
-    .fin-card .fin-value {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--text);
-    }
-    .fin-card.highlight {
-      background: #2f5f4c;
-      color: #fff;
-      border-color: #2f5f4c;
-    }
+    .fin-card h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); }
+    .fin-card .fin-value { margin: 0; font-size: 18px; font-weight: 800; color: var(--text); }
+    .fin-card.highlight { background: #2f5f4c; color: #fff; border-color: #2f5f4c; }
     .fin-card.highlight h4 { color: rgba(255,255,255,0.82); }
     .fin-card.highlight .fin-value { color: #fff; }
 
     .no-data { color:#666; text-align:center; padding:18px; }
 
     /* Archivos */
-    .files-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 14px;
-    }
+    .files-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
     .file-card {
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -171,24 +115,9 @@
       display: flex;
       flex-direction: column;
     }
-    .file-preview {
-      background: #f4f6f7;
-      display: grid;
-      place-items: center;
-      min-height: 180px;
-    }
-    .file-preview img {
-      max-width: 100%;
-      max-height: 320px;
-      object-fit: contain;
-      display: block;
-    }
-    .file-body {
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+    .file-preview { background: #f4f6f7; display: grid; place-items: center; min-height: 180px; }
+    .file-preview img { max-width: 100%; max-height: 320px; object-fit: contain; display: block; }
+    .file-body { padding: 12px; display: flex; flex-direction: column; gap: 6px; }
     .file-name { font-weight: 700; color: var(--text); margin: 0; }
     .file-meta { color: var(--muted); font-size: 12px; }
     .file-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
@@ -215,15 +144,7 @@
       display: flex;
       flex-direction: column;
     }
-    .viewer-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 14px;
-      color: #fff;
-      font-weight: 700;
-      background: rgba(255,255,255,0.06);
-    }
+    .viewer-top { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; color: #fff; font-weight: 700; background: rgba(255,255,255,0.06); }
     .viewer-counter { font-size: 14px; color: #cfd4da; }
     .viewer-close { background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer; }
     .viewer-body { flex: 1; display: grid; place-items: center; background: #0f1114; padding: 16px; }
@@ -259,7 +180,7 @@
       font-size: 20px;
     }
 
-    /* Valores traspasados: encabezado al ancho del contenido, verde un poco más oscuro y texto negro */
+    /* Valores traspasados */
     .valores-block {
       margin-bottom: 18px;
       border: 1px solid #e2e8f0;
@@ -270,18 +191,15 @@
     }
     .valores-head {
       display: block;
-      background: #cfded6; /* verde ligeramente más oscuro */
+      background: #cfded6;
       color: #1f2430;
       padding: 12px 14px;
       font-weight: 800;
       border-radius: 12px 12px 0 0;
       border-bottom: 1px solid #c1d0c7;
-      margin: 0 -14px -1px -14px; /* se extiende al borde, alineado con la tabla */
+      margin: 0 -14px -1px -14px;
     }
-    .valores-body {
-      background: #fff;
-      padding: 14px;
-    }
+    .valores-body { background: #fff; padding: 14px; }
     .valores-footer {
       background: #f5f9f6;
       color: #1f3b2e;
@@ -298,42 +216,18 @@
     th { background: #f5f7f6; color: #2e6b57; font-weight: 800; text-align: left; }
     .subtotal-row { background: rgba(46,94,78,0.06); font-weight: 700; }
 
-    /* Traspasados: columnas fijas */
     .valores-table { table-layout: fixed; width: 100%; }
-    .valores-table th:nth-child(1),
-    .valores-table td:nth-child(1) { width: 22%; }
-    .valores-table th:nth-child(2),
-    .valores-table td:nth-child(2) { width: 22%; }
-    .valores-table th:nth-child(3),
-    .valores-table td:nth-child(3) { width: 14%; }
-    .valores-table th:nth-child(4),
-    .valores-table td:nth-child(4) { width: 8%; text-align: center; }
-    .valores-table th:nth-child(5),
-    .valores-table td:nth-child(5) { width: 16%; text-align: right; }
-    .valores-table th:nth-child(6),
-    .valores-table td:nth-child(6) { width: 18%; text-align: right; }
+    .valores-table th:nth-child(1), .valores-table td:nth-child(1) { width: 22%; }
+    .valores-table th:nth-child(2), .valores-table td:nth-child(2) { width: 22%; }
+    .valores-table th:nth-child(3), .valores-table td:nth-child(3) { width: 14%; }
+    .valores-table th:nth-child(4), .valores-table td:nth-child(4) { width: 8%; text-align: center; }
+    .valores-table th:nth-child(5), .valores-table td:nth-child(5) { width: 16%; text-align: right; }
+    .valores-table th:nth-child(6), .valores-table td:nth-child(6) { width: 18%; text-align: right; }
 
-    /* Evitar cortes dentro de tarjetas y tablas en PDF */
-    .card,
-    .table-container,
-    table,
-    tr,
-    td,
-    th {
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
-    }
+    .card, .table-container, table, tr, td, th { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .page-break { page-break-before: always !important; break-before: page !important; }
 
-    /* Forzar salto de página antes de una sección (Materiales) */
-    .page-break {
-      page-break-before: always !important;
-      break-before: page !important;
-    }
-
-    @media (max-width: 640px) {
-      .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
-    }
-
+    @media (max-width: 640px) { .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
     @media print {
       .no-print { display: none !important; }
       body { background: white !important; }
@@ -343,7 +237,7 @@
     }
   </style>
 
-  <!-- pdf.js para previsualizar PDF -->
+  <!-- pdf.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
     if (window['pdfjsLib']) {
@@ -351,44 +245,24 @@
     }
   </script>
 
-  <!-- Captura y PDF todo en uno (html2canvas + jsPDF) -->
+  <!-- html2pdf -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
   <div id="page-content" class="page-content">
-    <!-- Botonera -->
     <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
       <button class="btn btn-secondary" onclick="window.print()">Imprimir</button>
       <button class="btn btn-ghost" id="btn-exportar-pdf" onclick="exportarPDF()">Exportar PDF</button>
     </div>
 
-    <!-- KPIs (ocultos por CSS) -->
     <div class="card topbar" id="topbar-kpis">
-      <div class="kpi">
-        <div class="kpi-label">Total Materiales</div>
-        <div class="kpi-value" id="kpi-total-materiales">$0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Factor</div>
-        <div class="kpi-value" id="kpi-factor">2x</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Neto</div>
-        <div class="kpi-value" id="kpi-neto">$0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">IVA (19%)</div>
-        <div class="kpi-value" id="kpi-iva">$0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Total Proyecto</div>
-        <div class="kpi-value" id="kpi-total-proyecto">$0</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi-label">Ganancia</div>
-        <div class="kpi-value" id="kpi-ganancia">$0</div>
-      </div>
+      <div class="kpi"><div class="kpi-label">Total Materiales</div><div class="kpi-value" id="kpi-total-materiales">$0</div></div>
+      <div class="kpi"><div class="kpi-label">Factor</div><div class="kpi-value" id="kpi-factor">2x</div></div>
+      <div class="kpi"><div class="kpi-label">Neto</div><div class="kpi-value" id="kpi-neto">$0</div></div>
+      <div class="kpi"><div class="kpi-label">IVA (19%)</div><div class="kpi-value" id="kpi-iva">$0</div></div>
+      <div class="kpi"><div class="kpi-label">Total Proyecto</div><div class="kpi-value" id="kpi-total-proyecto">$0</div></div>
+      <div class="kpi"><div class="kpi-label">Ganancia</div><div class="kpi-value" id="kpi-ganancia">$0</div></div>
     </div>
 
     <div id="loading-state" class="card text-center">
@@ -407,7 +281,6 @@
         <div class="fin-grid" id="resumen-financiero"></div>
       </div>
 
-      <!-- Materiales con salto de página forzado -->
       <div class="card section page-break">
         <h3 class="card-title">Materiales</h3>
         <div id="materiales-detalle"></div>
@@ -434,7 +307,6 @@
     </div>
   </div>
 
-  <!-- Visor -->
   <div id="file-viewer" class="viewer-overlay">
     <div class="viewer-inner">
       <div class="viewer-top">
@@ -449,14 +321,14 @@
     </div>
   </div>
 
-  <!-- Layout global: inyecta sidebar y topbar -->
-  <script src="../../js/layout.js"></script>
+  <!-- Layout global -->
+  <script src="../../js/layout.js?v=2026-03-17"></script>
 
-  <!-- Supabase y scripts existentes (se mantienen después de layout.js) -->
-  <script src="../../lib/supabaseConfig.js"></script>
-  <script type="module" src="../../js/supabaseBrowserClient.js"></script>
-  <script src="../../js/globalSupabase.js" defer></script>
-  <script src="../../js/categorias.js" defer></script>
+  <!-- Supabase y scripts existentes (con versión y módulo) -->
+  <script src="../../lib/supabaseConfig.js?v=2026-03-17"></script>
+  <script type="module" src="../../js/supabaseBrowserClient.js?v=2026-03-17"></script>
+  <script type="module" src="../../js/globalSupabase.js?v=2026-03-17"></script>
+  <script src="../../js/categorias.js?v=2026-03-17" defer></script>
 
   <script>
     (function () {
@@ -914,9 +786,7 @@
           });
           html += `
             <div class="valores-block">
-              <div class="valores-head">
-                <span>Valores Traspasados Extra</span>
-              </div>
+              <div class="valores-head"><span>Valores Traspasados Extra</span></div>
               <div class="valores-body">
                 <div class="table-container">
                   <table class="table valores-table">
@@ -949,7 +819,6 @@
         container.innerHTML = html;
       }
 
-      // ========= ARCHIVOS =========
       async function cargarArchivos() {
         const cont = q('archivos-detalle');
         if (!cont) return;
@@ -1025,14 +894,8 @@
         `;
       }
 
-      function isImage(ct) {
-        const c = (ct || '').toLowerCase();
-        return /^image\//i.test(c) || /\.(png|jpe?g|gif|webp|bmp)$/i.test(c);
-      }
-      function isPdf(ct) {
-        const c = (ct || '').toLowerCase();
-        return /pdf$/i.test(c) || /\.pdf$/i.test(c);
-      }
+      function isImage(ct) { const c = (ct || '').toLowerCase(); return /^image\//i.test(c) || /\.(png|jpe?g|gif|webp|bmp)$/i.test(c); }
+      function isPdf(ct) { const c = (ct || '').toLowerCase(); return /pdf$/i.test(c) || /\.pdf$/i.test(c); }
 
       async function renderPdfPreview(file) {
         if (!file.signedUrl || !window['pdfjsLib']) return;
@@ -1054,7 +917,6 @@
         }
       }
 
-      // Visor (lightbox)
       window.openViewer = function(idx) {
         if (!viewerItems.length) return;
         viewerIndex = Math.max(0, Math.min(viewerItems.length - 1, idx));
@@ -1113,28 +975,23 @@
       });
       const fv = q('file-viewer');
       if (fv) {
-        fv.addEventListener('click', (e) => {
-          if (e.target.id === 'file-viewer') closeViewer();
-        });
+        fv.addEventListener('click', (e) => { if (e.target.id === 'file-viewer') closeViewer(); });
       }
 
-      // ===== Exportar PDF con paginado automático =====
       async function exportarPDF() {
         const btn = document.getElementById('btn-exportar-pdf');
         if (btn) btn.disabled = true;
         try {
           const element = document.getElementById('page-content');
           if (!element) throw new Error('No hay contenido para exportar');
-
           const opt = {
-            margin:       [10, 10, 10, 10],
-            filename:     `cotizacion-${cotizacionId || 'detalle'}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-            jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: ['avoid-all', 'css'] }
+            margin: [10, 10, 10, 10],
+            filename: `cotizacion-${cotizacionId || 'detalle'}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+            jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css'] }
           };
-
           await html2pdf().set(opt).from(element).save();
           window.utils?.mostrarNotificacion?.('PDF generado', 'success');
         } catch (e) {
@@ -1162,9 +1019,7 @@
       window.exportarPDF = exportarPDF;
       window.mostrarError = mostrarError;
 
-      document.addEventListener('DOMContentLoaded', function() {
-        start();
-      });
+      document.addEventListener('DOMContentLoaded', function() { start(); });
     })();
   </script>
 </body>
