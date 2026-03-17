@@ -129,6 +129,7 @@
     const TABLE = 'purchase_lines';
     const MIN_ROWS = 0;
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
+    let catMateriales = []; // categorías vigentes desde material_categories
     let catImagesMap = {};
     let currentRows = [];
     let currentBlockId = null;
@@ -193,16 +194,18 @@
 
     async function loadCatalogs() {
       const client = await waitForClient();
-      const [enc, uni, mod, est] = await Promise.all([
+      const [enc, uni, mod, est, cats] = await Promise.all([
         client.from('purchase_catalog_encargados').select('*').order('nombre'),
         client.from('purchase_catalog_unidades').select('*').order('nombre'),
         client.from('purchase_catalog_modos_compra').select('*').order('nombre'),
         client.from('purchase_catalog_estados_pago').select('*').order('nombre'),
+        client.from('material_categories').select('name').order('name') // categorías vigentes
       ]);
       catEncargados = enc.data || [];
       catUnidades   = uni.data || [];
       catModos      = mod.data || [];
       catEstadosPago= est.data || [];
+      catMateriales = (cats.data || []).map(c => c.name);
 
       const { data: provs } = await client.from('providers').select('id,name').order('name');
       proveedores = provs || [];
@@ -411,6 +414,7 @@
         </thead>
       `;
 
+      const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c }))); // usar material_categories
       const bodyRows = rows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
         return `
@@ -426,7 +430,7 @@
             <td><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></td>
             <td><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></td>
             <td><input data-f="direccion" data-row="${idx}" type="text" value="${escapeHtml(row.direccion||'')}"></td>
-            <td><select data-f="categoria" data-row="${idx}">${makeOptions([...new Set(materiales.map(m=>m.category).filter(Boolean))].map(c=>({nombre:c})))}</select></td>
+            <td><select data-f="categoria" data-row="${idx}">${categoriaOptions}</select></td>
             <td><select data-f="producto_id" data-row="${idx}"></select></td>
             <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones||'')}"></td>
             <td><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></td>
