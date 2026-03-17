@@ -14,8 +14,8 @@
       --border: #e4e7ec;
       --text: #1f242c;
       --muted: #6b7280;
-      --primary: #5f6673;          /* gris medio para acentos */
-      --accent: #eef1f4;           /* gris claro para fondos */
+      --primary: #5f6673;          /* acento gris */
+      --accent: #eef1f4;           /* fondos claros */
       --accent-strong: #dadfe5;
       --shadow: 0 8px 20px rgba(0,0,0,0.04);
       --viewer-scale: 1;
@@ -35,7 +35,7 @@
       background: #fff;
       color: var(--text);
       padding: 9px 14px;
-      border-radius: 10px;
+      border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
       font-size: 13px;
@@ -109,8 +109,8 @@
     .table-container { overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 10px; border: 1px solid #e8ebef; }
-    th { background: #f3f5f7; color: #48505a; font-weight: 700; text-align: left; }
-    .subtotal-row { background: #f1f3f5; font-weight: 700; }
+    th { background: #f1f3f5; color: #47505c; font-weight: 700; text-align: left; }
+    .subtotal-row { background: #f4f6f8; font-weight: 700; }
 
     .valores-table { table-layout: fixed; width: 100%; }
     .valores-table th:nth-child(1), .valores-table td:nth-child(1) { width: 22%; }
@@ -123,9 +123,16 @@
     .card, .table-container, table, tr, td, th { page-break-inside: avoid !important; break-inside: avoid !important; }
     .page-break { page-break-before: always !important; break-before: page !important; }
 
-    @media (max-width: 640px) { .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
+    /* ==== PRINT OVERRIDE: solo print-view visible, layout oculto ==== */
+    @media print {
+      body { margin: 0 !important; background: #fff !important; }
+      body * { visibility: hidden !important; }
+      #print-view, #print-view * { visibility: visible !important; }
+      #print-view { position: absolute; left: 0; top: 0; width: 100%; padding: 26px; }
+      .no-print, #page-content, header, nav, aside, .sidebar, .topbar, .byt-sidebar { display: none !important; }
+    }
 
-    /* ===== Estilos de impresión (gris) ===== */
+    /* Estilos dedicados al print-view */
     .print-view { display: none; color: #2a2f38; padding: 24px 26px; font-size: 12px; }
     .print-header {
       display: flex; justify-content: space-between; align-items: center;
@@ -142,7 +149,7 @@
     .print-pill-value { font-size: 13px; font-weight: 600; color: #1f242b; }
 
     .print-table-wrap { border:1px solid #e3e6ea; border-radius: 10px; overflow: hidden; margin-bottom: 14px; background:#fff; }
-    .print-table-title { background:#f3f5f7; padding:10px 12px; font-weight:700; color:#3b454f; }
+    .print-table-title { background:#f1f3f5; padding:10px 12px; font-weight:700; color:#3b454f; }
     table.print-table { width:100%; border-collapse:collapse; }
     table.print-table th, table.print-table td {
       padding: 9px 10px; border-bottom: 1px solid #e7ebef; font-size: 12px; font-weight: 500;
@@ -150,12 +157,6 @@
     table.print-table th { background:#f9fafb; color:#6a7480; text-transform:none; letter-spacing:0.1px; }
     table.print-table .num { text-align:right; font-variant-numeric: tabular-nums; }
     .print-subtotal { font-weight:700; color:#2f3b45; background: #f4f6f8; }
-
-    @media print {
-      .no-print, #page-content { display: none !important; }
-      body { background: white !important; }
-      .print-view { display: block !important; width: 100%; }
-    }
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
