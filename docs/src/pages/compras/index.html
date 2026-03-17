@@ -14,7 +14,7 @@
     .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:var(--shadow); width:100%; }
     .block-list { display:flex !important; flex-direction:column; gap:14px; width:100%; }
     .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
-    .meta { color:var(--muted); font-size:13px; }
+    .meta { color:var(--muted); font-size:13px; font-weight:600; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
     .chip { background:#eef2f5; color:#2d2d2d; border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:background .12s ease; height:30px; box-shadow:none; }
@@ -66,13 +66,14 @@
     .estado-stock     { background:#35714e !important; color:#ffffff !important; }
     .estado-porcomprar{ background:#a22116 !important; color:#ffffff !important; }
 
-    .section-title { margin:12px 0 8px; font-weight:800; color:#1f2430; display:flex; align-items:center; gap:8px; }
-    .section-toggle { cursor:pointer; user-select:none; display:flex; align-items:center; gap:10px; }
+    .section-title { margin:12px 0 8px; font-weight:800; color:#1f2430; display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
     .section-body { transition:max-height .2s ease; overflow:hidden; }
     .badge-pill { padding:4px 10px; border-radius:999px; font-weight:700; font-size:12px; border:1px solid #d4d8dd; background:#f4f5f6; }
     .panel { padding:10px; border-radius:10px; border:1px solid #e6e7eb; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); }
-    .panel-por { background:rgba(255,95,95,0.08); }
-    .panel-ent { background:rgba(76,175,80,0.08); }
+    .panel-por { background:rgba(0,0,0,0.03); }
+    .panel-ent { background:rgba(0,0,0,0.06); }
+    .arrow { transition:transform .15s ease; font-size:14px; color:#444; }
+    .arrow.up { transform:rotate(180deg); }
   </style>
 </head>
 <body>
@@ -82,28 +83,25 @@
         <h1 style="margin:0;">Compras</h1>
         <p class="meta" style="margin:4px 0 0;">Bloques de compras generados al aprobar cotizaciones</p>
       </div>
-      <div class="chips">
-        <span class="chip" id="statBloques">Bloques: 0</span>
-      </div>
     </div>
 
     <div class="panel panel-por">
-      <div class="section-title section-toggle" id="togglePorEntregar">
-        <span style="font-size:18px;">📦 Proyectos por entregar</span>
+      <div class="section-title" id="togglePorEntregar">
+        <span class="arrow" id="arrowPor">▼</span>
+        <span style="font-size:16px; font-weight:800;">Proyectos por entregar</span>
         <span class="badge-pill" id="countPorEntregar">0</span>
-        <span style="margin-left:auto;font-size:12px;color:#444;">(click para contraer/expandir)</span>
       </div>
       <div class="section-body" id="bodyPorEntregar">
         <div id="blocksContainer" class="block-list"></div>
-        <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
+        <div id="emptyState" class="empty" style="display:none;">No hay proyectos por entregar.</div>
       </div>
     </div>
 
     <div class="panel panel-ent" style="margin-top:12px;">
-      <div class="section-title section-toggle" id="toggleEntregados">
-        <span style="font-size:18px;">✅ Proyectos entregados</span>
+      <div class="section-title" id="toggleEntregados">
+        <span class="arrow up" id="arrowEnt">▼</span>
+        <span style="font-size:16px; font-weight:800;">Proyectos entregados</span>
         <span class="badge-pill" id="countEntregados">0</span>
-        <span style="margin-left:auto;font-size:12px;color:#444;">(click para contraer/expandir)</span>
       </div>
       <div class="section-body" id="bodyEntregados" style="max-height:0;">
         <div id="blocksEntregados" class="block-list"></div>
@@ -150,8 +148,8 @@
   <script type="module">
     import * as catApi from '../../lib/cate_material.js';
 
-    let blocksContainer, blocksEntregados, emptyState, emptyEntregados, statBloques;
-    let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, togglePorEntregar, toggleEntregados;
+    let blocksContainer, blocksEntregados, emptyState, emptyEntregados;
+    let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, arrowPor, arrowEnt, togglePorEntregar, toggleEntregados;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
@@ -175,11 +173,12 @@
       blocksEntregados = pickLast('#blocksEntregados');
       emptyState = pickLast('#emptyState');
       emptyEntregados = pickLast('#emptyEntregados');
-      statBloques = pickLast('#statBloques');
       bodyPorEntregar = pickLast('#bodyPorEntregar');
       bodyEntregados = pickLast('#bodyEntregados');
       countPorEntregar = pickLast('#countPorEntregar');
       countEntregados = pickLast('#countEntregados');
+      arrowPor = pickLast('#arrowPor');
+      arrowEnt = pickLast('#arrowEnt');
       togglePorEntregar = pickLast('#togglePorEntregar');
       toggleEntregados = pickLast('#toggleEntregados');
       overlay = pickLast('#overlay');
@@ -195,21 +194,21 @@
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (addRowBtn) addRowBtn.onclick = addEmptyRow;
 
-      if (togglePorEntregar) togglePorEntregar.onclick = () => toggleSection(bodyPorEntregar);
-      if (toggleEntregados) toggleEntregados.onclick = () => toggleSection(bodyEntregados);
-      // estados iniciales: por entregar abierto, entregados cerrado
-      setSectionState(bodyPorEntregar, true);
-      setSectionState(bodyEntregados, false);
+      if (togglePorEntregar) togglePorEntregar.onclick = () => toggleSection(bodyPorEntregar, arrowPor);
+      if (toggleEntregados) toggleEntregados.onclick = () => toggleSection(bodyEntregados, arrowEnt);
+      setSectionState(bodyPorEntregar, arrowPor, true);
+      setSectionState(bodyEntregados, arrowEnt, false);
     }
 
-    function setSectionState(bodyEl, expanded) {
+    function setSectionState(bodyEl, arrowEl, expanded) {
       if (!bodyEl) return;
       bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
+      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
     }
-    function toggleSection(bodyEl) {
+    function toggleSection(bodyEl, arrowEl) {
       if (!bodyEl) return;
       const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
-      setSectionState(bodyEl, !isOpen);
+      setSectionState(bodyEl, arrowEl, !isOpen);
     }
 
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
@@ -248,7 +247,6 @@
       if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
     });
 
-    /* ---------- Datos base ---------- */
     async function loadCatalogs() {
       const client = await waitForClient();
       const [enc, uni, mod, est, cats] = await Promise.all([
@@ -270,7 +268,6 @@
       materiales = mats || [];
     }
 
-    /* ---------- Metadatos desde VENTAS ---------- */
     async function loadSalesMeta() {
       const client = await waitForClient();
 
@@ -311,7 +308,6 @@
       });
     }
 
-    /* ---------- Bloques ---------- */
     function filterBlocks(blocks, approvedSet) {
       if (!approvedSet || approvedSet.size === 0) return blocks || [];
       return (blocks || []).filter(b => {
@@ -326,9 +322,7 @@
       const client = await waitForClient();
       const { data } = await client.from('ventas').select('cotizacion_id,total_venta').not('cotizacion_id','is',null);
       const map = new Map();
-      (data||[]).forEach(v => {
-        if (v.cotizacion_id && v.total_venta != null) map.set(v.cotizacion_id, Number(v.total_venta));
-      });
+      (data||[]).forEach(v => { if (v.cotizacion_id && v.total_venta != null) map.set(v.cotizacion_id, Number(v.total_venta)); });
       return map;
     }
 
@@ -362,8 +356,7 @@
 
     function renderBlocks(blocks) {
       ensureEls();
-      if (!blocksContainer || !blocksEntregados || !statBloques || !emptyState || !emptyEntregados) return;
-      statBloques.textContent = `Bloques: ${blocks.length}`;
+      if (!blocksContainer || !blocksEntregados || !emptyState || !emptyEntregados) return;
 
       const cards = blocks.map(b => {
         const parts = projectPartsMap.get(b.proyecto_id) || [];
@@ -373,6 +366,7 @@
         const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
+        const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
 
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
@@ -382,7 +376,7 @@
                 <div>
                   <h3 style="margin:0 0 4px;">${title}</h3>
                   <div class="meta">Partidas: ${escapeHtml(partesLabel)}</div>
-                  <div class="meta" style="margin-top:6px;"><strong>Fecha de entrega límite:</strong> ${fechaLim ? escapeHtml(fechaLim) : '—'}</div>
+                  <div class="meta" style="margin-top:6px;">Fecha de entrega límite: ${fechaLim ? escapeHtml(fechaLim) : '—'}</div>
                 </div>
                 <div style="display:flex; gap:6px;">
                   <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
@@ -397,10 +391,8 @@
               </div>
               <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; margin-top:8px;">
                 <div>
-                  <div class="meta" style="font-weight:700;">Días restantes para fecha de entrega</div>
-                  <div style="font-size:18px; font-weight:800;">${
-                    fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—'
-                  }</div>
+                  <div class="meta" style="font-weight:600;">Días restantes para fecha de entrega</div>
+                  <div style="font-size:16px; font-weight:600;">${diasRest}</div>
                 </div>
               </div>
             </div>
@@ -417,28 +409,16 @@
       const porEntregar = porEntregarArr.map(c => c.html).join('');
       const entregados  = entregadosArr.map(c => c.html).join('');
 
-      if (!porEntregar) {
-        emptyState.style.display = 'block';
-        blocksContainer.innerHTML = '';
-      } else {
-        emptyState.style.display = 'none';
-        blocksContainer.innerHTML = porEntregar;
-      }
+      if (!porEntregar) { emptyState.style.display = 'block'; blocksContainer.innerHTML = ''; }
+      else { emptyState.style.display = 'none'; blocksContainer.innerHTML = porEntregar; }
 
-      if (!entregados) {
-        emptyEntregados.style.display = 'block';
-        blocksEntregados.innerHTML = '';
-      } else {
-        emptyEntregados.style.display = 'none';
-        blocksEntregados.innerHTML = entregados;
-      }
+      if (!entregados) { emptyEntregados.style.display = 'block'; blocksEntregados.innerHTML = ''; }
+      else { emptyEntregados.style.display = 'none'; blocksEntregados.innerHTML = entregados; }
 
-      // reajustar max-height si estaba expandido
-      if (bodyPorEntregar) setSectionState(bodyPorEntregar, true);
-      if (bodyEntregados) setSectionState(bodyEntregados, bodyEntregados.style.maxHeight !== '0px');
+      if (bodyPorEntregar) setSectionState(bodyPorEntregar, arrowPor, true);
+      if (bodyEntregados) setSectionState(bodyEntregados, arrowEnt, bodyEntregados.style.maxHeight !== '0px');
     }
 
-    /* ---------- Helpers opciones, grid, persistencia: igual que antes ---------- */
     function makeOptions(list, valKey='nombre', labelKey='nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
