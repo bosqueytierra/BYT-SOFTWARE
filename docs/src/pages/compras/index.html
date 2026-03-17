@@ -66,9 +66,13 @@
     .estado-stock     { background:#35714e !important; color:#ffffff !important; }
     .estado-porcomprar{ background:#a22116 !important; color:#ffffff !important; }
 
-    /* Secciones */
-    .section-title { margin:12px 0 4px; font-weight:800; color:#1f2430; }
-    .small-label { font-size:13px; color:#374151; font-weight:700; margin-top:6px; display:inline-block; }
+    .section-title { margin:12px 0 8px; font-weight:800; color:#1f2430; display:flex; align-items:center; gap:8px; }
+    .section-toggle { cursor:pointer; user-select:none; display:flex; align-items:center; gap:10px; }
+    .section-body { transition:max-height .2s ease; overflow:hidden; }
+    .badge-pill { padding:4px 10px; border-radius:999px; font-weight:700; font-size:12px; border:1px solid #d4d8dd; background:#f4f5f6; }
+    .panel { padding:10px; border-radius:10px; border:1px solid #e6e7eb; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); }
+    .panel-por { background:rgba(255,95,95,0.08); }
+    .panel-ent { background:rgba(76,175,80,0.08); }
   </style>
 </head>
 <body>
@@ -83,16 +87,28 @@
       </div>
     </div>
 
-    <div id="sectionPorEntregar">
-      <h3 class="section-title">Proyectos por entregar</h3>
-      <div id="blocksContainer" class="block-list"></div>
-      <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
+    <div class="panel panel-por">
+      <div class="section-title section-toggle" id="togglePorEntregar">
+        <span style="font-size:18px;">📦 Proyectos por entregar</span>
+        <span class="badge-pill" id="countPorEntregar">0</span>
+        <span style="margin-left:auto;font-size:12px;color:#444;">(click para contraer/expandir)</span>
+      </div>
+      <div class="section-body" id="bodyPorEntregar">
+        <div id="blocksContainer" class="block-list"></div>
+        <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
+      </div>
     </div>
 
-    <div id="sectionEntregados" style="margin-top:18px;">
-      <h3 class="section-title">Proyectos entregados</h3>
-      <div id="blocksEntregados" class="block-list"></div>
-      <div id="emptyEntregados" class="empty" style="display:none;">No hay proyectos entregados.</div>
+    <div class="panel panel-ent" style="margin-top:12px;">
+      <div class="section-title section-toggle" id="toggleEntregados">
+        <span style="font-size:18px;">✅ Proyectos entregados</span>
+        <span class="badge-pill" id="countEntregados">0</span>
+        <span style="margin-left:auto;font-size:12px;color:#444;">(click para contraer/expandir)</span>
+      </div>
+      <div class="section-body" id="bodyEntregados" style="max-height:0;">
+        <div id="blocksEntregados" class="block-list"></div>
+        <div id="emptyEntregados" class="empty" style="display:none;">No hay proyectos entregados.</div>
+      </div>
     </div>
   </div>
 
@@ -135,22 +151,20 @@
     import * as catApi from '../../lib/cate_material.js';
 
     let blocksContainer, blocksEntregados, emptyState, emptyEntregados, statBloques;
+    let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, togglePorEntregar, toggleEntregados;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
-    const MIN_ROWS = 0;
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
-    let catMateriales = []; // categorías vigentes desde material_categories
+    let catMateriales = [];
     let catImagesMap = {};
     let currentRows = [];
     let currentBlockId = null;
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
 
-    // Datos traídos desde VENTAS / COTIZACIONES
-    const projectPartsMap = new Map();        // cotizacion_id => ['Partida 1', ...]
-    const projectAllDoneMap = new Map();      // cotizacion_id => boolean (todas completadas)
-    const projectFechaLimiteMap = new Map();  // cotizacion_id => 'YYYY-MM-DD'
-    const projectAprobDateMap = new Map();    // cotizacion_id => created_at de cotización (aprobación)
+    const projectPartsMap = new Map();
+    const projectAllDoneMap = new Map();
+    const projectFechaLimiteMap = new Map();
 
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
@@ -162,6 +176,12 @@
       emptyState = pickLast('#emptyState');
       emptyEntregados = pickLast('#emptyEntregados');
       statBloques = pickLast('#statBloques');
+      bodyPorEntregar = pickLast('#bodyPorEntregar');
+      bodyEntregados = pickLast('#bodyEntregados');
+      countPorEntregar = pickLast('#countPorEntregar');
+      countEntregados = pickLast('#countEntregados');
+      togglePorEntregar = pickLast('#togglePorEntregar');
+      toggleEntregados = pickLast('#toggleEntregados');
       overlay = pickLast('#overlay');
       overlayGrid = pickLast('#overlayGrid');
       overlayTitle = pickLast('#overlayTitle');
@@ -174,6 +194,22 @@
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (addRowBtn) addRowBtn.onclick = addEmptyRow;
+
+      if (togglePorEntregar) togglePorEntregar.onclick = () => toggleSection(bodyPorEntregar);
+      if (toggleEntregados) toggleEntregados.onclick = () => toggleSection(bodyEntregados);
+      // estados iniciales: por entregar abierto, entregados cerrado
+      setSectionState(bodyPorEntregar, true);
+      setSectionState(bodyEntregados, false);
+    }
+
+    function setSectionState(bodyEl, expanded) {
+      if (!bodyEl) return;
+      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
+    }
+    function toggleSection(bodyEl) {
+      if (!bodyEl) return;
+      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
+      setSectionState(bodyEl, !isOpen);
     }
 
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
@@ -193,7 +229,7 @@
         const client = await waitForClient();
         if (!window.supabase && client) window.supabase = client;
         await loadCatalogs();
-        await loadSalesMeta();   // <-- nuevas metas desde ventas/cotizaciones
+        await loadSalesMeta();
         await loadBlocks();
       } catch (e) {
         console.error(e);
@@ -212,7 +248,7 @@
       if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
     });
 
-    /* ---------- Datos base (catálogos y materiales) ---------- */
+    /* ---------- Datos base ---------- */
     async function loadCatalogs() {
       const client = await waitForClient();
       const [enc, uni, mod, est, cats] = await Promise.all([
@@ -234,15 +270,13 @@
       materiales = mats || [];
     }
 
-    /* ---------- Metadatos desde VENTAS y COTIZACIONES ---------- */
+    /* ---------- Metadatos desde VENTAS ---------- */
     async function loadSalesMeta() {
       const client = await waitForClient();
 
-      // Ventas: para partidas y estados
-      const { data: ventasRows, error: errV } = await client
+      const { data: ventasRows } = await client
         .from('ventas')
         .select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
-      if (errV) console.warn('ventas meta', errV);
 
       projectPartsMap.clear();
       projectAllDoneMap.clear();
@@ -265,19 +299,14 @@
         }
       });
 
-      // Cotizaciones: para fecha límite y fecha aprobación (created_at)
-      const { data: cotRows, error: errCot } = await client
+      const { data: cotRows } = await client
         .from('cotizaciones')
-        .select('id, created_at, fecha_entrega_limite')
+        .select('id, fecha_entrega_limite')
         .eq('estado', 'aprobada');
-      if (errCot) console.warn('cotizaciones meta', errCot);
 
       (cotRows || []).forEach(c => {
-        if (c.id) {
-          if (c.created_at) projectAprobDateMap.set(c.id, c.created_at);
-          if (c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) {
-            projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
-          }
+        if (c.id && c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) {
+          projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
         }
       });
     }
@@ -295,8 +324,7 @@
 
     async function fetchCobradoMap() {
       const client = await waitForClient();
-      const { data, error } = await client.from('ventas').select('cotizacion_id,total_venta').not('cotizacion_id','is',null);
-      if (error) { console.error('ventas fetch', error); return new Map(); }
+      const { data } = await client.from('ventas').select('cotizacion_id,total_venta').not('cotizacion_id','is',null);
       const map = new Map();
       (data||[]).forEach(v => {
         if (v.cotizacion_id && v.total_venta != null) map.set(v.cotizacion_id, Number(v.total_venta));
@@ -307,15 +335,13 @@
     async function loadBlocks() {
       try {
         const client = await waitForClient();
-        const { data: cotAprob, error: errCot } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
-        if (errCot) throw errCot;
+        const { data: cotAprob } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
         const approved = new Set((cotAprob || []).map(c => c.id));
 
-        const { data, error } = await client
+        const { data } = await client
           .from('purchase_blocks')
           .select('*')
           .order('created_at', { ascending: false });
-        if (error) throw error;
 
         const cobradoMap = await fetchCobradoMap();
 
@@ -339,20 +365,10 @@
       if (!blocksContainer || !blocksEntregados || !statBloques || !emptyState || !emptyEntregados) return;
       statBloques.textContent = `Bloques: ${blocks.length}`;
 
-      const ahora = Date.now();
-      const fmtDiff = (ms, ceil=false) => {
-        if (!ms) return '—';
-        const d = ms / (1000*60*60*24);
-        return ceil ? Math.ceil(d) : Math.floor(d);
-      };
-
       const cards = blocks.map(b => {
         const parts = projectPartsMap.get(b.proyecto_id) || [];
         const partesLabel = parts.length ? parts.join(' · ') : 'Sin partidas';
         const fechaLim = projectFechaLimiteMap.get(b.proyecto_id) || b.fecha_entrega_limite || '';
-        const aprob = projectAprobDateMap.get(b.proyecto_id);
-        const diasTrans = aprob ? fmtDiff(ahora - new Date(aprob).getTime()) : '—';
-        const diasRest = fechaLim ? fmtDiff(new Date(fechaLim).getTime() - ahora, true) : '—';
 
         const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
@@ -381,12 +397,10 @@
               </div>
               <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; margin-top:8px;">
                 <div>
-                  <div class="small-label">Días transcurridos desde el depósito</div>
-                  <div style="font-size:18px; font-weight:800;">${diasTrans}</div>
-                </div>
-                <div>
-                  <div class="small-label">Días restantes para fecha de entrega</div>
-                  <div style="font-size:18px; font-weight:800;">${diasRest}</div>
+                  <div class="meta" style="font-weight:700;">Días restantes para fecha de entrega</div>
+                  <div style="font-size:18px; font-weight:800;">${
+                    fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—'
+                  }</div>
                 </div>
               </div>
             </div>
@@ -394,8 +408,14 @@
         };
       });
 
-      const porEntregar = cards.filter(c => !c.isDone).map(c => c.html).join('');
-      const entregados  = cards.filter(c => c.isDone).map(c => c.html).join('');
+      const porEntregarArr = cards.filter(c => !c.isDone);
+      const entregadosArr  = cards.filter(c => c.isDone);
+
+      countPorEntregar.textContent = porEntregarArr.length;
+      countEntregados.textContent = entregadosArr.length;
+
+      const porEntregar = porEntregarArr.map(c => c.html).join('');
+      const entregados  = entregadosArr.map(c => c.html).join('');
 
       if (!porEntregar) {
         emptyState.style.display = 'block';
@@ -412,18 +432,20 @@
         emptyEntregados.style.display = 'none';
         blocksEntregados.innerHTML = entregados;
       }
+
+      // reajustar max-height si estaba expandido
+      if (bodyPorEntregar) setSectionState(bodyPorEntregar, true);
+      if (bodyEntregados) setSectionState(bodyEntregados, bodyEntregados.style.maxHeight !== '0px');
     }
 
-    /* ---------- Helpers de opciones ---------- */
+    /* ---------- Helpers opciones, grid, persistencia: igual que antes ---------- */
     function makeOptions(list, valKey='nombre', labelKey='nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
-
     function productOptions(category) {
       const list = materiales.filter(m => !category || m.category === category);
       return makeOptions(list, 'id', 'name');
     }
-
     function rebuildProductOptions(rowIdx) {
       const row = currentRows[rowIdx] || {};
       const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="producto_id"]`);
@@ -431,22 +453,13 @@
       sel.innerHTML = productOptions(row.categoria || '');
       if (row.producto_id) {
         const valid = materiales.find(m => m.id === row.producto_id && (!row.categoria || m.category === row.categoria));
-        if (valid) {
-          sel.value = row.producto_id;
-        } else {
-          sel.value = '';
-          currentRows[rowIdx].producto_id = null;
-        }
-      } else {
-        sel.value = '';
-      }
+        if (valid) sel.value = row.producto_id; else { sel.value=''; currentRows[rowIdx].producto_id=null; }
+      } else sel.value='';
     }
-
     function setVal(idx, field, value) {
       const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
       if (el) el.value = value ?? '';
     }
-
     function isMeaningful(payload) {
       return (
         (payload.producto_id && payload.producto_id !== '') ||
@@ -456,14 +469,7 @@
         (payload.observaciones && payload.observaciones.trim() !== '')
       );
     }
-
-    /* ---------- CRUD líneas ---------- */
-    function addEmptyRow() {
-      if (!currentBlockId) return;
-      currentRows.push({ id: null, block_id: currentBlockId, placeholder: true, _saving: false });
-      renderGrid(currentRows);
-    }
-
+    function addEmptyRow() { if (!currentBlockId) return; currentRows.push({ id: null, block_id: currentBlockId, placeholder: true, _saving: false }); renderGrid(currentRows); }
     async function cleanupEmptiesInDB(lines, client) {
       const empties = (lines || []).filter(r => !isMeaningful(r) && r.id);
       if (!empties.length) return;
@@ -471,7 +477,6 @@
       try { await client.from(TABLE).delete().in('id', ids); }
       catch (e) { console.error('cleanupEmptiesInDB', e); }
     }
-
     async function loadLines(blockId) {
       const client = await waitForClient();
       const { data, error } = await client
@@ -479,16 +484,10 @@
         .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
-      if (error) {
-        console.error('loadLines', error);
-        currentRows = [];
-      } else {
-        await cleanupEmptiesInDB(data, client);
-        currentRows = (data || []).filter(r => isMeaningful(r));
-      }
+      if (error) { console.error('loadLines', error); currentRows = []; }
+      else { await cleanupEmptiesInDB(data, client); currentRows = (data || []).filter(r => isMeaningful(r)); }
       renderGrid(currentRows);
     }
-
     async function recomputeBlockTotals(blockId) {
       if (!blockId) return;
       const client = await waitForClient();
@@ -513,26 +512,17 @@
         await loadBlocks();
       } catch (e) { console.error('update block totals', e); }
     }
-
-    /* ---------- Render grid líneas ---------- */
     function renderGrid(rows) {
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
         overlayLCGrid = document.getElementById('overlayLCGrid');
       }
-
       const headers = ['','Encargado','Proveedor','Dirección','Categoría','Producto','Obs','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'];
-      const thead = `
-        <thead>
-          <tr>${headers.map((h,idx) => idx===0 ? `<th style="width:90px;">${h}</th>` : `<th>${escapeHtml(h)}</th>`).join('')}</tr>
-        </thead>
-      `;
-
+      const thead = `<thead><tr>${headers.map((h,idx)=>idx===0?`<th style="width:90px;">${h}</th>`:`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
       const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c })));
       const bodyRows = rows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
-        return `
-          <tr data-row="${idx}" ${idAttr}>
+        return `<tr data-row="${idx}" ${idAttr}>
             <td class="action-cell">
               <button class="icon-btn danger" type="button" title="Eliminar" data-action="del-row" data-row="${idx}">
                 <svg viewBox="0 0 24 24"><path d="M9 11v6M15 11v6M5.5 7h13"/><path d="M10 5.5h4l.7 1.7H9.3l.7-1.7Z"/><rect x="6.5" y="9" width="11" height="10" rx="1.4"/></svg>
@@ -553,19 +543,9 @@
             <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total||''}" readonly></td>
             <td><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></td>
             <td><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></td>
-          </tr>
-        `;
+          </tr>`;
       }).join('');
-
-      overlayLCGrid.innerHTML = `
-        <div class="table-wrapper">
-          <table class="lc-table">
-            ${thead}
-            <tbody>${bodyRows}</tbody>
-          </table>
-        </div>
-      `;
-
+      overlayLCGrid.innerHTML = `<div class="table-wrapper"><table class="lc-table">${thead}<tbody>${bodyRows}</tbody></table></div>`;
       rows.forEach((row, idx) => {
         setVal(idx,'encargado',row.encargado);
         setVal(idx,'proveedor_id',row.proveedor_id);
@@ -578,16 +558,10 @@
         setVal(idx,'estado_pago',row.estado_pago);
         applyEstadoStyle(idx);
       });
-
       const tbl = overlayLCGrid.querySelector('table.lc-table');
-      if (tbl) {
-        tbl.addEventListener('change', onCellEdit, false);
-        tbl.addEventListener('input', onCellEdit, false);
-      }
+      if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
     }
-
-    /* ---------- Eventos de edición ---------- */
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
@@ -595,108 +569,40 @@
       const row = currentRows[rowIdx] || {};
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
-
       currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder: false };
-
-      if (field === 'categoria') {
-        currentRows[rowIdx].producto_id = null;
-        rebuildProductOptions(rowIdx);
-      }
-
+      if (field === 'categoria') { currentRows[rowIdx].producto_id = null; rebuildProductOptions(rowIdx); }
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
-
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
-
       await persistRow(rowIdx);
       await recomputeBlockTotals(currentBlockId);
     }
-
     function buildPayload(row) {
-      return {
-        block_id: row.block_id || currentBlockId,
-        encargado: row.encargado || null,
-        proveedor_id: row.proveedor_id || null,
-        direccion: row.direccion || null,
-        categoria: row.categoria || null,
-        producto_id: row.producto_id || null,
-        unidad: row.unidad || null,
-        cantidad: row.cantidad || null,
-        precio_unit: row.precio_unit || null,
-        modo_compra: row.modo_compra || null,
-        estado_pago: row.estado_pago || null,
-        observaciones: row.observaciones || null
-      };
+      return { block_id: row.block_id || currentBlockId, encargado: row.encargado || null, proveedor_id: row.proveedor_id || null, direccion: row.direccion || null, categoria: row.categoria || null, producto_id: row.producto_id || null, unidad: row.unidad || null, cantidad: row.cantidad || null, precio_unit: row.precio_unit || null, modo_compra: row.modo_compra || null, estado_pago: row.estado_pago || null, observaciones: row.observaciones || null };
     }
-
     async function persistRow(idx) {
-      const row = currentRows[idx];
-      if (!row) return;
-      if (row._saving) return;
-      const client = await waitForClient();
-      const payload = buildPayload(row);
-      const meaningful = isMeaningful(payload);
-
+      const row = currentRows[idx]; if (!row) return; if (row._saving) return;
+      const client = await waitForClient(); const payload = buildPayload(row); const meaningful = isMeaningful(payload);
       if (!row.id && !meaningful) return;
-
       currentRows[idx] = { ...row, _saving: true };
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false };
-          setVal(idx,'total', data.total);
+          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
           if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total); }
         }
-      } catch (e) {
-        console.error('Persist error', e);
-      } finally {
-        if (currentRows[idx]) currentRows[idx]._saving = false;
-      }
+      } catch (e) { console.error('Persist error', e); }
+      finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
     }
-
-    async function deleteRow(idx) {
-      const row = currentRows[idx];
-      if (!row) return;
-      const client = await waitForClient();
-      try {
-        if (row.id) { await client.from(TABLE).delete().eq('id', row.id); }
-        currentRows.splice(idx,1);
-        renderGrid(currentRows);
-        await recomputeBlockTotals(currentBlockId);
-      } catch (e) { console.error('Delete error', e); }
-    }
-
-    function duplicateRow(idx) {
-      const src = currentRows[idx];
-      if (!src) return;
-      const clone = { ...src, id: null, block_id: currentBlockId, created_at: null, placeholder: false, _saving: false };
-      currentRows.splice(idx + 1, 0, clone);
-      renderGrid(currentRows);
-      if (isMeaningful(buildPayload(clone))) persistRow(idx + 1).then(() => recomputeBlockTotals(currentBlockId));
-    }
-
-    function applyEstadoStyle(rowIdx) {
-      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`);
-      if (!sel) return;
-      sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar');
-      const val = (sel.value || '').toLowerCase();
-      if (val.includes('comprado')) sel.classList.add('estado-comprado');
-      else if (val.includes('stock')) sel.classList.add('estado-stock');
-      else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar');
-    }
-
-    /* ---------- Resumen / overlays ---------- */
-    async function loadCategoryImages() {
-      try {
-        const { data } = await catApi.listCategoriesWithImages();
-        catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{});
-      } catch(e) { console.warn('cat images', e); }
-    }
+    async function deleteRow(idx) { const row=currentRows[idx]; if(!row) return; const client=await waitForClient(); try{ if(row.id) await client.from(TABLE).delete().eq('id',row.id); currentRows.splice(idx,1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId);}catch(e){console.error('Delete error',e);} }
+    function duplicateRow(idx) { const src=currentRows[idx]; if(!src) return; const clone={...src,id:null,block_id:currentBlockId,created_at:null,placeholder:false,_saving:false}; currentRows.splice(idx+1,0,clone); renderGrid(currentRows); if(isMeaningful(buildPayload(clone))) persistRow(idx+1).then(()=>recomputeBlockTotals(currentBlockId)); }
+    function applyEstadoStyle(rowIdx) { const sel=overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if(!sel)return; sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar'); const val=(sel.value||'').toLowerCase(); if(val.includes('comprado')) sel.classList.add('estado-comprado'); else if(val.includes('stock')) sel.classList.add('estado-stock'); else if(val.includes('por comprar')||val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
+    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{}); } catch(e) { console.warn('cat images', e); } }
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
     async function fetchLines(blockId) {
       const client = await waitForClient();
@@ -710,10 +616,7 @@
       return data || [];
     }
     function renderSummary(lines) {
-      if (!lines.length) {
-        overlayGrid.innerHTML = '<div style="padding:12px; text-align:center; color:#6c7a86;">Sin líneas</div>';
-        return;
-      }
+      if (!lines.length) { overlayGrid.innerHTML = '<div style="padding:12px; text-align:center; color:#6c7a86;">Sin líneas</div>'; return; }
       const byCat = {};
       for (const l of lines) {
         const k = l.categoria || 'Sin categoría';
@@ -734,13 +637,11 @@
       `).join('');
       overlayGrid.innerHTML = `<div class="item-grid">${cards}</div>`;
     }
-
     async function openLC(blockId, title) {
       ensureEls();
       currentBlockId = blockId;
       const wrapper = overlayLC?.querySelector?.('.overlay-content');
       if (wrapper) wrapper.dataset.currentBlock = blockId;
-
       currentRows = [];
       if (overlayLCGrid) overlayLCGrid.innerHTML = '';
       if (overlayLC && overlayLCGrid && overlayLCTitle) {
@@ -748,30 +649,19 @@
         overlayLC.classList.add('active'); document.body.classList.add('overlay-open');
       }
       try { await loadLines(blockId); }
-      catch (e) {
-        console.error(e);
-        overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>';
-      }
+      catch (e) { console.error(e); overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>'; }
     }
-
     async function openSummary(blockId, title) {
       ensureEls();
       if (!overlay || !overlayGrid || !overlayTitle) return;
       overlayTitle.textContent = 'Ver resumen - ' + (title || blockId);
       overlay.classList.add('active'); document.body.classList.add('overlay-open');
-      try {
-        await loadCategoryImages();
-        const lines = await fetchLines(blockId);
-        renderSummary(lines);
-      } catch (e) {
-        console.error(e);
-        overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>';
-      }
+      try { await loadCategoryImages(); const lines = await fetchLines(blockId); renderSummary(lines); }
+      catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
     }
 
-    /* ---------- Utilidades ---------- */
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
-    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
   </script>
 </body>
 </html>
