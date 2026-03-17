@@ -298,6 +298,34 @@
       font-size: 12px;
     }
 
+    /* Overlay de carga proveedores */
+    .prov-loading-overlay {
+      position: fixed; inset: 0; z-index: 12000;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.28);
+      backdrop-filter: blur(6px);
+    }
+    .prov-loading-card {
+      background: #fff; border-radius: 16px;
+      padding: 18px 20px; max-width: 420px; width: 92%;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.16);
+      text-align: center; color: #1f2a36;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .prov-loading-bounce {
+      width: 56px; height: 56px; margin: 0 auto;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #3f705d, #2e5e4e);
+      animation: prov-bounce 0.9s ease-in-out infinite;
+    }
+    @keyframes prov-bounce {
+      0% { transform: translateY(0); }
+      40% { transform: translateY(-10px) scale(1.03); }
+      100% { transform: translateY(0); }
+    }
+    .prov-loading-title { font-weight: 800; font-size: 16px; margin: 0; }
+    .prov-loading-text  { font-size: 14px; color: #4a5568; margin: 0; line-height: 1.45; }
+
     @media (max-width: 880px) {
       .actions { flex-wrap: wrap; }
       .actions button { width: 100%; justify-content: center; min-width: 0; }
@@ -412,9 +440,18 @@
     </div>
   </div>
 
+  <!-- Overlay de carga proveedores -->
+  <div id="prov-loading-overlay" class="prov-loading-overlay" aria-hidden="true">
+    <div class="prov-loading-card">
+      <div class="prov-loading-bounce"></div>
+      <p class="prov-loading-title">Cargando proveedores…</p>
+      <p class="prov-loading-text" id="prov-loading-phrase"></p>
+    </div>
+  </div>
+
   <!-- Layout global (sidebar/topbar) -->
   <script src="../../js/menuConfig.js"></script>
-<script src="../../js/layout.js"></script>
+  <script src="../../js/layout.js"></script>
 
   <!-- Scripts originales (mantener después de layout.js) -->
   <script type="module">
@@ -458,6 +495,37 @@
     let modalEditId = null;
 
     const DEMO_KEY = 'byt_demo_providers_v1';
+
+    /* Frases y overlay de carga */
+    const FRASES_PROV = [
+      "Dando tiempo a que lleguen los proveedores puntuales.",
+      "Afinando la lista, sin apurarse, para que todo cargue bien.",
+      "Un refresh menos, una carga más tranquila.",
+      "Deja que los datos se acomoden, ya vienen.",
+      "Respira hondo: la lista se está armando.",
+      "Los proveedores están pasando lista, dame un segundo."
+    ];
+    const pickProvPhrase = () => FRASES_PROV[Math.floor(Math.random() * FRASES_PROV.length)];
+
+    const provOverlay = document.getElementById('prov-loading-overlay');
+    const provPhraseEl = document.getElementById('prov-loading-phrase');
+    let provOverlayLocks = 0;
+
+    function showProvOverlay(customText) {
+      if (!provOverlay) return;
+      provPhraseEl.textContent = customText || pickProvPhrase();
+      provOverlayLocks++;
+      provOverlay.style.display = 'flex';
+      provOverlay.setAttribute('aria-hidden', 'false');
+    }
+    function hideProvOverlay() {
+      if (!provOverlay) return;
+      provOverlayLocks = Math.max(0, provOverlayLocks - 1);
+      if (provOverlayLocks === 0) {
+        provOverlay.style.display = 'none';
+        provOverlay.setAttribute('aria-hidden', 'true');
+      }
+    }
 
     function escapeHtml(s) {
       if (s === undefined || s === null) return '';
@@ -507,25 +575,26 @@
     }
 
     async function loadAdminProviders({ forceDemo = false } = {}) {
+      showProvOverlay();               // muestra overlay con frase
       tbody.innerHTML = '<tr><td colspan="5">Cargando...</td></tr>';
-      if (forceDemo || isDemoMode()) {
-        loadDemoDataToTable();
-        return;
-      }
-
-      const ok = await tryEnsureSupabase(3000);
-      if (!ok) {
-        clearBanner();
-        showBanner('No hay cliente de persistencia disponible (Supabase). Puedes conectar manualmente credenciales temporales o activar el Modo Demo.', 'error');
-        showConnectPanel();
-        tbody.innerHTML = `<tr><td colspan="5" class="muted">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
-        return;
-      }
-
-      clearBanner();
-      hideConnectPanel();
-
       try {
+        if (forceDemo || isDemoMode()) {
+          loadDemoDataToTable();
+          return;
+        }
+
+        const ok = await tryEnsureSupabase(3000);
+        if (!ok) {
+          clearBanner();
+          showBanner('No hay cliente de persistencia disponible (Supabase). Puedes conectar manualmente credenciales temporales o activar el Modo Demo.', 'error');
+          showConnectPanel();
+          tbody.innerHTML = `<tr><td colspan="5" class="muted">No hay datos disponibles porque no hay conexión al servicio de persistencia.</td></tr>`;
+          return;
+        }
+
+        clearBanner();
+        hideConnectPanel();
+
         const { listProviders } = apiModule;
         const { data, error } = await listProviders({ onlyActive: false });
         if (error) {
@@ -548,6 +617,8 @@
       } catch (e) {
         tbody.innerHTML = `<tr><td colspan="5" style="color:darkred">Error inesperado: ${escapeHtml(e.message || String(e))}</td></tr>`;
         console.error('loadAdminProviders unexpected', e);
+      } finally {
+        hideProvOverlay();             // se oculta siempre
       }
     }
 
