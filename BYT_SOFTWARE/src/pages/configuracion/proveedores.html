@@ -527,6 +527,9 @@
       }
     }
 
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const MIN_OVERLAY_MS = 3000;
+
     function escapeHtml(s) {
       if (s === undefined || s === null) return '';
       return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
@@ -575,6 +578,7 @@
     }
 
     async function loadAdminProviders({ forceDemo = false } = {}) {
+      const start = performance.now();
       showProvOverlay();               // muestra overlay con frase
       tbody.innerHTML = '<tr><td colspan="5">Cargando...</td></tr>';
       try {
@@ -618,7 +622,11 @@
         tbody.innerHTML = `<tr><td colspan="5" style="color:darkred">Error inesperado: ${escapeHtml(e.message || String(e))}</td></tr>`;
         console.error('loadAdminProviders unexpected', e);
       } finally {
-        hideProvOverlay();             // se oculta siempre
+        const elapsed = performance.now() - start;
+        if (elapsed < MIN_OVERLAY_MS) {
+          await wait(MIN_OVERLAY_MS - elapsed);
+        }
+        hideProvOverlay();             // se oculta siempre después de 3s mínimo
       }
     }
 
