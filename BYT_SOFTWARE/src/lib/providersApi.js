@@ -1,7 +1,7 @@
 // Wrapper CRUD para tabla public.providers
 // Ruta: BYT_SOFTWARE/src/lib/providersApi.js
 // Usa el mismo cliente de supabase ya inicializado en la app para evitar duplicados de GoTrueClient.
-import { supabase, ensureSupabase, getClient } from '../js/supabaseBrowserClient.js';
+import { supabase, ensureSupabase, getClient } from '../js/supabaseBrowserClient.js?v=2026-03-17';
 
 /**
  * Obtiene el cliente real (no el proxy) o devuelve error si no está inicializado.
