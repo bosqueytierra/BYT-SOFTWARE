@@ -450,13 +450,13 @@
   </div>
 
   <!-- Layout global (sidebar/topbar) -->
-  <script src="../../js/menuConfig.js"></script>
-  <script src="../../js/layout.js"></script>
+  <script src="../../js/menuConfig.js?v=2026-03-17"></script>
+  <script src="../../js/layout.js?v=2026-03-17"></script>
 
   <!-- Scripts originales (mantener después de layout.js) -->
   <script type="module">
     import * as apiModule from '../../lib/providersApi.js';
-    import { ensureSupabase, initializeSupabase } from '../../js/supabaseBrowserClient.js';
+    import { ensureSupabase, initializeSupabase } from '../../js/supabaseBrowserClient.js?v=2026-03-17';
 
     try {
       window.providersApi = apiModule;
@@ -496,14 +496,38 @@
 
     const DEMO_KEY = 'byt_demo_providers_v1';
 
-    /* Frases y overlay de carga */
+    /* Frases y overlay de carga (30 frases) */
     const FRASES_PROV = [
-      "Dando tiempo a que lleguen los proveedores puntuales.",
-      "Afinando la lista, sin apurarse, para que todo cargue bien.",
-      "Un refresh menos, una carga más tranquila.",
-      "Deja que los datos se acomoden, ya vienen.",
-      "Respira hondo: la lista se está armando.",
-      "Los proveedores están pasando lista, dame un segundo."
+      "Seleccionando proveedores que realmente responden.",
+      "Buscando aliados, no solo contactos.",
+      "Filtrando proveedores con criterio.",
+      "Eligiendo proveedores que cumplen en terreno.",
+      "Priorizando proveedores confiables.",
+      "Armando una red de proveedores sólidos.",
+      "Dejando entrar solo a los proveedores correctos.",
+      "Revisando proveedores uno a uno.",
+      "Construyendo una base de proveedores confiables.",
+      "Alineando proveedores con el estándar del proyecto.",
+      "Proveedores que suman, no que complican.",
+      "Seleccionando proveedores que entienden el oficio.",
+      "Buscando proveedores que no fallen en la entrega.",
+      "Validando proveedores antes de avanzar.",
+      "Priorizando experiencia sobre promesas.",
+      "Ordenando proveedores para trabajar sin fricción.",
+      "Eligiendo proveedores con respaldo real.",
+      "Afinando la lista de proveedores clave.",
+      "Proveedores que responden cuando importa.",
+      "Construyendo relaciones con proveedores serios.",
+      "Dejando fuera a los proveedores que no cumplen.",
+      "Proveedores alineados con la calidad del proyecto.",
+      "Seleccionando proveedores que hacen la diferencia.",
+      "Buscando proveedores que trabajen a la altura.",
+      "Preparando una red de proveedores confiable.",
+      "Filtrando proveedores con estándar de taller.",
+      "Proveedores que entienden los tiempos de obra.",
+      "Ajustando la lista de proveedores correctos.",
+      "Proveedores que sostienen el resultado final.",
+      "Deja que los datos se acomoden, ya vienen."
     ];
     const pickProvPhrase = () => FRASES_PROV[Math.floor(Math.random() * FRASES_PROV.length)];
 
