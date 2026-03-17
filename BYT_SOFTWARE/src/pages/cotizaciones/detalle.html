@@ -9,14 +9,15 @@
 
   <style>
     :root {
-      --bg: #f6f7f8;
+      --bg: #f7f8fa;
       --card: #ffffff;
-      --border: #e6e8eb;
-      --text: #1f242b;
-      --muted: #6a7480;
-      --primary: #2e5e4e;
-      --accent: #dfe3e6;
-      --shadow: 0 8px 22px rgba(0,0,0,0.05);
+      --border: #e4e7ec;
+      --text: #1f242c;
+      --muted: #6b7280;
+      --primary: #5f6673;          /* gris medio para acentos */
+      --accent: #eef1f4;           /* gris claro para fondos */
+      --accent-strong: #dadfe5;
+      --shadow: 0 8px 20px rgba(0,0,0,0.04);
       --viewer-scale: 1;
     }
 
@@ -33,50 +34,52 @@
       border: 1px solid var(--border);
       background: #fff;
       color: var(--text);
-      padding: 10px 14px;
-      border-radius: 12px;
+      padding: 9px 14px;
+      border-radius: 10px;
       cursor: pointer;
       font-weight: 600;
       font-size: 13px;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.05);
     }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
-    .btn-primary { background: #2f7a4f; color: #fff; border-color: #2f7a4f; }
-    .btn-secondary { color: #2f7a4f; border-color: #d7dcdc; background: #fff; }
-    .btn-ghost { background: #f0f3f5; color: var(--text); }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,0,0,0.08); border-color: #d0d5dd; }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: #545c6a; }
+    .btn-secondary { color: var(--primary); border-color: #d0d5dd; background: #fff; }
+    .btn-ghost { background: var(--accent); color: var(--text); border-color: var(--accent); }
 
     .card {
       background: var(--card);
-      border: 1px solid #e9edef;
+      border: 1px solid var(--border);
       border-radius: 14px;
       padding: 18px;
       box-shadow: var(--shadow);
     }
-    .card-title { margin: 0 0 10px 0; color: var(--primary); font-size: 18px; font-weight: 700; }
+    .card-title { margin: 0 0 10px 0; color: var(--primary); font-size: 17px; font-weight: 700; }
 
     #topbar-kpis { display: none !important; }
 
     .detalle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .detalle-item { padding: 12px; background: #f8faf9; border-radius: 10px; border: 1px solid #e8ecef; }
+    .detalle-item { padding: 12px; background: var(--accent); border-radius: 10px; border: 1px solid var(--border); }
     .detalle-label { font-size: 12px; color: var(--muted); letter-spacing: 0.2px; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
     .detalle-value { font-size: 15px; color: var(--text); font-weight: 600; word-break: break-word; }
 
     .fin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .fin-card { background: #f8faf9; border: 1px solid #e4e9ec; border-radius: 12px; padding: 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.04); }
+    .fin-card { background: var(--accent); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.03); }
     .fin-card h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.3px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
     .fin-card .fin-value { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
-    .fin-card.highlight { background: #e3e7ea; color: #1f242b; border-color: #d2d7dc; }
+    .fin-card.highlight { background: var(--accent-strong); border-color: var(--border); }
 
     .no-data { color:#666; text-align:center; padding:18px; }
 
     /* Archivos */
     .files-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
     .file-card { border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
-    .file-preview { background: #f4f6f7; display: grid; place-items: center; min-height: 180px; }
+    .file-preview { background: var(--accent); display: grid; place-items: center; min-height: 180px; }
     .file-preview img { max-width: 100%; max-height: 320px; object-fit: contain; display: block; }
     .file-body { padding: 12px; display: flex; flex-direction: column; gap: 6px; }
     .file-name { font-weight: 700; color: var(--text); margin: 0; }
@@ -98,16 +101,16 @@
     .viewer-nav { position: absolute; top: 50%; transform: translateY(-50%); display: flex; width: 100%; justify-content: space-between; pointer-events: none; }
     .viewer-btn { pointer-events: all; background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; margin: 0 10px; font-size: 20px; }
 
-    .valores-block { margin-bottom: 18px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,0.04); position: relative; }
-    .valores-head { display: block; background: #eef1f3; color: #1f2430; padding: 12px 14px; font-weight: 700; border-radius: 12px 12px 0 0; border-bottom: 1px solid #e1e6ea; margin: 0 -14px -1px -14px; }
+    .valores-block { margin-bottom: 18px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,0.04); position: relative; }
+    .valores-head { display: block; background: var(--accent); color: #2d3440; padding: 12px 14px; font-weight: 700; border-bottom: 1px solid var(--border); margin: 0 -14px -1px -14px; }
     .valores-body { background: #fff; padding: 14px; }
-    .valores-footer { background: #f7f9fb; color: #1f3b2e; padding: 10px 14px; font-weight: 700; display: flex; gap: 14px; flex-wrap: wrap; }
+    .valores-footer { background: #f4f6f9; color: #2e3540; padding: 10px 14px; font-weight: 700; display: flex; gap: 14px; flex-wrap: wrap; }
 
     .table-container { overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; border: 1px solid #e6efe9; }
-    th { background: #f5f7f6; color: #2e6b57; font-weight: 700; text-align: left; }
-    .subtotal-row { background: rgba(46,94,78,0.06); font-weight: 700; }
+    th, td { padding: 10px; border: 1px solid #e8ebef; }
+    th { background: #f3f5f7; color: #48505a; font-weight: 700; text-align: left; }
+    .subtotal-row { background: #f1f3f5; font-weight: 700; }
 
     .valores-table { table-layout: fixed; width: 100%; }
     .valores-table th:nth-child(1), .valores-table td:nth-child(1) { width: 22%; }
@@ -122,13 +125,13 @@
 
     @media (max-width: 640px) { .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
 
-    /* ===== Estilos de impresión modernos ===== */
-    .print-view { display: none; color: #2a2f38; padding: 26px 28px; font-size: 12px; }
+    /* ===== Estilos de impresión (gris) ===== */
+    .print-view { display: none; color: #2a2f38; padding: 24px 26px; font-size: 12px; }
     .print-header {
       display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 1px solid #dcdfe3; padding-bottom: 10px; margin-bottom: 14px;
+      border-bottom: 1px solid #dfe3e8; padding-bottom: 10px; margin-bottom: 14px;
     }
-    .print-logo { font-weight: 700; font-size: 20px; color: #2f3b45; letter-spacing: 0.2px; }
+    .print-logo { font-weight: 700; font-size: 19px; color: #2f3b45; letter-spacing: 0.2px; }
     .print-meta { text-align: right; font-size: 12px; color: #6a7480; line-height: 1.4; }
     .print-title { font-size: 15px; font-weight: 700; margin: 14px 0 8px; color: #2f3b45; }
     .print-grid {
@@ -801,7 +804,7 @@
             <div class="file-body">
               <p class="file-name">${escapeHtml(name)} ${hasNote ? '💬' : ''}</p>
               <div class="file-meta">${escapeHtml(file.content_type || '')} ${sizeMB ? '· ' + sizeMB : ''}</div>
-              ${hasNote ? `<div class="file-meta" style="color:#35564c;">${escapeHtml(file.nota)}</div>` : ''}
+              ${hasNote ? `<div class="file-meta" style="color:#4a5563;">${escapeHtml(file.nota)}</div>` : ''}
               <div class="file-actions">
                 <button class="btn btn-secondary" onclick="openViewer(${idx})">Ver</button>
                 <a class="btn btn-secondary" href="${file.signedUrl || '#'}" target="_blank" rel="noopener" download>Descargar</a>
