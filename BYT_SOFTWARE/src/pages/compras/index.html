@@ -13,7 +13,7 @@
     .header-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; box-shadow:var(--shadow); display:flex; justify-content:space-between; gap:14px; align-items:center; }
     .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:var(--shadow); width:100%; }
     .block-list { display:flex !important; flex-direction:column; gap:14px; width:100%; }
-    .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
     .meta { color:var(--muted); font-size:13px; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
     .chip { background:#eef2f5; color:#2d2d2d; border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
@@ -47,12 +47,10 @@
     .item-body h4 { margin:0; font-size:16px; }
     .item-body .muted { color:#6c7a86; font-size:13px; }
 
-    /* Column colors (indices after moving Obs) */
-    table.lc-table tbody td:nth-child(3), /* Proveedor */
-    table.lc-table tbody td:nth-child(5), /* Categoría */
-    table.lc-table tbody td:nth-child(8)  /* Unidad */
-      { background:#e8eaed; }
-    table.lc-table tbody td:nth-child(6) { background:#daf2d0; } /* Producto */
+    table.lc-table tbody td:nth-child(3),
+    table.lc-table tbody td:nth-child(5),
+    table.lc-table tbody td:nth-child(8) { background:#e8eaed; }
+    table.lc-table tbody td:nth-child(6) { background:#daf2d0; }
 
     .action-cell { display:flex; gap:6px; justify-content:center; align-items:center; }
     .icon-btn {
@@ -67,6 +65,10 @@
     .estado-comprado { background:#d9ecc1 !important; color:#1f2a37 !important; }
     .estado-stock     { background:#35714e !important; color:#ffffff !important; }
     .estado-porcomprar{ background:#a22116 !important; color:#ffffff !important; }
+
+    /* Secciones */
+    .section-title { margin:12px 0 4px; font-weight:800; color:#1f2430; }
+    .small-label { font-size:13px; color:#374151; font-weight:700; margin-top:6px; display:inline-block; }
   </style>
 </head>
 <body>
@@ -81,8 +83,17 @@
       </div>
     </div>
 
-    <div id="blocksContainer" class="block-list"></div>
-    <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
+    <div id="sectionPorEntregar">
+      <h3 class="section-title">Proyectos por entregar</h3>
+      <div id="blocksContainer" class="block-list"></div>
+      <div id="emptyState" class="empty" style="display:none;">No hay bloques de compras aún.</div>
+    </div>
+
+    <div id="sectionEntregados" style="margin-top:18px;">
+      <h3 class="section-title">Proyectos entregados</h3>
+      <div id="blocksEntregados" class="block-list"></div>
+      <div id="emptyEntregados" class="empty" style="display:none;">No hay proyectos entregados.</div>
+    </div>
   </div>
 
   <div id="overlay" class="overlay">
@@ -123,7 +134,7 @@
   <script type="module">
     import * as catApi from '../../lib/cate_material.js';
 
-    let blocksContainer, emptyState, statBloques;
+    let blocksContainer, blocksEntregados, emptyState, emptyEntregados, statBloques;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     const TABLE = 'purchase_lines';
@@ -135,13 +146,21 @@
     let currentBlockId = null;
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
 
+    // Datos traídos desde VENTAS / COTIZACIONES
+    const projectPartsMap = new Map();        // cotizacion_id => ['Partida 1', ...]
+    const projectAllDoneMap = new Map();      // cotizacion_id => boolean (todas completadas)
+    const projectFechaLimiteMap = new Map();  // cotizacion_id => 'YYYY-MM-DD'
+    const projectAprobDateMap = new Map();    // cotizacion_id => created_at de cotización (aprobación)
+
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
 
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
       blocksContainer = pickLast('#blocksContainer');
+      blocksEntregados = pickLast('#blocksEntregados');
       emptyState = pickLast('#emptyState');
+      emptyEntregados = pickLast('#emptyEntregados');
       statBloques = pickLast('#statBloques');
       overlay = pickLast('#overlay');
       overlayGrid = pickLast('#overlayGrid');
@@ -174,6 +193,7 @@
         const client = await waitForClient();
         if (!window.supabase && client) window.supabase = client;
         await loadCatalogs();
+        await loadSalesMeta();   // <-- nuevas metas desde ventas/cotizaciones
         await loadBlocks();
       } catch (e) {
         console.error(e);
@@ -192,6 +212,7 @@
       if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
     });
 
+    /* ---------- Datos base (catálogos y materiales) ---------- */
     async function loadCatalogs() {
       const client = await waitForClient();
       const [enc, uni, mod, est, cats] = await Promise.all([
@@ -199,7 +220,7 @@
         client.from('purchase_catalog_unidades').select('*').order('nombre'),
         client.from('purchase_catalog_modos_compra').select('*').order('nombre'),
         client.from('purchase_catalog_estados_pago').select('*').order('nombre'),
-        client.from('material_categories').select('name').order('name') // categorías vigentes
+        client.from('material_categories').select('name').order('name')
       ]);
       catEncargados = enc.data || [];
       catUnidades   = uni.data || [];
@@ -213,6 +234,55 @@
       materiales = mats || [];
     }
 
+    /* ---------- Metadatos desde VENTAS y COTIZACIONES ---------- */
+    async function loadSalesMeta() {
+      const client = await waitForClient();
+
+      // Ventas: para partidas y estados
+      const { data: ventasRows, error: errV } = await client
+        .from('ventas')
+        .select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
+      if (errV) console.warn('ventas meta', errV);
+
+      projectPartsMap.clear();
+      projectAllDoneMap.clear();
+      projectFechaLimiteMap.clear();
+
+      (ventasRows || []).forEach(v => {
+        const key = v.cotizacion_id;
+        if (!key) return;
+        const name = v.partida_nombre || v.partida || '';
+        if (!projectPartsMap.has(key)) projectPartsMap.set(key, []);
+        if (name) projectPartsMap.get(key).push(name);
+
+        const st = (v.estado || '').toLowerCase();
+        const done = st === 'completada';
+        if (!projectAllDoneMap.has(key)) projectAllDoneMap.set(key, true);
+        if (!done) projectAllDoneMap.set(key, false);
+
+        if (v.fecha_entrega_limite && !projectFechaLimiteMap.has(key)) {
+          projectFechaLimiteMap.set(key, v.fecha_entrega_limite);
+        }
+      });
+
+      // Cotizaciones: para fecha límite y fecha aprobación (created_at)
+      const { data: cotRows, error: errCot } = await client
+        .from('cotizaciones')
+        .select('id, created_at, fecha_entrega_limite')
+        .eq('estado', 'aprobada');
+      if (errCot) console.warn('cotizaciones meta', errCot);
+
+      (cotRows || []).forEach(c => {
+        if (c.id) {
+          if (c.created_at) projectAprobDateMap.set(c.id, c.created_at);
+          if (c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) {
+            projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
+          }
+        }
+      });
+    }
+
+    /* ---------- Bloques ---------- */
     function filterBlocks(blocks, approvedSet) {
       if (!approvedSet || approvedSet.size === 0) return blocks || [];
       return (blocks || []).filter(b => {
@@ -255,6 +325,7 @@
           ...b,
           total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
         }));
+
         renderBlocks(merged);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -265,44 +336,85 @@
 
     function renderBlocks(blocks) {
       ensureEls();
-      if (!blocksContainer || !statBloques || !emptyState) return;
+      if (!blocksContainer || !blocksEntregados || !statBloques || !emptyState || !emptyEntregados) return;
       statBloques.textContent = `Bloques: ${blocks.length}`;
-      if (!blocks.length) {
+
+      const ahora = Date.now();
+      const fmtDiff = (ms, ceil=false) => {
+        if (!ms) return '—';
+        const d = ms / (1000*60*60*24);
+        return ceil ? Math.ceil(d) : Math.floor(d);
+      };
+
+      const cards = blocks.map(b => {
+        const parts = projectPartsMap.get(b.proyecto_id) || [];
+        const partesLabel = parts.length ? parts.join(' · ') : 'Sin partidas';
+        const fechaLim = projectFechaLimiteMap.get(b.proyecto_id) || b.fecha_entrega_limite || '';
+        const aprob = projectAprobDateMap.get(b.proyecto_id);
+        const diasTrans = aprob ? fmtDiff(ahora - new Date(aprob).getTime()) : '—';
+        const diasRest = fechaLim ? fmtDiff(new Date(fechaLim).getTime() - ahora, true) : '—';
+
+        const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
+        const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
+        const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
+
+        return {
+          isDone: projectAllDoneMap.get(b.proyecto_id) === true,
+          html: `
+            <div class="card">
+              <div class="block-header">
+                <div>
+                  <h3 style="margin:0 0 4px;">${title}</h3>
+                  <div class="meta">Partidas: ${escapeHtml(partesLabel)}</div>
+                  <div class="meta" style="margin-top:6px;"><strong>Fecha de entrega límite:</strong> ${fechaLim ? escapeHtml(fechaLim) : '—'}</div>
+                </div>
+                <div style="display:flex; gap:6px;">
+                  <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
+                  <button class="btn btn-primary" data-block-summary data-block-id="${b.id}" data-block-title="${title}">Ver resumen</button>
+                </div>
+              </div>
+              <div class="chips" style="margin:8px 0;">
+                <span class="chip">Total cobrado: ${fmtCLP(b.total_cobrado)}</span>
+                <span class="chip">Comprado: ${fmtCLP(b.total_comprado)}</span>
+                <span class="chip">Por comprar: ${fmtCLP(b.total_por_comprar)}</span>
+                <span class="chip">Avance: ${pct}%</span>
+              </div>
+              <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; margin-top:8px;">
+                <div>
+                  <div class="small-label">Días transcurridos desde el depósito</div>
+                  <div style="font-size:18px; font-weight:800;">${diasTrans}</div>
+                </div>
+                <div>
+                  <div class="small-label">Días restantes para fecha de entrega</div>
+                  <div style="font-size:18px; font-weight:800;">${diasRest}</div>
+                </div>
+              </div>
+            </div>
+          `
+        };
+      });
+
+      const porEntregar = cards.filter(c => !c.isDone).map(c => c.html).join('');
+      const entregados  = cards.filter(c => c.isDone).map(c => c.html).join('');
+
+      if (!porEntregar) {
         emptyState.style.display = 'block';
         blocksContainer.innerHTML = '';
-        return;
+      } else {
+        emptyState.style.display = 'none';
+        blocksContainer.innerHTML = porEntregar;
       }
-      emptyState.style.display = 'none';
-      blocksContainer.innerHTML = blocks.map(b => blockCard(b)).join('');
+
+      if (!entregados) {
+        emptyEntregados.style.display = 'block';
+        blocksEntregados.innerHTML = '';
+      } else {
+        emptyEntregados.style.display = 'none';
+        blocksEntregados.innerHTML = entregados;
+      }
     }
 
-    function blockCard(b) {
-      const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
-      const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
-      const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
-      const estadoLabel = escapeHtml(b.cotizacion_estado || b.estado || 'aprobada');
-      return `
-        <div class="card">
-          <div class="block-header">
-            <div>
-              <h3 style="margin:0 0 4px;">${title}</h3>
-              <div class="meta">Estado: ${estadoLabel} · Creado: ${formatDate(b.created_at)} · Coti: ${escapeHtml(b.proyecto_id || '')}</div>
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
-              <button class="btn btn-primary" data-block-summary data-block-id="${b.id}" data-block-title="${title}">Ver resumen</button>
-            </div>
-          </div>
-          <div class="chips" style="margin:8px 0;">
-            <span class="chip">Total cobrado: ${fmtCLP(b.total_cobrado)}</span>
-            <span class="chip">Comprado: ${fmtCLP(b.total_comprado)}</span>
-            <span class="chip">Por comprar: ${fmtCLP(b.total_por_comprar)}</span>
-            <span class="chip">Avance: ${pct}%</span>
-          </div>
-        </div>
-      `;
-    }
-
+    /* ---------- Helpers de opciones ---------- */
     function makeOptions(list, valKey='nombre', labelKey='nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
@@ -345,6 +457,7 @@
       );
     }
 
+    /* ---------- CRUD líneas ---------- */
     function addEmptyRow() {
       if (!currentBlockId) return;
       currentRows.push({ id: null, block_id: currentBlockId, placeholder: true, _saving: false });
@@ -401,6 +514,7 @@
       } catch (e) { console.error('update block totals', e); }
     }
 
+    /* ---------- Render grid líneas ---------- */
     function renderGrid(rows) {
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
@@ -414,7 +528,7 @@
         </thead>
       `;
 
-      const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c }))); // usar material_categories
+      const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c })));
       const bodyRows = rows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
         return `
@@ -473,6 +587,7 @@
       overlayLCGrid._listenersSet = true;
     }
 
+    /* ---------- Eventos de edición ---------- */
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
@@ -575,6 +690,7 @@
       else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar');
     }
 
+    /* ---------- Resumen / overlays ---------- */
     async function loadCategoryImages() {
       try {
         const { data } = await catApi.listCategoriesWithImages();
@@ -653,8 +769,8 @@
       }
     }
 
+    /* ---------- Utilidades ---------- */
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
-    function formatDate(d) { return d ? new Date(d).toLocaleDateString('es-CL') : '-'; }
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   </script>
 </body>
