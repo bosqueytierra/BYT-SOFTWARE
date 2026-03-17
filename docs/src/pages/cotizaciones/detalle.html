@@ -14,10 +14,11 @@
       --border: #e4e7ec;
       --text: #1f242c;
       --muted: #6b7280;
-      --primary: #5f6673;
+      --primary: #cfbca5;          /* nuevo tono arena */
+      --primary-soft: #e6d8c5;      /* difuminado para hovers/fondos suaves */
       --accent: #eef1f4;
       --accent-strong: #dadfe5;
-      --green-soft: #dfe7dd; /* encabezados de tabla */
+      --green-soft: #e4e7e1;        /* encabezados de tabla más claros */
       --shadow: 0 8px 20px rgba(0,0,0,0.04);
       --viewer-scale: 1;
     }
@@ -38,13 +39,14 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: transform 0.12s, box-shadow 0.12s, background 0.12s, border-color 0.12s;
+      transition: transform 0.12s, box-shadow 0.12s, background 0.12s, border-color 0.12s, color 0.12s;
       box-shadow: 0 3px 10px rgba(0,0,0,0.05);
     }
     .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,0,0,0.08); border-color: #d0d5dd; }
     .btn-ghost { background: var(--accent); color: var(--text); border-color: var(--accent); }
-    .btn-primary { background: var(--primary); color:#fff; border-color: var(--primary); }
-    .btn-primary:hover { background:#545c6a; }
+    .btn-primary { background: var(--primary); color:#3d352a; border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-soft); color:#2f271f; }
+    .btn-secondary { color: #3d352a; border-color: #d0d5dd; background: #fff; }
 
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
     .card-title { margin: 0 0 10px 0; color: var(--primary); font-size: 17px; font-weight: 700; }
@@ -59,13 +61,13 @@
     .fin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
     .fin-card { background:var(--accent); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:0 6px 14px rgba(0,0,0,0.03); }
     .fin-card h4 { margin:0 0 6px; font-size:12px; letter-spacing:0.3px; color:var(--muted); font-weight:600; text-transform:uppercase; }
-    .fin-card .fin-value { margin:0; font-size:17px; font-weight:700; color:var(--text); }
-    .fin-card.highlight { background:var(--accent-strong); }
+    .fin-card .fin-value { margin:0; font-size:17px; font-weight:700; color: var(--text); }
+    .fin-card.highlight { background: var(--primary-soft); border-color: var(--border); }
 
     .table-container { overflow-x:auto; }
     table { width:100%; border-collapse:collapse; }
     th, td { padding:10px; border:1px solid #e8ebef; }
-    th { background: var(--green-soft); color:#32403c; font-weight:700; text-align:left; }
+    th { background: var(--green-soft); color:#3d352a; font-weight:700; text-align:left; }
     .subtotal-row { background:#f4f6f8; font-weight:700; }
 
     /* print isolation */
@@ -845,7 +847,7 @@
         });
       }
 
-      // --------- NUEVO: Exportar PDF vectorial (texto, no imagen) ----------
+      // --------- Exportar PDF vectorial (texto) ----------
       async function exportarPDF() {
         const btn = document.getElementById('btn-exportar-pdf');
         if (btn) btn.disabled = true;
@@ -868,7 +870,6 @@
           doc.text(`Fecha: ${fecha}`, marginX, y);
           doc.text(`ID: ${cotizacionId || ''}`, marginX + 200, y); y += 18;
 
-          // Resumen proyecto
           doc.setFont('helvetica','bold'); doc.setFontSize(12);
           doc.text('Resumen del proyecto', marginX, y); y += 10;
           doc.setFont('helvetica','normal'); doc.setFontSize(10);
@@ -882,7 +883,6 @@
           info.forEach(row => { doc.text(`${row[0]}: ${row[1]}`, marginX, y); y += 12; });
           y += 6;
 
-          // Resumen financiero tabla
           const resumenRows = [
             ['Total materiales', formatPrecio(t.totalMateriales)],
             ['Factor general', `${t.factorGeneral}x`],
@@ -902,7 +902,6 @@
           });
           y = doc.lastAutoTable.finalY + 16;
 
-          // Materiales
           const mats = data.materiales || {};
           const extrasMap = {
             quincalleria: data.quincalleriaExtras || [],
@@ -958,7 +957,6 @@
             if (filas.length) addMatTable(friendly[cat] || cat, filas, subtotal);
           });
 
-          // Valores traspasados
           const trasp = data.valoresTraspasados || {};
           const extras = data.traspasosExtras || [];
           doc.setFont('helvetica','bold'); doc.setFontSize(12);
@@ -1058,7 +1056,6 @@
         }, 300);
       };
 
-      // para Ctrl+P sigue existiendo print-view (texto)
       window.prepararImpresion = function() {
         renderPrintView();
         window.print();
