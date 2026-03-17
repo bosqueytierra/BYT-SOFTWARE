@@ -299,6 +299,7 @@
 
     <script type="module">
     import * as catApi from '../../lib/cate_material.js';
+    window.catApi = catApi; // exponer para depurar en consola
 
     let materialsApi = null;
     let unitsApi = null;
@@ -403,7 +404,6 @@
     }
 
     async function fetchCatalog() {
-      // Usa catApi para traer nombre + imagen del catálogo oficial
       const { data, error } = await catApi.listCategoriesWithImages();
       if (error) { console.warn('listCategoriesWithImages error', error); return []; }
       catImagesMap = (data || []).reduce((acc, c) => { acc[c.name] = c.image_url; return acc; }, {});
@@ -415,7 +415,6 @@
         const mod = await import('../../lib/materialsApi.js');
         materialsApi = mod;
         try {
-          // Solo activos
           const res = await materialsApi.listMaterials({ onlyActive: true });
           const catalog = await fetchCatalog();
           catalogNames = catalog;
@@ -443,9 +442,7 @@
 
     function buildCategoriesFromMaterialsArray(arr, catalog=[]) {
       categoriesData = {};
-      // crea todas las categorías del catálogo aunque no tengan materiales
       catalog.forEach(cat => { categoriesData[cat] = []; });
-      // asigna materiales a sus categorías válidas; si alguna no está en catálogo, se ignora
       arr.forEach(m => {
         const cat = m.category || 'Sin categoría';
         if (!categoriesData[cat]) return;
@@ -532,10 +529,16 @@
       if (!nombreCategoria || !nombreCategoria.trim()) return;
       const nombre = nombreCategoria.trim();
       if (categoriesData[nombre]) { toast('Ya existe una categoría con ese nombre','warning'); return; }
-      // crear en catálogo remoto
+
       const res = await catApi.upsertCategoryImage({ name: nombre, file: null });
-      if (res?.error) { toast('Error creando categoría en catálogo','error'); return; }
-      // refrescar catálogo + materiales
+      console.log('[Nueva categoría] payload', { nombre, res });
+
+      if (res?.error) {
+        console.error('upsertCategoryImage error', res.error);
+        toast('Error creando categoría en catálogo','error');
+        return;
+      }
+
       await refreshFromRemote();
       await initDataLayer();
       await loadCategories();
@@ -548,7 +551,6 @@
       if (!nuevoNombre || !nuevoNombre.trim() || nuevoNombre.trim() === categoriaActual) return;
       const nombre = nuevoNombre.trim();
       if (categoriesData[nombre]) { toast('Ya existe una categoría con ese nombre','warning'); return; }
-      // renombrar en catálogo (simple: crear nueva y migrar materiales)
       try {
         const res = await catApi.renameCategory({ oldName: categoriaActual, newName: nombre });
         if (res?.error) throw res.error;
@@ -584,7 +586,6 @@
       const ok = await confirmDialog({ title:'Eliminar categoría', message: mensaje, okText:'Eliminar', cancelText:'Cancelar' });
       if (!ok) return;
       if (remoteAvailable && materialsApi) {
-        // HARD delete de materiales de esa categoría
         for (const m of materiales) {
           if (m.id) {
             try { await materialsApi.deleteMaterial(m.id, { soft: false }); }
@@ -1070,14 +1071,4 @@
     window.consultarMaterialesPorCategoria = consultarMaterialesPorCategoria;
     window.filtrarMateriales = filtrarMateriales;
     window.limpiarFormularioCrear = limpiarFormularioCrear;
-    window.cargarMaterialesParaEditar = cargarMaterialesParaEditar;
-    window.cargarDatosMaterialEditar = cargarDatosMaterialEditar;
-    window.limpiarFormularioEditar = limpiarFormularioEditar;
-    window.cargarMaterialesParaEliminar = cargarMaterialesParaEliminar;
-    window.eliminarCategoria = eliminarCategoria;
-    window.editarCategoria = editarCategoria;
-    window.handleUnidadChange = handleUnidadChange;
-    window.refreshFromRemote = refreshFromRemote;
-    </script>
-</body>
-</html>
+
