@@ -855,19 +855,6 @@
           const marginX = 36;
           let y = 40;
 
-          // paleta arena suave para PDF
-          const sand = [207, 188, 165];      // #cfbca5
-          const sandLight = [232, 223, 211]; // difuminado
-          const textDark = [45, 40, 34];
-
-          const baseTableOpts = {
-            theme: 'grid',
-            styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: textDark },
-            headStyles: { fillColor: sand, textColor: textDark, fontStyle: 'bold' },
-            alternateRowStyles: { fillColor: sandLight },
-            footStyles: { fillColor: sandLight, textColor: textDark, fontStyle: 'bold' }
-          };
-
           const data = getDataSafe();
           if (!data) throw new Error('No hay datos de cotización cargados');
           const t = calcularTotales();
@@ -881,7 +868,7 @@
           doc.text(`Fecha: ${fecha}`, marginX, y);
           doc.text(`ID: ${cotizacionId || ''}`, marginX + 200, y); y += 18;
 
-          // Resumen del proyecto
+          // Resumen proyecto
           doc.setFont('helvetica','bold'); doc.setFontSize(12);
           doc.text('Resumen del proyecto', marginX, y); y += 10;
           doc.setFont('helvetica','normal'); doc.setFontSize(10);
@@ -895,7 +882,7 @@
           info.forEach(row => { doc.text(`${row[0]}: ${row[1]}`, marginX, y); y += 12; });
           y += 6;
 
-          // Resumen financiero
+          // Resumen financiero tabla
           const resumenRows = [
             ['Total materiales', formatPrecio(t.totalMateriales)],
             ['Factor general', `${t.factorGeneral}x`],
@@ -908,9 +895,10 @@
           doc.autoTable({
             startY: y,
             margin: { left: marginX, right: marginX },
-            ...baseTableOpts,
-            head: [['Concepto','Valor']],
-            body: resumenRows
+            styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: '#2a2f38' },
+            headStyles: { fillColor: [223, 231, 221], textColor: 50, halign:'left', fontStyle:'bold' },
+            body: resumenRows,
+            head: [['Concepto','Valor']]
           });
           y = doc.lastAutoTable.finalY + 16;
 
@@ -932,7 +920,6 @@
             led_electricidad: 'LED y electricidad',
             otras_compras: 'Otras compras',
           };
-
           doc.setFont('helvetica','bold'); doc.setFontSize(12);
           doc.text('Materiales', marginX, y); y += 8;
           doc.setFont('helvetica','normal'); doc.setFontSize(9);
@@ -941,13 +928,11 @@
             doc.autoTable({
               startY: y,
               margin: { left: marginX, right: marginX },
-              ...baseTableOpts,
-              head: [[titulo,'Cant.','V.Unit','Subtotal']],
+              styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: '#2a2f38' },
+              headStyles: { fillColor: [223, 231, 221], textColor: 50, halign:'left', fontStyle:'bold' },
               body: filas,
-              foot: [[
-                { content: 'Subtotal', colSpan: 3, styles: { halign: 'right' } },
-                { content: formatPrecio(subtotal), styles: { halign: 'right' } }
-              ]]
+              foot: [[{ content: 'Subtotal', colSpan: 3, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(subtotal), styles:{ halign:'right', fontStyle:'bold' } }]],
+              head: [[titulo,'Cant.','V.Unit','Subtotal']]
             });
             y = doc.lastAutoTable.finalY + 12;
           };
@@ -981,17 +966,19 @@
           doc.setFont('helvetica','normal'); doc.setFontSize(9);
 
           const addTraspTable = (titulo, factor, filas, base) => {
+            const foot = [
+              [{ content: 'Total base', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base), styles:{ halign:'right', fontStyle:'bold' } }],
+              [{ content: `Factor (${factor.toFixed(2)})`, colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base*factor), styles:{ halign:'right', fontStyle:'bold' } }],
+              [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base + base*factor), styles:{ halign:'right', fontStyle:'bold' } }],
+            ];
             doc.autoTable({
               startY: y,
               margin: { left: marginX, right: marginX },
-              ...baseTableOpts,
-              head: [[titulo,'Descripción','Lugar','Cant.','V.Unit','Subtotal']],
+              styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: '#2a2f38' },
+              headStyles: { fillColor: [223, 231, 221], textColor: 50, halign:'left', fontStyle:'bold' },
               body: filas,
-              foot: [
-                [{ content: 'Total base', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base), styles:{ halign:'right' } }],
-                [{ content: `Factor (${factor.toFixed(2)})`, colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base*factor), styles:{ halign:'right' } }],
-                [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base + base*factor), styles:{ halign:'right' } }],
-              ]
+              foot,
+              head: [[titulo,'Descripción','Lugar','Cant.','V.Unit','Subtotal']]
             });
             y = doc.lastAutoTable.finalY + 12;
           };
@@ -1036,14 +1023,15 @@
             doc.autoTable({
               startY: y,
               margin: { left: marginX, right: marginX },
-              ...baseTableOpts,
-              head: [['Valores Traspasados Extra','Descripción','Lugar','Cant.','V.Unit','Subtotal']],
+              styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: '#2a2f38' },
+              headStyles: { fillColor: [223, 231, 221], textColor: 50, halign:'left', fontStyle:'bold' },
               body: filas,
               foot: [
-                [{ content: 'Total extras', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base), styles:{ halign:'right' } }],
-                [{ content: 'Factores extras', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(fac), styles:{ halign:'right' } }],
-                [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base + fac), styles:{ halign:'right' } }],
-              ]
+                [{ content: 'Total extras', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base), styles:{ halign:'right', fontStyle:'bold' } }],
+                [{ content: 'Factores extras', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(fac), styles:{ halign:'right', fontStyle:'bold' } }],
+                [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base + fac), styles:{ halign:'right', fontStyle:'bold' } }],
+              ],
+              head: [['Valores Traspasados Extra','Descripción','Lugar','Cant.','V.Unit','Subtotal']]
             });
             y = doc.lastAutoTable.finalY + 12;
           }
@@ -1110,4 +1098,41 @@
           { l:'TOTAL PROYECTO', v: formatPrecio(t.totalConIVA) },
         ].map(i => `
           <div>
-           `](#)*
+            <div class="print-pill-label">${i.l}</div>
+            <div class="print-pill-value">${escapeHtml(i.v)}</div>
+          </div>
+        `).join('');
+
+        container.innerHTML = `
+          <div class="print-header">
+            <div class="print-logo">Bosque y Tierra · Cotización</div>
+            <div class="print-meta">
+              <div>Fecha: ${escapeHtml(fecha)}</div>
+              <div>ID: ${escapeHtml(cotizacionId || '')}</div>
+            </div>
+          </div>
+          <h2 class="print-title">Resumen del proyecto</h2>
+          <div class="print-grid">${metaGrid}</div>
+
+          <h2 class="print-title">Resumen financiero</h2>
+          <div class="print-grid">${resumenGrid}</div>
+
+          <h2 class="print-title">Materiales</h2>
+          ${document.getElementById('materiales-detalle')?.innerHTML || '<div class="no-data">No se registraron materiales.</div>'}
+
+          <h2 class="print-title">Valores traspasados</h2>
+          ${document.getElementById('valores-detalle')?.innerHTML || '<div class="no-data">No se registraron valores traspasados.</div>'}
+
+          <div style="margin-top:20px; font-size:12px; color:#6a7480;">© 2025 Bosque y Tierra — Sistema interno</div>
+        `;
+      }
+
+      window.cargarCotizacion = cargarCotizacion;
+      window.exportarPDF = exportarPDF;
+      window.mostrarError = mostrarError;
+
+      document.addEventListener('DOMContentLoaded', function() { start(); });
+    })();
+  </script>
+</body>
+</html>
