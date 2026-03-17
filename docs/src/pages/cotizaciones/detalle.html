@@ -397,7 +397,7 @@
         if (!container) return;
         const data = getDataSafe();
         const c = data.cliente || {};
-        const partidas = (data.partidas || []).map(p => (p?.nombre || p || '').trim()).filter(Boolean);
+        the partidas = (data.partidas || []).map(p => (p?.nombre || p || '').trim()).filter(Boolean);
 
         const items = [
           { label: 'Nombre del Proyecto', value: c.nombre_proyecto || 'N/A' },
@@ -857,15 +857,16 @@
 
           // paleta arena suave para PDF
           const sand = [207, 188, 165];      // #cfbca5
-          const sandLight = [232, 223, 211]; // difuminado
+          const sandLight = [232, 223, 211]; // más difuminado
           const textDark = [45, 40, 34];
 
+          // estilos base: pies en arena clara (ya no azul)
           const baseTableOpts = {
             theme: 'grid',
             styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: textDark },
             headStyles: { fillColor: sand, textColor: textDark, fontStyle: 'bold' },
             alternateRowStyles: { fillColor: sandLight },
-            footStyles: { fillColor: sand, textColor: textDark, fontStyle: 'bold' }
+            footStyles: { fillColor: sandLight, textColor: textDark, fontStyle: 'bold' }
           };
 
           const data = getDataSafe();
@@ -940,7 +941,10 @@
               ...baseTableOpts,
               head: [[titulo,'Cant.','V.Unit','Subtotal']],
               body: filas,
-              foot: [[{ content: 'Subtotal', colSpan: 3, styles:{ halign:'right' } }, { content: formatPrecio(subtotal), styles:{ halign:'right' } }]]
+              foot: [[
+                { content: 'Subtotal', colSpan: 3, styles: { halign: 'right', fillColor: sandLight, textColor: textDark, fontStyle: 'bold' } },
+                { content: formatPrecio(subtotal), styles: { halign: 'right', fillColor: sandLight, textColor: textDark, fontStyle: 'bold' } }
+              ]]
             });
             y = doc.lastAutoTable.finalY + 12;
           };
@@ -980,9 +984,18 @@
               head: [[titulo,'Descripción','Lugar','Cant.','V.Unit','Subtotal']],
               body: filas,
               foot: [
-                [{ content: 'Total base', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base), styles:{ halign:'right' } }],
-                [{ content: `Factor (${factor.toFixed(2)})`, colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base*factor), styles:{ halign:'right' } }],
-                [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base + base*factor), styles:{ halign:'right' } }],
+                [
+                  { content: 'Total base', colSpan: 5, styles: { halign:'right', fillColor: sandLight, textColor: textDark, fontStyle: 'bold' } },
+                  { content: formatPrecio(base), styles: { halign:'right', fillColor: sandLight, textColor: textDark, fontStyle: 'bold' } }
+                ],
+                [
+                  { content: `Factor (${factor.toFixed(2)})`, colSpan: 5, styles: { halign:'right', fillColor: sandLight, textColor: textDark, fontStyle: 'bold' } },
+                  { content: formatPrecio(base*factor), styles: { halign:'right', fillColor: sandLight, textColor: textDark, fontStyle: 'bold' } }
+                ],
+                [
+                  { content: 'Total con factor', colSpan: 5, styles: { halign:'right', fillColor: sandLight, textColor: textDark, fontStyle: 'bold' } },
+                  { content: formatPrecio(base + base*factor), styles: { halign:'right', fillColor: sandLight, textColor: textDark, fontStyle: 'bold' } }
+                ]
               ]
             });
             y = doc.lastAutoTable.finalY + 12;
@@ -1032,9 +1045,9 @@
               head: [['Valores Traspasados Extra','Descripción','Lugar','Cant.','V.Unit','Subtotal']],
               body: filas,
               foot: [
-                [{ content: 'Total extras', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base), styles:{ halign:'right' } }],
-                [{ content: 'Factores extras', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(fac), styles:{ halign:'right' } }],
-                [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right' } }, { content: formatPrecio(base + fac), styles:{ halign:'right' } }],
+                [{ content: 'Total extras', colSpan: 5, styles:{ halign:'right', fillColor: sandLight, textColor: textDark, fontStyle:'bold' } }, { content: formatPrecio(base), styles:{ halign:'right', fillColor: sandLight, textColor: textDark, fontStyle:'bold' } }],
+                [{ content: 'Factores extras', colSpan: 5, styles:{ halign:'right', fillColor: sandLight, textColor: textDark, fontStyle:'bold' } }, { content: formatPrecio(fac), styles:{ halign:'right', fillColor: sandLight, textColor: textDark, fontStyle:'bold' } }],
+                [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right', fillColor: sandLight, textColor: textDark, fontStyle:'bold' } }, { content: formatPrecio(base + fac), styles:{ halign:'right', fillColor: sandLight, textColor: textDark, fontStyle:'bold' } }],
               ]
             });
             y = doc.lastAutoTable.finalY + 12;
@@ -1049,20 +1062,6 @@
         }
       }
 
-      window.imprimirArchivo = function(url) {
-        if (!url) return;
-        const w = window.open(url, '_blank');
-        if (!w) return;
-        const checkLoaded = setInterval(() => {
-          if (w.document?.readyState === 'complete') {
-            clearInterval(checkLoaded);
-            w.focus();
-            w.print();
-          }
-        }, 300);
-      };
-
-      // para Ctrl+P sigue existiendo print-view (texto)
       window.prepararImpresion = function() {
         renderPrintView();
         window.print();
