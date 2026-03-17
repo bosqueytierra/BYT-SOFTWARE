@@ -299,7 +299,7 @@
 
     <script type="module">
     import * as catApi from '../../lib/cate_material.js';
-    window.catApi = catApi; // exponer para depurar en consola
+    window.catApi = catApi; // para depurar
 
     let materialsApi = null;
     let unitsApi = null;
@@ -308,7 +308,7 @@
     let catImagesMap = {};
     let unidades = [];
     let unitsMap = {};
-    let catalogNames = []; // catálogo oficial material_categories (name + image)
+    let catalogNames = [];
 
     function toast(msg, type='info', timeout=2400) {
       const cont = document.getElementById('toastContainer');
@@ -1071,4 +1071,16 @@
     window.consultarMaterialesPorCategoria = consultarMaterialesPorCategoria;
     window.filtrarMateriales = filtrarMateriales;
     window.limpiarFormularioCrear = limpiarFormularioCrear;
-
+    window.cargarMaterialesParaEditar = cargarMaterialesParaEditar;
+    window.cargarDatosMaterialEditar = cargarDatosMaterialEditar;
+    window.limpiarFormularioEditar = limpiarFormularioEditar;
+    window.cargarMaterialesParaEliminar = cargarMaterialesParaEliminar;
+    window.eliminarCategoria = eliminarCategoria;
+    window.editarCategoria = editarCategoria;
+    window.handleUnidadChange = handleUnidadChange;
+    window.refreshFromRemote = refreshFromRemote;
+    window.uploadCategoryImage = uploadCategoryImage;
+    window.removeCategoryImage = removeCategoryImage;
+    </script>
+</body>
+</html>
