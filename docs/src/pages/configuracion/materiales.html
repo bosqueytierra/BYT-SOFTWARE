@@ -310,6 +310,7 @@
     let unitsMap = {};
     let catalogNames = [];
 
+    // --- utilidades de UI ---
     function toast(msg, type='info', timeout=2400) {
       const cont = document.getElementById('toastContainer');
       const el = document.createElement('div');
@@ -351,6 +352,7 @@
     }
     function closeDeleteModal() { document.getElementById('deleteBackdrop').style.display = 'none'; }
 
+    // --- unidades ---
     function renderUnidades(selectId, selected='') {
       const sel = document.getElementById(selectId);
       sel.innerHTML = '';
@@ -403,6 +405,7 @@
       unitsMap = {};
     }
 
+    // --- catálogo ---
     async function fetchCatalog() {
       const { data, error } = await catApi.listCategoriesWithImages();
       if (error) { console.warn('listCategoriesWithImages error', error); return []; }
@@ -410,6 +413,7 @@
       return (data || []).map(c => c.name);
     }
 
+    // --- data layer ---
     async function initDataLayer() {
       try {
         const mod = await import('../../lib/materialsApi.js');
@@ -494,6 +498,7 @@
       try { localStorage.setItem('byt_materials_updated_at', Date.now()); } catch(e){}
     }
 
+    // --- UI render ---
     function renderThumb(cat) {
       const img = catImagesMap[cat];
       if (img) {
@@ -524,6 +529,7 @@
       });
     }
 
+    // --- CRUD de categorías ---
     async function mostrarModalAgregarCategoria() {
       const nombreCategoria = prompt('Ingrese el nombre de la nueva categoría:');
       if (!nombreCategoria || !nombreCategoria.trim()) return;
@@ -585,6 +591,7 @@
         : `¿Eliminar la categoría "${categoria}"?`;
       const ok = await confirmDialog({ title:'Eliminar categoría', message: mensaje, okText:'Eliminar', cancelText:'Cancelar' });
       if (!ok) return;
+
       if (remoteAvailable && materialsApi) {
         for (const m of materiales) {
           if (m.id) {
@@ -593,7 +600,14 @@
           }
         }
       }
-      await catApi.removeCategoryImage(categoria);
+
+      const delRes = await catApi.deleteCategory(categoria);
+      if (delRes?.error) {
+        console.error('Error borrando categoría', delRes.error);
+        toast('Error al borrar categoría','error');
+        return;
+      }
+
       await refreshFromRemote();
       await initDataLayer();
       await loadCategories();
@@ -602,6 +616,7 @@
       toast('Categoría eliminada','success');
     }
 
+    // --- selects y consulta ---
     function loadConsultarCategories() {
       const select = document.getElementById('consultarCategoria');
       select.innerHTML = '<option value="">-- Seleccione una categoría --</option>';
@@ -650,6 +665,7 @@
       loadEliminarCategories();
     }
 
+    // --- consulta ---
     function consultarMaterialesPorCategoria() {
       const categoria = document.getElementById('consultarCategoria').value;
       const resultsDiv = document.getElementById('consultarResultados');
@@ -732,6 +748,7 @@
       document.getElementById('contadorMateriales').textContent = '';
     }
 
+    // --- crear ---
     function limpiarFormularioCrear() { document.getElementById('crearMaterialForm').reset(); renderUnidades('crearUnidad'); }
 
     async function bindCrearSubmit() {
@@ -765,6 +782,7 @@
       };
     }
 
+    // --- editar ---
     function cargarMaterialesParaEditar() {
       const categoria = document.getElementById('editarBuscarCategoria').value;
       const selectMaterial = document.getElementById('editarBuscarMaterial');
@@ -879,6 +897,7 @@
       document.getElementById('editarSelectedId').value = '';
     }
 
+    // --- eliminar materiales ---
     function cargarMaterialesParaEliminar() {
       const categoria = document.getElementById('eliminarBuscarCategoria').value;
       const selectMaterial = document.getElementById('eliminarBuscarMaterial');
@@ -983,6 +1002,7 @@
       };
     }
 
+    // --- sync helpers ---
     async function refreshFromRemote() {
       if (!remoteAvailable || !materialsApi) return;
       try {
@@ -1006,6 +1026,7 @@
       }
     }
 
+    // --- tabs ---
     function showTab(tabName) {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -1021,6 +1042,7 @@
     function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>"']/g, s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
     function escapeJs(s){ return (s+'').replace(/'/g,"\\'"); }
 
+    // --- bindings para imágenes ---
     window.uploadCategoryImage = async (catName) => {
       const input = document.createElement('input');
       input.type = 'file'; input.accept = 'image/*';
@@ -1047,6 +1069,7 @@
       await loadCategories();
     };
 
+    // --- init ---
     (async function init(){
       await initDataLayer();
       await loadCategories();
@@ -1062,6 +1085,7 @@
       window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(async ()=>{ await initDataLayer(); await loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); } });
     })();
 
+    // --- exposiciones ---
     window.showTab = showTab;
     window.mostrarModalAgregarCategoria = mostrarModalAgregarCategoria;
     window.loadCategories = loadCategories;
