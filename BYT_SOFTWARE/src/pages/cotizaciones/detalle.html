@@ -14,19 +14,15 @@
       --border: #e4e7ec;
       --text: #1f242c;
       --muted: #6b7280;
-      --primary: #5f6673;          /* acento gris */
-      --accent: #eef1f4;           /* fondos claros */
+      --primary: #5f6673;
+      --accent: #eef1f4;
       --accent-strong: #dadfe5;
+      --green-soft: #dfe7dd; /* encabezados de tabla */
       --shadow: 0 8px 20px rgba(0,0,0,0.04);
       --viewer-scale: 1;
     }
 
-    body {
-      margin: 0;
-      font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
+    body { margin: 0; font-family: "Inter","Segoe UI",system-ui,-apple-system,sans-serif; background: var(--bg); color: var(--text); }
 
     .page-content { padding: 18px 22px 32px 22px; display: flex; flex-direction: column; gap: 16px; }
 
@@ -42,122 +38,72 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+      transition: transform 0.12s, box-shadow 0.12s, background 0.12s, border-color 0.12s;
       box-shadow: 0 3px 10px rgba(0,0,0,0.05);
     }
     .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,0,0,0.08); border-color: #d0d5dd; }
-    .btn:active { transform: translateY(0); }
-    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-primary:hover { background: #545c6a; }
-    .btn-secondary { color: var(--primary); border-color: #d0d5dd; background: #fff; }
     .btn-ghost { background: var(--accent); color: var(--text); border-color: var(--accent); }
+    .btn-primary { background: var(--primary); color:#fff; border-color: var(--primary); }
+    .btn-primary:hover { background:#545c6a; }
 
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 18px;
-      box-shadow: var(--shadow);
-    }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
     .card-title { margin: 0 0 10px 0; color: var(--primary); font-size: 17px; font-weight: 700; }
 
-    #topbar-kpis { display: none !important; }
+    #topbar-kpis { display:none!important; }
 
-    .detalle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .detalle-item { padding: 12px; background: var(--accent); border-radius: 10px; border: 1px solid var(--border); }
-    .detalle-label { font-size: 12px; color: var(--muted); letter-spacing: 0.2px; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
-    .detalle-value { font-size: 15px; color: var(--text); font-weight: 600; word-break: break-word; }
+    .detalle-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+    .detalle-item { padding:12px; background:var(--accent); border-radius:10px; border:1px solid var(--border); }
+    .detalle-label { font-size:12px; color:var(--muted); letter-spacing:0.2px; text-transform:uppercase; font-weight:600; margin-bottom:4px; }
+    .detalle-value { font-size:15px; color:var(--text); font-weight:600; word-break:break-word; }
 
-    .fin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .fin-card { background: var(--accent); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.03); }
-    .fin-card h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.3px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
-    .fin-card .fin-value { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
-    .fin-card.highlight { background: var(--accent-strong); border-color: var(--border); }
-
-    .no-data { color:#666; text-align:center; padding:18px; }
-
-    /* Archivos */
-    .files-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-    .file-card { border: 1px solid var(--border); border-radius: 12px; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; }
-    .file-preview { background: var(--accent); display: grid; place-items: center; min-height: 180px; }
-    .file-preview img { max-width: 100%; max-height: 320px; object-fit: contain; display: block; }
-    .file-body { padding: 12px; display: flex; flex-direction: column; gap: 6px; }
-    .file-name { font-weight: 700; color: var(--text); margin: 0; }
-    .file-meta { color: var(--muted); font-size: 12px; }
-    .file-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-
-    /* Visor */
-    .viewer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 9999; }
-    .viewer-overlay.active { display: flex; }
-    .viewer-inner { position: relative; background: #0f1114; max-width: 96vw; max-height: 92vh; width: 96vw; height: 92vh; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
-    .viewer-top { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; color: #fff; font-weight: 700; background: rgba(255,255,255,0.06); }
-    .viewer-counter { font-size: 14px; color: #cfd4da; }
-    .viewer-close { background: transparent; border: none; color: #fff; font-size: 20px; cursor: pointer; }
-    .viewer-body { flex: 1; display: grid; place-items: center; background: #0f1114; padding: 16px; }
-    .viewer-body img, .viewer-body iframe {
-      max-width: 95vw; max-height: 80vh; object-fit: contain; background: #fff; border-radius: 12px;
-      box-shadow: 0 12px 28px rgba(0,0,0,0.3); transform: scale(var(--viewer-scale)); transform-origin: center;
-    }
-    .viewer-nav { position: absolute; top: 50%; transform: translateY(-50%); display: flex; width: 100%; justify-content: space-between; pointer-events: none; }
-    .viewer-btn { pointer-events: all; background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; margin: 0 10px; font-size: 20px; }
-
-    .valores-block { margin-bottom: 18px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,0.04); position: relative; }
-    .valores-head { display: block; background: var(--accent); color: #2d3440; padding: 12px 14px; font-weight: 700; border-bottom: 1px solid var(--border); margin: 0 -14px -1px -14px; }
-    .valores-body { background: #fff; padding: 14px; }
-    .valores-footer { background: #f4f6f9; color: #2e3540; padding: 10px 14px; font-weight: 700; display: flex; gap: 14px; flex-wrap: wrap; }
+    .fin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+    .fin-card { background:var(--accent); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:0 6px 14px rgba(0,0,0,0.03); }
+    .fin-card h4 { margin:0 0 6px; font-size:12px; letter-spacing:0.3px; color:var(--muted); font-weight:600; text-transform:uppercase; }
+    .fin-card .fin-value { margin:0; font-size:17px; font-weight:700; color:var(--text); }
+    .fin-card.highlight { background:var(--accent-strong); }
 
     .table-container { overflow-x:auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; border: 1px solid #e8ebef; }
-    th { background: #f1f3f5; color: #47505c; font-weight: 700; text-align: left; }
-    .subtotal-row { background: #f4f6f8; font-weight: 700; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px; border:1px solid #e8ebef; }
+    th { background: var(--green-soft); color:#32403c; font-weight:700; text-align:left; }
+    .subtotal-row { background:#f4f6f8; font-weight:700; }
 
-    .valores-table { table-layout: fixed; width: 100%; }
-    .valores-table th:nth-child(1), .valores-table td:nth-child(1) { width: 22%; }
-    .valores-table th:nth-child(2), .valores-table td:nth-child(2) { width: 22%; }
-    .valores-table th:nth-child(3), .valores-table td:nth-child(3) { width: 14%; }
-    .valores-table th:nth-child(4), .valores-table td:nth-child(4) { width: 8%; text-align: center; }
-    .valores-table th:nth-child(5), .valores-table td:nth-child(5) { width: 16%; text-align: right; }
-    .valores-table th:nth-child(6), .valores-table td:nth-child(6) { width: 18%; text-align: right; }
-
-    .card, .table-container, table, tr, td, th { page-break-inside: avoid !important; break-inside: avoid !important; }
-    .page-break { page-break-before: always !important; break-before: page !important; }
-
-    /* ==== PRINT OVERRIDE: solo print-view visible, layout oculto ==== */
+    /* print isolation */
     @media print {
-      body { margin: 0 !important; background: #fff !important; }
-      body * { visibility: hidden !important; }
-      #print-view, #print-view * { visibility: visible !important; }
-      #print-view { position: absolute; left: 0; top: 0; width: 100%; padding: 26px; }
-      .no-print, #page-content, header, nav, aside, .sidebar, .topbar, .byt-sidebar { display: none !important; }
+      body { margin:0!important; background:#fff!important; }
+      body * { visibility:hidden!important; }
+      #print-view, #print-view * { visibility:visible!important; }
+      #print-view { position:absolute; left:0; top:0; width:100%; padding:26px; }
+      .no-print, #page-content { display:none!important; }
     }
 
-    /* Estilos dedicados al print-view */
-    .print-view { display: none; color: #2a2f38; padding: 24px 26px; font-size: 12px; }
-    .print-header {
-      display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 1px solid #dfe3e8; padding-bottom: 10px; margin-bottom: 14px;
-    }
-    .print-logo { font-weight: 700; font-size: 19px; color: #2f3b45; letter-spacing: 0.2px; }
-    .print-meta { text-align: right; font-size: 12px; color: #6a7480; line-height: 1.4; }
-    .print-title { font-size: 15px; font-weight: 700; margin: 14px 0 8px; color: #2f3b45; }
+    /* print view blocks */
+    .print-view { display:none; color:#2a2f38; padding:24px 26px; font-size:12px; }
+    .print-header { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #dfe3e8; padding-bottom:10px; margin-bottom:14px; }
+    .print-logo { font-weight:700; font-size:19px; color:#2f3b45; letter-spacing:0.2px; }
+    .print-meta { text-align:right; font-size:12px; color:#6a7480; line-height:1.4; }
+    .print-title { font-size:15px; font-weight:700; margin:14px 0 8px; color:#2f3b45; }
     .print-grid {
-      display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      padding: 10px; border: 1px solid #e3e6ea; border-radius: 10px; background: #f9fafb; margin-bottom: 14px;
+      display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+      padding:10px; border:1px solid #e3e6ea; border-radius:10px; background:#f9fafb; margin-bottom:14px;
     }
-    .print-pill-label { font-size: 11px; color: #7a828d; letter-spacing: 0.3px; }
-    .print-pill-value { font-size: 13px; font-weight: 600; color: #1f242b; }
+    .print-pill-label { font-size:11px; color:#7a828d; letter-spacing:0.3px; }
+    .print-pill-value { font-size:13px; font-weight:600; color:#1f242b; }
 
-    .print-table-wrap { border:1px solid #e3e6ea; border-radius: 10px; overflow: hidden; margin-bottom: 14px; background:#fff; }
-    .print-table-title { background:#f1f3f5; padding:10px 12px; font-weight:700; color:#3b454f; }
+    .print-table-wrap { border:1px solid #e3e6ea; border-radius:10px; overflow:hidden; margin-bottom:14px; background:#fff; }
+    .print-table-title { background:#eef2f3; padding:10px 12px; font-weight:700; color:#3b454f; }
     table.print-table { width:100%; border-collapse:collapse; }
-    table.print-table th, table.print-table td {
-      padding: 9px 10px; border-bottom: 1px solid #e7ebef; font-size: 12px; font-weight: 500;
-    }
-    table.print-table th { background:#f9fafb; color:#6a7480; text-transform:none; letter-spacing:0.1px; }
-    table.print-table .num { text-align:right; font-variant-numeric: tabular-nums; }
-    .print-subtotal { font-weight:700; color:#2f3b45; background: #f4f6f8; }
+    table.print-table th, table.print-table td { padding:9px 10px; border-bottom:1px solid #e7ebef; font-size:12px; font-weight:500; }
+    table.print-table th { background:#f9fafb; color:#6a7480; }
+    table.print-table .num { text-align:right; font-variant-numeric:tabular-nums; }
+    .print-subtotal { font-weight:700; color:#2f3b45; background:#f4f6f8; }
+
+    .no-data { color:#666; text-align:center; padding:18px; }
   </style>
+
+  <!-- jsPDF + autotable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
@@ -165,13 +111,12 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
   <div id="page-content" class="page-content">
     <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-      <button class="btn btn-secondary" onclick="prepararImpresion()">Imprimir</button>
+      <!-- Eliminamos botón Imprimir; solo Exportar PDF -->
       <button class="btn btn-ghost" id="btn-exportar-pdf" onclick="exportarPDF()">Exportar PDF</button>
     </div>
 
@@ -226,7 +171,7 @@
     </div>
   </div>
 
-  <!-- Vista dedicada a impresión -->
+  <!-- Vista dedicada a impresión (se usa solo si alguien usa Ctrl+P) -->
   <div id="print-view" class="print-view"></div>
 
   <!-- Visor -->
@@ -900,27 +845,201 @@
         });
       }
 
+      // --------- NUEVO: Exportar PDF vectorial (texto, no imagen) ----------
       async function exportarPDF() {
         const btn = document.getElementById('btn-exportar-pdf');
         if (btn) btn.disabled = true;
         try {
-          const element = document.getElementById('page-content');
-          if (!element) throw new Error('No hay contenido para exportar');
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+          const marginX = 36;
+          let y = 40;
 
-          const opt = {
-            margin:       [10, 10, 10, 10],
-            filename:     `cotizacion-${cotizacionId || 'detalle'}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-            jsPDF:        { unit: 'pt', format: 'a4', orientation: 'portrait' },
-            pagebreak:    { mode: ['avoid-all', 'css'] }
+          const data = getDataSafe();
+          if (!data) throw new Error('No hay datos de cotización cargados');
+          const t = calcularTotales();
+          const c = data.cliente || {};
+          const partidas = (data.partidas || []).map(p => (p?.nombre || p || '').trim()).filter(Boolean);
+          const fecha = new Date(cotizacionActual?.created_at || Date.now()).toLocaleDateString('es-CL', { year:'numeric', month:'long', day:'numeric' });
+
+          doc.setFont('helvetica','bold'); doc.setFontSize(16);
+          doc.text('Bosque y Tierra · Cotización', marginX, y); y += 14;
+          doc.setFont('helvetica','normal'); doc.setFontSize(10);
+          doc.text(`Fecha: ${fecha}`, marginX, y);
+          doc.text(`ID: ${cotizacionId || ''}`, marginX + 200, y); y += 18;
+
+          // Resumen proyecto
+          doc.setFont('helvetica','bold'); doc.setFontSize(12);
+          doc.text('Resumen del proyecto', marginX, y); y += 10;
+          doc.setFont('helvetica','normal'); doc.setFontSize(10);
+          const info = [
+            ['Proyecto', c.nombre_proyecto || 'N/A'],
+            ['Cliente', c.nombre || 'N/A'],
+            ['Comuna', c.comuna || 'N/A'],
+            ['Dirección', c.direccion || 'N/A'],
+            ['Partidas', partidas.join(' | ') || 'N/A']
+          ];
+          info.forEach(row => { doc.text(`${row[0]}: ${row[1]}`, marginX, y); y += 12; });
+          y += 6;
+
+          // Resumen financiero tabla
+          const resumenRows = [
+            ['Total materiales', formatPrecio(t.totalMateriales)],
+            ['Factor general', `${t.factorGeneral}x`],
+            ['Traspasados base', formatPrecio(t.totalTraspasosBase)],
+            ['Traspasados factor', formatPrecio(t.totalTraspasosFactor)],
+            ['Subtotal sin IVA', formatPrecio(t.subtotalSinIVA)],
+            ['IVA 19%', formatPrecio(t.iva)],
+            ['TOTAL PROYECTO', formatPrecio(t.totalConIVA)],
+          ];
+          doc.autoTable({
+            startY: y,
+            margin: { left: marginX, right: marginX },
+            styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: '#2a2f38' },
+            headStyles: { fillColor: [223, 231, 221], textColor: 50, halign:'left', fontStyle:'bold' },
+            body: resumenRows,
+            head: [['Concepto','Valor']]
+          });
+          y = doc.lastAutoTable.finalY + 16;
+
+          // Materiales
+          const mats = data.materiales || {};
+          const extrasMap = {
+            quincalleria: data.quincalleriaExtras || [],
+            tableros: data.tablerosExtras || [],
+            tapacantos: data.tapacantosExtras || [],
+            tableros_madera: data.tablerosMaderaExtras || [],
+            led_electricidad: data.ledElectricidadExtras || [],
+          };
+          const friendly = {
+            quincalleria: 'Quincallería',
+            tableros: 'Tableros',
+            tapacantos: 'Tapacantos',
+            servicios_externos: 'Servicios externos de corte',
+            tableros_madera: 'Tableros de madera',
+            led_electricidad: 'LED y electricidad',
+            otras_compras: 'Otras compras',
+          };
+          doc.setFont('helvetica','bold'); doc.setFontSize(12);
+          doc.text('Materiales', marginX, y); y += 8;
+          doc.setFont('helvetica','normal'); doc.setFontSize(9);
+
+          const addMatTable = (titulo, filas, subtotal) => {
+            doc.autoTable({
+              startY: y,
+              margin: { left: marginX, right: marginX },
+              styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: '#2a2f38' },
+              headStyles: { fillColor: [223, 231, 221], textColor: 50, halign:'left', fontStyle:'bold' },
+              body: filas,
+              foot: [[{ content: 'Subtotal', colSpan: 3, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(subtotal), styles:{ halign:'right', fontStyle:'bold' } }]],
+              head: [[titulo,'Cant.','V.Unit','Subtotal']]
+            });
+            y = doc.lastAutoTable.finalY + 12;
           };
 
-          await html2pdf().set(opt).from(element).save();
-          window.utils?.mostrarNotificacion?.('PDF generado', 'success');
+          Object.keys(mats).forEach(cat => {
+            const materiales = mats[cat] || {};
+            const filas = [];
+            let subtotal = 0;
+            Object.values(materiales).forEach(mat => {
+              const cantidad = Number(mat.cantidad || 0);
+              const precio = Number(mat.precio || 0);
+              const total = cantidad * precio;
+              if (cantidad || precio) {
+                subtotal += total;
+                filas.push([mat.nombre || mat.descripcion || 'Ítem', cantidad, formatPrecio(precio), formatPrecio(total)]);
+              }
+            });
+            (extrasMap[cat] || []).forEach(x => {
+              const total = x.total !== undefined ? Number(x.total || 0) : (Number(x.cantidad || 0) * Number(x.valor_unitario || 0));
+              subtotal += total;
+              filas.push([x.nombre || 'Extra', x.cantidad || 0, formatPrecio(x.valor_unitario || 0), formatPrecio(total)]);
+            });
+            if (filas.length) addMatTable(friendly[cat] || cat, filas, subtotal);
+          });
+
+          // Valores traspasados
+          const trasp = data.valoresTraspasados || {};
+          const extras = data.traspasosExtras || [];
+          doc.setFont('helvetica','bold'); doc.setFontSize(12);
+          doc.text('Valores traspasados', marginX, y); y += 8;
+          doc.setFont('helvetica','normal'); doc.setFontSize(9);
+
+          const addTraspTable = (titulo, factor, filas, base) => {
+            const foot = [
+              [{ content: 'Total base', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base), styles:{ halign:'right', fontStyle:'bold' } }],
+              [{ content: `Factor (${factor.toFixed(2)})`, colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base*factor), styles:{ halign:'right', fontStyle:'bold' } }],
+              [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base + base*factor), styles:{ halign:'right', fontStyle:'bold' } }],
+            ];
+            doc.autoTable({
+              startY: y,
+              margin: { left: marginX, right: marginX },
+              styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: '#2a2f38' },
+              headStyles: { fillColor: [223, 231, 221], textColor: 50, halign:'left', fontStyle:'bold' },
+              body: filas,
+              foot,
+              head: [[titulo,'Descripción','Lugar','Cant.','V.Unit','Subtotal']]
+            });
+            y = doc.lastAutoTable.finalY + 12;
+          };
+
+          Object.keys(trasp).forEach(sec => {
+            const cat = trasp[sec] || {};
+            if (!cat.materiales || !Object.keys(cat.materiales).length) return;
+            const factor = Number(cat.factor || 0);
+            let base = 0;
+            const filas = [];
+            Object.keys(cat.materiales).forEach(k => {
+              const it = cat.materiales[k] || {};
+              const sub = (Number(it.cantidad || 0) * Number(it.precio || 0)) || 0;
+              base += sub;
+              filas.push([
+                it.nombre || k,
+                it.descripcion || '',
+                it.lugar || '',
+                Number(it.cantidad || 0),
+                formatPrecio(it.precio || 0),
+                formatPrecio(sub)
+              ]);
+            });
+            addTraspTable(cat.nombre || sec, factor, filas, base);
+          });
+
+          if (extras.length) {
+            let base = 0, fac = 0;
+            const filas = [];
+            extras.forEach(x => {
+              const b = Number(x.total || ((x.cantidad || 0) * (x.precio || 0)) || 0);
+              base += b; fac += b * Number(x.factor || 0);
+              filas.push([
+                x.nombre || 'Extra',
+                x.descripcion || '',
+                x.lugar || '',
+                Number(x.cantidad || 0),
+                formatPrecio(x.precio || 0),
+                formatPrecio(b)
+              ]);
+            });
+            doc.autoTable({
+              startY: y,
+              margin: { left: marginX, right: marginX },
+              styles: { fontSize: 9, lineColor: '#dcdfe4', lineWidth: 0.3, textColor: '#2a2f38' },
+              headStyles: { fillColor: [223, 231, 221], textColor: 50, halign:'left', fontStyle:'bold' },
+              body: filas,
+              foot: [
+                [{ content: 'Total extras', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base), styles:{ halign:'right', fontStyle:'bold' } }],
+                [{ content: 'Factores extras', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(fac), styles:{ halign:'right', fontStyle:'bold' } }],
+                [{ content: 'Total con factor', colSpan: 5, styles:{ halign:'right', fontStyle:'bold' } }, { content: formatPrecio(base + fac), styles:{ halign:'right', fontStyle:'bold' } }],
+              ],
+              head: [['Valores Traspasados Extra','Descripción','Lugar','Cant.','V.Unit','Subtotal']]
+            });
+            y = doc.lastAutoTable.finalY + 12;
+          }
+
+          doc.save(`cotizacion-${cotizacionId || 'detalle'}.pdf`);
         } catch (e) {
           console.error(e);
-          window.utils?.mostrarNotificacion?.('No se pudo exportar: ' + (e.message || e), 'error');
+          alert('No se pudo exportar: ' + (e.message || e));
         } finally {
           if (btn) btn.disabled = false;
         }
@@ -939,6 +1058,7 @@
         }, 300);
       };
 
+      // para Ctrl+P sigue existiendo print-view (texto)
       window.prepararImpresion = function() {
         renderPrintView();
         window.print();
@@ -983,143 +1103,6 @@
           </div>
         `).join('');
 
-        const mats = data.materiales || {};
-        const extrasMap = {
-          quincalleria: data.quincalleriaExtras || [],
-          tableros: data.tablerosExtras || [],
-          tapacantos: data.tapacantosExtras || [],
-          tableros_madera: data.tablerosMaderaExtras || [],
-          led_electricidad: data.ledElectricidadExtras || [],
-        };
-        const friendly = {
-          quincalleria: 'Quincallería',
-          tableros: 'Tableros',
-          tapacantos: 'Tapacantos',
-          servicios_externos: 'Servicios externos de corte',
-          tableros_madera: 'Tableros de madera',
-          led_electricidad: 'LED y electricidad',
-          otras_compras: 'Otras compras',
-        };
-
-        let tablasMateriales = '';
-        Object.keys(mats).forEach(cat => {
-          const materiales = mats[cat] || {};
-          let filas = '';
-          let subtotal = 0;
-          Object.values(materiales).forEach(mat => {
-            const cantidad = Number(mat.cantidad || 0);
-            const precio = Number(mat.precio || 0);
-            const total = cantidad * precio;
-            if (cantidad || precio) {
-              subtotal += total;
-              filas += `<tr>
-                <td>${escapeHtml(mat.nombre || mat.descripcion || 'Ítem')}</td>
-                <td class="num">${cantidad}</td>
-                <td class="num">${formatPrecio(precio)}</td>
-                <td class="num">${formatPrecio(total)}</td>
-              </tr>`;
-            }
-          });
-          (extrasMap[cat] || []).forEach(x => {
-            const total = x.total !== undefined ? Number(x.total || 0) : (Number(x.cantidad || 0) * Number(x.valor_unitario || 0));
-            subtotal += total;
-            filas += `<tr>
-              <td>${escapeHtml(x.nombre || 'Extra')}</td>
-              <td class="num">${x.cantidad || 0}</td>
-              <td class="num">${formatPrecio(x.valor_unitario || 0)}</td>
-              <td class="num">${formatPrecio(total)}</td>
-            </tr>`;
-          });
-          if (filas) {
-            tablasMateriales += `
-              <div class="print-table-wrap">
-                <div class="print-table-title">${escapeHtml(friendly[cat] || cat)}</div>
-                <table class="print-table">
-                  <thead><tr><th>Material</th><th class="num">Cant.</th><th class="num">V. Unit</th><th class="num">Subtotal</th></tr></thead>
-                  <tbody>
-                    ${filas}
-                    <tr class="print-subtotal"><td colspan="3" class="num">Subtotal</td><td class="num">${formatPrecio(subtotal)}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            `;
-          }
-        });
-        if (!tablasMateriales) tablasMateriales = '<div class="print-table-wrap"><div class="print-table-title">Materiales</div><div style="padding:10px;">No se registraron materiales.</div></div>';
-
-        const trasp = data.valoresTraspasados || {};
-        const extras = data.traspasosExtras || [];
-        let tablasTrasp = '';
-        const colHead = `<thead><tr><th>Servicio</th><th>Descripción</th><th>Lugar</th><th class="num">Cant.</th><th class="num">Valor Unit.</th><th class="num">Subtotal</th></tr></thead>`;
-
-        Object.keys(trasp).forEach(sec => {
-          const cat = trasp[sec] || {};
-          if (!cat.materiales || !Object.keys(cat.materiales).length) return;
-          const factor = Number(cat.factor || 0);
-          let filas = '';
-          let base = 0;
-          Object.keys(cat.materiales).forEach(k => {
-            const it = cat.materiales[k] || {};
-            const sub = (Number(it.cantidad || 0) * Number(it.precio || 0)) || 0;
-            base += sub;
-            filas += `<tr>
-              <td>${escapeHtml(it.nombre || k)}</td>
-              <td>${escapeHtml(it.descripcion || '')}</td>
-              <td>${escapeHtml(it.lugar || '')}</td>
-              <td class="num">${Number(it.cantidad || 0)}</td>
-              <td class="num">${formatPrecio(it.precio || 0)}</td>
-              <td class="num">${formatPrecio(sub)}</td>
-            </tr>`;
-          });
-          const facVal = base * factor;
-          tablasTrasp += `
-            <div class="print-table-wrap">
-              <div class="print-table-title">${escapeHtml(cat.nombre || sec)} ${factor ? `(Factor ${factor.toFixed(2)})` : ''}</div>
-              <table class="print-table">
-                ${colHead}
-                <tbody>
-                  ${filas}
-                  <tr class="print-subtotal"><td colspan="5" class="num">Total base</td><td class="num">${formatPrecio(base)}</td></tr>
-                  <tr class="print-subtotal"><td colspan="5" class="num">Factor (${factor.toFixed(2)})</td><td class="num">${formatPrecio(facVal)}</td></tr>
-                  <tr class="print-subtotal"><td colspan="5" class="num">Total con factor</td><td class="num">${formatPrecio(base + facVal)}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          `;
-        });
-
-        if (extras.length) {
-          let filas = '';
-          let base = 0; let fac = 0;
-          extras.forEach(x => {
-            const b = Number(x.total || ((x.cantidad || 0) * (x.precio || 0)) || 0);
-            base += b; fac += b * Number(x.factor || 0);
-            filas += `<tr>
-              <td>${escapeHtml(x.nombre || 'Extra')}</td>
-              <td>${escapeHtml(x.descripcion || '')}</td>
-              <td>${escapeHtml(x.lugar || '')}</td>
-              <td class="num">${Number(x.cantidad || 0)}</td>
-              <td class="num">${formatPrecio(x.precio || 0)}</td>
-              <td class="num">${formatPrecio(b)}</td>
-            </tr>`;
-          });
-          tablasTrasp += `
-            <div class="print-table-wrap">
-              <div class="print-table-title">Valores Traspasados Extra</div>
-              <table class="print-table">
-                ${colHead}
-                <tbody>
-                  ${filas}
-                  <tr class="print-subtotal"><td colspan="5" class="num">Total extras</td><td class="num">${formatPrecio(base)}</td></tr>
-                  <tr class="print-subtotal"><td colspan="5" class="num">Factores extras</td><td class="num">${formatPrecio(fac)}</td></tr>
-                  <tr class="print-subtotal"><td colspan="5" class="num">Total con factor</td><td class="num">${formatPrecio(base + fac)}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          `;
-        }
-        if (!tablasTrasp) tablasTrasp = '<div class="print-table-wrap"><div class="print-table-title">Valores Traspasados</div><div style="padding:10px;">No se registraron valores traspasados.</div></div>';
-
         container.innerHTML = `
           <div class="print-header">
             <div class="print-logo">Bosque y Tierra · Cotización</div>
@@ -1135,10 +1118,10 @@
           <div class="print-grid">${resumenGrid}</div>
 
           <h2 class="print-title">Materiales</h2>
-          ${tablasMateriales}
+          ${document.getElementById('materiales-detalle')?.innerHTML || '<div class="no-data">No se registraron materiales.</div>'}
 
           <h2 class="print-title">Valores traspasados</h2>
-          ${tablasTrasp}
+          ${document.getElementById('valores-detalle')?.innerHTML || '<div class="no-data">No se registraron valores traspasados.</div>'}
 
           <div style="margin-top:20px; font-size:12px; color:#6a7480;">© 2025 Bosque y Tierra — Sistema interno</div>
         `;
