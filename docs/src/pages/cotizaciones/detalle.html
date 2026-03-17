@@ -5,21 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Detalle Cotización - BYT SOFTWARE</title>
 
-  <!-- Estilos base -->
   <link rel="stylesheet" href="../../styles/global.css" />
 
   <style>
     :root {
-      --bg: #f3f5f7;
+      --bg: #f6f7f8;
       --card: #ffffff;
-      --border: #e4e7eb;
-      --text: #2d2d2d;
-      --muted: #6c7a86;
+      --border: #e6e8eb;
+      --text: #1f242b;
+      --muted: #6a7480;
       --primary: #2e5e4e;
-      --primary-soft: #3f705d;
-      --accent: #bfe7c7;
-      --accent-strong: #1b5e20;
-      --chip-border: #7fbf90;
+      --accent: #dfe3e6;
+      --shadow: 0 8px 22px rgba(0,0,0,0.05);
       --viewer-scale: 1;
     }
 
@@ -39,7 +36,7 @@
       padding: 10px 14px;
       border-radius: 12px;
       cursor: pointer;
-      font-weight: 700;
+      font-weight: 600;
       font-size: 13px;
       display: inline-flex;
       align-items: center;
@@ -48,8 +45,8 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.04);
     }
     .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
-    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
+    .btn-primary { background: #2f7a4f; color: #fff; border-color: #2f7a4f; }
+    .btn-secondary { color: #2f7a4f; border-color: #d7dcdc; background: #fff; }
     .btn-ghost { background: #f0f3f5; color: var(--text); }
 
     .card {
@@ -57,47 +54,22 @@
       border: 1px solid #e9edef;
       border-radius: 14px;
       padding: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+      box-shadow: var(--shadow);
     }
-    .card-title { margin: 0 0 10px 0; color: var(--primary); font-size: 18px; font-weight: 800; }
+    .card-title { margin: 0 0 10px 0; color: var(--primary); font-size: 18px; font-weight: 700; }
 
-    /* Ocultamos la barra KPI superior tachada */
     #topbar-kpis { display: none !important; }
 
-    /* Info / detalle */
     .detalle-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .detalle-item { padding: 12px; background: #f8faf9; border-radius: 10px; border-left: 4px solid var(--primary); }
-    .detalle-label { font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+    .detalle-item { padding: 12px; background: #f8faf9; border-radius: 10px; border: 1px solid #e8ecef; }
+    .detalle-label { font-size: 12px; color: var(--muted); letter-spacing: 0.2px; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
     .detalle-value { font-size: 15px; color: var(--text); font-weight: 600; word-break: break-word; }
 
-    /* Resumen financiero compacto */
     .fin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    @media (min-width: 1024px) {
-      .fin-grid {
-        grid-template-areas:
-          "factor ganancia"
-          "matBase matFactor"
-          "trasBase trasFactor"
-          "subtotal iva"
-          "totalTrasp totalProyecto";
-      }
-      .fin-card.area-factor { grid-area: factor; }
-      .fin-card.area-ganancia { grid-area: ganancia; }
-      .fin-card.area-matBase { grid-area: matBase; }
-      .fin-card.area-matFactor { grid-area: matFactor; }
-      .fin-card.area-trasBase { grid-area: trasBase; }
-      .fin-card.area-trasFactor { grid-area: trasFactor; }
-      .fin-card.area-subtotal { grid-area: subtotal; }
-      .fin-card.area-iva { grid-area: iva; }
-      .fin-card.area-totalTrasp { grid-area: totalTrasp; }
-      .fin-card.area-totalProyecto { grid-area: totalProyecto; }
-    }
-    .fin-card { background: #f8faf9; border: 1px solid #e4e9ec; border-radius: 12px; padding: 12px; box-shadow: 0 8px 18px rgba(0,0,0,0.04); }
-    .fin-card h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); }
-    .fin-card .fin-value { margin: 0; font-size: 18px; font-weight: 800; color: var(--text); }
-    .fin-card.highlight { background: #2f5f4c; color: #fff; border-color: #2f5f4c; }
-    .fin-card.highlight h4 { color: rgba(255,255,255,0.82); }
-    .fin-card.highlight .fin-value { color: #fff; }
+    .fin-card { background: #f8faf9; border: 1px solid #e4e9ec; border-radius: 12px; padding: 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.04); }
+    .fin-card h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: 0.3px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+    .fin-card .fin-value { margin: 0; font-size: 17px; font-weight: 700; color: var(--text); }
+    .fin-card.highlight { background: #e3e7ea; color: #1f242b; border-color: #d2d7dc; }
 
     .no-data { color:#666; text-align:center; padding:18px; }
 
@@ -126,16 +98,15 @@
     .viewer-nav { position: absolute; top: 50%; transform: translateY(-50%); display: flex; width: 100%; justify-content: space-between; pointer-events: none; }
     .viewer-btn { pointer-events: all; background: rgba(0,0,0,0.45); color: #fff; border: none; border-radius: 999px; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer; margin: 0 10px; font-size: 20px; }
 
-    /* Valores traspasados */
     .valores-block { margin-bottom: 18px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 24px rgba(0,0,0,0.04); position: relative; }
-    .valores-head { display: block; background: #cfded6; color: #1f2430; padding: 12px 14px; font-weight: 800; border-radius: 12px 12px 0 0; border-bottom: 1px solid #c1d0c7; margin: 0 -14px -1px -14px; }
+    .valores-head { display: block; background: #eef1f3; color: #1f2430; padding: 12px 14px; font-weight: 700; border-radius: 12px 12px 0 0; border-bottom: 1px solid #e1e6ea; margin: 0 -14px -1px -14px; }
     .valores-body { background: #fff; padding: 14px; }
-    .valores-footer { background: #f5f9f6; color: #1f3b2e; padding: 10px 14px; font-weight: 700; display: flex; gap: 14px; flex-wrap: wrap; }
+    .valores-footer { background: #f7f9fb; color: #1f3b2e; padding: 10px 14px; font-weight: 700; display: flex; gap: 14px; flex-wrap: wrap; }
 
     .table-container { overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; }
     th, td { padding: 10px; border: 1px solid #e6efe9; }
-    th { background: #f5f7f6; color: #2e6b57; font-weight: 800; text-align: left; }
+    th { background: #f5f7f6; color: #2e6b57; font-weight: 700; text-align: left; }
     .subtotal-row { background: rgba(46,94,78,0.06); font-weight: 700; }
 
     .valores-table { table-layout: fixed; width: 100%; }
@@ -150,56 +121,50 @@
     .page-break { page-break-before: always !important; break-before: page !important; }
 
     @media (max-width: 640px) { .topbar { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); } }
+
+    /* ===== Estilos de impresión modernos ===== */
+    .print-view { display: none; color: #2a2f38; padding: 26px 28px; font-size: 12px; }
+    .print-header {
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 1px solid #dcdfe3; padding-bottom: 10px; margin-bottom: 14px;
+    }
+    .print-logo { font-weight: 700; font-size: 20px; color: #2f3b45; letter-spacing: 0.2px; }
+    .print-meta { text-align: right; font-size: 12px; color: #6a7480; line-height: 1.4; }
+    .print-title { font-size: 15px; font-weight: 700; margin: 14px 0 8px; color: #2f3b45; }
+    .print-grid {
+      display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      padding: 10px; border: 1px solid #e3e6ea; border-radius: 10px; background: #f9fafb; margin-bottom: 14px;
+    }
+    .print-pill-label { font-size: 11px; color: #7a828d; letter-spacing: 0.3px; }
+    .print-pill-value { font-size: 13px; font-weight: 600; color: #1f242b; }
+
+    .print-table-wrap { border:1px solid #e3e6ea; border-radius: 10px; overflow: hidden; margin-bottom: 14px; background:#fff; }
+    .print-table-title { background:#f3f5f7; padding:10px 12px; font-weight:700; color:#3b454f; }
+    table.print-table { width:100%; border-collapse:collapse; }
+    table.print-table th, table.print-table td {
+      padding: 9px 10px; border-bottom: 1px solid #e7ebef; font-size: 12px; font-weight: 500;
+    }
+    table.print-table th { background:#f9fafb; color:#6a7480; text-transform:none; letter-spacing:0.1px; }
+    table.print-table .num { text-align:right; font-variant-numeric: tabular-nums; }
+    .print-subtotal { font-weight:700; color:#2f3b45; background: #f4f6f8; }
+
     @media print {
       .no-print, #page-content { display: none !important; }
       body { background: white !important; }
-    }
-
-    /* ===== Estilos de impresión pro ===== */
-    .print-view { display: none; color: #1f2f2b; padding: 18px 22px; }
-    .print-header {
-      display: flex; justify-content: space-between; align-items: center;
-      border-bottom: 2px solid #e3e8ea; padding-bottom: 10px; margin-bottom: 14px;
-    }
-    .print-logo { font-weight: 800; font-size: 22px; color: #2f7a4f; }
-    .print-meta { text-align: right; font-size: 12px; color: #5c6c66; }
-    .print-title { font-size: 18px; font-weight: 800; margin: 0 0 6px; color: #2f7a4f; }
-    .print-grid {
-      display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      padding: 10px; border: 1px solid #e3e8ea; border-radius: 10px; background: #f8fbfa; margin-bottom: 14px;
-    }
-    .print-pill-label { font-size: 11px; color: #5c6c66; text-transform: uppercase; letter-spacing: 0.3px; }
-    .print-pill-value { font-size: 14px; font-weight: 700; color: #1f2f2b; }
-
-    .print-table-wrap { border:1px solid #e3e8ea; border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
-    .print-table-title { background:#f2f6f5; padding:10px 12px; font-weight:800; color:#2e6b57; }
-    table.print-table { width:100%; border-collapse:collapse; }
-    table.print-table th, table.print-table td {
-      padding: 9px 10px; border-bottom: 1px solid #e7eced; font-size: 12px;
-    }
-    table.print-table th { background:#f8fbfa; color:#5c6c66; text-transform:uppercase; letter-spacing:0.2px; }
-    table.print-table .num { text-align:right; font-variant-numeric: tabular-nums; }
-    .print-subtotal { font-weight:800; color:#2e5e4e; background: #f5f8f6; }
-
-    @media print {
-      .print-view { display: block !important; }
+      .print-view { display: block !important; width: 100%; }
     }
   </style>
 
-  <!-- pdf.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
     if (window['pdfjsLib']) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
   </script>
-
-  <!-- html2pdf -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
-  <!-- Vista normal -->
   <div id="page-content" class="page-content">
     <div class="no-print" style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
       <button class="btn btn-secondary" onclick="prepararImpresion()">Imprimir</button>
@@ -275,10 +240,7 @@
     </div>
   </div>
 
-  <!-- Layout global -->
   <script src="../../js/layout.js?v=2026-03-17"></script>
-
-  <!-- Supabase y scripts existentes con versionado -->
   <script src="../../lib/supabaseConfig.js?v=2026-03-17"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js?v=2026-03-17"></script>
   <script type="module" src="../../js/globalSupabase.js?v=2026-03-17"></script>
@@ -775,7 +737,6 @@
         container.innerHTML = html;
       }
 
-      // ========= ARCHIVOS =========
       async function cargarArchivos() {
         const cont = q('archivos-detalle');
         if (!cont) return;
@@ -872,7 +833,6 @@
         } catch (e) { console.warn('No se pudo renderizar PDF', e); }
       }
 
-      // Visor (lightbox)
       window.openViewer = function(idx) {
         if (!viewerItems.length) return;
         viewerIndex = Math.max(0, Math.min(viewerItems.length - 1, idx));
@@ -936,7 +896,6 @@
         });
       }
 
-      // Exportar PDF
       async function exportarPDF() {
         const btn = document.getElementById('btn-exportar-pdf');
         if (btn) btn.disabled = true;
@@ -976,7 +935,6 @@
         }, 300);
       };
 
-      // Nueva impresión pro
       window.prepararImpresion = function() {
         renderPrintView();
         window.print();
@@ -1178,7 +1136,7 @@
           <h2 class="print-title">Valores traspasados</h2>
           ${tablasTrasp}
 
-          <div style="margin-top:20px; font-size:12px; color:#5c6c66;">© 2025 Bosque y Tierra — Sistema interno</div>
+          <div style="margin-top:20px; font-size:12px; color:#6a7480;">© 2025 Bosque y Tierra — Sistema interno</div>
         `;
       }
 
