@@ -83,6 +83,16 @@ export async function renameCategory({ oldName, newName }) {
   return { data: !error, error };
 }
 
+export async function deleteCategory(name) {
+  if (!name) return { error: 'Falta name' };
+  const { data, error } = await supabase
+    .from('material_categories')
+    .delete()
+    .eq('name', name);
+  return { data, error };
+}
+
+
 function slugify(str) {
   return String(str)
     .toLowerCase()
