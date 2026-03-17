@@ -307,6 +307,7 @@
     let catImagesMap = {};
     let unidades = [];
     let unitsMap = {};
+    let catalogNames = []; // catálogo oficial material_categories (name + image)
 
     function toast(msg, type='info', timeout=2400) {
       const cont = document.getElementById('toastContainer');
@@ -401,6 +402,14 @@
       unitsMap = {};
     }
 
+    async function fetchCatalog() {
+      // Usa catApi para traer nombre + imagen del catálogo oficial
+      const { data, error } = await catApi.listCategoriesWithImages();
+      if (error) { console.warn('listCategoriesWithImages error', error); return []; }
+      catImagesMap = (data || []).reduce((acc, c) => { acc[c.name] = c.image_url; return acc; }, {});
+      return (data || []).map(c => c.name);
+    }
+
     async function initDataLayer() {
       try {
         const mod = await import('../../lib/materialsApi.js');
@@ -408,10 +417,12 @@
         try {
           // Solo activos
           const res = await materialsApi.listMaterials({ onlyActive: true });
+          const catalog = await fetchCatalog();
+          catalogNames = catalog;
           if (!res?.error) {
             remoteAvailable = true;
-            buildCategoriesFromMaterialsArray(res.data || []);
-            console.log('Materials API connected - using Supabase materials');
+            buildCategoriesFromMaterialsArray(res.data || [], catalog);
+            console.log('Materials API connected - using Supabase materials + catalog');
           } else {
             console.warn('materialsApi.listMaterials returned error, falling back to local categories:', res.error);
             toast('Modo local: no se pudo leer materiales de Supabase','warning', 4000);
@@ -430,11 +441,14 @@
       await refreshUnits();
     }
 
-    function buildCategoriesFromMaterialsArray(arr) {
+    function buildCategoriesFromMaterialsArray(arr, catalog=[]) {
       categoriesData = {};
+      // crea todas las categorías del catálogo aunque no tengan materiales
+      catalog.forEach(cat => { categoriesData[cat] = []; });
+      // asigna materiales a sus categorías válidas; si alguna no está en catálogo, se ignora
       arr.forEach(m => {
         const cat = m.category || 'Sin categoría';
-        if (!categoriesData[cat]) categoriesData[cat] = [];
+        if (!categoriesData[cat]) return;
         categoriesData[cat].push({
           id: m.id,
           name: m.name,
@@ -483,12 +497,6 @@
       try { localStorage.setItem('byt_materials_updated_at', Date.now()); } catch(e){}
     }
 
-    async function loadCategoriesImages() {
-      const { data, error } = await catApi.listCategoriesWithImages();
-      if (error) { console.warn('listCategoriesWithImages error', error); return; }
-      catImagesMap = (data || []).reduce((acc, c) => { acc[c.name] = c.image_url; return acc; }, {});
-    }
-
     function renderThumb(cat) {
       const img = catImagesMap[cat];
       if (img) {
@@ -498,7 +506,6 @@
     }
 
     async function loadCategories() {
-      await loadCategoriesImages();
       const tbody = document.getElementById('tablaCategorias');
       tbody.innerHTML = '';
       Object.keys(categoriesData).forEach(categoria => {
@@ -525,8 +532,12 @@
       if (!nombreCategoria || !nombreCategoria.trim()) return;
       const nombre = nombreCategoria.trim();
       if (categoriesData[nombre]) { toast('Ya existe una categoría con ese nombre','warning'); return; }
-      categoriesData[nombre] = [];
-      if (window.categoriasMateriales) window.categoriasMateriales[nombre] = [];
+      // crear en catálogo remoto
+      const res = await catApi.upsertCategoryImage({ name: nombre, file: null });
+      if (res?.error) { toast('Error creando categoría en catálogo','error'); return; }
+      // refrescar catálogo + materiales
+      await refreshFromRemote();
+      await initDataLayer();
       await loadCategories();
       actualizarTodosLosSelects();
       toast('Categoría creada','success');
@@ -537,22 +548,28 @@
       if (!nuevoNombre || !nuevoNombre.trim() || nuevoNombre.trim() === categoriaActual) return;
       const nombre = nuevoNombre.trim();
       if (categoriesData[nombre]) { toast('Ya existe una categoría con ese nombre','warning'); return; }
-      categoriesData[nombre] = categoriesData[categoriaActual] || [];
-      delete categoriesData[categoriaActual];
-      if (window.categoriasMateriales) {
-        window.categoriasMateriales[nombre] = window.categoriasMateriales[categoriaActual] || [];
-        delete window.categoriasMateriales[categoriaActual];
+      // renombrar en catálogo (simple: crear nueva y migrar materiales)
+      try {
+        const res = await catApi.renameCategory({ oldName: categoriaActual, newName: nombre });
+        if (res?.error) throw res.error;
+      } catch(e){
+        console.warn('No rename endpoint, fallback a crear/borrar manual', e);
+        await catApi.upsertCategoryImage({ name: nombre, file: null });
+        await catApi.removeCategoryImage(categoriaActual);
       }
-      if (remoteAvailable) {
-        const list = categoriesData[nombre];
-        for (const item of list) {
-          if (item.id) {
-            try { await materialsApi.updateMaterial(item.id, { category: nombre }); }
-            catch(e){ console.warn('Failed to update material category on remote for id', item.id, e); }
+      if (remoteAvailable && materialsApi) {
+        const res = await materialsApi.listMaterials({ onlyActive: true });
+        if (res?.data) {
+          for (const m of res.data) {
+            if (m.category === categoriaActual) {
+              try { await materialsApi.updateMaterial(m.id, { category: nombre }); }
+              catch(err){ console.warn('Failed update category', m.id, err); }
+            }
           }
         }
-        await refreshFromRemote();
       }
+      await refreshFromRemote();
+      await initDataLayer();
       await loadCategories();
       actualizarTodosLosSelects();
       toast('Categoría actualizada','success');
@@ -566,19 +583,18 @@
         : `¿Eliminar la categoría "${categoria}"?`;
       const ok = await confirmDialog({ title:'Eliminar categoría', message: mensaje, okText:'Eliminar', cancelText:'Cancelar' });
       if (!ok) return;
-      if (remoteAvailable) {
-        // HARD delete
+      if (remoteAvailable && materialsApi) {
+        // HARD delete de materiales de esa categoría
         for (const m of materiales) {
           if (m.id) {
             try { await materialsApi.deleteMaterial(m.id, { soft: false }); }
             catch(e){ console.warn('Failed deleting material remotely', m.id, e); }
           }
         }
-        await refreshFromRemote();
-      } else {
-        if (window.categoriasMateriales) delete window.categoriasMateriales[categoria];
-        delete categoriesData[categoria];
       }
+      await catApi.removeCategoryImage(categoria);
+      await refreshFromRemote();
+      await initDataLayer();
       await loadCategories();
       actualizarTodosLosSelects();
       notifyUpdate();
@@ -736,6 +752,7 @@
           if (res?.error) { toast('Error creando (ver consola)','error'); return; }
           await refreshFromRemote();
           notifyUpdate();
+          await initDataLayer();
           await loadCategories();
           actualizarTodosLosSelects();
           if (document.getElementById('consultar').classList.contains('active')) consultarTodosMateriales();
@@ -848,6 +865,8 @@
       }
 
       limpiarFormularioEditar();
+      await refreshFromRemote();
+      await initDataLayer();
       await loadCategories();
       actualizarTodosLosSelects();
     });
@@ -942,6 +961,8 @@
       cargarMaterialesParaEliminar();
       document.getElementById('eliminarBuscarCategoria').value = prevCat;
       document.getElementById('materialAEliminar').style.display = 'none';
+      await refreshFromRemote();
+      await initDataLayer();
       await loadCategories();
       actualizarTodosLosSelects();
       document.getElementById('eliminarBuscarCategoria').value = prevCat;
@@ -964,12 +985,18 @@
     async function refreshFromRemote() {
       if (!remoteAvailable || !materialsApi) return;
       try {
-        // Solo activos
-        const res = await materialsApi.listMaterials({ onlyActive: true });
-        if (!res?.error) {
-          buildCategoriesFromMaterialsArray(res.data || []);
+        const [matRes, catRes] = await Promise.all([
+          materialsApi.listMaterials({ onlyActive: true }),
+          catApi.listCategoriesWithImages()
+        ]);
+        if (catRes?.data) {
+          catImagesMap = (catRes.data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{});
+          catalogNames = (catRes.data || []).map(c=>c.name);
+        }
+        if (!matRes?.error) {
+          buildCategoriesFromMaterialsArray(matRes.data || [], catalogNames);
         } else {
-          console.warn('refreshFromRemote: error', res.error);
+          console.warn('refreshFromRemote: error', matRes.error);
           buildCategoriesFromLocal();
         }
       } catch (e) {
@@ -1003,6 +1030,7 @@
         if (res.error) { console.error(res.error); toast('Error subiendo imagen','error'); return; }
         toast('Imagen guardada','success');
         await refreshFromRemote?.();
+        await initDataLayer();
         await loadCategories();
       };
       input.click();
@@ -1014,6 +1042,7 @@
       if (res.error) { console.error(res.error); toast('Error al quitar imagen','error'); return; }
       toast('Imagen quitada','success');
       await refreshFromRemote?.();
+      await initDataLayer();
       await loadCategories();
     };
 
@@ -1027,9 +1056,9 @@
 
       try {
         const bc = new BroadcastChannel('byt-materials');
-        bc.onmessage = (ev) => { if (ev.data?.type === 'materials-updated') refreshFromRemote().then(async ()=>{ await loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); };
+        bc.onmessage = (ev) => { if (ev.data?.type === 'materials-updated') refreshFromRemote().then(async ()=>{ await initDataLayer(); await loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); };
       } catch(e){}
-      window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(async ()=>{ await loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); } });
+      window.addEventListener('storage', (e) => { if (e.key === 'byt_materials_updated_at') { refreshFromRemote().then(async ()=>{ await initDataLayer(); await loadCategories(); actualizarTodosLosSelects(); renderUnidades('crearUnidad'); }); } });
     })();
 
     window.showTab = showTab;
