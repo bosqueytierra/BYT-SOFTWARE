@@ -82,7 +82,7 @@
     .btn-ghost{background:#ffffff;}
     .detail-header h3{margin:0;font-size:18px;font-weight:800;}
     .detail-meta{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
-    .partidas-container{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
+    .partidas-container{display:flex;flex-direction:column;gap:16px;margin-top:10px;}
     .partida-wrapper{
       border:1px solid var(--border);border-radius:14px;
       background:#fff;box-shadow:0 8px 22px rgba(0,0,0,0.06);
@@ -101,6 +101,7 @@
       box-shadow:0 3px 12px rgba(0,0,0,0.04);
       position:relative;
     }
+    .stage-item.done{background:var(--chip-green);border-color:#c6ead1;}
     .stage-name{font-weight:800;}
     .stage-owner{font-size:12px;color:#6b7280;}
     .stage-select{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-weight:700;}
@@ -243,6 +244,7 @@
     let globalStageNotes={};
     let adjContext={tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null};
     let pendingFiles=[]; let isUploading=false;
+    let openPartidas=new Set();
 
     const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
     async function waitForSupabase(maxMs=12000){
@@ -358,6 +360,16 @@
       localStorage.setItem('byt_estado_proyectos_stages_v2', JSON.stringify(obj));
     }
 
+    function captureOpenPartidas(){
+      openPartidas.clear();
+      document.querySelectorAll('[id^="stages-"]').forEach(g=>{
+        if(g.style.display!=='none'){
+          const id = g.id.replace('stages-','');
+          openPartidas.add(id);
+        }
+      });
+    }
+
     /* Render principal */
     function applyFiltersAndRender(resetSelection=false){
       const txt=document.getElementById('filtro-texto').value.toLowerCase().trim();
@@ -441,6 +453,7 @@
         wrap.innerHTML='<div style="padding:22px;color:var(--muted);">Selecciona un proyecto de la lista.</div>';
         return;
       }
+      captureOpenPartidas();
       const prog=computeProgress(proj);
       wrap.innerHTML = `
         <div class="detail-header">
@@ -468,24 +481,26 @@
             const notes = stageNotesByPartida.get(pt.id) || {};
             const pending = pt.estado!=='completada';
             const partId = attr(pt.id);
+            const isOpen = openPartidas.has(pt.id);
             return `
               <div class="partida-wrapper">
                 <div class="partida-header" onclick="togglePartida('${partId}')">
-                  <span class="chevron" id="chev-${partId}">▸</span>
+                  <span class="chevron" id="chev-${partId}" style="transform:${isOpen?'rotate(90deg)':'rotate(0deg)'};">▸</span>
                   <p class="partida-title">${esc(pt.nombre)}</p>
                   <span class="partida-status ${pending?'p-pend':'p-comp'}">${pending?'Pendiente':'Completada'}</span>
                 </div>
-                <div class="stage-grid" id="stages-${partId}" style="display:none;">
+                <div class="stage-grid" id="stages-${partId}" style="display:${isOpen?'grid':'none'};">
                   ${STAGES.map(stage=>{
                     const value = stMap[stage.name] || 'pendiente';
                     const nota = notes[stage.name] ?? globalStageNotes[stage.name] ?? '';
                     const noteId = `note-${pt.id}-${stage.name}`;
+                    const doneClass = value==='listo' ? 'done' : '';
                     return `
-                      <div class="stage-item">
+                      <div class="stage-item ${doneClass}">
                         <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
                         <span class="stage-name">${esc(stage.name)}</span>
                         <span class="stage-owner">${esc(stage.owner)}</span>
-                        <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value)">
+                        <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value, true)">
                           <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
                           <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
                           <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
@@ -510,6 +525,7 @@
       const show = grid.style.display==='none';
       grid.style.display= show ? 'grid':'none';
       if(chev) chev.style.transform = show ? 'rotate(90deg)' : 'rotate(0deg)';
+      if(show) openPartidas.add(partId); else openPartidas.delete(partId);
     }
 
     /* Notas y etapas */
@@ -518,13 +534,17 @@
       if(!box) return;
       box.classList.toggle('show');
     }
-    function setStage(partidaId, stage, value){
+
+    function setStage(partidaId, stage, value, keepOpen=false){
+      if(keepOpen) openPartidas.add(partidaId);
       const current = stageStore.get(partidaId) || {};
       current[stage] = value;
       stageStore.set(partidaId, current);
       saveStageStore();
-      renderDetalle();
+      renderDetalle(); // re-render keeping openPartidas
+      renderLista();   // refresca progreso de la lista
     }
+
     function refreshStageNotesInDOM(etapa, nota){
       document.querySelectorAll(`.note-box textarea[data-stage="${CSS.escape(etapa)}"]`).forEach(t=>{ t.value = nota; });
     }
