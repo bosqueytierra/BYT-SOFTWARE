@@ -32,6 +32,7 @@
     .actions{display:flex;gap:6px;flex-wrap:wrap;}
     .btn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:8px 11px;border-radius:10px;cursor:pointer;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px;}
     .btn:hover{border-color:#d0d5dd;}
+    .btn-ghost{background:#f0f3f5;color:#1f2430;}
     .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary);}
     .btn-primary:hover{background:var(--primary-soft);}
     .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;}
@@ -81,14 +82,14 @@
       <div class="filters-grid">
         <div>
           <label>Buscar proyecto o cliente</label>
-          <input id="filtro-texto" type="text" placeholder="Proyecto, cliente..." oninput="aplicarFiltros()">
+          <input id="filtro-texto" type="text" placeholder="Proyecto, cliente..." oninput="applyFiltersAndRender()">
         </div>
         <div>
           <label>Estado global</label>
-          <select id="filtro-estado" onchange="aplicarFiltros()">
+          <select id="filtro-estado" onchange="applyFiltersAndRender()">
             <option value="todos" selected>Todos</option>
             <option value="abierto">Con partidas pendientes</option>
-            <option value="completo">Todas las partidas completadas</option>
+            <option value="completo">Todas completadas</option>
           </select>
         </div>
       </div>
@@ -151,9 +152,9 @@
     };
 
     /* STATE */
-    let proyectos = [];            // [{key, display, cliente, cotizacionId, partidas:[{id, nombre, estado}], etapas: {stage:status}}]
+    let proyectos = [];    // todos (pendientes + completos)
     let filtered = [];
-    let stageStore = new Map();    // key -> { stageName: status }
+    let stageStore = new Map(); // key -> { stageName: status }
     let adjContext = { tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null };
 
     /* helpers */
@@ -176,7 +177,6 @@
     }
     const esc = (s)=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]||m));
     const attr = (s)=>esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    const fmt = (n)=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n||0);
 
     /* bootstrap */
     document.addEventListener('DOMContentLoaded',()=>bootstrapEstado());
@@ -196,7 +196,6 @@
       const sb = await waitForSupabase();
       if(sbClient.init) await sbClient.init();
 
-      // obtén ventas (partidas) aprobadas
       const {data:cotAprob,error:errCot}=await sb.from('cotizaciones').select('id').eq('estado','aprobada');
       if(errCot) throw errCot;
       const approved = new Set((cotAprob||[]).map(c=>c.id));
@@ -205,7 +204,6 @@
       if(!res.success) throw new Error(res.error||'listarVentas sin éxito');
       const ventas=(res.data||[]).filter(v=>approved.has(v.cotizacion_id));
 
-      // agrupar por proyecto/cotizacion
       const map=new Map();
       ventas.forEach(v=>{
         const key=v.cotizacion_id || v.proyecto || 'sin-key';
@@ -224,10 +222,8 @@
         });
       });
 
-      // Solo proyectos con alguna partida != completada
-      proyectos = Array.from(map.values()).filter(p=>p.partidas.some(pt=>pt.estado!=='completada'));
+      proyectos = Array.from(map.values());
 
-      // cargar progreso etapas guardado en localStorage
       loadStageStore();
     }
 
@@ -255,45 +251,50 @@
       localStorage.setItem('byt_estado_proyectos_stages', JSON.stringify(obj));
     }
 
-    function aplicarFiltros(){
+    function applyFiltersAndRender(){
       const txt=document.getElementById('filtro-texto').value.toLowerCase().trim();
       const est=document.getElementById('filtro-estado').value;
+
       filtered = proyectos.filter(p=>{
+        const pend = p.partidas.some(pt=>pt.estado!=='completada');
         const matchTxt = !txt || p.display.toLowerCase().includes(txt) || p.cliente.toLowerCase().includes(txt);
-        const allDone = p.partidas.every(pt=>pt.estado==='completada');
-        const matchEst = est==='todos' ? true : (est==='completo'? allDone : !allDone);
+        const matchEst = est==='todos' ? true : (est==='abierto'? pend : !pend);
         return matchTxt && matchEst;
       });
-    }
 
-    function applyFiltersAndRender(){
-      aplicarFiltros();
+      // ordenar: pendientes arriba, completados abajo
+      filtered.sort((a,b)=>{
+        const pa = a.partidas.some(pt=>pt.estado!=='completada') ? 0 : 1;
+        const pb = b.partidas.some(pt=>pt.estado!=='completada') ? 0 : 1;
+        if(pa!==pb) return pa-pb;
+        return (a.display||'').localeCompare(b.display||'');
+      });
+
       renderProyectos();
     }
 
     function renderProyectos(){
       const list=document.getElementById('proyectos-list');
       if(!filtered.length){
-        list.innerHTML='<div class="empty">No hay proyectos con partidas pendientes.</div>';
+        list.innerHTML='<div class="empty">No hay proyectos para los filtros aplicados.</div>';
         return;
       }
       const html=filtered.map(proj=>{
         const stages = stageStore.get(proj.key) || {};
-        const open = false;
-        const statusGlobal = proj.partidas.some(p=>p.estado!=='completada') ? 'abierto' : 'completo';
-        const statusChip = statusGlobal==='completo'
-          ? '<span class="status-chip status-ok">Completo</span>'
-          : '<span class="status-chip status-open">Pendiente</span>';
+        const pendientes = proj.partidas.filter(p=>p.estado!=='completada').length;
+        const statusChip = pendientes>0
+          ? '<span class="status-chip status-open">Pendiente</span>'
+          : '<span class="status-chip status-ok">Completo</span>';
 
         return `
-          <details class="project-card" ${open?'open':''}>
+          <details class="project-card">
             <summary class="project-head">
               <div>
                 <p class="project-title">${esc(proj.display)}</p>
                 <div class="project-meta">
                   <span>Cliente: ${esc(proj.cliente||'N/A')}</span>
                   <span>ID cotización: ${esc(proj.cotizacionId||'')}</span>
-                  <span>Partidas pendientes: ${proj.partidas.filter(p=>p.estado!=='completada').length}</span>
+                  <span>Partidas pendientes: ${pendientes}</span>
                 </div>
               </div>
               <div class="actions">
@@ -303,13 +304,12 @@
                 <button class="btn btn-ghost" onclick="event.preventDefault(); openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
                 <button class="btn btn-ghost" onclick="event.preventDefault(); openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
                 <button class="btn btn-ghost" onclick="event.preventDefault(); openAdj('${attr(proj.cotizacionId||'')}','cotizacion')">Adjuntos Cotización</button>
-                <button class="btn btn-ghost" onclick="event.preventDefault(); imprimirContrato('${attr(proj.cotizacionId||'')}')">Imprimir contrato</button>
               </div>
             </summary>
 
             <div class="project-meta" style="margin:8px 0 6px;">Partidas con estado ≠ completada:</div>
             <ul style="margin:0 0 8px 16px; padding-left:8px;">
-              ${proj.partidas.filter(p=>p.estado!=='completada').map(p=>`<li>${esc(p.nombre)} · <span style="color:#d35400;font-weight:700;">${esc(p.estado||'pendiente')}</span></li>`).join('')}
+              ${pendientes? proj.partidas.filter(p=>p.estado!=='completada').map(p=>`<li>${esc(p.nombre)} · <span style="color:#d35400;font-weight:700;">${esc(p.estado||'pendiente')}</span></li>`).join('') : '<li>Todas completadas</li>'}
             </ul>
 
             <div class="stage-grid">
@@ -470,7 +470,7 @@
     }
 
     function verCotizacion(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}`; }
-    function imprimirContrato(id){ window.utils?.mostrarNotificacion?.('Imprimir contrato aún no está disponible','info'); }
+    function imprimirContrato(id){ /* eliminado según solicitud */ }
   </script>
 </body>
 </html>
