@@ -192,7 +192,8 @@
     let proyectos = [];
     let filtered = [];
     let stageStore = new Map(); // partidaId -> { stageName: status }
-    let stageNotes = new Map(); // partidaId -> { stageName: nota }
+    let stageNotesByPartida = new Map(); // partidaId -> { stageName: nota }
+    let globalStageNotes = {}; // stageName -> nota (se replica)
     let openProjects = new Set();
     let openPartidas = new Set();
     let adjContext = { tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null };
@@ -271,15 +272,22 @@
 
     async function cargarNotasEtapas(){
       const sb = await waitForSupabase();
-      const { data, error } = await sb.from('etapa_notas')
-        .select('partida_id, etapa, nota');
-      if(error) { console.warn('No se cargaron notas', error); return; }
+      // notas específicas
+      const { data:partData } = await sb.from('etapa_notas')
+        .select('partida_id, etapa, nota')
+        .not('partida_id','is',null);
       const m=new Map();
-      (data||[]).forEach(r=>{
+      (partData||[]).forEach(r=>{
         if(!m.has(r.partida_id)) m.set(r.partida_id,{});
         m.get(r.partida_id)[r.etapa]=r.nota||'';
       });
-      stageNotes = m;
+      stageNotesByPartida = m;
+      // notas globales por etapa
+      const { data:globData } = await sb.from('etapa_notas')
+        .select('etapa, nota')
+        .is('partida_id', null);
+      globalStageNotes = {};
+      (globData||[]).forEach(r=>{ globalStageNotes[r.etapa]=r.nota||''; });
     }
 
     function parseCliente(cli){
@@ -392,7 +400,7 @@
             ${proj.partidas.map(pt=>{
               const pending = pt.estado!=='completada';
               const stMap = stageStore.get(pt.id) || {};
-              const notes = stageNotes.get(pt.id) || {};
+              const notes = stageNotesByPartida.get(pt.id) || {};
               const openPart = openPartidas.has(pt.id);
               return `
                 <details class="partida-details" data-partida-id="${attr(pt.id)}" ${openPart?'open':''}>
@@ -403,7 +411,7 @@
                   <div class="stage-grid">
                     ${STAGES.map(stage=>{
                       const value = stMap[stage.name] || 'pendiente';
-                      const nota = notes[stage.name] || '';
+                      const nota = notes[stage.name] ?? globalStageNotes[stage.name] ?? '';
                       const noteId = `note-${pt.id}-${stage.name}`;
                       return `
                         <div class="stage-item">
@@ -447,13 +455,19 @@
 
     async function saveStageNote(partidaId, etapa, nota){
       const sb=await waitForSupabase();
-      const current = stageNotes.get(partidaId) || {};
+      // guardar específico
+      const current = stageNotesByPartida.get(partidaId) || {};
       current[etapa]=nota;
-      stageNotes.set(partidaId,current);
-      await sb.from('etapa_notas').upsert({
-        partida_id: partidaId,
-        etapa,
-        nota
+      stageNotesByPartida.set(partidaId,current);
+      await sb.from('etapa_notas').upsert({ partida_id: partidaId, etapa, nota });
+      // guardar global (para replicar en otras partidas)
+      globalStageNotes[etapa]=nota;
+      await sb.from('etapa_notas').upsert({ partida_id: null, etapa, nota });
+      // refrescar textarea de mismas etapas en pantalla
+      document.querySelectorAll(`[id^="note-"] textarea`).forEach(t=>{
+        if(t.parentElement?.parentElement?.innerHTML?.includes(etapa)) {
+          t.value = nota;
+        }
       });
       toast('Nota guardada');
     }
@@ -514,7 +528,7 @@
 
     document.getElementById('adj-file-input').addEventListener('change', async (e)=>{
       const files=Array.from(e.target.files||[]);
-      if(!files.length) return;
+      if(!files.length) { toast('Selecciona archivo(s)'); return; }
       pendingFiles = files;
       renderPendingPreviews();
       await autoUpload(files);
