@@ -7,56 +7,112 @@
   <link rel="stylesheet" href="../../styles/global.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
-    :root {
-      --bg:#f6f7f8; --card:#fff; --border:#e4e7eb; --text:#2a2f36; --muted:#6b7280;
-      --primary:#2e5e4e; --primary-soft:#3f705d; --chip:#eef2f7; --chip-text:#2f3b4c;
-      --shadow:0 10px 30px rgba(0,0,0,0.08);
-      --chip-green:#e9f7ef; --chip-red:#fdeceb; --chip-neutral:#f4f5f7;
-      --chip-green-text:#1f9d55; --chip-red-text:#c0392b; --chip-neutral-text:#6b7280;
-      --overlay:rgba(0,0,0,0.55);
+    /* --- paleta nueva, look “tarjeta limpia” --- */
+    :root{
+      --bg:#eef1f6;
+      --card:#ffffff;
+      --border:#e6e9f0;
+      --text:#283040;
+      --muted:#7a8191;
+      --shadow:0 14px 40px rgba(17,24,39,0.12);
+      --primary:#2f6f4f;
+      --chip-green:#e7f5eb; --chip-green-text:#1b874a;
+      --chip-amber:#fff4df; --chip-amber-text:#b47a1b;
+      --chip-grey:#eef1f6;  --chip-grey-text:#5f6470;
     }
     *{box-sizing:border-box;}
-    body{margin:0;font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif;background:var(--bg);color:var(--text);}
-    .page{max-width:1400px;width:96%;margin:22px auto 48px;}
+    body{
+      margin:0;
+      font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif;
+      background:radial-gradient(circle at 20% 20%, rgba(255,255,255,0.9), transparent 35%), var(--bg);
+      color:var(--text);
+    }
+    .page{max-width:1280px;width:95%;margin:28px auto 48px;}
     .header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
-    .header h2{margin:0;}
-    .filters-card,.card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);}
-    .filters-card{padding:14px;margin-bottom:14px;}
-    .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;}
+    .header h2{margin:0;font-weight:800;font-size:22px;}
+    .filters-card,.card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+    }
+    .filters-card{padding:16px;margin-bottom:16px;}
+    .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
     label{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px;display:block;}
-    input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:#fdfdfd;font-family:inherit;font-size:14px;color:var(--text);}
-    .project-card{padding:14px;border-bottom:1px solid var(--border);}
-    .project-head{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;}
+    input,select{
+      width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;
+      background:#fdfefe;font-family:inherit;font-size:14px;color:var(--text);
+      box-shadow:inset 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    /* ---- Lista de proyectos ---- */
+    .project-card{
+      margin:10px 12px;
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:0;
+      overflow:hidden;
+      background:var(--card);
+    }
+    .project-head{
+      display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+      gap:12px;padding:14px 16px;cursor:default;
+    }
     .project-left{display:flex;gap:10px;align-items:flex-start;}
-    .chevron{display:inline-block;transition:transform .15s; font-size:16px; color:#4b5563; margin-top:3px;}
-    details[open] .chevron{transform:rotate(90deg);}
     .project-title{margin:0;font-size:16px;font-weight:800;color:var(--text);}
-    .project-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--muted);}
-    .actions{display:flex;gap:6px;flex-wrap:wrap;}
-    .btn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:8px 11px;border-radius:10px;cursor:pointer;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px;}
-    .btn:hover{border-color:#d0d5dd;}
-    .btn-ghost{background:#f0f3f5;color:#1f2430;}
+    .project-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:13px;color:var(--muted);}
+    .progress-wrap{margin-top:6px;width:320px;max-width:100%;}
+    .progress-bar{height:8px;border-radius:999px;background:#edf0f5;overflow:hidden;}
+    .progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#f97316,#22c55e);transition:width .2s;}
+    .progress-text{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
+
+    .actions{display:flex;gap:8px;flex-wrap:wrap;}
+    .btn{
+      border:1px solid var(--border);background:#f6f8fb;color:#1f2430;
+      padding:9px 12px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;
+      display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,0.04);
+    }
+    .btn:hover{border-color:#cfd6e3;background:#eef2f7;}
+    .btn-ghost{background:#ffffff;}
+    .btn-pill{
+      border-radius:999px;
+      background:#2f6f4f;
+      color:white;
+      border:1px solid #2f6f4f;
+      padding:9px 14px;
+    }
+
+    /* ---- Partidas ---- */
+    .partidas-box{padding:0 16px 14px;}
+    .partida-details{
+      border:1px solid var(--border);border-radius:14px;
+      padding:10px;margin:10px 0;background:#fdfefe;
+      box-shadow:0 4px 18px rgba(0,0,0,0.05);
+    }
+    .partida-summary{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+    .partida-name{font-weight:800;}
+    .partida-status{padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;}
+    .p-pend{background:var(--chip-amber);color:var(--chip-amber-text);}
+    .p-comp{background:var(--chip-green);color:var(--chip-green-text);}
+
     .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:12px;}
-    .stage-item{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fafafa;display:flex;flex-direction:column;gap:6px;position:relative;}
+    .stage-item{
+      border:1px solid var(--border);border-radius:12px;padding:10px;
+      background:#ffffff;display:flex;flex-direction:column;gap:6px;position:relative;
+      box-shadow:0 3px 12px rgba(0,0,0,0.04);
+    }
     .stage-name{font-weight:800;}
     .stage-owner{font-size:12px;color:#6b7280;}
     .stage-select{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-weight:700;}
-    details[open] .project-head{border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;}
-    .empty{padding:18px;text-align:center;color:var(--muted);}
-    .partida-details{border:1px solid var(--border);border-radius:12px;padding:10px;margin:8px 0;background:#fdfdfd;}
-    .partida-summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;}
-    .partida-name{font-weight:700;}
-    .partida-status{padding:6px 10px;border-radius:10px;font-weight:700;font-size:12px;}
-    .p-pend{background:var(--chip-neutral);color:var(--chip-neutral-text);}
-    .p-comp{background:var(--chip-green);color:var(--chip-green-text);}
-    .progress-wrap{margin:8px 0 4px;width: clamp(240px, 24vw, 320px);max-width:100%;}
-    .progress-bar{height:10px;border-radius:999px;background:#eceff1;overflow:hidden;width:100%;}
-    .progress-fill{height:100%;border-radius:999px;transition:width .2s;}
-    .progress-text{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
+    .note-toggle{position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:4px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:12px; display:flex;align-items:center;justify-content:center;}
+    .note-box{margin-top:6px; display:none;}
+    .note-box textarea{width:100%; min-height:60px; border:1px solid var(--border); border-radius:8px; padding:6px; font-family:inherit; font-size:12px;}
+    .note-box.show{display:block;}
 
-    /* Modal adjuntos grande */
-    .adj-backdrop{position:fixed; inset:0; background:var(--overlay); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;}
-    .adj-modal{background:#fff; border-radius:18px; max-width:1280px; width:96vw; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); max-height:94vh; display:flex; flex-direction:column;}
+    /* Modal adjuntos */
+    .adj-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;}
+    .adj-modal{background:#fff; border-radius:18px; max-width:1200px; width:96vw; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); max-height:94vh; display:flex; flex-direction:column;}
     .adj-head{padding:18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;}
     .adj-title{margin:0; font-size:19px; font-weight:800;}
     .adj-sub{margin:2px 0 0; color:#6c7a86; font-size:13px;}
@@ -64,11 +120,10 @@
     .adj-body{padding:16px 18px; overflow:auto;}
     .adj-upload{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;}
     .adj-btn{border:1px solid var(--border);background:#f8fafc;color:#1f2430;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;}
-    .adj-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);}
     .adj-note{padding:9px 10px;border:1px solid var(--border);border-radius:10px;flex:1;min-width:220px;}
     .adj-status{font-size:13px;color:var(--muted);margin-bottom:8px;}
     .adj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
-    .adj-card{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fdfdfd;display:flex;flex-direction:column;gap:6px;}
+    .adj-card{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fdfdfd;display:flex;flex-direction:column;gap:6px;box-shadow:0 6px 18px rgba(0,0,0,0.06);}
     .adj-preview{height:170px;display:grid;place-items:center;background:#fff;border:1px dashed var(--border);border-radius:10px;overflow:hidden;}
     .adj-preview img{max-width:100%;max-height:100%;object-fit:contain;}
     .pdf-frame{width:100%;height:170px;border:none;}
@@ -79,23 +134,10 @@
     .adj-smallbtn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:6px 8px;border-radius:8px;font-size:12px;cursor:pointer;}
     .adj-smallbtn.danger{border-color:#fda4af;color:#b91c1c;}
 
-    /* Previsualización instantánea */
-    .pending-wrap{border:1px dashed var(--border);border-radius:12px;padding:10px;margin-bottom:12px;background:#fff;}
-    .pending-title{font-weight:800;margin:6px 0 4px;font-size:14px;}
-    .pending-note{color:#6b7280;font-size:12px;margin:0 0 8px;}
-
-    /* Nota por etapa */
-    .note-toggle{position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:4px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:12px; display:flex;align-items:center;justify-content:center;}
-    .note-box{margin-top:6px; display:none;}
-    .note-box textarea{width:100%; min-height:60px; border:1px solid var(--border); border-radius:8px; padding:6px; font-family:inherit; font-size:12px;}
-    .note-box.show{display:block;}
-
-    /* Overlay loader */
+    /* Loader y toast */
     .loader-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:3000;}
     .spinner{width:70px;height:70px;border-radius:50%;border:6px solid #e5e7eb;border-top-color:var(--primary);animation:spin 0.9s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg);}}
-
-    /* Toast */
     .toast{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111827; color:#fff; padding:12px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:4000; display:none;}
   </style>
 </head>
@@ -103,7 +145,7 @@
   <div class="page">
     <div class="header">
       <button class="btn btn-ghost" onclick="window.history.back()">← Atrás</button>
-      <h2 style="margin:0;">Estado de proyectos</h2>
+      <h2>Estado de proyectos</h2>
     </div>
 
     <div class="filters-card">
@@ -123,7 +165,7 @@
       </div>
     </div>
 
-    <div id="proyectos-list" class="card"></div>
+    <div id="proyectos-list" class="card" style="padding:8px 0;"></div>
   </div>
 
   <!-- Modal adjuntos -->
@@ -363,20 +405,18 @@
     function renderProyectos(){
       const list=document.getElementById('proyectos-list');
       if(!filtered.length){
-        list.innerHTML='<div class="empty">No hay proyectos para los filtros aplicados.</div>';
+        list.innerHTML='<div class="empty" style="padding:22px;text-align:center;color:var(--muted);">No hay proyectos para los filtros aplicados.</div>';
         return;
       }
       const html=filtered.map(proj=>{
         const pendientes = proj.partidas.filter(p=>p.estado!=='completada').length;
         const prog = computeProgress(proj);
-        const gradient = 'linear-gradient(90deg, #e53e3e 0%, #f6ad55 50%, #38a169 100%)';
         const openProj = openProjects.has(proj.key);
 
         return `
           <details class="project-card" data-proj-key="${attr(proj.key)}" ${openProj?'open':''}>
             <summary class="project-head">
               <div class="project-left">
-                <span class="chevron">▸</span>
                 <div>
                   <p class="project-title">${esc(proj.display)}</p>
                   <div class="project-meta">
@@ -384,61 +424,72 @@
                     <span>Partidas pendientes: ${pendientes}</span>
                   </div>
                   <div class="progress-wrap">
-                    <div class="progress-bar"><div class="progress-fill" style="width:${prog.percent}%; background:${gradient};"></div></div>
-                    <div class="progress-text">${prog.percent}% completado (Listos ${prog.done}/${prog.total})</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${prog.percent}%;"></div></div>
+                    <div class="progress-text">${prog.percent}% completado</div>
                   </div>
                 </div>
               </div>
               <div class="actions">
+                <button type="button" class="btn btn-pill" onclick="event.preventDefault(); toggleProject('${attr(proj.key)}')">${openProj?'Cerrar proyecto':'Abrir proyecto'}</button>
+              </div>
+            </summary>
+
+            <div class="partidas-box">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px;">
                 <button type="button" class="btn btn-ghost" onclick="event.stopPropagation(); verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
                 <button type="button" class="btn btn-ghost" onclick="event.stopPropagation(); openAdj('${attr(proj.cotizacionId||'')}','skp')">SKP</button>
                 <button type="button" class="btn btn-ghost" onclick="event.stopPropagation(); openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
                 <button type="button" class="btn btn-ghost" onclick="event.stopPropagation(); openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
                 <button type="button" class="btn btn-ghost" onclick="event.stopPropagation(); openAdj('${attr(proj.cotizacionId||'')}','cotizacion')">Adjuntos Cotización</button>
               </div>
-            </summary>
 
-            <div class="project-meta" style="margin:8px 0 6px;">Partidas:</div>
-            ${proj.partidas.map(pt=>{
-              const pending = pt.estado!=='completada';
-              const stMap = stageStore.get(pt.id) || {};
-              const notes = stageNotesByPartida.get(pt.id) || {};
-              const openPart = openPartidas.has(pt.id);
-              return `
-                <details class="partida-details" data-partida-id="${attr(pt.id)}" ${openPart?'open':''}>
-                  <summary class="partida-summary">
-                    <span class="partida-name">${esc(pt.nombre)}</span>
-                    <span class="partida-status ${pending?'p-pend':'p-comp'}">${pending?'Pendiente':'Completada'}</span>
-                  </summary>
-                  <div class="stage-grid">
-                    ${STAGES.map(stage=>{
-                      const value = stMap[stage.name] || 'pendiente';
-                      const nota = notes[stage.name] ?? globalStageNotes[stage.name] ?? '';
-                      const noteId = `note-${pt.id}-${stage.name}`;
-                      return `
-                        <div class="stage-item">
-                          <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
-                          <span class="stage-name">${esc(stage.name)}</span>
-                          <span class="stage-owner">${esc(stage.owner)}</span>
-                          <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value)">
-                            <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
-                            <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
-                            <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
-                          </select>
-                          <div id="${attr(noteId)}" class="note-box">
-                            <textarea data-stage="${attr(stage.name)}" placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
+              ${proj.partidas.map(pt=>{
+                const pending = pt.estado!=='completada';
+                const stMap = stageStore.get(pt.id) || {};
+                const notes = stageNotesByPartida.get(pt.id) || {};
+                const openPart = openPartidas.has(pt.id);
+                return `
+                  <details class="partida-details" data-partida-id="${attr(pt.id)}" ${openPart?'open':''}>
+                    <summary class="partida-summary">
+                      <span class="partida-name">${esc(pt.nombre)}</span>
+                      <span class="partida-status ${pending?'p-pend':'p-comp'}">${pending?'Pendiente':'Completada'}</span>
+                    </summary>
+                    <div class="stage-grid">
+                      ${STAGES.map(stage=>{
+                        const value = stMap[stage.name] || 'pendiente';
+                        const nota = notes[stage.name] ?? globalStageNotes[stage.name] ?? '';
+                        const noteId = `note-${pt.id}-${stage.name}`;
+                        return `
+                          <div class="stage-item">
+                            <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
+                            <span class="stage-name">${esc(stage.name)}</span>
+                            <span class="stage-owner">${esc(stage.owner)}</span>
+                            <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value)">
+                              <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
+                              <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
+                              <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
+                            </select>
+                            <div id="${attr(noteId)}" class="note-box">
+                              <textarea data-stage="${attr(stage.name)}" placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
+                            </div>
                           </div>
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>
-                </details>
-              `;
-            }).join('')}
+                        `;
+                      }).join('')}
+                    </div>
+                  </details>
+                `;
+              }).join('')}
+            </div>
           </details>
         `;
       }).join('');
       list.innerHTML=html;
+    }
+
+    function toggleProject(key){
+      const el=document.querySelector(`details.project-card[data-proj-key="${CSS.escape(key)}"]`);
+      if(!el) return;
+      el.open=!el.open;
     }
 
     function toggleNote(id){
