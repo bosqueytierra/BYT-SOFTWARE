@@ -34,9 +34,7 @@
       gap:16px;
       align-items:start;
     }
-    @media(max-width:1100px){
-      .layout{grid-template-columns:1fr;}
-    }
+    @media(max-width:1100px){ .layout{grid-template-columns:1fr;} }
     .header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
     .header h2{margin:0;font-weight:800;font-size:22px;}
     .card, .filters-card{
@@ -74,7 +72,7 @@
 
     /* Detalle derecha */
     .detail-card{padding:16px;}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 14px;}
     .btn{
       border:1px solid var(--border);background:#f6f8fb;color:#1f2430;
       padding:9px 12px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;
@@ -84,9 +82,19 @@
     .btn-ghost{background:#ffffff;}
     .detail-header h3{margin:0;font-size:18px;font-weight:800;}
     .detail-meta{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
-    .partida-box{margin-top:12px;}
-    .partida-title{font-weight:800;margin:8px 0 6px;}
-    .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;}
+    .partidas-container{display:flex;flex-direction:column;gap:12px;margin-top:10px;}
+    .partida-wrapper{
+      border:1px solid var(--border);border-radius:14px;
+      background:#fff;box-shadow:0 8px 22px rgba(0,0,0,0.06);
+      padding:10px 12px;
+    }
+    .partida-header{display:flex;align-items:center;gap:10px;cursor:pointer;}
+    .partida-title{font-weight:800;margin:0;}
+    .partida-status{padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;}
+    .p-pend{background:var(--chip-amber);color:var(--chip-amber-text);}
+    .p-comp{background:var(--chip-green);color:var(--chip-green-text);}
+    .chevron{font-size:16px;color:#6b7280;transition:transform .15s;}
+    .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px;}
     .stage-item{
       border:1px solid var(--border);border-radius:12px;padding:10px;
       background:#ffffff;display:flex;flex-direction:column;gap:6px;
@@ -96,15 +104,12 @@
     .stage-name{font-weight:800;}
     .stage-owner{font-size:12px;color:#6b7280;}
     .stage-select{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-weight:700;}
-    .partida-status{padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;}
-    .p-pend{background:var(--chip-amber);color:var(--chip-amber-text);}
-    .p-comp{background:var(--chip-green);color:var(--chip-green-text);}
     .note-toggle{position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:4px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:12px; display:flex;align-items:center;justify-content:center;}
     .note-box{margin-top:6px; display:none;}
     .note-box textarea{width:100%; min-height:60px; border:1px solid var(--border); border-radius:8px; padding:6px; font-family:inherit; font-size:12px;}
     .note-box.show{display:block;}
 
-    /* Modal adjuntos y utilidades (igual que antes) */
+    /* Modal adjuntos y utilidades */
     .adj-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;}
     .adj-modal{background:#fff; border-radius:18px; max-width:1200px; width:96vw; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); max-height:94vh; display:flex; flex-direction:column;}
     .adj-head{padding:18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;}
@@ -457,42 +462,54 @@
           <button class="btn btn-ghost" onclick="verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
         </div>
 
-        ${proj.partidas.map(pt=>{
-          const stMap = stageStore.get(pt.id) || {};
-          const notes = stageNotesByPartida.get(pt.id) || {};
-          const pending = pt.estado!=='completada';
-          return `
-            <div class="partida-box">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <div class="partida-title">${esc(pt.nombre)}</div>
-                <span class="partida-status ${pending?'p-pend':'p-comp'}">${pending?'Pendiente':'Completada'}</span>
-              </div>
-              <div class="stage-grid">
-                ${STAGES.map(stage=>{
-                  const value = stMap[stage.name] || 'pendiente';
-                  const nota = notes[stage.name] ?? globalStageNotes[stage.name] ?? '';
-                  const noteId = `note-${pt.id}-${stage.name}`;
-                  return `
-                    <div class="stage-item">
-                      <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
-                      <span class="stage-name">${esc(stage.name)}</span>
-                      <span class="stage-owner">${esc(stage.owner)}</span>
-                      <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value)">
-                        <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
-                        <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
-                        <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
-                      </select>
-                      <div id="${attr(noteId)}" class="note-box">
-                        <textarea data-stage="${attr(stage.name)}" placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
+        <div class="partidas-container">
+          ${proj.partidas.map(pt=>{
+            const stMap = stageStore.get(pt.id) || {};
+            const notes = stageNotesByPartida.get(pt.id) || {};
+            const pending = pt.estado!=='completada';
+            const partId = attr(pt.id);
+            return `
+              <div class="partida-wrapper">
+                <div class="partida-header" onclick="togglePartida('${partId}')">
+                  <span class="chevron" id="chev-${partId}">▸</span>
+                  <p class="partida-title">${esc(pt.nombre)}</p>
+                  <span class="partida-status ${pending?'p-pend':'p-comp'}">${pending?'Pendiente':'Completada'}</span>
+                </div>
+                <div class="stage-grid" id="stages-${partId}" style="display:none;">
+                  ${STAGES.map(stage=>{
+                    const value = stMap[stage.name] || 'pendiente';
+                    const nota = notes[stage.name] ?? globalStageNotes[stage.name] ?? '';
+                    const noteId = `note-${pt.id}-${stage.name}`;
+                    return `
+                      <div class="stage-item">
+                        <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
+                        <span class="stage-name">${esc(stage.name)}</span>
+                        <span class="stage-owner">${esc(stage.owner)}</span>
+                        <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value)">
+                          <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
+                          <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
+                          <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
+                        </select>
+                        <div id="${attr(noteId)}" class="note-box">
+                          <textarea data-stage="${attr(stage.name)}" placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
+                        </div>
                       </div>
-                    </div>
-                  `;
-                }).join('')}
+                    `;
+                  }).join('')}
+                </div>
               </div>
-            </div>
-          `;
-        }).join('')}
+            `;
+          }).join('')}
+        </div>
       `;
+    }
+
+    function togglePartida(partId){
+      const grid=document.getElementById(`stages-${partId}`);
+      const chev=document.getElementById(`chev-${partId}`);
+      const show = grid.style.display==='none';
+      grid.style.display= show ? 'grid':'none';
+      if(chev) chev.style.transform = show ? 'rotate(90deg)' : 'rotate(0deg)';
     }
 
     /* Notas y etapas */
@@ -523,7 +540,7 @@
       toast('Nota guardada');
     }
 
-    /* ------------ Adjuntos (igual pero con previews PDF) ------------- */
+    /* ------------ Adjuntos (igual con previews PDF) ------------- */
     function wireFileInput(){
       const old=document.getElementById('adj-file-input');
       if(old){ const c=old.cloneNode(true); old.replaceWith(c); }
