@@ -71,6 +71,7 @@
     .adj-card{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fdfdfd;display:flex;flex-direction:column;gap:6px;}
     .adj-preview{height:170px;display:grid;place-items:center;background:#fff;border:1px dashed var(--border);border-radius:10px;overflow:hidden;}
     .adj-preview img{max-width:100%;max-height:100%;object-fit:contain;}
+    .pdf-frame{width:100%;height:170px;border:none;}
     .adj-name{font-weight:700;}
     .adj-meta{font-size:12px;color:#6b7280;}
     .adj-note-edit{width:100%;min-height:48px;border:1px solid var(--border);border-radius:10px;padding:8px;font-family:inherit;}
@@ -462,12 +463,10 @@
 
     async function saveStageNote(partidaId, etapa, nota){
       const sb=await waitForSupabase();
-      // guardar específico
       const current = stageNotesByPartida.get(partidaId) || {};
       current[etapa]=nota;
       stageNotesByPartida.set(partidaId,current);
       await sb.from('etapa_notas').upsert({ partida_id: partidaId, etapa, nota });
-      // guardar global (replicar)
       globalStageNotes[etapa]=nota;
       await sb.from('etapa_notas').upsert({ partida_id: null, etapa, nota });
       refreshStageNotesInDOM(etapa, nota);
@@ -534,10 +533,15 @@
       wrap.style.display='block';
       grid.innerHTML = pendingFiles.map(f=>{
         const url = f.type.startsWith('image/') ? URL.createObjectURL(f) : null;
+        const isPdf = /\.pdf$/i.test(f.name);
         const sizeMB = (f.size/1024/1024).toFixed(2)+' MB';
+        const preview = url
+          ? `<img src="${url}" alt="">`
+          : isPdf ? '<span style="font-size:32px;color:#9ca3af;">📄</span>'
+                  : '<span style="font-size:32px;color:#9ca3af;">📁</span>';
         return `
           <div class="adj-card">
-            <div class="adj-preview">${url?`<img src="${url}" alt="">`:`<span style="font-size:32px;color:#9ca3af;">📁</span>`}</div>
+            <div class="adj-preview">${preview}</div>
             <div class="adj-name">${esc(f.name)}</div>
             <div class="adj-meta">${esc(f.type||'archivo')} · ${sizeMB}</div>
           </div>
@@ -614,9 +618,14 @@
         const isImg=/\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name);
         const isPdf=/\.pdf$/i.test(f.name);
         const sizeMB = f.metadata?.size ? (f.metadata.size/1024/1024).toFixed(2)+' MB' : '';
-        const preview = isImg
-          ? `<div class="adj-preview"><img src="${f.signedUrl||''}" alt=""></div>`
-          : `<div class="adj-preview"><span style="font-size:32px;color:#9ca3af;">${isPdf?'📄':'📁'}</span></div>`;
+        let preview;
+        if(isImg){
+          preview = `<div class="adj-preview"><img src="${f.signedUrl||''}" alt=""></div>`;
+        }else if(isPdf){
+          preview = `<div class="adj-preview"><iframe class="pdf-frame" src="${f.signedUrl||''}#toolbar=0&navpanes=0&scrollbar=0" title="PDF"></iframe></div>`;
+        }else{
+          preview = `<div class="adj-preview"><span style="font-size:32px;color:#9ca3af;">📁</span></div>`;
+        }
         const noteField = adjContext.bucket===ADJ_BUCKETS.cotizacion
           ? `<textarea class="adj-note-edit" placeholder="Nota" data-note-id="${notaObj.id||''}" data-path="${f.path}" onchange="guardarNotaAdj(this)">${notaObj.nota||''}</textarea>`
           : '';
