@@ -198,6 +198,7 @@
     let openPartidas = new Set();
     let adjContext = { tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null };
     let pendingFiles = [];
+    let isUploading = false;               // evita doble subida
 
     const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
     async function waitForSupabase(maxMs=12000){
@@ -229,7 +230,7 @@
         await cargarDatos();
         await cargarNotasEtapas();
         applyFiltersAndRender();
-        wireFileInput(); // asegurar que el change se enganche
+        wireFileInput(); // asegurar handler único
       }catch(e){
         console.error(e);
         document.getElementById('proyectos-list').innerHTML='<div class="empty">No se pudo cargar información</div>';
@@ -475,8 +476,12 @@
 
     /* ------------ Adjuntos ------------- */
     function wireFileInput(){
+      const old = document.getElementById('adj-file-input');
+      if(old){
+        const clone = old.cloneNode(true);
+        old.replaceWith(clone); // elimina listeners previos
+      }
       const input = document.getElementById('adj-file-input');
-      input.onchange = null; // limpiar handlers previos
       input.addEventListener('change', async (e)=>{
         const files = Array.from(e.target.files||[]);
         if(!files.length){ toast('Selecciona archivo(s)'); return; }
@@ -502,6 +507,7 @@
       document.body.style.overflow='hidden';
       document.getElementById('adj-nota-upload').style.display = (tipo==='cotizacion') ? 'block' : 'none';
       document.getElementById('adj-file-input').value='';
+      wireFileInput(); // reengancha listener por seguridad
       await cargarAdjuntos();
     }
     function closeAdjuntos(){
@@ -540,13 +546,16 @@
     }
 
     async function autoUpload(files){
+      if(isUploading) return;   // evita doble disparo
+      isUploading = true;
       showLoader(true);
       const sb=await waitForSupabase();
       const note=document.getElementById('adj-nota-upload').value.trim();
       try{
         const uploads = files.map(async file=>{
           const path=`${adjContext.cotId}/${Date.now()}-${file.name}`;
-          const { error:upErr } = await sb.storage.from(adjContext.bucket).upload(path, file, { cacheControl:'3600', upsert:false });
+          const { error:upErr } = await sb.storage.from(adjContext.bucket)
+            .upload(path, file, { cacheControl:'3600', upsert:false });
           if(upErr) throw upErr;
           if(adjContext.bucket===ADJ_BUCKETS.cotizacion){
             await sb.from('cotizacion_files').insert({
@@ -570,6 +579,7 @@
         toast('Error subiendo: '+(e.message||''));
       }finally{
         showLoader(false);
+        isUploading = false;
       }
     }
 
@@ -627,13 +637,20 @@
     }
 
     async function eliminarAdjunto(path){
-      if(!confirm('¿Eliminar archivo?')) return;
       const sb=await waitForSupabase();
-      await sb.storage.from(adjContext.bucket).remove([path]);
-      if(adjContext.bucket===ADJ_BUCKETS.cotizacion){
-        await sb.from('cotizacion_files').delete().eq('cotizacion_id', adjContext.cotId).eq('path', path);
+      try{
+        await sb.storage.from(adjContext.bucket).remove([path]);
+        if(adjContext.bucket===ADJ_BUCKETS.cotizacion){
+          await sb.from('cotizacion_files')
+            .delete()
+            .eq('cotizacion_id', adjContext.cotId)
+            .eq('path', path);
+        }
+        await cargarAdjuntos();
+      }catch(e){
+        console.error(e);
+        toast('No se pudo eliminar: '+(e.message||''));
       }
-      await cargarAdjuntos();
     }
 
     async function guardarNotaAdj(textarea){
