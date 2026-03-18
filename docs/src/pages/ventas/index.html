@@ -30,7 +30,7 @@
     tr.project-row{cursor:pointer;transition:background .15s ease;}
     tr.project-row:hover{background:#f5f8f7;}
     tr.project-row.selected{background:var(--selected);}
-    .actions{display:flex;gap:8px;flex-wrap:nowrap;}
+    .actions{display:flex;gap:6px;flex-wrap:wrap;}
     .btn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;}
     .btn-ghost{background:#f0f3f5;color:#1f2430;}
     .layout-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;align-items:start;}
@@ -79,6 +79,7 @@
     .adj-btn { border:1px solid #d1d5db; background:#fff; padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer; display:inline-flex; gap:8px; align-items:center; }
     .adj-btn.primary { background:#2e5e4e; color:#fff; border-color:#2e5e4e; }
     .adj-note { flex:1; min-width:240px; padding:9px 10px; border:1px solid #d1d5db; border-radius:10px; }
+    .adj-note.hidden { display:none; }
     .adj-status { font-size:13px; color:#6c7a86; }
     .adj-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
     .adj-card { border:1px solid #e5e7eb; border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px; background:#fafafa; }
@@ -90,6 +91,7 @@
     .adj-smallbtn { border:1px solid #d1d5db; background:#fff; padding:6px 10px; border-radius:8px; font-size:12px; cursor:pointer; }
     .adj-smallbtn.danger { border-color:#fca5a5; color:#b91c1c; }
     .adj-note-edit { width:100%; padding:7px 8px; border:1px solid #d1d5db; border-radius:8px; font-size:12px; }
+    .adj-note-edit.hidden { display:none; }
   </style>
 </head>
 <body>
@@ -162,8 +164,8 @@
     <div class="adj-modal">
       <div class="adj-head">
         <div>
-          <h3 class="adj-title">Archivos de la cotización</h3>
-          <p class="adj-sub">ID: <span id="adj-cot-id">-</span></p>
+          <h3 class="adj-title" id="adj-title">Archivos</h3>
+          <p class="adj-sub">ID: <span id="adj-cot-id">-</span> · <span id="adj-subtipo"></span></p>
         </div>
         <button class="adj-close" onclick="closeAdjuntos()">×</button>
       </div>
@@ -220,7 +222,22 @@
     let approvedCotIds = new Set();
     let fpInstances = [];
 
-    /* === Espera supabase client y storage === */
+    /* === Adjuntos context === */
+    const ADJ_BUCKETS = {
+      cotizacion: 'cotizaciones',
+      skp: 'skp',
+      diagrama: 'diagramas_corte',
+      planos: 'planos_armado'
+    };
+    const ADJ_LABELS = {
+      cotizacion: 'Adjuntos Cotización (bucket: cotizaciones)',
+      skp: 'Archivos SKP',
+      diagrama: 'Diagramas de corte',
+      planos: 'Planos de armado'
+    };
+    let adjContext = { tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null, allowNote:true };
+
+    /* === Espera supabase === */
     async function waitForSupabaseClient(maxMs=15000){
       const start=Date.now();
       while(Date.now()-start<maxMs){
@@ -402,8 +419,11 @@
             </td>
             <td>
               <div class="actions">
-                <button class="btn btn-ghost" onclick="event.stopPropagation(); verAdjuntos('${escapeHtmlAttr(p.cotizacionId||'')}')">Adjuntos</button>
-                <button class="btn btn-ghost" onclick="event.stopPropagation(); verCotizacion('${escapeHtmlAttr(p.cotizacionId||'')}')">Ver Cotización</button>
+                <button class="btn btn-ghost" onclick="event.stopPropagation(); openAdjuntosTipo('${escapeHtmlAttr(p.cotizacionId||'')}','skp')">SKP</button>
+                <button class="btn btn-ghost" onclick="event.stopPropagation(); openAdjuntosTipo('${escapeHtmlAttr(p.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
+                <button class="btn btn-ghost" onclick="event.stopPropagation(); openAdjuntosTipo('${escapeHtmlAttr(p.cotizacionId||'')}','planos')">Planos de Armado</button>
+                <button class="btn btn-ghost" onclick="event.stopPropagation(); openAdjuntosTipo('${escapeHtmlAttr(p.cotizacionId||'')}','cotizacion')">Adjuntos Cotización</button>
+                <button class="btn btn-ghost" onclick="event.stopPropagation(); verCotizacion('${escapeHtmlAttr(p.cotizacionId||'')}')">Ver cotización</button>
                 <button class="btn btn-ghost" onclick="event.stopPropagation(); imprimirContrato('${escapeHtmlAttr(p.cotizacionId||'')}')">Imprimir contrato</button>
               </div>
             </td>
@@ -734,16 +754,23 @@
     function verCotizacion(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}`; }
 
     /* === Adjuntos modal === */
-    const ADJ_BUCKET = 'cotizaciones';
-
-    async function verAdjuntos(cotId){
+    function openAdjuntosTipo(cotId, tipo){
       if(!cotId) return;
+      adjContext.tipo = tipo;
+      adjContext.bucket = ADJ_BUCKETS[tipo] || ADJ_BUCKETS.cotizacion;
+      adjContext.cotId = cotId;
+      adjContext.allowNote = (tipo === 'cotizacion');
+      document.getElementById('adj-title').textContent = ADJ_LABELS[tipo] || 'Archivos';
+      document.getElementById('adj-subtipo').textContent = tipo;
       document.getElementById('adj-cot-id').textContent = cotId;
       document.getElementById('adj-modal-backdrop').classList.add('show');
       document.getElementById('adj-modal-backdrop').setAttribute('aria-hidden','false');
       document.body.style.overflow='hidden';
-      await cargarAdjuntos(cotId);
+      const noteField = document.getElementById('adj-nota-upload');
+      noteField.classList.toggle('hidden', !adjContext.allowNote);
+      cargarAdjuntos(cotId);
     }
+
     function closeAdjuntos(){
       document.getElementById('adj-modal-backdrop').classList.remove('show');
       document.getElementById('adj-modal-backdrop').setAttribute('aria-hidden','true');
@@ -761,21 +788,22 @@
       status.textContent = 'Cargando...';
       grid.innerHTML = '';
       const { data:list, error } = await sb
-        .storage.from(ADJ_BUCKET)
+        .storage.from(adjContext.bucket)
         .list(`${cotId}/`, { limit: 200, sortBy:{column:'created_at', order:'desc'} });
       if(error){ status.textContent='Error: '+error.message; return; }
       if(!list || !list.length){ status.textContent='No hay archivos para esta cotización.'; return; }
 
-      // obtener notas desde tabla cotizacion_files
       let notasMap = new Map();
-      const { data:meta } = await sb.from('cotizacion_files')
-        .select('id,path,nota')
-        .eq('cotizacion_id', cotId);
-      (meta||[]).forEach(m=>notasMap.set(m.path, {id:m.id, nota:m.nota||''}));
+      if(adjContext.allowNote){
+        const { data:meta } = await sb.from('cotizacion_files')
+          .select('id,path,nota')
+          .eq('cotizacion_id', cotId);
+        (meta||[]).forEach(m=>notasMap.set(m.path, {id:m.id, nota:m.nota||''}));
+      }
 
       const signedPromises = list.map(async f=>{
         const path = `${cotId}/${f.name}`;
-        const { data:signed } = await sb.storage.from(ADJ_BUCKET).createSignedUrl(path, 3600);
+        const { data:signed } = await sb.storage.from(adjContext.bucket).createSignedUrl(path, 3600);
         return { ...f, path, signedUrl: signed?.signedUrl || null };
       });
       const files = await Promise.all(signedPromises);
@@ -793,7 +821,7 @@
             ${preview}
             <div class="adj-name">${f.name}</div>
             <div class="adj-meta">${f.metadata?.mimetype||''} ${sizeMB?('· '+sizeMB):''}</div>
-            <textarea class="adj-note-edit" placeholder="Nota" data-note-id="${notaObj.id||''}" data-path="${f.path}" onchange="guardarNotaAdj(this)">${notaObj.nota||''}</textarea>
+            <textarea class="adj-note-edit ${adjContext.allowNote ? '' : 'hidden'}" placeholder="Nota" data-note-id="${notaObj.id||''}" data-path="${f.path}" onchange="guardarNotaAdj(this)">${notaObj.nota||''}</textarea>
             <div class="adj-actions">
               ${f.signedUrl ? `<a class="adj-smallbtn" href="${f.signedUrl}" target="_blank" rel="noopener">Ver/Descargar</a>` : ''}
               <button class="adj-smallbtn danger" onclick="eliminarAdjunto('${f.path.replace(/'/g,"\\'")}')">Eliminar</button>
@@ -805,7 +833,7 @@
     }
 
     async function subirAdjuntos(){
-      const cotId = document.getElementById('adj-cot-id').textContent;
+      const cotId = adjContext.cotId;
       const filesInput = document.getElementById('adj-file-input');
       const note = document.getElementById('adj-nota-upload').value.trim();
       if(!cotId){ alert('Cotización no definida'); return; }
@@ -813,16 +841,18 @@
       const sb = await waitForSupabase();
       const uploads = Array.from(filesInput.files).map(async file=>{
         const path = `${cotId}/${Date.now()}-${file.name}`;
-        const { error:upErr } = await sb.storage.from(ADJ_BUCKET).upload(path, file, { cacheControl:'3600', upsert:false });
+        const { error:upErr } = await sb.storage.from(adjContext.bucket).upload(path, file, { cacheControl:'3600', upsert:false });
         if(upErr) throw upErr;
-        await sb.from('cotizacion_files').insert({
-          cotizacion_id: cotId,
-          path,
-          filename: file.name,
-          size: file.size,
-          content_type: file.type,
-          nota: note || null
-        });
+        if(adjContext.allowNote){
+          await sb.from('cotizacion_files').insert({
+            cotizacion_id: cotId,
+            path,
+            filename: file.name,
+            size: file.size,
+            content_type: file.type,
+            nota: note || null
+          });
+        }
       });
       try{
         await Promise.all(uploads);
@@ -837,12 +867,15 @@
       if(!confirm('¿Eliminar archivo?')) return;
       const sb = await waitForSupabase();
       const [cotId] = path.split('/');
-      await sb.storage.from(ADJ_BUCKET).remove([path]);
-      await sb.from('cotizacion_files').delete().eq('cotizacion_id', cotId).eq('path', path);
+      await sb.storage.from(adjContext.bucket).remove([path]);
+      if(adjContext.allowNote){
+        await sb.from('cotizacion_files').delete().eq('cotizacion_id', cotId).eq('path', path);
+      }
       await cargarAdjuntos(cotId);
     }
 
     async function guardarNotaAdj(textarea){
+      if(!adjContext.allowNote) return;
       const path = textarea.dataset.path;
       const noteId = textarea.dataset.noteId;
       const nota = textarea.value.trim();
