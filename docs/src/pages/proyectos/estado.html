@@ -58,13 +58,13 @@
       display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;
     }
     .adj-modal{
-      background:#fff; border-radius:16px; max-width:1200px; width:94vw;
-      border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.15);
-      max-height:92vh; display:flex; flex-direction:column;
+      background:#fff; border-radius:18px; max-width:1280px; width:96vw;
+      border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18);
+      max-height:94vh; display:flex; flex-direction:column;
     }
-    .adj-head{padding:16px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;}
-    .adj-title{margin:0; font-size:18px; font-weight:800;}
-    .adj-sub{margin:2px 0 0; color:var(--muted); font-size:13px;}
+    .adj-head{padding:18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;}
+    .adj-title{margin:0; font-size:19px; font-weight:800;}
+    .adj-sub{margin:2px 0 0; color:#6c7a86; font-size:13px;}
     .adj-close{border:none;background:transparent;font-size:22px;cursor:pointer;color:#6b7280;}
     .adj-body{padding:16px 18px; overflow:auto;}
     .adj-upload{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;}
@@ -72,9 +72,9 @@
     .adj-btn.primary{background:var(--primary);color:#fff;border-color:var(--primary);}
     .adj-note{padding:9px 10px;border:1px solid var(--border);border-radius:10px;flex:1;min-width:220px;}
     .adj-status{font-size:13px;color:var(--muted);margin-bottom:8px;}
-    .adj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+    .adj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
     .adj-card{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fdfdfd;display:flex;flex-direction:column;gap:6px;}
-    .adj-preview{height:150px;display:grid;place-items:center;background:#fff;border:1px dashed var(--border);border-radius:10px;overflow:hidden;}
+    .adj-preview{height:170px;display:grid;place-items:center;background:#fff;border:1px dashed var(--border);border-radius:10px;overflow:hidden;}
     .adj-preview img{max-width:100%;max-height:100%;object-fit:contain;}
     .adj-name{font-weight:700;}
     .adj-meta{font-size:12px;color:#6b7280;}
@@ -82,9 +82,11 @@
     .adj-actions{display:flex;gap:6px;flex-wrap:wrap;}
     .adj-smallbtn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:6px 8px;border-radius:8px;font-size:12px;cursor:pointer;}
     .adj-smallbtn.danger{border-color:#fda4af;color:#b91c1c;}
+
+    /* Previsualización antes de subir */
+    .pending-wrap{border:1px dashed var(--border);border-radius:12px;padding:10px;margin-bottom:12px;background:#fff;}
     .pending-title{font-weight:800;margin:6px 0 4px;font-size:14px;}
     .pending-note{color:#6b7280;font-size:12px;margin:0 0 8px;}
-    .pending-wrap{border:1px dashed var(--border);border-radius:12px;padding:10px;margin-bottom:12px;background:#fdfdfd;}
   </style>
 </head>
 <body>
@@ -135,8 +137,8 @@
         </div>
 
         <div id="pending-wrapper" class="pending-wrap" style="display:none;">
-          <div class="pending-title">Archivos seleccionados (pre-visualización)</div>
-          <p class="pending-note">Estos se subirán cuando presiones "Subir".</p>
+          <div class="pending-title">Previsualización (pendientes de subir)</div>
+          <p class="pending-note">Confirma que son los archivos correctos antes de subir.</p>
           <div id="pending-grid" class="adj-grid"></div>
         </div>
 
