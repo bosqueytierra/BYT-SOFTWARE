@@ -170,7 +170,7 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
-    /* Nuevas etapas con responsables */
+    /* Etapas con responsables */
     const STAGES = [
       {name:'Diseño y Cierre', owner:'Luis'},
       {name:'Traspaso de informacion de proyecto', owner:'Luis → Jano - Jorge'},
@@ -191,9 +191,9 @@
 
     let proyectos = [];
     let filtered = [];
-    let stageStore = new Map(); // partidaId -> { stageName: status }
-    let stageNotesByPartida = new Map(); // partidaId -> { stageName: nota }
-    let globalStageNotes = {}; // stageName -> nota (se replica)
+    let stageStore = new Map();            // partidaId -> { stageName: status }
+    let stageNotesByPartida = new Map();   // partidaId -> { stageName: nota }
+    let globalStageNotes = {};             // stageName -> nota global
     let openProjects = new Set();
     let openPartidas = new Set();
     let adjContext = { tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null };
@@ -229,6 +229,7 @@
         await cargarDatos();
         await cargarNotasEtapas();
         applyFiltersAndRender();
+        wireFileInput(); // asegurar que el change se enganche
       }catch(e){
         console.error(e);
         document.getElementById('proyectos-list').innerHTML='<div class="empty">No se pudo cargar información</div>';
@@ -272,7 +273,6 @@
 
     async function cargarNotasEtapas(){
       const sb = await waitForSupabase();
-      // notas específicas
       const { data:partData } = await sb.from('etapa_notas')
         .select('partida_id, etapa, nota')
         .not('partida_id','is',null);
@@ -282,7 +282,7 @@
         m.get(r.partida_id)[r.etapa]=r.nota||'';
       });
       stageNotesByPartida = m;
-      // notas globales por etapa
+
       const { data:globData } = await sb.from('etapa_notas')
         .select('etapa, nota')
         .is('partida_id', null);
@@ -424,7 +424,7 @@
                             <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
                           </select>
                           <div id="${attr(noteId)}" class="note-box">
-                            <textarea placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
+                            <textarea data-stage="${attr(stage.name)}" placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
                           </div>
                         </div>
                       `;
@@ -453,6 +453,12 @@
       applyFiltersAndRender();
     }
 
+    function refreshStageNotesInDOM(etapa, nota){
+      document.querySelectorAll(`.note-box textarea[data-stage="${CSS.escape(etapa)}"]`).forEach(t=>{
+        t.value = nota;
+      });
+    }
+
     async function saveStageNote(partidaId, etapa, nota){
       const sb=await waitForSupabase();
       // guardar específico
@@ -460,19 +466,26 @@
       current[etapa]=nota;
       stageNotesByPartida.set(partidaId,current);
       await sb.from('etapa_notas').upsert({ partida_id: partidaId, etapa, nota });
-      // guardar global (para replicar en otras partidas)
+      // guardar global (replicar)
       globalStageNotes[etapa]=nota;
       await sb.from('etapa_notas').upsert({ partida_id: null, etapa, nota });
-      // refrescar textarea de mismas etapas en pantalla
-      document.querySelectorAll(`[id^="note-"] textarea`).forEach(t=>{
-        if(t.parentElement?.parentElement?.innerHTML?.includes(etapa)) {
-          t.value = nota;
-        }
-      });
+      refreshStageNotesInDOM(etapa, nota);
       toast('Nota guardada');
     }
 
     /* ------------ Adjuntos ------------- */
+    function wireFileInput(){
+      const input = document.getElementById('adj-file-input');
+      input.onchange = null; // limpiar handlers previos
+      input.addEventListener('change', async (e)=>{
+        const files = Array.from(e.target.files||[]);
+        if(!files.length){ toast('Selecciona archivo(s)'); return; }
+        pendingFiles = files;
+        renderPendingPreviews();
+        await autoUpload(files);
+      });
+    }
+
     async function openAdj(cotId, tipo){
       if(!cotId) return;
       pendingFiles = [];
@@ -525,14 +538,6 @@
         `;
       }).join('');
     }
-
-    document.getElementById('adj-file-input').addEventListener('change', async (e)=>{
-      const files=Array.from(e.target.files||[]);
-      if(!files.length) { toast('Selecciona archivo(s)'); return; }
-      pendingFiles = files;
-      renderPendingPreviews();
-      await autoUpload(files);
-    });
 
     async function autoUpload(files){
       showLoader(true);
