@@ -13,6 +13,7 @@
       --shadow:0 10px 30px rgba(0,0,0,0.08);
       --chip-green:#e9f7ef; --chip-red:#fdeceb; --chip-neutral:#f4f5f7;
       --chip-green-text:#1f9d55; --chip-red-text:#c0392b; --chip-neutral-text:#6b7280;
+      --overlay:rgba(0,0,0,0.55);
     }
     *{box-sizing:border-box;}
     body{margin:0;font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif;background:var(--bg);color:var(--text);}
@@ -35,9 +36,10 @@
     .btn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:8px 11px;border-radius:10px;cursor:pointer;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px;}
     .btn:hover{border-color:#d0d5dd;}
     .btn-ghost{background:#f0f3f5;color:#1f2430;}
-    .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px;}
-    .stage-item{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fafafa;display:flex;justify-content:space-between;align-items:center;gap:8px;}
-    .stage-name{font-weight:700;}
+    .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:12px;}
+    .stage-item{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fafafa;display:flex;flex-direction:column;gap:6px;position:relative;}
+    .stage-name{font-weight:800;}
+    .stage-owner{font-size:12px;color:#6b7280;}
     .stage-select{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-weight:700;}
     details[open] .project-head{border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:10px;}
     .empty{padding:18px;text-align:center;color:var(--muted);}
@@ -52,16 +54,9 @@
     .progress-fill{height:100%;border-radius:999px;transition:width .2s;}
     .progress-text{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
 
-    /* --- Modal adjuntos --- */
-    .adj-backdrop{
-      position:fixed; inset:0; background:rgba(15,23,42,0.45);
-      display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;
-    }
-    .adj-modal{
-      background:#fff; border-radius:18px; max-width:1280px; width:96vw;
-      border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18);
-      max-height:94vh; display:flex; flex-direction:column;
-    }
+    /* Modal adjuntos grande */
+    .adj-backdrop{position:fixed; inset:0; background:var(--overlay); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;}
+    .adj-modal{background:#fff; border-radius:18px; max-width:1280px; width:96vw; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); max-height:94vh; display:flex; flex-direction:column;}
     .adj-head{padding:18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;}
     .adj-title{margin:0; font-size:19px; font-weight:800;}
     .adj-sub{margin:2px 0 0; color:#6c7a86; font-size:13px;}
@@ -83,10 +78,24 @@
     .adj-smallbtn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:6px 8px;border-radius:8px;font-size:12px;cursor:pointer;}
     .adj-smallbtn.danger{border-color:#fda4af;color:#b91c1c;}
 
-    /* Previsualización antes de subir */
+    /* Previsualización instantánea */
     .pending-wrap{border:1px dashed var(--border);border-radius:12px;padding:10px;margin-bottom:12px;background:#fff;}
     .pending-title{font-weight:800;margin:6px 0 4px;font-size:14px;}
     .pending-note{color:#6b7280;font-size:12px;margin:0 0 8px;}
+
+    /* Nota por etapa */
+    .note-toggle{position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:4px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:12px; display:flex;align-items:center;justify-content:center;}
+    .note-box{margin-top:6px; display:none;}
+    .note-box textarea{width:100%; min-height:60px; border:1px solid var(--border); border-radius:8px; padding:6px; font-family:inherit; font-size:12px;}
+    .note-box.show{display:block;}
+
+    /* Overlay loader */
+    .loader-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:3000;}
+    .spinner{width:70px;height:70px;border-radius:50%;border:6px solid #e5e7eb;border-top-color:var(--primary);animation:spin 0.9s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    /* Toast */
+    .toast{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111827; color:#fff; padding:12px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:4000; display:none;}
   </style>
 </head>
 <body>
@@ -129,16 +138,15 @@
       <div class="adj-body">
         <div class="adj-upload">
           <label class="adj-btn">
-            📤 Subir archivo(s)
+            📤 Seleccionar archivo(s)
             <input id="adj-file-input" type="file" multiple style="display:none;">
           </label>
-          <input id="adj-nota-upload" class="adj-note" type="text" placeholder="Nota opcional para estos archivos">
-          <button class="adj-btn primary" onclick="subirAdjuntos()">Subir</button>
+          <input id="adj-nota-upload" class="adj-note" type="text" placeholder="Nota opcional para todos">
         </div>
 
         <div id="pending-wrapper" class="pending-wrap" style="display:none;">
-          <div class="pending-title">Previsualización (pendientes de subir)</div>
-          <p class="pending-note">Confirma que son los archivos correctos antes de subir.</p>
+          <div class="pending-title">Previsualización (se suben automáticamente)</div>
+          <p class="pending-note">Al elegir archivos se suben al instante; espera el círculo de carga.</p>
           <div id="pending-grid" class="adj-grid"></div>
         </div>
 
@@ -147,6 +155,10 @@
       </div>
     </div>
   </div>
+
+  <!-- Loader global -->
+  <div id="loader" class="loader-backdrop"><div class="spinner"></div></div>
+  <div id="toast" class="toast"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
@@ -158,16 +170,29 @@
   <script type="module" src="../../js/globalSupabase.js"></script>
 
   <script>
+    /* Nuevas etapas con responsables */
     const STAGES = [
-      'Diseño','Rectificado','Skp Final','Optimizado','Compras Ingresadas',
-      'Melaminas y tapacantos comprados','Planos de Armado','Cortes en taller','Instalando'
+      {name:'Diseño y Cierre', owner:'Luis'},
+      {name:'Traspaso de informacion de proyecto', owner:'Luis → Jano - Jorge'},
+      {name:'Rectificacion del espacio', owner:'Jorge - Jano'},
+      {name:'Modelado de planta y mobiliario', owner:'Jorge'},
+      {name:'Explicacion y revisión tecnica del proyecto', owner:'Jorge → Jano'},
+      {name:'Explicacion y revisión de diseño', owner:'Jorge - Jano → Luis'},
+      {name:'Ingreso de compra de quincalleria y otros', owner:'Jano'},
+      {name:'Optimizado y estimación de tableros y tapacantos', owner:'Jorge'},
+      {name:'Planos de armado', owner:'Jorge'},
+      {name:'Compras de Melaminas y tapacantos', owner:'Luis - Jano'},
+      {name:'Cortes en taller', owner:'Taller'},
+      {name:'Listo para instalar', owner:'Tallerar'}
     ];
+
     const ADJ_BUCKETS = { skp:'skp', diagrama:'diagramas_corte', planos:'planos_armado', cotizacion:'cotizaciones' };
     const ADJ_LABELS = { skp:'SKP', diagrama:'Diagrama de corte', planos:'Planos de Armado', cotizacion:'Adjuntos Cotización' };
 
     let proyectos = [];
     let filtered = [];
     let stageStore = new Map(); // partidaId -> { stageName: status }
+    let stageNotes = new Map(); // partidaId -> { stageName: nota }
     let openProjects = new Set();
     let openPartidas = new Set();
     let adjContext = { tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null };
@@ -193,11 +218,15 @@
     const esc = (s)=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]||m));
     const attr = (s)=>esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
+    function showLoader(flag){document.getElementById('loader').style.display=flag?'flex':'none';}
+    function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1800);}
+
     document.addEventListener('DOMContentLoaded',()=>bootstrapEstado());
 
     async function bootstrapEstado(){
       try{
         await cargarDatos();
+        await cargarNotasEtapas();
         applyFiltersAndRender();
       }catch(e){
         console.error(e);
@@ -238,6 +267,19 @@
 
       proyectos = Array.from(map.values());
       loadStageStore();
+    }
+
+    async function cargarNotasEtapas(){
+      const sb = await waitForSupabase();
+      const { data, error } = await sb.from('etapa_notas')
+        .select('partida_id, etapa, nota');
+      if(error) { console.warn('No se cargaron notas', error); return; }
+      const m=new Map();
+      (data||[]).forEach(r=>{
+        if(!m.has(r.partida_id)) m.set(r.partida_id,{});
+        m.get(r.partida_id)[r.etapa]=r.nota||'';
+      });
+      stageNotes = m;
     }
 
     function parseCliente(cli){
@@ -299,9 +341,9 @@
       let total=0, done=0;
       proj.partidas.forEach(pt=>{
         const stMap = stageStore.get(pt.id) || {};
-        STAGES.forEach(stage=>{
+        STAGES.forEach(s=>{
           total += 1;
-          if(stMap[stage]==='listo') done += 1;
+          if(stMap[s.name]==='listo') done += 1;
         });
       });
       const percent = total ? Math.round((done/total)*100) : 0;
@@ -350,6 +392,7 @@
             ${proj.partidas.map(pt=>{
               const pending = pt.estado!=='completada';
               const stMap = stageStore.get(pt.id) || {};
+              const notes = stageNotes.get(pt.id) || {};
               const openPart = openPartidas.has(pt.id);
               return `
                 <details class="partida-details" data-partida-id="${attr(pt.id)}" ${openPart?'open':''}>
@@ -359,15 +402,22 @@
                   </summary>
                   <div class="stage-grid">
                     ${STAGES.map(stage=>{
-                      const value = stMap[stage] || 'pendiente';
+                      const value = stMap[stage.name] || 'pendiente';
+                      const nota = notes[stage.name] || '';
+                      const noteId = `note-${pt.id}-${stage.name}`;
                       return `
                         <div class="stage-item">
-                          <span class="stage-name">${esc(stage)}</span>
-                          <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage)}', this.value)">
+                          <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
+                          <span class="stage-name">${esc(stage.name)}</span>
+                          <span class="stage-owner">${esc(stage.owner)}</span>
+                          <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value)">
                             <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
                             <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
                             <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
                           </select>
+                          <div id="${attr(noteId)}" class="note-box">
+                            <textarea placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
+                          </div>
                         </div>
                       `;
                     }).join('')}
@@ -381,12 +431,31 @@
       list.innerHTML=html;
     }
 
+    function toggleNote(id){
+      const box=document.getElementById(id);
+      if(!box) return;
+      box.classList.toggle('show');
+    }
+
     function setStage(partidaId, stage, value){
       const current = stageStore.get(partidaId) || {};
       current[stage] = value;
       stageStore.set(partidaId, current);
       saveStageStore();
       applyFiltersAndRender();
+    }
+
+    async function saveStageNote(partidaId, etapa, nota){
+      const sb=await waitForSupabase();
+      const current = stageNotes.get(partidaId) || {};
+      current[etapa]=nota;
+      stageNotes.set(partidaId,current);
+      await sb.from('etapa_notas').upsert({
+        partida_id: partidaId,
+        etapa,
+        nota
+      });
+      toast('Nota guardada');
     }
 
     /* ------------ Adjuntos ------------- */
@@ -443,10 +512,47 @@
       }).join('');
     }
 
-    document.getElementById('adj-file-input').addEventListener('change', (e)=>{
-      pendingFiles = Array.from(e.target.files||[]);
+    document.getElementById('adj-file-input').addEventListener('change', async (e)=>{
+      const files=Array.from(e.target.files||[]);
+      if(!files.length) return;
+      pendingFiles = files;
       renderPendingPreviews();
+      await autoUpload(files);
     });
+
+    async function autoUpload(files){
+      showLoader(true);
+      const sb=await waitForSupabase();
+      const note=document.getElementById('adj-nota-upload').value.trim();
+      try{
+        const uploads = files.map(async file=>{
+          const path=`${adjContext.cotId}/${Date.now()}-${file.name}`;
+          const { error:upErr } = await sb.storage.from(adjContext.bucket).upload(path, file, { cacheControl:'3600', upsert:false });
+          if(upErr) throw upErr;
+          if(adjContext.bucket===ADJ_BUCKETS.cotizacion){
+            await sb.from('cotizacion_files').insert({
+              cotizacion_id: adjContext.cotId,
+              path,
+              filename:file.name,
+              size:file.size,
+              content_type:file.type,
+              nota: note || null
+            });
+          }
+        });
+        await Promise.all(uploads);
+        toast('Archivo(s) subidos');
+        pendingFiles = [];
+        document.getElementById('adj-file-input').value='';
+        renderPendingPreviews();
+        await cargarAdjuntos();
+      }catch(e){
+        console.error(e);
+        toast('Error subiendo: '+(e.message||''));
+      }finally{
+        showLoader(false);
+      }
+    }
 
     async function cargarAdjuntos(){
       const sb = await waitForSupabase();
@@ -499,38 +605,6 @@
         `;
       }).join('');
       status.textContent=`${signed.length} archivo(s)`;
-    }
-
-    async function subirAdjuntos(){
-      if(!adjContext.cotId) return;
-      if(!pendingFiles.length){ alert('Selecciona archivo(s)'); return; }
-      const sb=await waitForSupabase();
-      const note=document.getElementById('adj-nota-upload').value.trim();
-      try{
-        const uploads = pendingFiles.map(async file=>{
-          const path=`${adjContext.cotId}/${Date.now()}-${file.name}`;
-          const { error:upErr } = await sb.storage.from(adjContext.bucket).upload(path, file, { cacheControl:'3600', upsert:false });
-          if(upErr) throw upErr;
-          if(adjContext.bucket===ADJ_BUCKETS.cotizacion){
-            await sb.from('cotizacion_files').insert({
-              cotizacion_id: adjContext.cotId,
-              path,
-              filename:file.name,
-              size:file.size,
-              content_type:file.type,
-              nota: note || null
-            });
-          }
-        });
-        await Promise.all(uploads);
-        pendingFiles = [];
-        document.getElementById('adj-file-input').value='';
-        document.getElementById('adj-nota-upload').value='';
-        renderPendingPreviews();
-        await cargarAdjuntos();
-      }catch(e){
-        alert('Error subiendo: '+(e.message||e));
-      }
     }
 
     async function eliminarAdjunto(path){
