@@ -65,6 +65,31 @@
     .resumen-label{color:var(--muted);font-size:13px;}
     .resumen-value{font-weight:700;}
     .resumen-divider{border:none;border-top:1px solid var(--border);margin:8px 0;}
+
+    /* === Estilos modal adjuntos === */
+    .adj-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:14000; padding:16px; }
+    .adj-backdrop.show { display:flex; }
+    .adj-modal { width:min(980px,95vw); max-height:90vh; background:#fff; border:1px solid #e5e7eb; border-radius:14px; box-shadow:0 18px 46px rgba(0,0,0,0.16); display:flex; flex-direction:column; overflow:hidden; }
+    .adj-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:14px 16px; border-bottom:1px solid #e5e7eb; }
+    .adj-title { margin:0; font-size:17px; font-weight:800; color:#1f2430; }
+    .adj-sub { margin:2px 0 0; color:#6c7a86; font-size:13px; }
+    .adj-close { border:0; background:#f3f4f6; width:34px; height:34px; border-radius:10px; cursor:pointer; font-size:18px; }
+    .adj-body { padding:12px 16px 16px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+    .adj-upload { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .adj-btn { border:1px solid #d1d5db; background:#fff; padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer; display:inline-flex; gap:8px; align-items:center; }
+    .adj-btn.primary { background:#2e5e4e; color:#fff; border-color:#2e5e4e; }
+    .adj-note { flex:1; min-width:240px; padding:9px 10px; border:1px solid #d1d5db; border-radius:10px; }
+    .adj-status { font-size:13px; color:#6c7a86; }
+    .adj-grid { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
+    .adj-card { border:1px solid #e5e7eb; border-radius:10px; padding:10px; display:flex; flex-direction:column; gap:6px; background:#fafafa; }
+    .adj-name { font-weight:700; color:#111827; word-break:break-word; }
+    .adj-meta { font-size:12px; color:#6b7280; }
+    .adj-preview { height:120px; border-radius:8px; background:#f3f4f6; display:grid; place-items:center; overflow:hidden; }
+    .adj-preview img { width:100%; height:100%; object-fit:cover; }
+    .adj-actions { display:flex; gap:6px; flex-wrap:wrap; }
+    .adj-smallbtn { border:1px solid #d1d5db; background:#fff; padding:6px 10px; border-radius:8px; font-size:12px; cursor:pointer; }
+    .adj-smallbtn.danger { border-color:#fca5a5; color:#b91c1c; }
+    .adj-note-edit { width:100%; padding:7px 8px; border:1px solid #d1d5db; border-radius:8px; font-size:12px; }
   </style>
 </head>
 <body>
@@ -120,6 +145,7 @@
     </div>
   </div>
 
+  <!-- Modal notas -->
   <div class="modal-backdrop" id="notes-modal">
     <div class="modal">
       <h3 id="notes-title">Observaciones</h3>
@@ -127,6 +153,31 @@
       <div class="modal-actions">
         <button class="btn btn-ghost" type="button" onclick="closeNotesModal()">Cancelar</button>
         <button class="btn btn-primary" type="button" onclick="saveNotes()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal adjuntos -->
+  <div id="adj-modal-backdrop" class="adj-backdrop" aria-hidden="true">
+    <div class="adj-modal">
+      <div class="adj-head">
+        <div>
+          <h3 class="adj-title">Archivos de la cotización</h3>
+          <p class="adj-sub">ID: <span id="adj-cot-id">-</span></p>
+        </div>
+        <button class="adj-close" onclick="closeAdjuntos()">×</button>
+      </div>
+      <div class="adj-body">
+        <div class="adj-upload">
+          <label class="adj-btn">
+            📤 Subir archivo(s)
+            <input id="adj-file-input" type="file" multiple style="display:none;">
+          </label>
+          <input id="adj-nota-upload" class="adj-note" type="text" placeholder="Nota opcional para estos archivos">
+          <button class="adj-btn primary" onclick="subirAdjuntos()">Subir</button>
+        </div>
+        <div id="adj-status" class="adj-status">Sin cargar aún…</div>
+        <div id="adj-grid" class="adj-grid"></div>
       </div>
     </div>
   </div>
@@ -169,6 +220,24 @@
     let approvedCotIds = new Set();
     let fpInstances = [];
 
+    /* === Espera supabase client y storage === */
+    async function waitForSupabaseClient(maxMs=15000){
+      const start=Date.now();
+      while(Date.now()-start<maxMs){
+        if(window.supabaseClient && typeof window.supabaseClient.listarVentas==='function') return window.supabaseClient;
+        await new Promise(r=>setTimeout(r,300));
+      }
+      throw new Error('supabaseClient no disponible tras esperar');
+    }
+    async function waitForSupabase(maxMs=15000){
+      const start=Date.now();
+      while(Date.now()-start<maxMs){
+        if(window.supabase && typeof window.supabase.from==='function') return window.supabase;
+        await new Promise(r=>setTimeout(r,300));
+      }
+      throw new Error('window.supabase no disponible tras esperar');
+    }
+
     function normalizeEstado(v){ return (v.estado || '').trim(); }
     function fmt(num){ if(num==null) return '$0'; return new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(num); }
     function parseMoney(val){
@@ -188,23 +257,6 @@
     }
     function escapeHtml(str){ if(str==null) return ''; return String(str).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
     function escapeHtmlAttr(str){ return escapeHtml(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-
-    async function waitForSupabaseClient(maxMs=15000){
-      const start=Date.now();
-      while(Date.now()-start<maxMs){
-        if(window.supabaseClient && typeof window.supabaseClient.listarVentas==='function') return window.supabaseClient;
-        await new Promise(r=>setTimeout(r,300));
-      }
-      throw new Error('supabaseClient no disponible tras esperar');
-    }
-    async function waitForSupabase(maxMs=15000){
-      const start=Date.now();
-      while(Date.now()-start<maxMs){
-        if(window.supabase && typeof window.supabase.from==='function') return window.supabase;
-        await new Promise(r=>setTimeout(r,300));
-      }
-      throw new Error('window.supabase no disponible tras esperar');
-    }
 
     function shouldIncludeVenta(v){
       if(v.deleted_at || v.eliminada || v.activa===false) return false;
@@ -228,7 +280,7 @@
       catch(e){
         console.error('cargarVentas fallo:',e);
         if(retries>0) setTimeout(()=>bootstrapVentas(retries-1),800);
-        else document.getElementById('proyectos-wrapper').innerHTML='<div class="empty"><span class="state-icon">��️</span>Error cargando ventas</div>';
+        else document.getElementById('proyectos-wrapper').innerHTML='<div class="empty"><span class="state-icon">😵‍💫</span>Error cargando ventas</div>';
       }
     }
 
@@ -680,9 +732,132 @@
     }
 
     function verCotizacion(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}`; }
-    function verAdjuntos(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}#adjuntos`; }
+
+    /* === Adjuntos modal === */
+    const ADJ_BUCKET = 'cotizaciones';
+
+    async function verAdjuntos(cotId){
+      if(!cotId) return;
+      document.getElementById('adj-cot-id').textContent = cotId;
+      document.getElementById('adj-modal-backdrop').classList.add('show');
+      document.getElementById('adj-modal-backdrop').setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+      await cargarAdjuntos(cotId);
+    }
+    function closeAdjuntos(){
+      document.getElementById('adj-modal-backdrop').classList.remove('show');
+      document.getElementById('adj-modal-backdrop').setAttribute('aria-hidden','true');
+      document.body.style.overflow='';
+      document.getElementById('adj-grid').innerHTML='';
+      document.getElementById('adj-status').textContent='Sin cargar aún…';
+      document.getElementById('adj-file-input').value='';
+      document.getElementById('adj-nota-upload').value='';
+    }
+
+    async function cargarAdjuntos(cotId){
+      const sb = await waitForSupabase();
+      const grid = document.getElementById('adj-grid');
+      const status = document.getElementById('adj-status');
+      status.textContent = 'Cargando...';
+      grid.innerHTML = '';
+      const { data:list, error } = await sb
+        .storage.from(ADJ_BUCKET)
+        .list(`${cotId}/`, { limit: 200, sortBy:{column:'created_at', order:'desc'} });
+      if(error){ status.textContent='Error: '+error.message; return; }
+      if(!list || !list.length){ status.textContent='No hay archivos para esta cotización.'; return; }
+
+      // obtener notas desde tabla cotizacion_files
+      let notasMap = new Map();
+      const { data:meta } = await sb.from('cotizacion_files')
+        .select('id,path,nota')
+        .eq('cotizacion_id', cotId);
+      (meta||[]).forEach(m=>notasMap.set(m.path, {id:m.id, nota:m.nota||''}));
+
+      const signedPromises = list.map(async f=>{
+        const path = `${cotId}/${f.name}`;
+        const { data:signed } = await sb.storage.from(ADJ_BUCKET).createSignedUrl(path, 3600);
+        return { ...f, path, signedUrl: signed?.signedUrl || null };
+      });
+      const files = await Promise.all(signedPromises);
+
+      grid.innerHTML = files.map(f=>{
+        const notaObj = notasMap.get(f.path) || {};
+        const isImg = /\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name);
+        const isPdf = /\.pdf$/i.test(f.name);
+        const sizeMB = f.metadata?.size ? (f.metadata.size/1024/1024).toFixed(2)+' MB' : '';
+        const preview = isImg
+          ? `<div class="adj-preview"><img src="${f.signedUrl||''}" alt=""></div>`
+          : `<div class="adj-preview"><span style="font-size:32px;color:#9ca3af;">${isPdf?'📄':'📁'}</span></div>`;
+        return `
+          <div class="adj-card" data-path="${f.path}">
+            ${preview}
+            <div class="adj-name">${f.name}</div>
+            <div class="adj-meta">${f.metadata?.mimetype||''} ${sizeMB?('· '+sizeMB):''}</div>
+            <textarea class="adj-note-edit" placeholder="Nota" data-note-id="${notaObj.id||''}" data-path="${f.path}" onchange="guardarNotaAdj(this)">${notaObj.nota||''}</textarea>
+            <div class="adj-actions">
+              ${f.signedUrl ? `<a class="adj-smallbtn" href="${f.signedUrl}" target="_blank" rel="noopener">Ver/Descargar</a>` : ''}
+              <button class="adj-smallbtn danger" onclick="eliminarAdjunto('${f.path.replace(/'/g,"\\'")}')">Eliminar</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      status.textContent = `${files.length} archivo(s)`;
+    }
+
+    async function subirAdjuntos(){
+      const cotId = document.getElementById('adj-cot-id').textContent;
+      const filesInput = document.getElementById('adj-file-input');
+      const note = document.getElementById('adj-nota-upload').value.trim();
+      if(!cotId){ alert('Cotización no definida'); return; }
+      if(!filesInput.files.length){ alert('Selecciona archivo(s)'); return; }
+      const sb = await waitForSupabase();
+      const uploads = Array.from(filesInput.files).map(async file=>{
+        const path = `${cotId}/${Date.now()}-${file.name}`;
+        const { error:upErr } = await sb.storage.from(ADJ_BUCKET).upload(path, file, { cacheControl:'3600', upsert:false });
+        if(upErr) throw upErr;
+        await sb.from('cotizacion_files').insert({
+          cotizacion_id: cotId,
+          path,
+          filename: file.name,
+          size: file.size,
+          content_type: file.type,
+          nota: note || null
+        });
+      });
+      try{
+        await Promise.all(uploads);
+        filesInput.value=''; document.getElementById('adj-nota-upload').value='';
+        await cargarAdjuntos(cotId);
+      }catch(e){
+        alert('Error subiendo: ' + (e.message||e));
+      }
+    }
+
+    async function eliminarAdjunto(path){
+      if(!confirm('¿Eliminar archivo?')) return;
+      const sb = await waitForSupabase();
+      const [cotId] = path.split('/');
+      await sb.storage.from(ADJ_BUCKET).remove([path]);
+      await sb.from('cotizacion_files').delete().eq('cotizacion_id', cotId).eq('path', path);
+      await cargarAdjuntos(cotId);
+    }
+
+    async function guardarNotaAdj(textarea){
+      const path = textarea.dataset.path;
+      const noteId = textarea.dataset.noteId;
+      const nota = textarea.value.trim();
+      const [cotId] = path.split('/');
+      const sb = await waitForSupabase();
+      if(noteId){
+        await sb.from('cotizacion_files').update({ nota }).eq('id', noteId);
+      }else{
+        await sb.from('cotizacion_files').insert({ cotizacion_id: cotId, path, filename: path.split('/').pop(), nota });
+      }
+    }
+
     function imprimirContrato(id){ window.utils?.mostrarNotificacion?.('Imprimir contrato aún no está disponible','info'); }
 
+    /* === Notas modal === */
     function openNotesModal(partidaId, proyectoKey, proyectoNombre){
       notesModalState={partidaId, proyectoKey, proyectoNombre};
       const modal=document.getElementById('notes-modal');
