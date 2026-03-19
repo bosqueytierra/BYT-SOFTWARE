@@ -1,29 +1,22 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BYT SOFTWARE - Inicio</title>
 
-  <!-- Estilos globales (rutas absolutas para GitHub Pages) -->
-  <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css">
-  <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css">
+  <!-- Estilos globales -->
+  <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/loader.css" />
 
-  <!-- Configuración del menú y aplicación del layout -->
-  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
-  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
-
-  <style>
-    body { margin: 0; background: var(--bg); color: var(--text); }
-    .home-welcome {
-      padding: 24px;
-      color: var(--muted);
-      font-size: 16px;
-    }
-  </style>
+  <!-- Menú unificado -->
+  <script src="../js/menuConfig.js"></script>
+  <script src="../js/layout.js"></script>
 </head>
 <body>
-  <!-- Contenido mínimo: layout.js moverá esto a #page-content-slot -->
-  <div class="home-welcome">Selecciona una opción del menú para comenzar.</div>
+  <!-- Contenido mínimo: layout.js moverá esto al slot #page-content-slot -->
+  <div style="padding:16px; color: var(--muted);">
+    Selecciona una opción del menú para comenzar.
+  </div>
 </body>
 </html>
