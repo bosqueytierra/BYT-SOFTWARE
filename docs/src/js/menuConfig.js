@@ -1,14 +1,6 @@
 // Menú unificado BYT (los que no tienen href quedan deshabilitados)
 window.BYT_MENU = [
   {
-    label: "Proyectos",
-    icon: "folder",
-    children: [
-      { label: "Cronograma de proyectos", href: "../proyectos/cronograma.html" },
-      { label: "Estado de proyectos", href: "../proyectos/estado.html" }
-    ]
-  },
-  {
     label: "Cotizaciones",
     icon: "file",
     children: [
@@ -16,7 +8,6 @@ window.BYT_MENU = [
       { label: "Administrar cotizaciones", href: "../cotizaciones/consultar.html" }
     ]
   },
- { label: "Compras", icon: "cart", href: "../compras/index.html" },
   {
     label: "Ventas",
     icon: "tag",
@@ -26,6 +17,15 @@ window.BYT_MENU = [
     ]
   },
   { label: "Finanzas", icon: "card", href: "" },
+  {
+    label: "Proyectos",
+    icon: "folder",
+    children: [
+      { label: "Cronograma de proyectos", href: "../proyectos/cronograma.html" },
+      { label: "Estado de proyectos", href: "../proyectos/estado.html" }
+    ]
+  },
+  { label: "Compras", icon: "cart", href: "../compras/index.html" },
   {
     label: "Datos",
     icon: "db",
