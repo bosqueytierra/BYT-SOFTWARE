@@ -8,13 +8,35 @@
   <link rel="stylesheet" href="../styles/loader.css">
 </head>
 <body>
-  <!-- Contenido mínimo; layout.js lo moverá a #page-content-slot -->
+  <!-- Contenido mínimo; layout.js lo moverá al slot -->
   <div style="padding:16px; color: var(--muted);">
     Selecciona una opción del menú para comenzar.
   </div>
 
-  <!-- Menú unificado (al final para que <body> ya exista) -->
+  <!-- Menú unificado -->
   <script src="../js/menuConfig.js"></script>
+
+  <!-- Normaliza rutas relativas a absolutas SOLO en esta página -->
+  <script>
+    (function() {
+      const PREFIX = "/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/";
+      function normalize(item) {
+        const copy = { ...item };
+        if (copy.href && copy.href.startsWith("../")) {
+          copy.href = PREFIX + copy.href.replace(/^\.\.\//, "");
+        }
+        if (Array.isArray(copy.children)) {
+          copy.children = copy.children.map(normalize);
+        }
+        return copy;
+      }
+      if (Array.isArray(window.BYT_MENU)) {
+        window.BYT_MENU = window.BYT_MENU.map(normalize);
+      }
+    })();
+  </script>
+
+  <!-- Inyecta layout -->
   <script src="../js/layout.js"></script>
 </body>
 </html>
