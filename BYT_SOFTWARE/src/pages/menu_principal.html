@@ -5,17 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BYT SOFTWARE - Inicio</title>
 
-  <!-- Estilos globales y loader -->
-  <link rel="stylesheet" href="../styles/global.css">
-  <link rel="stylesheet" href="../styles/loader.css">
+  <!-- Estilos globales (rutas absolutas para GitHub Pages) -->
+  <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css">
+  <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css">
 
-  <!-- Config y helpers del menú -->
-  <script src="../js/menuConfig.js"></script>
-  <script src="../js/layout.js"></script>
+  <!-- Configuración del menú y aplicación del layout -->
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
 
   <style>
     body { margin: 0; background: var(--bg); color: var(--text); }
-    /* Mensaje de bienvenida opcional */
     .home-welcome {
       padding: 24px;
       color: var(--muted);
@@ -24,24 +23,7 @@
   </style>
 </head>
 <body>
-  <script>
-    // Carga el fragmento de layout y lo inserta en el body.
-    // Así usamos el menú único definido en src/fragments/layout.html
-    (async function loadLayout() {
-      const res = await fetch('../fragments/layout.html');
-      const html = await res.text();
-      document.body.innerHTML = html;
-
-      // Deja el slot vacío o con un mensaje ligero
-      const slot = document.getElementById('page-content-slot');
-      if (slot) {
-        slot.innerHTML = `
-          <div class="home-welcome">
-            Selecciona una opción del menú para comenzar.
-          </div>
-        `;
-      }
-    })();
-  </script>
+  <!-- Contenido mínimo: layout.js moverá esto a #page-content-slot -->
+  <div class="home-welcome">Selecciona una opción del menú para comenzar.</div>
 </body>
 </html>
