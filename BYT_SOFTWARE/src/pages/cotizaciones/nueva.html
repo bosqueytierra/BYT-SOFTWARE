@@ -29,15 +29,31 @@
     a { color: inherit; text-decoration: none; }
 
     /* Summary bar */
-    .summary-bar {
-      background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.82) 100%);
-      backdrop-filter: blur(6px);
-      border-bottom: 1px solid var(--border);
-      padding: 10px 14px;
-      position: sticky;
-      top: 80px;
-      z-index: 5;
-    }
+   /* Summary bar */
+
+    
+.summary-bar {
+  position: fixed;
+  top: 0;
+  left: 80px;                 /* ancho de la sidebar; ajusta si cambia */
+  width: calc(100% - 80px);   /* evita solapar la sidebar */
+  z-index: 20;
+  background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.82) 100%);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Espacio para que el contenido no quede debajo de la barra */
+#page-content {
+  padding-top: 130px;  /* si aún roza, sube a 140px; si sobra espacio, bájalo */
+}
+
+
+
+
+    
     .summary-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
