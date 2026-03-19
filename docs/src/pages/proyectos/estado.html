@@ -53,7 +53,14 @@
     }
 
     /* Lista izquierda */
-    .list-card{padding:10px;}
+    .list-card{
+      padding:10px;
+      max-height:calc(100vh - 210px);
+      overflow-y:auto;
+    }
+    .list-card::-webkit-scrollbar{width:10px;}
+    .list-card::-webkit-scrollbar-track{background:rgba(0,0,0,0.04);border-radius:12px;}
+    .list-card::-webkit-scrollbar-thumb{background:#c9d3de;border-radius:12px;}
     .proj-item{
       border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px;
       background:var(--card);cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.06);
@@ -755,6 +762,16 @@
       }else{
         await sb.from('cotizacion_files').insert({ cotizacion_id: cotId, path, filename:path.split('/').pop(), nota });
       }
+    }
+
+    /* --- FIX: verCotizacion helper --- */
+    function verCotizacion(cotId){
+      if(!cotId){
+        toast('Esta venta no tiene cotización asociada');
+        return;
+      }
+      const url = `../cotizaciones/detalle.html?id=${encodeURIComponent(cotId)}`;
+      window.open(url, '_blank');
     }
   </script>
 </body>
