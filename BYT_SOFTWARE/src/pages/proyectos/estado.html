@@ -16,7 +16,7 @@
       --muted:#7a8191;
       --shadow:0 14px 40px rgba(17,24,39,0.12);
       --primary:#2f6f4f;
-      --chip-green:#e7f5eb; --chip-green-text:#1b874a;
+      --chip-green:#eaf6ef; --chip-green-text:#1f6c3b;
       --chip-amber:#fff4df; --chip-amber-text:#b47a1b;
       --chip-grey:#eef1f6;  --chip-grey-text:#5f6470;
     }
@@ -74,7 +74,7 @@
       max-height:calc(100vh - 140px);
       overflow-y:auto;
     }
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 18px;}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 18px;}
     .btn{
       border:1px solid var(--border);background:#f6f8fb;color:#1f2430;
       padding:9px 14px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;
@@ -82,10 +82,14 @@
     }
     .btn:hover{border-color:#cfd6e3;background:#eef2f7;}
     .btn-ghost{background:#ffffff;}
-    .btn-solid{background:var(--primary);color:#fff;border-color:var(--primary);}
+    .btn-soft-green{
+      background:#f4faf6;
+      color:#245e40;
+      border:1px solid #cfe6d7;
+    }
     .detail-header h3{margin:0;font-size:18px;font-weight:800;}
     .detail-meta{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
-    .partidas-container{display:flex;flex-direction:column;gap:16px;margin-top:10px;}
+    .partidas-container{display:flex;flex-direction:column;gap:16px;margin-top:18px;}
     .partida-wrapper{
       border:1px solid var(--border);border-radius:14px;
       background:#fff;box-shadow:0 8px 22px rgba(0,0,0,0.06);
@@ -469,23 +473,19 @@
             <span>Partidas pendientes: ${proj.partidas.filter(pt=>pt.estado!=='completada').length}</span>
           </div>
           <div class="progress-wrap" style="margin:10px 0;">
-            <div class="progress-bar"><div class="progress-fill" style="width:${prog.percent}%;"></div></div>
+            <div class="progress-bar"><div class="bar-fill" style="width:${prog.percent}%;"></div></div>
           </div>
         </div>
 
         <div class="actions">
-          <button class="btn btn-ghost">👁️ Ver</button>
-          <button class="btn btn-solid">✏️ Editar</button>
-          <button class="btn btn-solid">📑 Duplicar</button>
-          <button class="btn btn-ghost">🗑️ Eliminar</button>
-          <button class="btn btn-ghost" onclick="openAdj('${attr(proj.cotizacionId||'')}','cotizacion')">Adjuntos Cotización</button>
-          <button class="btn btn-ghost" onclick="openAdj('${attr(proj.cotizacionId||'')}','skp')">SKP</button>
-          <button class="btn btn-ghost" onclick="openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
-          <button class="btn btn-ghost" onclick="openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
-          <button class="btn btn-ghost" onclick="verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','cotizacion')">Adjuntos Cotización</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','skp')">SKP</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
+          <button class="btn btn-soft-green" onclick="verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
         </div>
 
-        <div style="height:10px;"></div>
+        <div style="height:12px;"></div>
 
         <div class="partidas-container">
           ${proj.partidas.map(pt=>{
@@ -756,8 +756,6 @@
         await sb.from('cotizacion_files').insert({ cotizacion_id: cotId, path, filename:path.split('/').pop(), nota });
       }
     }
-
-    function verCotizacion(id){ if(!id) return; window.location.href=`../cotizaciones/detalle.html?id=${id}`; }
   </script>
 </body>
 </html>
