@@ -3,820 +3,1033 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Consultar Cotizaciones - BYT SOFTWARE</title>
+  <title>Estado de proyectos - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
-    :root {
-      --bg: #f6f7f8;
-      --card: #ffffff;
-      --border: #e4e7eb;
-      --text: #2d2d2d;
-      --muted: #6c7a86;
-      --primary: #2e5e4e;
-      --primary-soft: #3f705d;
-      --accent: #2e5e4e;
-      --accent-2: #3f705d;
-      --danger: #2e5e4e;
-      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+    /* --- paleta y layout de dos columnas --- */
+    :root{
+      --bg:#eef1f6;
+      --card:#ffffff;
+      --border:#e6e9f0;
+      --text:#283040;
+      --muted:#7a8191;
+      --shadow:0 14px 40px rgba(17,24,39,0.12);
+      --primary:#2f6f4f;
+      --chip-green:#eaf6ef; --chip-green-text:#1f6c3b;
+      --chip-amber:#fff4df; --chip-amber-text:#b47a1b;
+      --chip-grey:#eef1f6;  --chip-grey-text:#5f6470;
     }
-    body {
-      margin: 0;
-      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
-      background: var(--bg);
-      color: var(--text);
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif;
+      background:radial-gradient(circle at 20% 20%, rgba(255,255,255,0.9), transparent 35%), var(--bg);
+      color:var(--text);
     }
-    .page { max-width: 1280px; margin: 22px auto 48px; padding: 0 16px; }
-    .header-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      align-items: center;
+    .page{max-width:1400px;width:95%;margin:24px auto 48px;}
+    .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
+    @media(max-width:1100px){ .layout{grid-template-columns:1fr;} }
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+    .header h2{margin:0;font-weight:800;font-size:22px;}
+    .card, .filters-card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow:var(--shadow);
     }
-    .logo-row { display: flex; align-items: center; gap: 12px; }
-    .logo {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      object-fit: contain;
-      background: #edf1f3;
-      padding: 6px;
-      border: 1px solid var(--border);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+    .filters-card{padding:16px;margin-bottom:12px;}
+    .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+    label{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px;display:block;}
+    input,select{
+      width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;
+      background:#fdfefe;font-family:inherit;font-size:14px;color:var(--text);
+      box-shadow:inset 0 1px 2px rgba(0,0,0,0.02);
     }
-    .header-title { margin: 0; font-size: 20px; font-weight: 800; color: var(--text); }
-    .header-subtitle { margin: 0; color: var(--muted); font-size: 13px; }
-    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .list-card{padding:10px;max-height:calc(100vh - 210px);overflow-y:auto;}
+    .list-card::-webkit-scrollbar{width:10px;}
+    .list-card::-webkit-scrollbar-track{background:rgba(0,0,0,0.04);border-radius:12px;}
+    .list-card::-webkit-scrollbar-thumb{background:#c9d3de;border-radius:12px;}
+    .proj-item{border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px;
+      background:var(--card);cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,0.06);transition:transform .08s, box-shadow .08s, border-color .08s;}
+    .proj-item:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(0,0,0,0.1);}
+    .proj-item.active{border-color:#d0e3d8;box-shadow:0 12px 30px rgba(47,111,79,0.18);}
+    .proj-title{margin:0;font-weight:800;font-size:15px;}
+    .proj-meta{font-size:13px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;}
+    .proj-progress{margin-top:8px;}
+    .bar{height:8px;border-radius:999px;background:#edf0f5;overflow:hidden;}
+    .bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#f97316,#22c55e);}
+    .bar-text{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
+    .detail-card{padding:16px;max-height:calc(100vh - 140px);overflow-y:auto;}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 18px;}
+    .btn{border:1px solid var(--border);background:#f6f8fb;color:#1f2430;
+      padding:9px 14px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;
+      display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+    .btn:hover{border-color:#cfd6e3;background:#eef2f7;}
+    .btn-ghost{background:#ffffff;}
+    .btn-soft-green{background:#f1f3f6;color:#2f3a4a;border:1px solid #d9e0e8;}
+    .detail-header h3{margin:0;font-size:18px;font-weight:800;}
+    .detail-meta{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
+    .partidas-container{display:flex;flex-direction:column;gap:16px;margin-top:18px;}
+    .partida-wrapper{border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 8px 22px rgba(0,0,0,0.06);padding:10px 12px;}
+    .partida-header{display:flex;align-items:center;gap:10px;cursor:pointer;}
+    .partida-title{font-weight:800;margin:0;}
+    .partida-status{padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;}
+    .p-pend{background:var(--chip-amber);color:var(--chip-amber-text);}
+    .p-comp{background:var(--chip-green);color:var(--chip-green-text);}
+    .chevron{font-size:16px;color:#6b7280;transition:transform .15s;}
+    .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px;}
+    .stage-item{border:1px solid var(--border);border-radius:12px;padding:10px;background:#ffffff;display:flex;flex-direction:column;gap:6px;box-shadow:0 3px 12px rgba(0,0,0,0.04);position:relative;}
+    .stage-item.done{background:var(--chip-green);border-color:#c6ead1;}
+    .stage-name{font-weight:400;}
+    .stage-owner{font-size:12px;color:#6b7280;}
+    .stage-select{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-weight:700;}
+    .note-toggle{position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:4px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:12px; display:flex;align-items:center;justify-content:center;}
+    .note-box{margin-top:6px; display:none;}
+    .note-box textarea{width:100%; min-height:60px; border:1px solid var(--border); border-radius:8px; padding:6px; font-family:inherit; font-size:12px;}
+    .note-box.show{display:block;}
 
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-    }
-    .card + .card { margin-top: 14px; }
+    .adj-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;}
+    .adj-modal{background:#fff; border-radius:18px; max-width:1200px; width:96vw; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); max-height:94vh; display:flex; flex-direction:column;}
+    .adj-head{padding:18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;}
+    .adj-title{margin:0; font-size:19px; font-weight:800;}
+    .adj-sub{margin:2px 0 0; color:#6c7a86; font-size:13px;}
+    .adj-close{border:none;background:transparent;font-size:22px;cursor:pointer;color:#6b7280;}
+    .adj-body{padding:16px 18px; overflow:auto;}
+    .adj-upload{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;}
+    .adj-btn{border:1px solid var(--border);background:#f8fafc;color:#1f2430;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;}
+    .adj-note{padding:9px 10px;border:1px solid var(--border);border-radius:10px;flex:1;min-width:220px;}
+    .adj-status{font-size:13px;color:var(--muted);margin-bottom:8px;}
+    .adj-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+    .adj-card{border:1px solid var(--border);border-radius:12px;padding:10px;background:#fdfdfd;display:flex;flex-direction:column;gap:6px;box-shadow:0 6px 18px rgba(0,0,0,0.06);}
+    .adj-preview{height:170px;display:grid;place-items:center;background:#fff;border:1px dashed var(--border);border-radius:10px;overflow:hidden;}
+    .adj-preview img{max-width:100%;max-height:100%;object-fit:contain;}
+    .pdf-frame{width:100%;height:170px;border:none;}
+    .adj-name{font-weight:700;}
+    .adj-meta{font-size:12px;color:#6b7280;}
+    .adj-note-edit{width:100%;min-height:48px;border:1px solid var(--border);border-radius:10px;padding:8px;font-family:inherit;}
+    .adj-actions{display:flex;gap:6px;flex-wrap:wrap;}
+    .adj-smallbtn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:6px 8px;border-radius:8px;font-size:12px;cursor:pointer;}
+    .adj-smallbtn.danger{border-color:#fda4af;color:#b91c1c;}
 
-    .filters {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
-      align-items: end;
-    }
-    label { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 6px; display: block; }
-    input, select {
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fdfdfd;
-      font-family: inherit;
-      font-size: 14px;
-      transition: border 0.15s ease, box-shadow 0.15s ease;
-    }
-    input:focus, select:focus {
-      outline: none;
-      border-color: rgba(46,94,78,0.6);
-      box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
-    }
+    /* Loader global */
+    .loader-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:3000;}
+    .spinner{width:70px;height:70px;border-radius:50%;border:6px solid #e5e7eb;border-top-color:var(--primary);animation:spin 0.9s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .toast{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111827; color:#fff; padding:12px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:4000; display:none;}
 
-    .btn {
-      border: 1px solid var(--border);
-      background: #fff;
-      color: #1f2430;
-      padding: 10px 14px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: 14px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    }
-    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
-    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-primary:hover { background: var(--primary-soft); }
-    .btn-ghost { background: #f0f3f5; color: #1f2430; }
-    .btn-secondary { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
-    .btn-ver      { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; }
-    .btn-editar   { background: var(--primary-soft); color: #fff; border-color: var(--primary-soft); }
-    .btn-duplicar { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .btn-eliminar { color: var(--primary); border-color: rgba(46,94,78,0.25); background: #fff; position: relative; }
-    .btn-icon { width: 18px; height: 18px; }
-
-    .list { display: flex; flex-direction: column; gap: 12px; }
-    .quote-card { padding: 16px; }
-    .quote-head {
-      display: grid;
-      grid-template-columns: 1fr minmax(320px, 420px);
-      gap: 12px;
-      align-items: flex-start;
-    }
-    .quote-title {
-      margin: 0;
-      font-size: 16px;
-      font-weight: 800;
-      color: var(--text);
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      word-break: break-word;
-    }
-    .quote-meta { margin: 6px 0; color: var(--muted); font-size: 13px; }
-    .quote-total { margin: 4px 0 0; font-weight: 700; color: var(--primary); }
-    .quote-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-end;
-      margin-top: 8px;
-    }
-    .quote-status {
-      width: 100%;
-      padding: 11px 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fdfdfd;
-      font-size: 14px;
-      color: var(--text);
-      flex-shrink: 0;
-    }
-
-    .state { textán:center; color: var(--muted); padding: 24px 12px; }
-    .state-icon {
-      width: 54px; height: 54px; margin: 0 auto 8px;
-      display: grid; place-items: center;
-      border-radius: 16px;
-      background: #eef2f5;
-      color: var(--primary);
-      font-size: 24px;
-      border: 1px solid var(--border);
-    }
-
-    .loading-spinner {
-      width: 36px; height: 36px;
-      border: 4px solid #e6e9ed;
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-      margin: 0 auto 8px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.35);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 12000;
-      padding: 16px;
-    }
-    .modal {
-      background: #fff;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.12);
-      width: min(420px, 100%);
-      padding: 18px;
-    }
-    .modal h3 { margin: 0 0 8px; }
-    .modal p { margin: 0 0 14px; color: var(--muted); }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
-    .hold-btn { position: relative; overflow: hidden; }
-    .hold-fill {
-      position: absolute;
-      inset: 0;
-      background: rgba(46,94,78,0.15);
-      width: 0%;
-      pointer-events: none;
-      transition: width 0.1s linear;
-    }
-
-    .sidebar a,
-    .sidebar .nav-item,
-    .sidebar .nav-item .nav-label,
-    .sidebar .submenu a { text-decoration: none !important; }
-    .sidebar a:hover,
-    .sidebar .nav-item:hover,
-    .sidebar .nav-item:focus,
-    .sidebar .nav-item:active,
-    .sidebar .submenu a:hover,
-    .sidebar .submenu a:focus,
-    .sidebar .submenu a:active { text-decoration: none !important; }
-
-    @media (max-width: 900px) {
-      .quote-head { grid-template-columns: 1fr; }
-      .quote-actions { justify-content: flex-start; }
-      .quote-status { width: 100%; }
-    }
+    /* --- Modal pizarra --- */
+    .board-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2300; padding:18px;}
+    .board-modal{background:#fff; border-radius:18px; max-width:1200px; width:96vw; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); max-height:94vh; display:flex; flex-direction:column;}
+    .board-head{padding:16px; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:center; justify-content:space-between;}
+    .board-tools{display:flex; gap:8px; flex-wrap:wrap;}
+    .tool-btn{padding:8px 12px; border:1px solid #e0e4ea; border-radius:10px; background:#f7f9fb; cursor:pointer; font-weight:700; font-size:12px;}
+    .tool-btn.active{background:#2f6f4f; color:#fff; border-color:#2f6f4f;}
+    .board-body{padding:0 16px 16px; overflow:auto; flex:1; display:flex; flex-direction:column; gap:10px;}
+    #board-canvas-wrap{border:1px solid #dfe4ea; border-radius:12px; overflow:hidden; background:#fff; position:relative;}
+    #board-canvas{border:none; width:100%; height:70vh;}
   </style>
 </head>
 <body>
-  <div id="page-content">
-    <div class="page">
-      <div class="header-card">
-        <div class="logo-row">
-          <img class="logo" src="../../assets/logo_byt.png" alt="BYT">
-          <div>
-            <h1 class="header-title">Consultar Cotizaciones</h1>
-            <p class="header-subtitle">Historial de Proyectos · Bosque y Tierra</p>
-          </div>
-        </div>
-        <div class="actions">
-          <button class="btn btn-ghost" onclick="cargarCotizaciones()" title="Actualizar">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 9 9"/><path d="M3 16v-4h4"/></svg>
-            Actualizar
-          </button>
-          <a class="btn btn-primary" href="nueva.html">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>
-            Nueva Cotización
-          </a>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3 style="margin:0 0 12px;">Filtros de Búsqueda</h3>
-        <div class="filters">
-          <div>
-            <label>Buscar por Proyecto o Cliente</label>
-            <input id="filtro-busqueda" type="text" placeholder="Escriba el nombre del proyecto o cliente..." oninput="filtrarCotizaciones()">
-          </div>
-          <div>
-            <label>Ordenar por</label>
-            <select id="filtro-orden" onchange="ordenarCotizaciones()">
-              <option value="fecha_desc">Fecha (Más reciente)</option>
-              <option value="fecha_asc">Fecha (Más antigua)</option>
-              <option value="cliente_asc">Cliente (A-Z)</option>
-              <option value="cliente_desc">Cliente (Z-A)</option>
-              <option value="total_desc">Total (Mayor a menor)</option>
-              <option value="total_asc">Total (Menor a mayor)</option>
-            </select>
-          </div>
-          <div>
-            <label>Estado</label>
-            <select id="filtro-estado" onchange="filtrarCotizaciones()">
-              <option value="todos">Todos</option>
-              <option value="borrador">Borrador</option>
-              <option value="enviada">Enviada</option>
-              <option value="en_revision_cliente">En revisión cliente</option>
-              <option value="aprobada">Aprobada</option>
-              <option value="rechazada">Rechazada</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div id="loading-state" class="card state" style="display:none;">
-        <div class="loading-spinner"></div>
-        <div>Cargando cotizaciones...</div>
-      </div>
-
-      <div id="empty-state" class="card state" style="display:none;">
-        <div class="state-icon">📁</div>
-        <h3 style="margin:6px 0 4px; color: var(--text);">No hay cotizaciones</h3>
-        <p style="margin:0; color: var(--muted);">Aún no se han creado cotizaciones. <a href="nueva.html" style="color:var(--primary); font-weight:700;">Crear primera cotización</a></p>
-      </div>
-
-      <div id="cotizaciones-container" class="list" style="display:none;"></div>
+  <div class="page">
+    <div class="header">
+      <button class="btn btn-ghost" onclick="window.history.back()">← Atrás</button>
+      <h2>Estado de proyectos</h2>
     </div>
 
-    <!-- Modal eliminar (10s, barra, alerta, nombre proyecto) -->
-    <div class="modal-backdrop" id="delete-modal" aria-hidden="true">
-      <div class="modal">
-        <h3 style="margin:0 0 8px; display:flex; align-items:center; gap:8px;">
-          <span style="color:var(--danger);">⚠️</span> Eliminar cotización
-        </h3>
-        <p id="delete-text">¿Seguro que deseas eliminar esta cotización? Mantén el botón 10 segundos para confirmar.</p>
-        <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
-          <div id="delete-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
+    <div class="layout">
+      <!-- Columna izquierda: filtros + lista -->
+      <div>
+        <div class="filters-card">
+          <div class="filters-grid">
+            <div>
+              <label>Buscar proyecto o cliente</label>
+              <input id="filtro-texto" type="text" placeholder="Proyecto, cliente..." oninput="applyFiltersAndRender()">
+            </div>
+            <div>
+              <label>Estado global</label>
+              <select id="filtro-estado" onchange="applyFiltersAndRender()">
+                <option value="todos" selected>Todos</option>
+                <option value="abierto">Con partidas pendientes</option>
+                <option value="completo">Todas completadas</option>
+              </select>
+            </div>
+          </div>
         </div>
-        <div class="modal-actions">
-          <button class="btn btn-secondary" id="delete-cancel">Cancelar</button>
-          <button class="btn btn-primary hold-btn" id="delete-hold-btn">
-            <span id="delete-hold-text">Mantén 10s para eliminar</span>
-            <div class="hold-fill" id="delete-hold-fill"></div>
-          </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Modal de confirmación para cambio de estado (custom, 10s) -->
-    <div class="modal-backdrop" id="status-confirm-modal" aria-hidden="true">
-      <div class="modal">
-        <h3 style="margin:0 0 8px; display:flex; align-items:center; gap:8px;">
-          <span style="color:var(--danger);">⚠️</span> Confirmar cambio de estado
-        </h3>
-        <p id="status-confirm-text" style="margin:0 0 12px; color:#555;">Mantén presionado 10s para confirmar.</p>
-        <div style="background:#eee; border-radius:8px; overflow:hidden; height:10px; margin-bottom:12px;">
-          <div id="status-progress" style="background:#35564c; width:0%; height:100%; transition:width 0.1s linear;"></div>
+        <div id="proyectos-list" class="list-card card"></div>
+      </div>
+
+      <!-- Columna derecha: detalle -->
+      <div id="detalle-wrapper" class="detail-card card"></div>
+    </div>
+  </div>
+
+  <!-- Modal adjuntos -->
+  <div id="adj-modal-backdrop" class="adj-backdrop" aria-hidden="true">
+    <div class="adj-modal">
+      <div class="adj-head">
+        <div>
+          <h3 class="adj-title" id="adj-title">Archivos</h3>
+          <p class="adj-sub">Cotización: <span id="adj-cot-id">-</span> · <span id="adj-subtipo"></span></p>
         </div>
-        <div style="display:flex; gap:8px; justify-content:flex-end;">
-          <button id="status-cancel" class="btn btn-secondary" type="button">Cancelar</button>
-          <button id="status-hold" class="btn btn-primary hold-btn" type="button" style="touch-action:none;">
-            <span id="status-hold-text">Mantén 10s</span>
-            <div class="hold-fill" id="status-hold-fill"></div>
-          </button>
+        <button class="adj-close" onclick="closeAdjuntos()">×</button>
+      </div>
+      <div class="adj-body">
+        <div class="adj-upload">
+          <label class="adj-btn">
+            📤 Seleccionar archivo(s)
+            <input id="adj-file-input" type="file" multiple style="display:none;">
+          </label>
+          <input id="adj-nota-upload" class="adj-note" type="text" placeholder="Nota opcional para todos">
         </div>
+
+        <div id="pending-wrapper" class="pending-wrap" style="display:none;">
+          <div class="pending-title">Previsualización (se suben automáticamente)</div>
+          <p class="pending-note">Al elegir archivos se suben al instante; espera el círculo de carga.</p>
+          <div id="pending-grid" class="adj-grid"></div>
+        </div>
+
+        <div id="adj-status" class="adj-status">Sin cargar aún…</div>
+        <div id="adj-grid" class="adj-grid"></div>
       </div>
     </div>
   </div>
+
+  <!-- Modal Pizarra -->
+  <div id="board-backdrop" class="board-backdrop" aria-hidden="true">
+    <div class="board-modal">
+      <div class="board-head">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <strong>Notas y obs. presentación</strong>
+          <select id="board-partida-select" style="padding:6px 10px;border-radius:10px;border:1px solid #dfe4ea;">
+          </select>
+        </div>
+        <div class="board-tools">
+          <button class="tool-btn active" data-tool="pen">Lapiz</button>
+          <button class="tool-btn" data-tool="highlighter">Resaltador</button>
+          <button class="tool-btn" data-tool="text">Texto</button>
+          <button class="tool-btn" data-tool="rect">Rectángulo</button>
+          <button class="tool-btn" data-tool="select">Mover/Seleccionar</button>
+          <button class="tool-btn" id="board-undo">↶ Undo</button>
+          <button class="tool-btn" id="board-redo">↷ Redo</button>
+          <button class="tool-btn" id="board-clear">🗑 Limpiar</button>
+          <button class="tool-btn" id="board-close">Cerrar</button>
+        </div>
+      </div>
+      <div class="board-body">
+        <div id="board-canvas-wrap">
+          <canvas id="board-canvas"></canvas>
+        </div>
+        <small style="color:#6c7a86;">Pega una imagen con Ctrl+V, o arrástrala. Todo se guarda en Supabase y se replica en vivo.</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loader global -->
+  <div id="loader" class="loader-backdrop"><div class="spinner"></div></div>
+  <div id="toast" class="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
   <script type="module" src="../../js/globalSupabase.js"></script>
-  <script src="../../js/categorias.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/fabric@6.0.0-beta8/dist/fabric.min.js"></script>
 
   <script>
-    let cotizacionesData = [];
-    let cotizacionesFiltradas = [];
-    let deleteTargetId = null;
-    let holdTimer = null;
-    let holdInterval = null;
+    /* Datos y estado */
+    const STAGES = [
+      {name:'Diseño y Cierre', owner:'Luis'},
+      {name:'Traspaso de informacion de proyecto', owner:'Luis → Jano - Jorge'},
+      {name:'Rectificacion del espacio', owner:'Jorge - Jano'},
+      {name:'Modelado de planta y mobiliario', owner:'Jorge'},
+      {name:'Explicacion y revisión tecnica del proyecto', owner:'Jorge → Jano'},
+      {name:'Explicacion y revisión de diseño', owner:'Jorge - Jano → Luis'},
+      {name:'Ingreso de compra de quincalleria y otros', owner:'Jano'},
+      {name:'Optimizado y estimación de tableros y tapacantos', owner:'Jorge'},
+      {name:'Planos de armado', owner:'Jorge'},
+      {name:'Compras de Melaminas y tapacantos', owner:'Luis - Jano'},
+      {name:'Cortes en taller', owner:'Taller'},
+      {name:'Listo para instalar', owner:'Tallerar'}
+    ];
+    const ADJ_BUCKETS = { skp:'skp', diagrama:'diagramas_corte', planos:'planos_armado', cotizacion:'cotizaciones' };
+    const ADJ_LABELS = { skp:'SKP', diagrama:'Diagrama de corte', planos:'Planos de Armado', cotizacion:'Adjuntos Cotización' };
 
-    // Wrap supabase calls para ver respuestas
-    window.__logWrap = async (fn, label, ...args) => {
-      console.log(label, 'IN', args);
-      const out = await fn(...args);
-      console.log(label, 'OUT', out);
-      return out;
-    };
-    const origUpdate = {};
-    const origVenta  = {};
-    const origEliminar = {};
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.supabaseClient) {
-        if (!origUpdate.fn) {
-          origUpdate.fn = window.supabaseClient.actualizarEstadoCotizacion;
-          window.supabaseClient.actualizarEstadoCotizacion = (...a) => __logWrap(origUpdate.fn, 'actualizarEstadoCotizacion', ...a);
-        }
-        if (!origVenta.fn) {
-          origVenta.fn = window.supabaseClient.crearOVincularVentaDesdeCotizacion;
-          window.supabaseClient.crearOVincularVentaDesdeCotizacion = (...a) => __logWrap(origVenta.fn, 'crearOVincularVentaDesdeCotizacion', ...a);
-        }
-        if (!origEliminar.fn) {
-          origEliminar.fn = window.supabaseClient.eliminarVentasPorCotizacion;
-          window.supabaseClient.eliminarVentasPorCotizacion = (...a) => __logWrap(origEliminar.fn, 'eliminarVentasPorCotizacion', ...a);
-        }
+    let proyectos=[]; let filtered=[]; let selectedKey=null;
+    let stageStore=new Map();
+    let stageNotesByPartida=new Map();
+    let globalStageNotes={};
+    let adjContext={tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null};
+    let pendingFiles=[]; let isUploading=false;
+    let openPartidas=new Set();
+    let realtimeSub = null; // suscripción Realtime etapas
+    let pollId = null;
+    const LIVE_POLL_MS = 4000; // respaldo (puedes ajustar)
+
+    // Board (pizarra)
+    let boardCanvas = null;
+    let boardRealtime = null;
+    let boardPollId = null;
+    let currentBoardPartida = null;
+    const BOARD_POLL_MS = 4000;
+
+    const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
+    async function waitForSupabase(maxMs=12000){
+      const start=Date.now();
+      while(Date.now()-start<maxMs){
+        if(window.supabase && typeof window.supabase.from==='function') return window.supabase;
+        await wait(250);
       }
+      throw new Error('supabase no disponible');
+    }
+    async function waitForSupabaseClient(maxMs=12000){
+      const start=Date.now();
+      while(Date.now()-start<maxMs){
+        if(window.supabaseClient && typeof window.supabaseClient.listarVentas==='function') return window.supabaseClient;
+        await wait(250);
+      }
+      throw new Error('supabaseClient no disponible');
+    }
+    const esc = (s)=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]||m));
+    const attr = (s)=>esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    function showLoader(flag){document.getElementById('loader').style.display=flag?'flex':'none';}
+    function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1800);}
+
+    document.addEventListener('DOMContentLoaded',()=>bootstrapEstado());
+    window.addEventListener('beforeunload', () => {
+      if(realtimeSub) { try{ realtimeSub.unsubscribe(); }catch(e){} realtimeSub=null; }
+      if(pollId) { clearInterval(pollId); pollId=null; }
+      stopBoardRealtime();
     });
 
-    if (!localStorage.getItem('byt_logged_in')) {
-      window.location.href = '../login/login.html';
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      cargarCotizaciones();
-      setupDeleteModal();
-    });
-
-    function mostrarEstado(estado) {
-      const loading = document.getElementById('loading-state');
-      const empty = document.getElementById('empty-state');
-      const container = document.getElementById('cotizaciones-container');
-      loading.style.display = estado === 'loading' ? 'block' : 'none';
-      empty.style.display = estado === 'empty' ? 'block' : 'none';
-      container.style.display = estado === 'data' ? 'flex' : 'none';
-    }
-
-    async function cargarCotizaciones() {
-      mostrarEstado('loading');
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const resultado = await window.supabaseClient.obtenerCotizaciones();
-        if (!resultado.success) throw new Error(resultado.error);
-        cotizacionesData = resultado.data || [];
-        cotizacionesFiltradas = [...cotizacionesData];
-        if (cotizacionesData.length === 0) {
-          mostrarEstado('empty');
-        } else {
-          ordenarCotizaciones();
-        }
-      } catch (error) {
-        console.error('Error al cargar cotizaciones:', error);
-        window.utils?.mostrarNotificacion?.('Error al cargar cotizaciones: ' + (error.message || String(error)), 'error');
-        mostrarEstado('empty');
+    async function bootstrapEstado(){
+      try{
+        await cargarDatos();
+        await cargarNotasEtapas();
+        await startRealtimeSync();  // realtime + poll
+        applyFiltersAndRender(true);
+        wireFileInput();
+      }catch(e){
+        console.error(e);
+        document.getElementById('proyectos-list').innerHTML='<div style="padding:22px;text-align:center;color:#b91c1c;">No se pudo cargar información</div>';
       }
     }
 
-    function getClienteNombre(c) {
-      if (!c) return 'N/A';
-      if (typeof c === 'string') return c;
-      if (typeof c === 'object') {
-        return c.nombre || c.nombre_proyecto || c.razon_social || JSON.stringify(c);
-      }
-      return String(c);
-    }
+    /* Carga de datos */
+    async function cargarDatos(){
+      const sbClient = await waitForSupabaseClient();
+      const sb = await waitForSupabase();
+      if(sbClient.init) await sbClient.init();
 
-    function filtrarCotizaciones() {
-      const filtroTexto = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
-      const filtroEstado = document.getElementById('filtro-estado').value;
-      let base = [...cotizacionesData];
+      const {data:cotAprob,error:errCot}=await sb.from('cotizaciones').select('id').eq('estado','aprobada');
+      if(errCot) throw errCot;
+      const approved = new Set((cotAprob||[]).map(c=>c.id));
 
-      if (filtroTexto) {
-        base = base.filter(c => {
-          const proj = (c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || '').toLowerCase();
-          const cli  = (getClienteNombre(c.cliente || c.data?.cliente) || '').toLowerCase();
-          const notas = (c.notas || '').toLowerCase();
-          return proj.includes(filtroTexto) || cli.includes(filtroTexto) || notas.includes(filtroTexto);
+      const res=await sbClient.listarVentas();
+      if(!res.success) throw new Error(res.error||'listarVentas sin éxito');
+      const ventas=(res.data||[]).filter(v=>approved.has(v.cotizacion_id));
+
+      const map=new Map();
+      ventas.forEach(v=>{
+        const key=v.cotizacion_id || v.proyecto || 'sin-key';
+        const estadoPart= (v.estado||'').trim();
+        if(!map.has(key)) map.set(key,{
+          key,
+          display:v.proyecto||'Proyecto sin nombre',
+          cliente:parseCliente(v.cliente),
+          cotizacionId:v.cotizacion_id,
+          partidas:[]
         });
-      }
+        map.get(key).partidas.push({
+          id:v.id || v.partida_id || v.partida_nombre || v.partida,
+          nombre:v.partida_nombre || v.partida || 'Partida',
+          estado: estadoPart || 'en_ejecucion'
+        });
+      });
 
-      if (filtroEstado !== 'todos') {
-        base = base.filter(c => (c.estado || 'borrador') === filtroEstado);
-      }
-
-      cotizacionesFiltradas = base;
-      ordenarCotizaciones();
+      proyectos = Array.from(map.values());
+      await loadStageStore(); // async + Supabase
     }
 
-    function ordenarCotizaciones() {
-      const orden = document.getElementById('filtro-orden').value;
-      cotizacionesFiltradas.sort((a, b) => {
-        switch(orden) {
-          case 'fecha_asc':  return new Date(a.created_at) - new Date(b.created_at);
-          case 'fecha_desc': return new Date(b.created_at) - new Date(a.created_at);
-          case 'cliente_asc': {
-            const ca = getClienteNombre(a.cliente || a.data?.cliente);
-            const cb = getClienteNombre(b.cliente || b.data?.cliente);
-            return ca.localeCompare(cb);
-          }
-          case 'cliente_desc': {
-            const ca = getClienteNombre(a.cliente || a.data?.cliente);
-            const cb = getClienteNombre(b.cliente || b.data?.cliente);
-            return cb.localeCompare(ca);
-          }
-          case 'total_asc':  return (a.total_proyecto || a.total || 0) - (b.total_proyecto || b.total || 0);
-          case 'total_desc': return (b.total_proyecto || b.total || 0) - (a.total_proyecto || a.total || 0);
-          default: return new Date(b.created_at) - new Date(a.created_at);
+    async function cargarNotasEtapas(){
+      const sb = await waitForSupabase();
+      const { data:partData } = await sb.from('etapa_notas')
+        .select('partida_id, etapa, nota')
+        .not('partida_id','is',null);
+      const m=new Map();
+      (partData||[]).forEach(r=>{
+        if(!m.has(r.partida_id)) m.set(r.partida_id,{});
+        m.get(r.partida_id)[r.etapa]=r.nota||'';
+      });
+      stageNotesByPartida = m;
+
+      const { data:globData } = await sb.from('etapa_notas')
+        .select('etapa, nota')
+        .is('partida_id', null);
+      globalStageNotes = {};
+      (globData||[]).forEach(r=>{ globalStageNotes[r.etapa]=r.nota||''; });
+    }
+
+    function parseCliente(cli){
+      if(!cli) return '';
+      if(typeof cli==='string'){
+        try{const o=JSON.parse(cli);return o.nombre||o.name||o.cliente||cli;}catch{return cli;}
+      }
+      if(typeof cli==='object') return cli.nombre||cli.name||cli.cliente||'';
+      return String(cli);
+    }
+
+    /* ---------- Estado de etapas: persistencia ---------- */
+    async function loadStageStoreFromSupabase() {
+      const sb = await waitForSupabase();
+      const { data, error } = await sb.from('etapa_estado').select('partida_id, etapa, estado');
+      if (error) { console.warn('loadStageStoreFromSupabase', error); return; }
+      stageStore.clear();
+      (data || []).forEach(r => {
+        const map = stageStore.get(r.partida_id) || {};
+        map[r.etapa] = r.estado || 'pendiente';
+        stageStore.set(r.partida_id, map);
+      });
+    }
+
+    async function saveStageStatus(partidaId, etapa, estado) {
+      const sb = await waitForSupabase();
+      const { error } = await sb.from('etapa_estado')
+        .upsert({ partida_id: partidaId, etapa, estado }, { onConflict: 'partida_id,etapa' });
+      if (error) console.error('saveStageStatus', error);
+    }
+
+    async function startRealtimeSync(){
+      if(realtimeSub) { try{ realtimeSub.unsubscribe(); }catch(e){} realtimeSub=null; }
+      if(pollId) { clearInterval(pollId); pollId=null; }
+      if (window.supabaseClient?.init) await window.supabaseClient.init();
+      const sb = await waitForSupabase();
+      try { sb.realtime?.setAuth?.(window.SUPABASE_ANON_KEY || ''); } catch(e){}
+
+      realtimeSub = sb.channel('rt-etapa-estado')
+        .on('postgres_changes', { event:'*', schema:'public', table:'etapa_estado' }, payload => {
+          const row = payload.new || payload.old;
+          if(!row) return;
+          const { partida_id, etapa, estado } = row;
+          const map = stageStore.get(partida_id) || {};
+          if (map[etapa] === estado) return;
+          map[etapa] = estado || 'pendiente';
+          stageStore.set(partida_id, map);
+          saveStageStore();
+          renderDetalle();
+          renderLista();
+        })
+        .subscribe(status => { console.log('Realtime etapa_estado:', status); });
+
+      pollId = setInterval(async () => {
+        try {
+          await loadStageStoreFromSupabase();
+          renderDetalle();
+          renderLista();
+        } catch(e){}
+      }, LIVE_POLL_MS);
+    }
+
+    async function loadStageStore(){
+      try{
+        await loadStageStoreFromSupabase(); // multiusuario
+        const raw=localStorage.getItem('byt_estado_proyectos_stages_v2');
+        if(raw){
+          const obj=JSON.parse(raw);
+          Object.keys(obj).forEach(k=>{
+            const merged = { ...(stageStore.get(k)||{}), ...obj[k] };
+            stageStore.set(k, merged);
+          });
+        }
+      }catch(e){ console.warn('loadStageStore fallback local', e); }
+    }
+
+    function saveStageStore(){
+      const obj={}; stageStore.forEach((v,k)=>{obj[k]=v;});
+      localStorage.setItem('byt_estado_proyectos_stages_v2', JSON.stringify(obj));
+    }
+
+    function captureOpenPartidas(){
+      openPartidas.clear();
+      document.querySelectorAll('[id^="stages-"]').forEach(g=>{
+        if(g.style.display!=='none'){
+          const id = g.id.replace('stages-','');
+          openPartidas.add(id);
         }
       });
-      mostrarCotizaciones();
     }
 
-    function mostrarCotizaciones() {
-      const container = document.getElementById('cotizaciones-container');
-      if (!cotizacionesFiltradas.length) {
-        container.innerHTML = `
-          <div class="card state">
-            <div class="state-icon">🔎</div>
-            <h3 style="margin:6px 0 4px; color: var(--text);">No se encontraron resultados</h3>
-            <p style="margin:0; color: var(--muted);">Intente con otros criterios de búsqueda</p>
-          </div>`;
-        mostrarEstado('data');
-        return;
+    /* Render principal */
+    function applyFiltersAndRender(resetSelection=false){
+      const txt=document.getElementById('filtro-texto').value.toLowerCase().trim();
+      const est=document.getElementById('filtro-estado').value;
+
+      filtered = proyectos.filter(p=>{
+        const pend = p.partidas.some(pt=>pt.estado!=='completada');
+        const matchTxt = !txt || p.display.toLowerCase().includes(txt) || p.cliente.toLowerCase().includes(txt);
+        const matchEst = est==='todos' ? true : (est==='abierto'? pend : !pend);
+        return matchTxt && matchEst;
+      });
+
+      filtered.sort((a,b)=>{
+        const pa = a.partidas.some(pt=>pt.estado!=='completada') ? 0 : 1;
+        const pb = b.partidas.some(pt=>pt.estado!=='completada') ? 0 : 1;
+        if(pa!==pb) return pa-pb;
+        return (a.display||'').localeCompare(b.display||'');
+      });
+
+      if(resetSelection || !filtered.some(p=>p.key===selectedKey)){
+        selectedKey = filtered.length ? filtered[0].key : null;
       }
 
-      const html = cotizacionesFiltradas.map(c => {
-        const nombreProyecto = c.nombre_proyecto || c.project_key || c.data?.cliente?.nombre_proyecto || c.data?.cliente?.nombre || 'Sin nombre';
-        const clienteNombre = getClienteNombre(c.cliente || c.data?.cliente);
-        const fecha = c.created_at ? new Date(c.created_at).toLocaleDateString('es-CL') : '-';
+      renderLista();
+      renderDetalle();
+    }
 
-        // Usar campos guardados (subtotal/neto, iva y total con IVA). Evitar sumar IVA si ya viene incluido.
-        const subtotal = Number(c.subtotal ?? c.total_proyecto ?? c.total ?? 0) || 0;
-        const iva      = Number(c.iva ?? c.total_iva ?? 0) || 0;
-        const totalConIva = Number(c.total ?? (subtotal + iva)) || 0;
+    function computeProgress(proj){
+      let total=0, done=0;
+      proj.partidas.forEach(pt=>{
+        const stMap = stageStore.get(pt.id) || {};
+        STAGES.forEach(s=>{
+          total += 1;
+          if(stMap[s.name]==='listo') done += 1;
+        });
+      });
+      const percent = total ? Math.round((done/total)*100) : 0;
+      return { total, done, percent };
+    }
 
-        const format = window.categorias?.formatearPrecio || (n => n.toLocaleString('es-CL'));
-        const subtotalFmt = format(subtotal);
-        const ivaFmt      = format(iva);
-        const totalFmt    = format(totalConIva);
-
-        // Partidas
-        const partidas = c.partidas || c.data?.partidas || [];
-        const partidasTxt = partidas
-          .map(p => p?.nombre || p?.titulo || p?.name || '')
-          .filter(Boolean)
-          .join(' | ') || 'Sin partidas registradas';
-
-        const estado = c.estado || 'borrador';
-
+    function renderLista(){
+      const list=document.getElementById('proyectos-list');
+      if(!filtered.length){
+        list.innerHTML='<div style="padding:22px;text-align:center;color:var(--muted);">No hay proyectos para los filtros aplicados.</div>';
+        return;
+      }
+      list.innerHTML = filtered.map(p=>{
+        const prog=computeProgress(p);
+        const pendientes = p.partidas.filter(pt=>pt.estado!=='completada').length;
         return `
-          <div class="card quote-card cotizacion-item" data-id="${c.id}">
-            <div class="quote-head">
+          <div class="proj-item ${p.key===selectedKey?'active':''}" onclick="selectProject('${attr(p.key)}')">
+            <div style="display:flex;align-items:flex-start;gap:8px;">
               <div>
-                <h4 class="quote-title">
-                  <a href="detalle.html?id=${c.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
-                </h4>
-                <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</p>
-                <p class="quote-total">Neto: ${escapeHtml(subtotalFmt)} · IVA: ${escapeHtml(ivaFmt)} · Total: ${escapeHtml(totalFmt)}</p>
-                <p class="quote-meta"><strong>Partidas:</strong> ${escapeHtml(partidasTxt)}</p>
-              </div>
-              <div>
-                <select class="quote-status estado-cotizacion" data-id="${c.id}">
-                  <option value="borrador" ${estado==='borrador'?'selected':''}>Borrador</option>
-                  <option value="enviada" ${estado==='enviada'?'selected':''}>Enviada</option>
-                  <option value="en_revision_cliente" ${estado==='en_revision_cliente'?'selected':''}>En revisión cliente</option>
-                  <option value="aprobada" ${estado==='aprobada'?'selected':''}>Aprobada</option>
-                  <option value="rechazada" ${estado==='rechazada'?'selected':''}>Rechazada</option>
-                </select>
-                <div class="quote-actions">
-                  <button class="btn btn-ver" onclick="verDetalle('${c.id}')" title="Ver">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M3.5 12s3.5-6 8.5-6 8.5 6 8.5 6-3.5 6-8.5 6-8.5-6-8.5-6Z"/></svg>
-                    Ver
-                  </button>
-                  <button class="btn btn-editar" onclick="editarCotizacion('${c.id}')" title="Editar">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17.5 17.5 4a1.41 1.41 0 0 1 2 2L6 19.5 4 20z"/><path d="M14.5 6.5 17.5 9.5"/></svg>
-                    Editar
-                  </button>
-                  <button class="btn btn-duplicar" onclick="duplicarCotizacion('${c.id}')" title="Duplicar">
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10v12H7z"/><path d="M5 5h10v12"/></svg>
-                    Duplicar
-                  </button>
-                  <button class="btn btn-eliminar" data-id="${c.id}" title="Eliminar">Eliminar</button>
+                <p class="proj-title">${esc(p.display)}</p>
+                <div class="proj-meta">
+                  <span>Cliente: ${esc(p.cliente||'N/A')}</span>
+                  <span>Partidas pendientes: ${pendientes}</span>
+                </div>
+                <div class="proj-progress">
+                  <div class="bar"><div class="bar-fill" style="width:${prog.percent}%;"></div></div>
+                  <div class="bar-text">${prog.percent}% completado</div>
                 </div>
               </div>
             </div>
           </div>
         `;
       }).join('');
-
-      container.innerHTML = html;
-      wireDeleteButtons();
-      wireEstadoSelects();
-      mostrarEstado('data');
     }
 
-    function verDetalle(id) { window.location.href = `detalle.html?id=${id}`; }
-    function editarCotizacion(id) { window.location.href = `nueva.html?id=${id}`; }
-    function duplicarCotizacion(id) { window.location.href = `nueva.html?duplicate=${id}`; }
-
-    function wireDeleteButtons() {
-      document.querySelectorAll('.btn-eliminar[data-id]').forEach(btn => {
-        btn.onclick = () => openDeleteModal(btn.dataset.id);
-      });
+    function selectProject(key){
+      selectedKey = key;
+      const proj = filtered.find(p=>p.key===key);
+      openPartidas.clear();
+      if(proj && proj.partidas.length){ openPartidas.add(proj.partidas[0].id); }
+      renderLista();
+      renderDetalle();
     }
 
-    // Delete modal con barra, 10s y nombre de proyecto
-    function setupDeleteModal() {
-      const modal = document.getElementById('delete-modal');
-      const cancelBtn = document.getElementById('delete-cancel');
-      const holdBtn = document.getElementById('delete-hold-btn');
-      const holdText = document.getElementById('delete-hold-text');
-      const holdFill = document.getElementById('delete-hold-fill');
-      const bar = document.getElementById('delete-progress');
-      const deleteText = document.getElementById('delete-text');
-      const HOLD_MS = 10000;
-
-      const resetHold = () => {
-        if (holdTimer) clearTimeout(holdTimer);
-        if (holdInterval) clearInterval(holdInterval);
-        holdTimer = null;
-        holdInterval = null;
-        holdFill.style.width = '0%';
-        bar.style.width = '0%';
-        holdText.textContent = 'Mantén 10s para eliminar';
-      };
-
-      const closeModal = () => {
-        modal.style.display = 'none';
-        modal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-        resetHold();
-        deleteTargetId = null;
-      };
-
-      const startHold = () => {
-        if (!deleteTargetId) return;
-        resetHold();
-        const t0 = performance.now();
-        holdInterval = setInterval(() => {
-          const elapsed = performance.now() - t0;
-          const remaining = Math.max(0, HOLD_MS - elapsed);
-          const pct = Math.min(100, (elapsed / HOLD_MS) * 100);
-          holdFill.style.width = pct + '%';
-          bar.style.width = pct + '%';
-          holdText.textContent = `Mantén ${(remaining/1000).toFixed(1)}s para eliminar`;
-        }, 80);
-        holdTimer = setTimeout(async () => {
-          resetHold();
-          await eliminarCotizacion(deleteTargetId, null, { silentRemove: true });
-          closeModal();
-          cargarCotizaciones();
-        }, HOLD_MS);
-      };
-
-      const stopHold = () => resetHold();
-
-      cancelBtn.onclick = closeModal;
-      holdBtn.addEventListener('mousedown', startHold);
-      holdBtn.addEventListener('touchstart', startHold);
-      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => {
-        holdBtn.addEventListener(ev, stopHold);
-      });
-      modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
-      window.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.style.display === 'flex') closeModal(); });
-
-      // Insertar nombre del proyecto al abrir
-      window._setDeleteProjectName = (name) => {
-        deleteText.textContent = `¿Seguro que deseas eliminar "${name}"? Mantén el botón 10 segundos para confirmar.`;
-      };
-    }
-
-    function openDeleteModal(id) {
-      deleteTargetId = id;
-      const modal = document.getElementById('delete-modal');
-      const cot = cotizacionesData.find(c => c.id === id);
-      const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
-      if (typeof window._setDeleteProjectName === 'function') window._setDeleteProjectName(nombreProyecto);
-
-      modal.style.display = 'flex';
-      modal.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-    }
-
-    async function eliminarCotizacion(id, btnEl, opts = {}) {
-      const silentRemove = !!opts.silentRemove;
-      if (!silentRemove) {
-        const ok = confirm('Para eliminar, confirma y luego mantén el botón en el modal.');
-        if (!ok) return;
-        openDeleteModal(id);
+    function renderDetalle(){
+      const wrap=document.getElementById('detalle-wrapper');
+      const proj=filtered.find(p=>p.key===selectedKey);
+      if(!proj){
+        wrap.innerHTML='<div style="padding:22px;color:var(--muted);">Selecciona un proyecto de la lista.</div>';
         return;
       }
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const resultado = await window.supabaseClient.eliminarCotizacion(id);
-        if (!resultado.success) throw new Error(resultado.error);
+      captureOpenPartidas();
+      const prog=computeProgress(proj);
+      wrap.innerHTML = `
+        <div class="detail-header">
+          <h3>${esc(proj.display)}</h3>
+          <div class="detail-meta">
+            <span>Cliente: ${esc(proj.cliente||'N/A')}</span>
+            <span>Partidas pendientes: ${proj.partidas.filter(pt=>pt.estado!=='completada').length}</span>
+          </div>
+          <div class="progress-wrap" style="margin:10px 0;">
+            <div class="progress-bar"><div class="bar-fill" style="width:${prog.percent}%;"></div></div>
+          </div>
+        </div>
 
-        try { btnEl?.closest('.cotizacion-item')?.remove(); } catch (_) {}
+        <div class="actions">
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','cotizacion')">Adjuntos Cotización</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','skp')">SKP Final</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
+          <button class="btn btn-soft-green" onclick="verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
+          <button class="btn btn-soft-green" style="background:#f0f7ff;border-color:#cfe2ff;" onclick="openBoardModal()">Notas y obs. presentación</button>
+        </div>
 
-        cotizacionesData = (cotizacionesData || []).filter(c => c.id !== id);
-        cotizacionesFiltradas = (cotizacionesFiltradas || []).filter(c => c.id !== id);
-        mostrarCotizaciones();
+        <div style="height:12px;"></div>
 
-        window.utils?.mostrarNotificacion?.('Cotización eliminada', 'success');
-      } catch (error) {
-        console.error('Error al eliminar cotización:', error);
-        window.utils?.mostrarNotificacion?.('Error al eliminar cotización: ' + (error.message || String(error)), 'error');
-      }
+        <div class="partidas-container">
+          ${proj.partidas.map(pt=>{
+            const stMap = stageStore.get(pt.id) || {};
+            const notes = stageNotesByPartida.get(pt.id) || {};
+            const pending = pt.estado!=='completada';
+            const partId = attr(pt.id);
+            const isOpen = openPartidas.has(pt.id);
+            return `
+              <div class="partida-wrapper">
+                <div class="partida-header" onclick="togglePartida('${partId}')">
+                  <span class="chevron" id="chev-${partId}" style="transform:${isOpen?'rotate(90deg)':'rotate(0deg)'};">▸</span>
+                  <p class="partida-title">${esc(pt.nombre)}</p>
+                  <span class="partida-status ${pending?'p-pend':'p-comp'}">${pending?'Pendiente':'Completada'}</span>
+                </div>
+                <div class="stage-grid" id="stages-${partId}" style="display:${isOpen?'grid':'none'};">
+                  ${STAGES.map(stage=>{
+                    const value = stMap[stage.name] || 'pendiente';
+                    const nota = notes[stage.name] ?? globalStageNotes[stage.name] ?? '';
+                    const noteId = `note-${pt.id}-${stage.name}`;
+                    const doneClass = value==='listo' ? 'done' : '';
+                    return `
+                      <div class="stage-item ${doneClass}">
+                        <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
+                        <span class="stage-name">${esc(stage.name)}</span>
+                        <span class="stage-owner">${esc(stage.owner)}</span>
+                        <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value, true)">
+                          <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
+                          <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
+                          <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
+                        </select>
+                        <div id="${attr(noteId)}" class="note-box">
+                          <textarea data-stage="${attr(stage.name)}" placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
     }
 
-    function escapeHtml(str) {
-      if (str === undefined || str === null) return '';
-      return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    function togglePartida(partId){
+      const grid=document.getElementById(`stages-${partId}`);
+      const chev=document.getElementById(`chev-${partId}`);
+      const show = grid.style.display==='none';
+      grid.style.display= show ? 'grid':'none';
+      if(chev) chev.style.transform = show ? 'rotate(90deg)' : 'rotate(0deg)';
+      if(show) openPartidas.add(partId); else openPartidas.delete(partId);
     }
 
-    function wireEstadoSelects() {
-      document.querySelectorAll('select.estado-cotizacion').forEach(sel => {
-        sel.dataset.prev = sel.value;
-        sel.addEventListener('focus', () => { sel.dataset.prev = sel.value; });
-        sel.addEventListener('change', () => {
-          const prev = sel.dataset.prev || sel.value;
-          const newStatus = sel.value;
-          openStatusModal(sel, sel.dataset.id, prev, newStatus);
+    /* Notas y etapas */
+    function toggleNote(id){
+      const box=document.getElementById(id);
+      if(!box) return;
+      box.classList.toggle('show');
+    }
+
+    function setStage(partidaId, stage, value, keepOpen=false){
+      if(keepOpen) openPartidas.add(partidaId);
+      const current = stageStore.get(partidaId) || {};
+      current[stage] = value;
+      stageStore.set(partidaId, current);
+      saveStageStore();                    // offline
+      saveStageStatus(partidaId, stage, value); // online
+      renderDetalle();
+      renderLista();
+    }
+
+    function refreshStageNotesInDOM(etapa, nota){
+      document.querySelectorAll(`.note-box textarea[data-stage="${CSS.escape(etapa)}"]`).forEach(t=>{ t.value = nota; });
+    }
+    async function saveStageNote(partidaId, etapa, nota){
+      const sb=await waitForSupabase();
+      const current = stageNotesByPartida.get(partidaId) || {};
+      current[etapa]=nota;
+      stageNotesByPartida.set(partidaId,current);
+      await sb.from('etapa_notas').upsert({ partida_id: partidaId, etapa, nota });
+      globalStageNotes[etapa]=nota;
+      await sb.from('etapa_notas').upsert({ partida_id: null, etapa, nota });
+      refreshStageNotesInDOM(etapa, nota);
+      toast('Nota guardada');
+    }
+
+    /* ------------ Adjuntos (igual con previews PDF) ------------- */
+    function wireFileInput(){
+      const old=document.getElementById('adj-file-input');
+      if(old){ const c=old.cloneNode(true); old.replaceWith(c); }
+      const input=document.getElementById('adj-file-input');
+      input.addEventListener('change', async (e)=>{
+        const files=Array.from(e.target.files||[]);
+        if(!files.length){ toast('Selecciona archivo(s)'); return; }
+        pendingFiles = files;
+        renderPendingPreviews();
+        await autoUpload(files);
+      });
+    }
+
+    async function openAdj(cotId, tipo){
+      if(!cotId) return;
+      pendingFiles = [];
+      renderPendingPreviews();
+      adjContext.tipo = tipo;
+      adjContext.bucket = ADJ_BUCKETS[tipo] || ADJ_BUCKETS.cotizacion;
+      adjContext.cotId = cotId;
+      document.getElementById('adj-title').textContent = ADJ_LABELS[tipo] || 'Archivos';
+      document.getElementById('adj-subtipo').textContent = tipo;
+      document.getElementById('adj-cot-id').textContent = cotId;
+      const modal=document.getElementById('adj-modal-backdrop');
+      modal.style.display='flex';
+      modal.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+      document.getElementById('adj-nota-upload').style.display = (tipo==='cotizacion') ? 'block' : 'none';
+      document.getElementById('adj-file-input').value='';
+      wireFileInput();
+      await cargarAdjuntos();
+    }
+    function closeAdjuntos(){
+      const modal=document.getElementById('adj-modal-backdrop');
+      modal.style.display='none';
+      modal.setAttribute('aria-hidden','true');
+      document.body.style.overflow='';
+      document.getElementById('adj-grid').innerHTML='';
+      document.getElementById('adj-status').textContent='Sin cargar aún…';
+      document.getElementById('adj-file-input').value='';
+      document.getElementById('adj-nota-upload').value='';
+      pendingFiles = [];
+      renderPendingPreviews();
+    }
+
+    function renderPendingPreviews(){
+      const wrap=document.getElementById('pending-wrapper');
+      const grid=document.getElementById('pending-grid');
+      if(!pendingFiles.length){ wrap.style.display='none'; grid.innerHTML=''; return; }
+      wrap.style.display='block';
+      grid.innerHTML = pendingFiles.map(f=>{
+        const url = f.type.startsWith('image/') ? URL.createObjectURL(f) : null;
+        const isPdf = /\.pdf$/i.test(f.name);
+        const sizeMB = (f.size/1024/1024).toFixed(2)+' MB';
+        const preview = url
+          ? `<img src="${url}" alt="">`
+          : isPdf ? '<span style="font-size:32px;color:#9ca3af;">📄</span>'
+                  : '<span style="font-size:32px;color:#9ca3af;">📁</span>';
+        return `
+          <div class="adj-card">
+            <div class="adj-preview">${preview}</div>
+            <div class="adj-name">${esc(f.name)}</div>
+            <div class="adj-meta">${esc(f.type||'archivo')} · ${sizeMB}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function autoUpload(files){
+      if(isUploading) return;
+      isUploading = true; showLoader(true);
+      const sb=await waitForSupabase();
+      const note=document.getElementById('adj-nota-upload').value.trim();
+      try{
+        const uploads = files.map(async file=>{
+          const path=`${adjContext.cotId}/${Date.now()}-${file.name}`;
+          const { error:upErr } = await sb.storage.from(adjContext.bucket).upload(path, file, { cacheControl:'3600', upsert:false });
+          if(upErr) throw upErr;
+          if(adjContext.bucket===ADJ_BUCKETS.cotizacion){
+            await sb.from('cotizacion_files').insert({
+              cotizacion_id: adjContext.cotId,
+              path,
+              filename:file.name,
+              size:file.size,
+              content_type:file.type,
+              nota: note || null
+            });
+          }
         });
-      });
+        await Promise.all(uploads);
+        toast('Archivo(s) subidos');
+        pendingFiles = [];
+        document.getElementById('adj-file-input').value='';
+        renderPendingPreviews();
+        await cargarAdjuntos();
+      }catch(e){ console.error(e); toast('Error subiendo: '+(e.message||'')); }
+      finally{ showLoader(false); isUploading=false; }
     }
 
-    function openStatusModal(selectEl, id, prev, newStatus) {
-      const backdrop = document.getElementById('status-confirm-modal');
-      const txt = document.getElementById('status-confirm-text');
-      const bar = document.getElementById('status-progress');
-      const btnHold = document.getElementById('status-hold');
-      const btnCancel = document.getElementById('status-cancel');
-      const holdFill = document.getElementById('status-hold-fill');
-      const holdLabel = document.getElementById('status-hold-text');
+    async function cargarAdjuntos(){
+      const sb = await waitForSupabase();
+      const grid = document.getElementById('adj-grid');
+      const status = document.getElementById('adj-status');
+      status.textContent='Cargando...';
+      grid.innerHTML='';
+      const { data:list, error } = await sb
+        .storage.from(adjContext.bucket)
+        .list(`${adjContext.cotId}/`, { limit:200, sortBy:{column:'created_at',order:'desc'} });
+      if(error){ status.textContent='Error: '+error.message; return; }
+      if(!list || !list.length){ status.textContent='No hay archivos para esta cotización.'; return; }
 
-      const cot = cotizacionesData.find(c => c.id === id);
-      const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
-
-      txt.textContent = `Mantén presionado 10s para confirmar cambio de "${nombreProyecto}" a “${newStatus}”.`;
-      holdLabel.textContent = 'Mantén 10s';
-
-      let timer = null;
-      let tick = null;
-      const HOLD_MS = 10000;
-
-      const reset = () => {
-        if (timer) clearTimeout(timer);
-        if (tick) clearInterval(tick);
-        bar.style.width = '0%';
-        holdFill.style.width = '0%';
-        holdLabel.textContent = 'Mantén 10s';
-        timer = tick = null;
-      };
-
-      const close = () => {
-        reset();
-        backdrop.style.display = 'none';
-        backdrop.setAttribute('aria-hidden','true');
-        document.body.style.overflow = '';
-      };
-
-      const startHold = () => {
-        const t0 = performance.now();
-        tick = setInterval(() => {
-          const elapsed = performance.now() - t0;
-          const remaining = Math.max(0, HOLD_MS - elapsed);
-          const pct = Math.min(100, (elapsed / HOLD_MS) * 100);
-          bar.style.width = pct + '%';
-          holdFill.style.width = pct + '%';
-          holdLabel.textContent = `Mantén ${(remaining/1000).toFixed(1)}s`;
-        }, 80);
-        timer = setTimeout(async () => {
-          reset();
-          await confirmChange();
-          close();
-        }, HOLD_MS);
-      };
-      const stopHold = () => reset();
-
-      async function confirmChange() {
-        selectEl.disabled = true;
-        try {
-          await handleEstadoChange(selectEl, id, newStatus);
-          selectEl.value = newStatus;
-          selectEl.dataset.prev = newStatus;
-        } catch (e) {
-          selectEl.value = prev;
-          selectEl.dataset.prev = prev;
-        } finally {
-          selectEl.disabled = false;
-        }
+      let notasMap = new Map();
+      if(adjContext.bucket === ADJ_BUCKETS.cotizacion){
+        const { data:meta } = await sb.from('cotizacion_files')
+          .select('id,path,nota')
+          .eq('cotizacion_id', adjContext.cotId);
+        (meta||[]).forEach(m=>notasMap.set(m.path, {id:m.id, nota:m.nota||''}));
       }
 
-      btnHold.onmousedown = startHold;
-      btnHold.ontouchstart = (e)=>{ e.preventDefault(); startHold(); };
-      ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>{
-        btnHold.addEventListener(ev, stopHold);
-      });
-      btnCancel.onclick = () => { selectEl.value = prev; sel.dataset.prev = prev; close(); };
-      backdrop.onclick = (e) => { if (e.target === backdrop) { selectEl.value = prev; sel.dataset.prev = prev; close(); } };
-      window.addEventListener('keydown', escClose);
-      function escClose(e){ if (e.key === 'Escape' && backdrop.style.display === 'flex') { selectEl.value = prev; sel.dataset.prev = prev; close(); window.removeEventListener('keydown', escClose);} }
+      const signed = await Promise.all(list.map(async f=>{
+        const path=`${adjContext.cotId}/${f.name}`;
+        const { data:signed } = await sb.storage.from(adjContext.bucket).createSignedUrl(path, 3600);
+        return { ...f, path, signedUrl:signed?.signedUrl||null };
+      }));
 
-      bar.style.width = '0%';
-      holdFill.style.width = '0%';
-      backdrop.style.display = 'flex';
-      backdrop.setAttribute('aria-hidden','false');
-      document.body.style.overflow = 'hidden';
+      grid.innerHTML = signed.map(f=>{
+        const notaObj = notasMap.get(f.path) || {};
+        const isImg=/\.(png|jpe?g|gif|webp|bmp)$/i.test(f.name);
+        const isPdf=/\.pdf$/i.test(f.name);
+        const sizeMB = f.metadata?.size ? (f.metadata.size/1024/1024).toFixed(2)+' MB' : '';
+        let preview;
+        if(isImg){
+          preview = `<div class="adj-preview"><img src="${f.signedUrl||''}" alt=""></div>`;
+        }else if(isPdf){
+          preview = `<div class="adj-preview"><iframe class="pdf-frame" src="${f.signedUrl||''}#toolbar=0&navpanes=0&scrollbar=0" title="PDF"></iframe></div>`;
+        }else{
+          preview = `<div class="adj-preview"><span style="font-size:32px;color:#9ca3af;">📁</span></div>`;
+        }
+        const noteField = adjContext.bucket===ADJ_BUCKETS.cotizacion
+          ? `<textarea class="adj-note-edit" placeholder="Nota" data-note-id="${notaObj.id||''}" data-path="${f.path}" onchange="guardarNotaAdj(this)">${notaObj.nota||''}</textarea>`
+          : '';
+        return `
+          <div class="adj-card">
+            ${preview}
+            <div class="adj-name">${esc(f.name)}</div>
+            <div class="adj-meta">${esc(f.metadata?.mimetype||'')} ${sizeMB?('· '+sizeMB):''}</div>
+            ${noteField}
+            <div class="adj-actions">
+              ${f.signedUrl?`<a class="adj-smallbtn" href="${f.signedUrl}" target="_blank" rel="noopener">Ver/Descargar</a>`:''}
+              <button class="adj-smallbtn danger" onclick="eliminarAdjunto('${attr(f.path)}')">Eliminar</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      status.textContent=`${signed.length} archivo(s)`;
     }
 
-    async function handleEstadoChange(selectEl, id, forcedEstado) {
-      const nuevoEstado = forcedEstado || selectEl.value;
-      const prevEstado = cotizacionesData.find(c => c.id === id)?.estado || 'borrador';
+    async function eliminarAdjunto(path){
+      const sb=await waitForSupabase();
+      try{
+        await sb.storage.from(adjContext.bucket).remove([path]);
+        if(adjContext.bucket===ADJ_BUCKETS.cotizacion){
+          await sb.from('cotizacion_files')
+            .delete()
+            .eq('cotizacion_id', adjContext.cotId)
+            .eq('path', path);
+        }
+        await cargarAdjuntos();
+      }catch(e){ console.error(e); toast('No se pudo eliminar: '+(e.message||'')); }
+    }
 
-      try {
-        if (window.supabaseClient?.init) await window.supabaseClient.init();
-        const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
-        if (!res?.success) throw new Error(res?.error || 'Error desconocido');
+    async function guardarNotaAdj(textarea){
+      const path=textarea.dataset.path;
+      const noteId=textarea.dataset.noteId;
+      const nota=textarea.value.trim();
+      const [cotId]=path.split('/');
+      const sb=await waitForSupabase();
+      if(noteId){
+        await sb.from('cotizacion_files').update({ nota }).eq('id', noteId);
+      }else{
+        await sb.from('cotizacion_files').insert({ cotizacion_id: cotId, path, filename:path.split('/').pop(), nota });
+      }
+    }
 
-        cotizacionesData = cotizacionesData.map(c =>
-          c.id === id ? { ...c, estado: nuevoEstado } : c
-        );
+    /* --- Pizarra: board por partida --- */
+    function openBoardModal(){
+      const proj = filtered.find(p=>p.key===selectedKey);
+      if(!proj){ toast('Selecciona un proyecto'); return; }
+      const select = document.getElementById('board-partida-select');
+      select.innerHTML = proj.partidas.map(pt=>`<option value="${attr(pt.id)}">${esc(pt.nombre)}</option>`).join('');
+      currentBoardPartida = select.value;
+      document.getElementById('board-backdrop').style.display='flex';
+      document.getElementById('board-backdrop').setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+      initBoardCanvas();
+      loadBoard(currentBoardPartida);
+      select.onchange = () => { currentBoardPartida = select.value; loadBoard(currentBoardPartida); };
+    }
 
-        let cot = cotizacionesData.find(c => c.id === id);
-        if (!cot || (!cot.partidas && !cot.data?.partidas)) {
-          console.warn('Cotización sin partidas en memoria, salteando vinculación de venta', cot);
-          window.utils?.mostrarNotificacion?.('Estado actualizado. Recarga la lista para gestionar la venta.', 'warning');
-          filtrarCotizaciones();
+    function closeBoardModal(){
+      document.getElementById('board-backdrop').style.display='none';
+      document.getElementById('board-backdrop').setAttribute('aria-hidden','true');
+      document.body.style.overflow='';
+      stopBoardRealtime();
+    }
+
+    function initBoardCanvas(){
+      const canvasEl = document.getElementById('board-canvas');
+      canvasEl.width = canvasEl.offsetWidth;
+      canvasEl.height = canvasEl.offsetHeight;
+      if (!boardCanvas) {
+        boardCanvas = new fabric.Canvas('board-canvas', { isDrawingMode: true, backgroundColor: '#ffffff' });
+        setTool('pen');
+        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn=>{
+          btn.onclick = ()=> setTool(btn.dataset.tool);
+        });
+        document.getElementById('board-undo').onclick = undoBoard;
+        document.getElementById('board-redo').onclick = redoBoard;
+        document.getElementById('board-clear').onclick = clearBoard;
+        document.getElementById('board-close').onclick = closeBoardModal;
+        window.addEventListener('paste', handlePasteToBoard);
+      }
+      boardCanvas.on('object:added', scheduleSaveBoard);
+      boardCanvas.on('object:modified', scheduleSaveBoard);
+      boardCanvas.on('object:removed', scheduleSaveBoard);
+    }
+
+    let undoStack=[]; let redoStack=[]; let saveTimeout=null;
+    function snapshot(){
+      undoStack.push(boardCanvas.toJSON());
+      if(undoStack.length>50) undoStack.shift();
+      redoStack=[];
+    }
+    function undoBoard(){
+      if(!undoStack.length) return;
+      redoStack.push(boardCanvas.toJSON());
+      const state=undoStack.pop();
+      boardCanvas.loadFromJSON(state, boardCanvas.renderAll.bind(boardCanvas));
+      scheduleSaveBoard();
+    }
+    function redoBoard(){
+      if(!redoStack.length) return;
+      undoStack.push(boardCanvas.toJSON());
+      const state=redoStack.pop();
+      boardCanvas.loadFromJSON(state, boardCanvas.renderAll.bind(boardCanvas));
+      scheduleSaveBoard();
+    }
+    function clearBoard(){
+      snapshot();
+      boardCanvas.clear();
+      boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+      scheduleSaveBoard();
+    }
+
+    function setTool(tool){
+      document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.remove('active'));
+      const btn=document.querySelector(`.tool-btn[data-tool="${tool}"]`); if(btn) btn.classList.add('active');
+      boardCanvas.isDrawingMode = (tool==='pen' || tool==='highlighter');
+      if(tool==='pen'){
+        boardCanvas.freeDrawingBrush = new fabric.PencilBrush(boardCanvas);
+        boardCanvas.freeDrawingBrush.color = '#111827';
+        boardCanvas.freeDrawingBrush.width = 2.5;
+        boardCanvas.freeDrawingBrush.opacity = 1;
+      } else if(tool==='highlighter'){
+        boardCanvas.freeDrawingBrush = new fabric.PencilBrush(boardCanvas);
+        boardCanvas.freeDrawingBrush.color = 'rgba(247, 190, 0, 0.4)';
+        boardCanvas.freeDrawingBrush.width = 12;
+        boardCanvas.freeDrawingBrush.opacity = 1;
+      } else if(tool==='text'){
+        boardCanvas.isDrawingMode=false;
+        const t = new fabric.IText('Escribe aquí', { left: 40, top: 40, fontSize: 18, fill: '#111827' });
+        boardCanvas.add(t); boardCanvas.setActiveObject(t); scheduleSaveBoard();
+      } else if(tool==='rect'){
+        boardCanvas.isDrawingMode=false;
+        const r = new fabric.Rect({ left:50, top:50, width:120, height:80, fill:'rgba(46,111,79,0.15)', stroke:'#2f6f4f', strokeWidth:2 });
+        boardCanvas.add(r); scheduleSaveBoard();
+      } else { // select
+        boardCanvas.isDrawingMode=false;
+      }
+    }
+
+    function handlePasteToBoard(e){
+      if(!boardCanvas || document.getElementById('board-backdrop').getAttribute('aria-hidden')==='true') return;
+      const items = (e.clipboardData || e.originalEvent?.clipboardData || {}).items || [];
+      for(const item of items){
+        if(item.type && item.type.indexOf('image') !== -1){
+          const file = item.getAsFile();
+          const reader = new FileReader();
+          reader.onload = (evt)=>{
+            fabric.Image.fromURL(evt.target.result, img=>{
+              img.set({ left:40, top:40, scaleX:0.7, scaleY:0.7 });
+              boardCanvas.add(img); boardCanvas.renderAll(); scheduleSaveBoard();
+            });
+          };
+          reader.readAsDataURL(file);
+          e.preventDefault();
           return;
         }
-
-        if (nuevoEstado === 'aprobada') {
-          const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cot, 'en_ejecucion');
-          if (!v?.success) throw new Error(v?.error || 'No se pudo crear/vincular la venta');
-
-          try {
-            await window.supabaseClient.crearBloqueComprasDesdeCotizacion(cot);
-          } catch (e) {
-            console.warn('No se pudo crear bloque de compras', e);
-          }
-        } else {
-          const v = await window.supabaseClient.eliminarVentasPorCotizacion(id);
-          if (!v?.success) throw new Error(v?.error || 'No se pudieron borrar ventas');
-          if (v?.success && v.count === 0) {
-            window.utils?.mostrarNotificacion?.('No se borró ninguna venta (0 filas). Verifica cotizacion_id.', 'warning');
-          }
-        }
-
-        filtrarCotizaciones();
-        window.utils?.mostrarNotificacion?.('Estado actualizado', 'success');
-      } catch (err) {
-        console.error('handleEstadoChange error', err);
-        window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
-        selectEl.value = prevEstado;
-        selectEl.dataset.prev = prevEstado;
-        throw err;
       }
     }
 
-    window.cargarCotizaciones = cargarCotizaciones;
-    window.filtrarCotizaciones = filtrarCotizaciones;
-    window.ordenarCotizaciones = ordenarCotizaciones;
-    window.verDetalle = verDetalle;
-    window.editarCotizacion = editarCotizacion;
-    window.duplicarCotizacion = duplicarCotizacion;
+    let saveBoardTimer=null;
+    function scheduleSaveBoard(){
+      if(!currentBoardPartida) return;
+      if(saveBoardTimer) clearTimeout(saveBoardTimer);
+      saveBoardTimer = setTimeout(saveBoard, 500);
+    }
+
+    async function saveBoard(){
+      if(!boardCanvas || !currentBoardPartida) return;
+      const sb = await waitForSupabase();
+      const json = boardCanvas.toJSON();
+      await sb.from('partida_board').upsert({ partida_id: currentBoardPartida, board_json: json });
+    }
+
+    async function loadBoard(partidaId){
+      stopBoardRealtime();
+      const sb = await waitForSupabase();
+      const { data, error } = await sb.from('partida_board').select('board_json').eq('partida_id', partidaId).maybeSingle();
+      if(error){ console.warn(error); }
+      boardCanvas.clear(); boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+      undoStack=[]; redoStack=[];
+      if(data?.board_json){
+        boardCanvas.loadFromJSON(data.board_json, boardCanvas.renderAll.bind(boardCanvas));
+      }
+      snapshot(); // estado inicial en undo
+      startBoardRealtime(partidaId);
+    }
+
+    function stopBoardRealtime(){
+      if(boardRealtime){ try{ boardRealtime.unsubscribe(); }catch(e){} boardRealtime=null; }
+      if(boardPollId){ clearInterval(boardPollId); boardPollId=null; }
+    }
+
+    async function startBoardRealtime(partidaId){
+      const sb = await waitForSupabase();
+      boardRealtime = sb.channel(`rt-board-${partidaId}`)
+        .on('postgres_changes',{event:'*',schema:'public',table:'partida_board',filter:`partida_id=eq.${partidaId}`}, payload=>{
+          const row = payload.new || payload.old;
+          if(!row) return;
+          const incoming = row.board_json;
+          const current = boardCanvas.toJSON();
+          if(JSON.stringify(incoming) === JSON.stringify(current)) return;
+          boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
+          snapshot();
+        }).subscribe();
+      boardPollId = setInterval(async ()=>{
+        try{
+          const {data} = await sb.from('partida_board').select('board_json').eq('partida_id', partidaId).maybeSingle();
+          if(data?.board_json){
+            const incoming = data.board_json;
+            const current = boardCanvas.toJSON();
+            if(JSON.stringify(incoming)!==JSON.stringify(current)){
+              boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
+              snapshot();
+            }
+          }
+        }catch(e){}
+      }, BOARD_POLL_MS);
+    }
+
+    /* --- FIX: verCotizacion helper --- */
+    function verCotizacion(cotId){
+      if(!cotId){
+        toast('Esta venta no tiene cotización asociada');
+        return;
+      }
+      const url = `../cotizaciones/detalle.html?id=${encodeURIComponent(cotId)}`;
+      window.open(url, '_blank');
+    }
   </script>
 </body>
 </html>
