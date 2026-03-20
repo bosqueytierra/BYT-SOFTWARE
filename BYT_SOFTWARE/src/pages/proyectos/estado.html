@@ -143,28 +143,29 @@
       overflow:auto;
       background:#fff;
       position:relative;
-      min-height:70vh;
+      min-height:120vh; /* más alto + scroll */
     }
-    #board-canvas{border:none; width:100%; min-height:70vh;}
+    #board-canvas{border:none; width:100%; min-height:120vh;}
     #board-notes{
       flex:1 1 40%;
       display:flex;
       flex-direction:column;
       gap:8px;
-      min-height:70vh;
+      min-height:120vh;
+      overflow:auto;
     }
     .note-toolbar{display:flex;flex-wrap:wrap;gap:6px;}
     .note-tool{padding:6px 10px; border:1px solid #dfe4ea; border-radius:8px; background:#f7f9fb; cursor:pointer; font-size:12px;}
     #board-note-area{
       flex:1;
       width:100%;
-      min-height:200px;
+      min-height:400px;
       border:1px solid #dfe4ea;
       border-radius:12px;
       padding:10px;
       font-family:inherit;
       font-size:15px;
-      resize:both;
+      resize:vertical;
       overflow:auto;
       box-shadow:inset 0 1px 2px rgba(0,0,0,0.03);
     }
@@ -184,6 +185,38 @@
     .color-swatch{width:22px;height:22px;border-radius:6px;border:1px solid #d5d8de;cursor:pointer;}
     .size-row{display:flex;align-items:center;gap:8px;}
     .size-row input{width:140px;}
+
+    /* Paleta de formas */
+    .shape-panel{position:relative;}
+    .shape-grid{
+      display:grid;
+      grid-template-columns:repeat(6,24px);
+      gap:6px;
+      padding:10px;
+      background:#111827;
+      color:#fff;
+      border-radius:10px;
+      border:1px solid #111827;
+      position:absolute;
+      top:38px;
+      left:0;
+      z-index:2400;
+      box-shadow:0 10px 30px rgba(0,0,0,0.25);
+      min-width:180px;
+    }
+    .shape-btn{
+      width:24px;
+      height:24px;
+      border:1px solid #374151;
+      border-radius:6px;
+      background:#1f2937;
+      color:#fff;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      font-size:14px;
+      line-height:1;
+    }
   </style>
 </head>
 <body>
@@ -286,6 +319,17 @@
           <button class="tool-btn" data-tool="text">Texto</button>
           <button class="tool-btn" data-tool="rect">Rectángulo</button>
           <button class="tool-btn" data-tool="select">Mover/Seleccionar</button>
+          <div class="shape-panel">
+            <button class="tool-btn" id="shape-toggle">Formas ▾</button>
+            <div id="shape-grid" class="shape-grid" style="display:none;">
+              <div class="shape-btn" data-shape="line">／</div>
+              <div class="shape-btn" data-shape="arrow">→</div>
+              <div class="shape-btn" data-shape="rect">▭</div>
+              <div class="shape-btn" data-shape="circle">○</div>
+              <div class="shape-btn" data-shape="triangle">△</div>
+              <div class="shape-btn" data-shape="star">★</div>
+            </div>
+          </div>
           <button class="tool-btn" id="board-undo">↶ Deshacer</button>
           <button class="tool-btn" id="board-redo">↷ Rehacer</button>
           <button class="tool-btn" id="board-clear">🗑 Limpiar todo</button>
@@ -366,6 +410,8 @@
     let boardPollId = null;
     let currentBoardPartida = null;
     const BOARD_POLL_MS = 4000;
+    let localEditingNote = false; // para no pisar mientras escribes
+    let localBoardDirty = false;
 
     const FABRIC_URL = 'https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js';
     async function ensureFabric() {
@@ -964,17 +1010,23 @@
       select.onchange = () => { currentBoardPartida = select.value; loadBoard(currentBoardPartida); };
       const noteArea = document.getElementById('board-note-area');
       const noteSave = document.getElementById('board-note-save');
-      if(noteArea) noteArea.oninput = scheduleSaveBoard;
+      if(noteArea){
+        noteArea.oninput = ()=>{ localEditingNote=true; scheduleSaveBoard(); };
+        noteArea.onfocus = ()=>{ localEditingNote=true; };
+        noteArea.onblur  = ()=>{ localEditingNote=false; scheduleSaveBoard(); };
+      }
       if(noteSave) noteSave.onclick = saveBoard;
       document.querySelectorAll('.note-tool').forEach(btn=>{
         btn.onclick = ()=>{
           const cmd = btn.dataset.cmd; const val = btn.dataset.value || null;
           document.execCommand(cmd, false, val);
+          localEditingNote=true;
           scheduleSaveBoard();
         };
       });
       wireColorPalette();
       wireSizeSlider();
+      wireShapePalette();
     }
 
     function closeBoardModal(){
@@ -988,7 +1040,7 @@
       if (!window.fabric) return;
       const canvasEl = document.getElementById('board-canvas');
       canvasEl.width = canvasEl.offsetWidth;
-      canvasEl.height = canvasEl.offsetHeight || 700;
+      canvasEl.height = canvasEl.offsetHeight || 1200;
       if (!boardCanvas) {
         boardCanvas = new fabric.Canvas('board-canvas', { isDrawingMode: true, backgroundColor: '#ffffff' });
         setTool('pen');
@@ -1005,9 +1057,9 @@
         document.getElementById('board-close').onclick = closeBoardModal;
         window.addEventListener('paste', handlePasteToBoard);
       }
-      boardCanvas.on('object:added', scheduleSaveBoard);
-      boardCanvas.on('object:modified', scheduleSaveBoard);
-      boardCanvas.on('object:removed', scheduleSaveBoard);
+      boardCanvas.on('object:added', ()=>{ localBoardDirty=true; scheduleSaveBoard(); });
+      boardCanvas.on('object:modified', ()=>{ localBoardDirty=true; scheduleSaveBoard(); });
+      boardCanvas.on('object:removed', ()=>{ localBoardDirty=true; scheduleSaveBoard(); });
     }
 
     let undoStack=[]; let redoStack=[]; let saveBoardTimer=null;
@@ -1022,6 +1074,7 @@
       redoStack.push(boardCanvas.toJSON());
       const state=undoStack.pop();
       boardCanvas.loadFromJSON(state, boardCanvas.renderAll.bind(boardCanvas));
+      localBoardDirty=true;
       scheduleSaveBoard();
     }
     function redoBoard(){
@@ -1029,6 +1082,7 @@
       undoStack.push(boardCanvas.toJSON());
       const state=redoStack.pop();
       boardCanvas.loadFromJSON(state, boardCanvas.renderAll.bind(boardCanvas));
+      localBoardDirty=true;
       scheduleSaveBoard();
     }
     function clearBoard(){
@@ -1036,6 +1090,7 @@
       snapshot();
       boardCanvas.clear();
       boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+      localBoardDirty=true;
       scheduleSaveBoard();
     }
 
@@ -1059,12 +1114,12 @@
       } else {
         boardCanvas.isDrawingMode=false;
         if(tool==='text'){
-          const t = new fabric.IText('Escribe aquí', { left: 40, top: 40, fontSize: 20, fill: color, width: 240 });
+          const t = new fabric.IText('Escribe aquí', { left: 40, top: 40, fontSize: 22, fill: color, width: 260 });
           if (t._setTextStyles) { t._setTextStyles((ctx)=>{ if(ctx) ctx.textBaseline = 'alphabetic'; }); }
-          boardCanvas.add(t); boardCanvas.setActiveObject(t); scheduleSaveBoard();
+          boardCanvas.add(t); boardCanvas.setActiveObject(t); snapshot(); localBoardDirty=true; scheduleSaveBoard();
         } else if(tool==='rect'){
           const r = new fabric.Rect({ left:50, top:50, width:160, height:100, fill:'rgba(46,111,79,0.15)', stroke:'#2f6f4f', strokeWidth:2 });
-          boardCanvas.add(r); scheduleSaveBoard();
+          boardCanvas.add(r); snapshot(); localBoardDirty=true; scheduleSaveBoard();
         }
       }
     }
@@ -1093,6 +1148,60 @@
       update();
     }
 
+    function wireShapePalette(){
+      const toggle=document.getElementById('shape-toggle');
+      const grid=document.getElementById('shape-grid');
+      toggle.onclick = ()=>{ grid.style.display = grid.style.display==='none'?'grid':'none'; };
+      grid.onmouseleave = ()=>{ grid.style.display='none'; };
+      grid.querySelectorAll('.shape-btn').forEach(btn=>{
+        btn.onclick = ()=>{
+          const shape=btn.dataset.shape;
+          addShape(shape);
+          grid.style.display='none';
+        };
+      });
+    }
+
+    function addShape(shape){
+      if(!boardCanvas) return;
+      const color = boardCanvas._currentColor || '#111827';
+      const size = Number(document.getElementById('pen-size').value || 3);
+      let obj=null;
+      switch(shape){
+        case 'line':
+          obj = new fabric.Line([40,40,200,120], { stroke: color, strokeWidth:size, selectable:true });
+          break;
+        case 'arrow': {
+          const line = new fabric.Line([40,40,200,120], { stroke: color, strokeWidth:size, selectable:true });
+          const head = new fabric.Triangle({ left:190, top:110, width:18, height:20, angle:45, fill:color });
+          obj = new fabric.Group([line, head], { selectable:true });
+          break;
+        }
+        case 'rect':
+          obj = new fabric.Rect({ left:50, top:50, width:160, height:100, fill:'rgba(0,0,0,0)', stroke:color, strokeWidth:size });
+          break;
+        case 'circle':
+          obj = new fabric.Circle({ left:70, top:70, radius:60, fill:'rgba(0,0,0,0)', stroke:color, strokeWidth:size });
+          break;
+        case 'triangle':
+          obj = new fabric.Triangle({ left:70, top:70, width:140, height:120, fill:'rgba(0,0,0,0)', stroke:color, strokeWidth:size });
+          break;
+        case 'star': {
+          const points=[];
+          const cx=120, cy=120, spikes=5, outer=70, inner=30;
+          let rot=Math.PI/2*3; let x=cx, y=cy;
+          const step=Math.PI/spikes;
+          for(let i=0;i<spikes;i++){
+            x=cx+Math.cos(rot)*outer; y=cy+Math.sin(rot)*outer; points.push({x,y}); rot+=step;
+            x=cx+Math.cos(rot)*inner; y=cy+Math.sin(rot)*inner; points.push({x,y}); rot+=step;
+          }
+          obj = new fabric.Polygon(points, { left:50, top:50, fill:'rgba(0,0,0,0)', stroke:color, strokeWidth:size });
+          break;
+        }
+      }
+      if(obj){ boardCanvas.add(obj); snapshot(); localBoardDirty=true; scheduleSaveBoard(); }
+    }
+
     function handlePasteToBoard(e){
       if(!boardCanvas || document.getElementById('board-backdrop').getAttribute('aria-hidden')==='true') return;
       const items = (e.clipboardData || e.originalEvent?.clipboardData || {}).items || [];
@@ -1103,7 +1212,7 @@
           reader.onload = (evt)=>{
             fabric.Image.fromURL(evt.target.result, img=>{
               img.set({ left:40, top:40, scaleX:0.7, scaleY:0.7 });
-              boardCanvas.add(img); boardCanvas.renderAll(); scheduleSaveBoard();
+              boardCanvas.add(img); boardCanvas.renderAll(); snapshot(); localBoardDirty=true; scheduleSaveBoard();
             });
           };
           reader.readAsDataURL(file);
@@ -1116,7 +1225,8 @@
     function scheduleSaveBoard(){
       if(!currentBoardPartida || !boardCanvas) return;
       if(saveBoardTimer) clearTimeout(saveBoardTimer);
-      saveBoardTimer = setTimeout(saveBoard, 600); // un poco más para tecleo rápido
+      // 1.2s para evitar pérdida al tipear muy rápido
+      saveBoardTimer = setTimeout(saveBoard, 1200);
     }
 
     async function saveBoard(){
@@ -1124,6 +1234,7 @@
       const sb = await waitForSupabase();
       const json = boardCanvas.toJSON();
       const noteHtml = document.getElementById('board-note-area')?.innerHTML || '';
+      localBoardDirty=false; localEditingNote=false;
       await sb.from('partida_board').upsert({ partida_id: currentBoardPartida, board_json: json, note: noteHtml });
     }
 
@@ -1143,6 +1254,7 @@
       const noteArea = document.getElementById('board-note-area');
       if(noteArea) noteArea.innerHTML = data?.note || '';
       snapshot(); // estado inicial en undo
+      localBoardDirty=false;
       startBoardRealtime(partidaId);
     }
 
@@ -1157,18 +1269,21 @@
         .on('postgres_changes',{event:'*',schema:'public',table:'partida_board',filter:`partida_id=eq.${partidaId}`}, payload=>{
           const row = payload.new || payload.old;
           if(!row || !boardCanvas) return;
+          if(localBoardDirty || localEditingNote) return; // no pisar mientras editas rápido
           const incoming = row.board_json;
           const current = boardCanvas.toJSON();
           if(JSON.stringify(incoming) === JSON.stringify(current)) return;
           boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
           const noteArea = document.getElementById('board-note-area');
-          if(noteArea) noteArea.innerHTML = row.note || '';
+          if(noteArea && !localEditingNote) noteArea.innerHTML = row.note || '';
           snapshot();
         }).subscribe();
       boardPollId = setInterval(async ()=>{
         try{
           const {data} = await sb.from('partida_board').select('board_json, note').eq('partida_id', partidaId).maybeSingle();
-          if(data?.board_json && boardCanvas){
+          if(!data) return;
+          if(localBoardDirty || localEditingNote) return;
+          if(data.board_json && boardCanvas){
             const incoming = data.board_json;
             const current = boardCanvas.toJSON();
             if(JSON.stringify(incoming)!==JSON.stringify(current)){
@@ -1176,9 +1291,9 @@
               snapshot();
             }
           }
-          if(data?.note !== undefined){
+          if(data.note !== undefined){
             const noteArea = document.getElementById('board-note-area');
-            if(noteArea && noteArea.innerHTML !== (data.note||'')){
+            if(noteArea && noteArea.innerHTML !== (data.note||'') && !localEditingNote){
               noteArea.innerHTML = data.note || '';
             }
           }
@@ -1186,7 +1301,7 @@
       }, BOARD_POLL_MS);
     }
 
-    /* --- FIX: verCotizacion helper --- */
+    /* --- helper ver cotización --- */
     function verCotizacion(cotId){
       if(!cotId){
         toast('Esta venta no tiene cotización asociada');
