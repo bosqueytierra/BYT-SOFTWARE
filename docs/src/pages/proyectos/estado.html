@@ -331,7 +331,7 @@
       });
 
       proyectos = Array.from(map.values());
-      loadStageStore();
+      await loadStageStore(); // ahora es async y sincroniza con Supabase
     }
 
     async function cargarNotasEtapas(){
@@ -362,15 +362,42 @@
       return String(cli);
     }
 
-    function loadStageStore(){
+    /* ---------- Estado de etapas: persistencia ---------- */
+    async function loadStageStoreFromSupabase() {
+      const sb = await waitForSupabase();
+      const { data, error } = await sb.from('etapa_estado').select('partida_id, etapa, estado');
+      if (error) { console.warn('loadStageStoreFromSupabase', error); return; }
+      stageStore.clear();
+      (data || []).forEach(r => {
+        const map = stageStore.get(r.partida_id) || {};
+        map[r.etapa] = r.estado || 'pendiente';
+        stageStore.set(r.partida_id, map);
+      });
+    }
+
+    async function saveStageStatus(partidaId, etapa, estado) {
+      const sb = await waitForSupabase();
+      const { error } = await sb.from('etapa_estado')
+        .upsert({ partida_id: partidaId, etapa, estado }, { onConflict: 'partida_id,etapa' });
+      if (error) console.error('saveStageStatus', error);
+    }
+
+    async function loadStageStore(){
       try{
+        // Primero remoto (multiusuario)
+        await loadStageStoreFromSupabase();
+        // Luego merge con local (fallback/offline)
         const raw=localStorage.getItem('byt_estado_proyectos_stages_v2');
         if(raw){
           const obj=JSON.parse(raw);
-          Object.keys(obj).forEach(k=>stageStore.set(k,obj[k]));
+          Object.keys(obj).forEach(k=>{
+            const merged = { ...(stageStore.get(k)||{}), ...obj[k] };
+            stageStore.set(k, merged);
+          });
         }
-      }catch{}
+      }catch(e){ console.warn('loadStageStore fallback local', e); }
     }
+
     function saveStageStore(){
       const obj={}; stageStore.forEach((v,k)=>{obj[k]=v;});
       localStorage.setItem('byt_estado_proyectos_stages_v2', JSON.stringify(obj));
@@ -561,7 +588,8 @@
       const current = stageStore.get(partidaId) || {};
       current[stage] = value;
       stageStore.set(partidaId, current);
-      saveStageStore();
+      saveStageStore();                    // sigue guardando local (offline)
+      saveStageStatus(partidaId, stage, value); // sync Supabase multiusuario
       renderDetalle(); // re-render keeping openPartidas
       renderLista();   // refresca progreso de la lista
     }
