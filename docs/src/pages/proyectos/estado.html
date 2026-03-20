@@ -263,7 +263,7 @@
     let openPartidas=new Set();
     let realtimeSub = null; // suscripción Realtime
     let pollId = null;
-    const LIVE_POLL_MS = 8000; // respaldo
+    const LIVE_POLL_MS = 4000; // respaldo
 
     const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
     async function waitForSupabase(maxMs=12000){
