@@ -43,7 +43,7 @@
     label{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px;display:block;}
     input,select{
       width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;
-      background:#fdfefe;font-family:inherit;font-size:14px;color:var(--text);
+      background:#fdfefe;font-family:inherit;font-size:14px;color:#000;
       box-shadow:inset 0 1px 2px rgba(0,0,0,0.02);
     }
 
@@ -125,41 +125,45 @@
     /* --- Modal pizarra + notas --- */
     .board-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2300; padding:12px;}
     .board-modal{background:#fff; border-radius:18px; max-width:98vw; width:98vw; max-height:95vh; height:95vh; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); display:flex; flex-direction:column;}
-    .board-head{padding:16px; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:center; justify-content:space-between;}
-    .board-tools{display:flex; gap:8px; flex-wrap:wrap;}
-    .tool-btn{padding:8px 12px; border:1px solid #e0e4ea; border-radius:10px; background:#f7f9fb; cursor:pointer; font-weight:700; font-size:12px;}
-    .tool-btn.active{background:#2f6f4f; color:#fff; border-color:#2f6f4f;}
+    .board-head{padding:12px 16px; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:center; flex-wrap:wrap;}
     .board-body{
-      padding:12px 16px 12px;
+      padding:10px 14px 12px;
       overflow:hidden;
       flex:1;
-      display:flex;
+      display:grid;
+      grid-template-columns:1fr 38%;
       gap:12px;
+      min-height:0;
     }
     #board-canvas-wrap{
-      flex:1 1 60%;
+      position:relative;
       border:1px solid #dfe4ea;
       border-radius:12px;
-      overflow:auto;
       background:#fff;
-      position:relative;
-      min-height:120vh; /* más alto + scroll */
+      overflow:auto;
+      max-height:calc(95vh - 140px);
+      min-height:100%;
+      scrollbar-width:thin;
     }
-    #board-canvas{border:none; width:100%; min-height:120vh;}
+    #board-canvas{border:none; width:100%; min-height:2000px;} /* scroll largo */
     #board-notes{
-      flex:1 1 40%;
+      border:1px solid #dfe4ea;
+      border-radius:12px;
+      background:#fff;
       display:flex;
       flex-direction:column;
       gap:8px;
-      min-height:120vh;
       overflow:auto;
+      max-height:calc(95vh - 140px);
+      padding:8px 10px 12px;
+      scrollbar-width:thin;
     }
-    .note-toolbar{display:flex;flex-wrap:wrap;gap:6px;}
+    .note-toolbar{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:0;background:#fff;z-index:2;padding-bottom:6px;}
     .note-tool{padding:6px 10px; border:1px solid #dfe4ea; border-radius:8px; background:#f7f9fb; cursor:pointer; font-size:12px;}
     #board-note-area{
       flex:1;
       width:100%;
-      min-height:400px;
+      min-height:600px;
       border:1px solid #dfe4ea;
       border-radius:12px;
       padding:10px;
@@ -180,13 +184,24 @@
       font-size:12px;
     }
 
-    /* Paleta y slider */
+    /* Paleta, slider y barra flotante en canvas */
+    .canvas-tools{
+      position:sticky;
+      top:6px;
+      left:0;
+      right:0;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      background:#fff;
+      padding:8px 10px;
+      border-bottom:1px solid #e5e7eb;
+      z-index:5;
+    }
     .color-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
     .color-swatch{width:22px;height:22px;border-radius:6px;border:1px solid #d5d8de;cursor:pointer;}
     .size-row{display:flex;align-items:center;gap:8px;}
     .size-row input{width:140px;}
-
-    /* Paleta de formas */
     .shape-panel{position:relative;}
     .shape-grid{
       display:grid;
@@ -217,6 +232,7 @@
       font-size:14px;
       line-height:1;
     }
+    .toolbar-spacer{flex:1;}
   </style>
 </head>
 <body>
@@ -289,63 +305,66 @@
   <div id="board-backdrop" class="board-backdrop" aria-hidden="true">
     <div class="board-modal">
       <div class="board-head">
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-          <strong>Notas y obs. presentación</strong>
-          <select id="board-partida-select" style="padding:6px 10px;border-radius:10px;border:1px solid #dfe4ea;">
-          </select>
-        </div>
-        <div class="board-tools">
-          <div class="color-row" style="margin-right:12px;">
-            <span style="font-size:12px;color:#6b7280;">Color:</span>
-            <div class="color-swatch" style="background:#111827;" data-color="#111827"></div>
-            <div class="color-swatch" style="background:#dc2626;" data-color="#dc2626"></div>
-            <div class="color-swatch" style="background:#f97316;" data-color="#f97316"></div>
-            <div class="color-swatch" style="background:#facc15;" data-color="#facc15"></div>
-            <div class="color-swatch" style="background:#22c55e;" data-color="#22c55e"></div>
-            <div class="color-swatch" style="background:#0ea5e9;" data-color="#0ea5e9"></div>
-            <div class="color-swatch" style="background:#6366f1;" data-color="#6366f1"></div>
-            <div class="color-swatch" style="background:#a855f7;" data-color="#a855f7"></div>
-            <div class="color-swatch" style="background:#ec4899;" data-color="#ec4899"></div>
-            <div class="color-swatch" style="background:#ffffff;border-color:#cbd5e1;" data-color="#ffffff"></div>
-          </div>
-          <div class="size-row" style="margin-right:12px;">
-            <span style="font-size:12px;color:#6b7280;">Tamaño:</span>
-            <input id="pen-size" type="range" min="1" max="30" value="3">
-            <span id="pen-size-label" style="font-size:12px;color:#6b7280;">3px</span>
-          </div>
-          <button class="tool-btn active" data-tool="pen">Lapiz</button>
-          <button class="tool-btn" data-tool="highlighter">Resaltador</button>
-          <button class="tool-btn" data-tool="eraser">Goma</button>
-          <button class="tool-btn" data-tool="text">Texto</button>
-          <button class="tool-btn" data-tool="rect">Rectángulo</button>
-          <button class="tool-btn" data-tool="select">Mover/Seleccionar</button>
-          <div class="shape-panel">
-            <button class="tool-btn" id="shape-toggle">Formas ▾</button>
-            <div id="shape-grid" class="shape-grid" style="display:none;">
-              <div class="shape-btn" data-shape="line">／</div>
-              <div class="shape-btn" data-shape="arrow">→</div>
-              <div class="shape-btn" data-shape="rect">▭</div>
-              <div class="shape-btn" data-shape="circle">○</div>
-              <div class="shape-btn" data-shape="triangle">△</div>
-              <div class="shape-btn" data-shape="star">★</div>
-            </div>
-          </div>
-          <button class="tool-btn" id="board-undo">↶ Deshacer</button>
-          <button class="tool-btn" id="board-redo">↷ Rehacer</button>
-          <button class="tool-btn" id="board-clear">🗑 Limpiar todo</button>
-          <button class="tool-btn" id="board-close">Cerrar</button>
-        </div>
+        <strong>Notas y obs. presentación</strong>
+        <select id="board-partida-select" style="padding:6px 10px;border-radius:10px;border:1px solid #dfe4ea;"></select>
+        <div class="toolbar-spacer"></div>
+        <button class="tool-btn" id="board-close">Cerrar</button>
       </div>
       <div class="board-body">
         <div id="board-canvas-wrap">
+          <div class="canvas-tools">
+            <div class="color-row">
+              <span style="font-size:12px;color:#6b7280;">Color:</span>
+              <div class="color-swatch" style="background:#111827;" data-color="#111827"></div>
+              <div class="color-swatch" style="background:#dc2626;" data-color="#dc2626"></div>
+              <div class="color-swatch" style="background:#f97316;" data-color="#f97316"></div>
+              <div class="color-swatch" style="background:#facc15;" data-color="#facc15"></div>
+              <div class="color-swatch" style="background:#22c55e;" data-color="#22c55e"></div>
+              <div class="color-swatch" style="background:#0ea5e9;" data-color="#0ea5e9"></div>
+              <div class="color-swatch" style="background:#6366f1;" data-color="#6366f1"></div>
+              <div class="color-swatch" style="background:#a855f7;" data-color="#a855f7"></div>
+              <div class="color-swatch" style="background:#ec4899;" data-color="#ec4899"></div>
+              <div class="color-swatch" style="background:#ffffff;border-color:#cbd5e1;" data-color="#ffffff"></div>
+            </div>
+            <div class="size-row">
+              <span style="font-size:12px;color:#6b7280;">Tamaño:</span>
+              <input id="pen-size" type="range" min="1" max="30" value="3">
+              <span id="pen-size-label" style="font-size:12px;color:#6b7280;">3px</span>
+            </div>
+            <button class="tool-btn active" data-tool="pen">Lapiz</button>
+            <button class="tool-btn" data-tool="highlighter">Resaltador</button>
+            <button class="tool-btn" data-tool="eraser">Goma</button>
+            <button class="tool-btn" data-tool="text">Texto</button>
+            <button class="tool-btn" data-tool="rect">Rectángulo</button>
+            <button class="tool-btn" data-tool="select">Mover/Seleccionar</button>
+            <div class="shape-panel">
+              <button class="tool-btn" id="shape-toggle">Formas ▾</button>
+              <div id="shape-grid" class="shape-grid" style="display:none;">
+                <div class="shape-btn" data-shape="line">／</div>
+                <div class="shape-btn" data-shape="arrow">→</div>
+                <div class="shape-btn" data-shape="rect">▭</div>
+                <div class="shape-btn" data-shape="circle">○</div>
+                <div class="shape-btn" data-shape="triangle">△</div>
+                <div class="shape-btn" data-shape="star">��</div>
+              </div>
+            </div>
+            <button class="tool-btn" id="extend-canvas">⬇ Extender lienzo</button>
+            <button class="tool-btn" id="board-undo">↶ Deshacer</button>
+            <button class="tool-btn" id="board-redo">↷ Rehacer</button>
+            <button class="tool-btn" id="board-clear">🗑 Limpiar todo</button>
+          </div>
           <canvas id="board-canvas"></canvas>
         </div>
+
         <div id="board-notes">
           <div class="note-toolbar">
             <button class="note-tool" data-cmd="bold"><b>B</b></button>
             <button class="note-tool" data-cmd="italic"><i>I</i></button>
             <button class="note-tool" data-cmd="underline"><u>S</u></button>
             <button class="note-tool" data-cmd="strikeThrough"><s>T</s></button>
+            <button class="note-tool" data-cmd="justifyLeft">↤</button>
+            <button class="note-tool" data-cmd="justifyCenter">↔</button>
+            <button class="note-tool" data-cmd="justifyRight">↦</button>
             <button class="note-tool" data-cmd="insertUnorderedList">• Lista</button>
             <button class="note-tool" data-cmd="insertOrderedList">1. Lista</button>
             <button class="note-tool" data-cmd="formatBlock" data-value="h3">Título</button>
@@ -412,6 +431,7 @@
     const BOARD_POLL_MS = 4000;
     let localEditingNote = false; // para no pisar mientras escribes
     let localBoardDirty = false;
+    let canvasHeight = 2000;
 
     const FABRIC_URL = 'https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js';
     async function ensureFabric() {
@@ -1027,6 +1047,7 @@
       wireColorPalette();
       wireSizeSlider();
       wireShapePalette();
+      document.getElementById('extend-canvas').onclick = extendCanvas;
     }
 
     function closeBoardModal(){
@@ -1040,7 +1061,7 @@
       if (!window.fabric) return;
       const canvasEl = document.getElementById('board-canvas');
       canvasEl.width = canvasEl.offsetWidth;
-      canvasEl.height = canvasEl.offsetHeight || 1200;
+      canvasEl.height = canvasHeight;
       if (!boardCanvas) {
         boardCanvas = new fabric.Canvas('board-canvas', { isDrawingMode: true, backgroundColor: '#ffffff' });
         setTool('pen');
@@ -1056,10 +1077,19 @@
         };
         document.getElementById('board-close').onclick = closeBoardModal;
         window.addEventListener('paste', handlePasteToBoard);
+      }else{
+        boardCanvas.setHeight(canvasHeight);
+        boardCanvas.renderAll();
       }
-      boardCanvas.on('object:added', ()=>{ localBoardDirty=true; scheduleSaveBoard(); });
+      boardCanvas.on('object:added', ()=>{ snapshot(); localBoardDirty=true; scheduleSaveBoard(); });
       boardCanvas.on('object:modified', ()=>{ localBoardDirty=true; scheduleSaveBoard(); });
       boardCanvas.on('object:removed', ()=>{ localBoardDirty=true; scheduleSaveBoard(); });
+    }
+
+    function extendCanvas(){
+      canvasHeight += 1000;
+      document.getElementById('board-canvas').height = canvasHeight;
+      if(boardCanvas){ boardCanvas.setHeight(canvasHeight); boardCanvas.renderAll(); localBoardDirty=true; scheduleSaveBoard(); }
     }
 
     let undoStack=[]; let redoStack=[]; let saveBoardTimer=null;
@@ -1115,7 +1145,6 @@
         boardCanvas.isDrawingMode=false;
         if(tool==='text'){
           const t = new fabric.IText('Escribe aquí', { left: 40, top: 40, fontSize: 22, fill: color, width: 260 });
-          if (t._setTextStyles) { t._setTextStyles((ctx)=>{ if(ctx) ctx.textBaseline = 'alphabetic'; }); }
           boardCanvas.add(t); boardCanvas.setActiveObject(t); snapshot(); localBoardDirty=true; scheduleSaveBoard();
         } else if(tool==='rect'){
           const r = new fabric.Rect({ left:50, top:50, width:160, height:100, fill:'rgba(46,111,79,0.15)', stroke:'#2f6f4f', strokeWidth:2 });
@@ -1225,7 +1254,6 @@
     function scheduleSaveBoard(){
       if(!currentBoardPartida || !boardCanvas) return;
       if(saveBoardTimer) clearTimeout(saveBoardTimer);
-      // 1.2s para evitar pérdida al tipear muy rápido
       saveBoardTimer = setTimeout(saveBoard, 1200);
     }
 
@@ -1246,6 +1274,7 @@
       if(boardCanvas){
         boardCanvas.clear();
         boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+        boardCanvas.setHeight(canvasHeight);
       }
       undoStack=[]; redoStack=[];
       if(data?.board_json && boardCanvas){
