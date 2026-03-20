@@ -14,11 +14,14 @@
       --border:#e6e9f0;
       --text:#283040;
       --muted:#7a8191;
-      --shadow:0 14px 40px rgba(0,0,0,0.12);
+      --shadow:0 14px 40px rgba(17,24,39,0.12);
       --primary:#2f6f4f;
       --chip-green:#eaf6ef; --chip-green-text:#1f6c3b;
       --chip-amber:#fff4df; --chip-amber-text:#b47a1b;
       --chip-grey:#eef1f6;  --chip-grey-text:#5f6470;
+      --toolbar-bg:#f8fafc;
+      --toolbar-border:#dfe4ea;
+      --btn-soft:#eef2f7;
     }
     *{box-sizing:border-box;}
     body{
@@ -158,15 +161,20 @@
       padding:8px 10px 12px;
       scrollbar-width:thin;
     }
-    .note-toolbar{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:0;background:#fff;z-index:2;padding-bottom:6px;}
-    .note-tool{padding:6px 10px; border:1px solid #dfe4ea; border-radius:8px; background:#f7f9fb; cursor:pointer; font-size:12px;}
+    .note-toolbar{
+      display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:0;background:#fff;z-index:2;padding-bottom:6px;
+      align-items:center;
+    }
+    .note-tool{padding:7px 10px; border:1px solid #e4e7ee; border-radius:10px; background:var(--toolbar-bg); cursor:pointer; font-size:12px; box-shadow:0 1px 2px rgba(0,0,0,0.04);}
+    .note-tool:hover{background:#eef2f7;}
+    .note-select{padding:8px 10px; border:1px solid #dfe4ea; border-radius:10px; background:#fff; font-weight:600;}
     #board-note-area{
       flex:1;
       width:100%;
       min-height:600px;
       border:1px solid #dfe4ea;
       border-radius:12px;
-      padding:10px;
+      padding:12px;
       font-family:inherit;
       font-size:15px;
       resize:vertical;
@@ -175,14 +183,17 @@
     }
     #board-note-save{
       align-self:flex-end;
-      padding:8px 12px;
+      padding:10px 14px;
       border:1px solid #dfe4ea;
-      border-radius:10px;
-      background:#f7f9fb;
+      border-radius:12px;
+      background:#111827;
+      color:#fff;
       cursor:pointer;
-      font-weight:700;
+      font-weight:800;
       font-size:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.08);
     }
+    #board-note-save:hover{filter:brightness(1.05);}
 
     /* Paleta, slider y barra flotante en canvas */
     .canvas-tools{
@@ -194,36 +205,51 @@
       flex-wrap:wrap;
       gap:8px;
       background:#fff;
-      padding:8px 10px;
-      border-bottom:1px solid #e5e7eb;
+      padding:10px 12px;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.08);
       z-index:5;
+      align-items:center;
     }
+    .tool-pill{
+      padding:9px 12px;
+      border:1px solid #dfe4ea;
+      border-radius:12px;
+      background:var(--toolbar-bg);
+      font-weight:700;
+      font-size:12px;
+      cursor:pointer;
+      box-shadow:0 1px 2px rgba(0,0,0,0.05);
+    }
+    .tool-pill.active{background:#2f6f4f;color:#fff;border-color:#2f6f4f;}
+    .tool-pill:hover{background:#eef2f7;}
     .color-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
-    .color-swatch{width:22px;height:22px;border-radius:6px;border:1px solid #d5d8de;cursor:pointer;}
+    .color-swatch{width:26px;height:26px;border-radius:8px;border:1px solid #d5d8de;cursor:pointer;box-shadow:inset 0 1px 1px rgba(255,255,255,0.6);}
     .size-row{display:flex;align-items:center;gap:8px;}
     .size-row input{width:140px;}
     .shape-panel{position:relative;}
     .shape-grid{
       display:grid;
-      grid-template-columns:repeat(6,24px);
+      grid-template-columns:repeat(6,26px);
       gap:6px;
       padding:10px;
       background:#111827;
       color:#fff;
-      border-radius:10px;
+      border-radius:12px;
       border:1px solid #111827;
       position:absolute;
       top:38px;
       left:0;
       z-index:2400;
       box-shadow:0 10px 30px rgba(0,0,0,0.25);
-      min-width:180px;
+      min-width:190px;
     }
     .shape-btn{
-      width:24px;
-      height:24px;
+      width:26px;
+      height:26px;
       border:1px solid #374151;
-      border-radius:6px;
+      border-radius:8px;
       background:#1f2937;
       color:#fff;
       display:grid;
@@ -233,6 +259,7 @@
       line-height:1;
     }
     .toolbar-spacer{flex:1;}
+    .icon-btn{display:inline-flex;align-items:center;gap:6px;}
   </style>
 </head>
 <body>
@@ -308,7 +335,7 @@
         <strong>Notas y obs. presentación</strong>
         <select id="board-partida-select" style="padding:6px 10px;border-radius:10px;border:1px solid #dfe4ea;"></select>
         <div class="toolbar-spacer"></div>
-        <button class="tool-btn" id="board-close">Cerrar</button>
+        <button class="tool-pill" id="board-close">Cerrar</button>
       </div>
       <div class="board-body">
         <div id="board-canvas-wrap">
@@ -323,7 +350,7 @@
               <div class="color-swatch" style="background:#0ea5e9;" data-color="#0ea5e9"></div>
               <div class="color-swatch" style="background:#6366f1;" data-color="#6366f1"></div>
               <div class="color-swatch" style="background:#a855f7;" data-color="#a855f7"></div>
-              <div class="color-swatch" style="background:#ec4899;" data-color="#ec4899"></div>
+              <div class="color-swatch" style="background:#ec4899;" data-color:#ec4899></div>
               <div class="color-swatch" style="background:#ffffff;border-color:#cbd5e1;" data-color="#ffffff"></div>
             </div>
             <div class="size-row">
@@ -331,33 +358,48 @@
               <input id="pen-size" type="range" min="1" max="30" value="3">
               <span id="pen-size-label" style="font-size:12px;color:#6b7280;">3px</span>
             </div>
-            <button class="tool-btn active" data-tool="pen">Lapiz</button>
-            <button class="tool-btn" data-tool="highlighter">Resaltador</button>
-            <button class="tool-btn" data-tool="eraser">Goma</button>
-            <button class="tool-btn" data-tool="text">Texto</button>
-            <button class="tool-btn" data-tool="rect">Rectángulo</button>
-            <button class="tool-btn" data-tool="select">Mover/Seleccionar</button>
+            <button class="tool-pill active" data-tool="pen">Lapiz</button>
+            <button class="tool-pill" data-tool="highlighter">Resaltador</button>
+            <button class="tool-pill" data-tool="eraser">Goma</button>
+            <button class="tool-pill" data-tool="text">Texto</button>
+            <button class="tool-pill" data-tool="rect">Rectángulo</button>
+            <button class="tool-pill" data-tool="select">Mover/Seleccionar</button>
             <div class="shape-panel">
-              <button class="tool-btn" id="shape-toggle">Formas ▾</button>
+              <button class="tool-pill" id="shape-toggle">Formas ▾</button>
               <div id="shape-grid" class="shape-grid" style="display:none;">
                 <div class="shape-btn" data-shape="line">／</div>
                 <div class="shape-btn" data-shape="arrow">→</div>
                 <div class="shape-btn" data-shape="rect">▭</div>
                 <div class="shape-btn" data-shape="circle">○</div>
                 <div class="shape-btn" data-shape="triangle">△</div>
-                <div class="shape-btn" data-shape="star">��</div>
+                <div class="shape-btn" data-shape="star">★</div>
               </div>
             </div>
-            <button class="tool-btn" id="extend-canvas">⬇ Extender lienzo</button>
-            <button class="tool-btn" id="board-undo">↶ Deshacer</button>
-            <button class="tool-btn" id="board-redo">↷ Rehacer</button>
-            <button class="tool-btn" id="board-clear">🗑 Limpiar todo</button>
+            <button class="tool-pill icon-btn" id="extend-canvas">⬇ Extender lienzo</button>
+            <button class="tool-pill icon-btn" id="board-undo">↶ Deshacer</button>
+            <button class="tool-pill icon-btn" id="board-redo">↷ Rehacer</button>
+            <button class="tool-pill icon-btn" id="board-clear">🗑 Limpiar todo</button>
           </div>
           <canvas id="board-canvas"></canvas>
         </div>
 
         <div id="board-notes">
           <div class="note-toolbar">
+            <select id="note-font" class="note-select">
+              <option value="Inter, sans-serif" selected>Inter</option>
+              <option value="Calibri, sans-serif">Calibri</option>
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Georgia, serif">Georgia</option>
+            </select>
+            <select id="note-size" class="note-select">
+              <option value="14">14</option>
+              <option value="16" selected>16</option>
+              <option value="18">18</option>
+              <option value="20">20</option>
+              <option value="24">24</option>
+            </select>
+            <input type="color" id="note-color" value="#1f2937" class="note-select" style="padding:6px 4px;width:46px;">
+            <input type="color" id="note-bg" value="#ffffff" class="note-select" style="padding:6px 4px;width:46px;">
             <button class="note-tool" data-cmd="bold"><b>B</b></button>
             <button class="note-tool" data-cmd="italic"><i>I</i></button>
             <button class="note-tool" data-cmd="underline"><u>S</u></button>
@@ -1044,6 +1086,11 @@
           scheduleSaveBoard();
         };
       });
+      document.getElementById('note-font').onchange = (e)=>{ document.execCommand('fontName', false, e.target.value); scheduleSaveBoard(); };
+      document.getElementById('note-size').onchange = (e)=>{ document.execCommand('fontSize', false, 7); const sels=window.getSelection(); if(sels.rangeCount){ const el=document.createElement('span'); el.style.fontSize=e.target.value+'px'; sels.getRangeAt(0).surroundContents(el);} scheduleSaveBoard(); };
+      document.getElementById('note-color').onchange = (e)=>{ document.execCommand('foreColor', false, e.target.value); scheduleSaveBoard(); };
+      document.getElementById('note-bg').onchange = (e)=>{ document.execCommand('hiliteColor', false, e.target.value); scheduleSaveBoard(); };
+
       wireColorPalette();
       wireSizeSlider();
       wireShapePalette();
@@ -1065,7 +1112,7 @@
       if (!boardCanvas) {
         boardCanvas = new fabric.Canvas('board-canvas', { isDrawingMode: true, backgroundColor: '#ffffff' });
         setTool('pen');
-        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn=>{
+        document.querySelectorAll('.tool-pill[data-tool]').forEach(btn=>{
           btn.onclick = ()=> setTool(btn.dataset.tool);
         });
         document.getElementById('board-undo').onclick = undoBoard;
@@ -1125,8 +1172,8 @@
     }
 
     function setTool(tool){
-      document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.remove('active'));
-      const btn=document.querySelector(`.tool-btn[data-tool="${tool}"]`); if(btn) btn.classList.add('active');
+      document.querySelectorAll('.tool-pill[data-tool]').forEach(b=>b.classList.remove('active'));
+      const btn=document.querySelector(`.tool-pill[data-tool="${tool}"]`); if(btn) btn.classList.add('active');
       if(!boardCanvas) return;
       const size = Number(document.getElementById('pen-size').value || 3);
       const color = boardCanvas._currentColor || '#111827';
