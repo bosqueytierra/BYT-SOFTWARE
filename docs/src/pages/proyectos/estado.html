@@ -125,9 +125,50 @@
     .board-tools{display:flex; gap:8px; flex-wrap:wrap;}
     .tool-btn{padding:8px 12px; border:1px solid #e0e4ea; border-radius:10px; background:#f7f9fb; cursor:pointer; font-weight:700; font-size:12px;}
     .tool-btn.active{background:#2f6f4f; color:#fff; border-color:#2f6f4f;}
-    .board-body{padding:0 16px 16px; overflow:auto; flex:1; display:flex; flex-direction:column; gap:10px;}
-    #board-canvas-wrap{border:1px solid #dfe4ea; border-radius:12px; overflow:hidden; background:#fff; position:relative;}
+    .board-body{
+      padding:0 16px 16px;
+      overflow:auto;
+      flex:1;
+      display:flex;
+      gap:12px;
+    }
+    #board-canvas-wrap{
+      flex:1 1 65%;
+      border:1px solid #dfe4ea;
+      border-radius:12px;
+      overflow:hidden;
+      background:#fff;
+      position:relative;
+    }
     #board-canvas{border:none; width:100%; height:70vh;}
+    #board-notes{
+      flex:1 1 35%;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    #board-note-area{
+      flex:1;
+      width:100%;
+      min-height:120px;
+      border:1px solid #dfe4ea;
+      border-radius:12px;
+      padding:10px;
+      font-family:inherit;
+      font-size:14px;
+      resize:vertical;
+      box-shadow:inset 0 1px 2px rgba(0,0,0,0.03);
+    }
+    #board-note-save{
+      align-self:flex-end;
+      padding:8px 12px;
+      border:1px solid #dfe4ea;
+      border-radius:10px;
+      background:#f7f9fb;
+      cursor:pointer;
+      font-weight:700;
+      font-size:12px;
+    }
   </style>
 </head>
 <body>
@@ -221,8 +262,13 @@
         <div id="board-canvas-wrap">
           <canvas id="board-canvas"></canvas>
         </div>
-        <small style="color:#6c7a86;">Pega una imagen con Ctrl+V, o arrástrala. Todo se guarda en Supabase y se replica en vivo.</small>
+        <div id="board-notes">
+          <label style="font-size:13px;color:#6b7280;font-weight:700;">Notas rápidas</label>
+          <textarea id="board-note-area" placeholder="Escribe aquí..."></textarea>
+          <button id="board-note-save">Guardar nota</button>
+        </div>
       </div>
+      <small style="color:#6c7a86; padding:0 16px 12px;">Pega una imagen con Ctrl+V, o arrástrala. Todo se guarda en Supabase y se replica en vivo.</small>
     </div>
   </div>
 
@@ -872,6 +918,10 @@
       initBoardCanvas();
       loadBoard(currentBoardPartida);
       select.onchange = () => { currentBoardPartida = select.value; loadBoard(currentBoardPartida); };
+      const noteArea = document.getElementById('board-note-area');
+      const noteSave = document.getElementById('board-note-save');
+      if(noteArea) noteArea.oninput = scheduleSaveBoard;
+      if(noteSave) noteSave.onclick = saveBoard;
     }
 
     function closeBoardModal(){
@@ -949,7 +999,16 @@
         boardCanvas.freeDrawingBrush.opacity = 1;
       } else if(tool==='text'){
         boardCanvas.isDrawingMode=false;
-        const t = new fabric.IText('Escribe aquí', { left: 40, top: 40, fontSize: 18, fill: '#111827' });
+        const t = new fabric.IText('Escribe aquí', {
+          left: 40, top: 40,
+          fontSize: 20,
+          fill: '#111827',
+          width: 240,
+        });
+        // Evita warning textBaseline
+        if (t._setTextStyles) {
+          t._setTextStyles((ctx)=>{ if(ctx) ctx.textBaseline = 'alphabetic'; });
+        }
         boardCanvas.add(t); boardCanvas.setActiveObject(t); scheduleSaveBoard();
       } else if(tool==='rect'){
         boardCanvas.isDrawingMode=false;
@@ -991,13 +1050,14 @@
       if(!boardCanvas || !currentBoardPartida) return;
       const sb = await waitForSupabase();
       const json = boardCanvas.toJSON();
-      await sb.from('partida_board').upsert({ partida_id: currentBoardPartida, board_json: json });
+      const note = document.getElementById('board-note-area')?.value || '';
+      await sb.from('partida_board').upsert({ partida_id: currentBoardPartida, board_json: json, note });
     }
 
     async function loadBoard(partidaId){
       stopBoardRealtime();
       const sb = await waitForSupabase();
-      const { data, error } = await sb.from('partida_board').select('board_json').eq('partida_id', partidaId).maybeSingle();
+      const { data, error } = await sb.from('partida_board').select('board_json, note').eq('partida_id', partidaId).maybeSingle();
       if(error){ console.warn(error); }
       if(boardCanvas){
         boardCanvas.clear(); boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
@@ -1006,6 +1066,8 @@
       if(data?.board_json && boardCanvas){
         boardCanvas.loadFromJSON(data.board_json, boardCanvas.renderAll.bind(boardCanvas));
       }
+      const noteArea = document.getElementById('board-note-area');
+      if(noteArea) noteArea.value = data?.note || '';
       snapshot(); // estado inicial en undo
       startBoardRealtime(partidaId);
     }
@@ -1025,17 +1087,25 @@
           const current = boardCanvas.toJSON();
           if(JSON.stringify(incoming) === JSON.stringify(current)) return;
           boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
+          const noteArea = document.getElementById('board-note-area');
+          if(noteArea) noteArea.value = row.note || '';
           snapshot();
         }).subscribe();
       boardPollId = setInterval(async ()=>{
         try{
-          const {data} = await sb.from('partida_board').select('board_json').eq('partida_id', partidaId).maybeSingle();
+          const {data} = await sb.from('partida_board').select('board_json, note').eq('partida_id', partidaId).maybeSingle();
           if(data?.board_json && boardCanvas){
             const incoming = data.board_json;
             const current = boardCanvas.toJSON();
             if(JSON.stringify(incoming)!==JSON.stringify(current)){
               boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
               snapshot();
+            }
+          }
+          if(data?.note !== undefined){
+            const noteArea = document.getElementById('board-note-area');
+            if(noteArea && noteArea.value !== data.note){
+              noteArea.value = data.note || '';
             }
           }
         }catch(e){}
