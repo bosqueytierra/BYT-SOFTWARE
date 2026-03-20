@@ -261,6 +261,7 @@
     let adjContext={tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null};
     let pendingFiles=[]; let isUploading=false;
     let openPartidas=new Set();
+    let realtimeSub = null; // suscripción Realtime
 
     const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
     async function waitForSupabase(maxMs=12000){
@@ -285,11 +286,13 @@
     function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1800);}
 
     document.addEventListener('DOMContentLoaded',()=>bootstrapEstado());
+    window.addEventListener('beforeunload', () => { if(realtimeSub) realtimeSub.unsubscribe(); });
 
     async function bootstrapEstado(){
       try{
         await cargarDatos();
         await cargarNotasEtapas();
+        await startRealtimeSync();  // <<--- realtime
         applyFiltersAndRender(true);
         wireFileInput();
       }catch(e){
@@ -331,7 +334,7 @@
       });
 
       proyectos = Array.from(map.values());
-      await loadStageStore(); // ahora es async y sincroniza con Supabase
+      await loadStageStore(); // async + Supabase
     }
 
     async function cargarNotasEtapas(){
@@ -382,11 +385,30 @@
       if (error) console.error('saveStageStatus', error);
     }
 
+    async function startRealtimeSync(){
+      if(realtimeSub) { realtimeSub.unsubscribe(); realtimeSub = null; }
+      const sb = await waitForSupabase();
+      realtimeSub = sb.channel('rt-etapa-estado')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'etapa_estado' }, payload => {
+          const row = payload.new || payload.old;
+          if(!row) return;
+          const { partida_id, etapa, estado } = row;
+          const map = stageStore.get(partida_id) || {};
+          if (map[etapa] === estado) return; // ya reflejado
+          map[etapa] = estado || 'pendiente';
+          stageStore.set(partida_id, map);
+          saveStageStore();   // mantiene cache local
+          renderDetalle();
+          renderLista();
+        })
+        .subscribe(status => {
+          if(status === 'SUBSCRIBED') console.log('Realtime etapa_estado activo');
+        });
+    }
+
     async function loadStageStore(){
       try{
-        // Primero remoto (multiusuario)
-        await loadStageStoreFromSupabase();
-        // Luego merge con local (fallback/offline)
+        await loadStageStoreFromSupabase(); // multiusuario
         const raw=localStorage.getItem('byt_estado_proyectos_stages_v2');
         if(raw){
           const obj=JSON.parse(raw);
@@ -484,7 +506,6 @@
 
     function selectProject(key){
       selectedKey = key;
-      // abrir primera partida por defecto
       const proj = filtered.find(p=>p.key===key);
       openPartidas.clear();
       if(proj && proj.partidas.length){ openPartidas.add(proj.partidas[0].id); }
@@ -588,10 +609,10 @@
       const current = stageStore.get(partidaId) || {};
       current[stage] = value;
       stageStore.set(partidaId, current);
-      saveStageStore();                    // sigue guardando local (offline)
-      saveStageStatus(partidaId, stage, value); // sync Supabase multiusuario
-      renderDetalle(); // re-render keeping openPartidas
-      renderLista();   // refresca progreso de la lista
+      saveStageStore();                    // offline
+      saveStageStatus(partidaId, stage, value); // online
+      renderDetalle();
+      renderLista();
     }
 
     function refreshStageNotesInDOM(etapa, nota){
