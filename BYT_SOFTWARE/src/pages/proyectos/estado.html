@@ -46,6 +46,8 @@
       background:#fdfefe;font-family:inherit;font-size:14px;color:var(--text);
       box-shadow:inset 0 1px 2px rgba(0,0,0,0.02);
     }
+
+    /* Lista izquierda */
     .list-card{padding:10px;max-height:calc(100vh - 210px);overflow-y:auto;}
     .list-card::-webkit-scrollbar{width:10px;}
     .list-card::-webkit-scrollbar-track{background:rgba(0,0,0,0.04);border-radius:12px;}
@@ -60,6 +62,8 @@
     .bar{height:8px;border-radius:999px;background:#edf0f5;overflow:hidden;}
     .bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#f97316,#22c55e);}
     .bar-text{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
+
+    /* Detalle derecha */
     .detail-card{padding:16px;max-height:calc(100vh - 140px);overflow-y:auto;}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 18px;}
     .btn{border:1px solid var(--border);background:#f6f8fb;color:#1f2430;
@@ -89,6 +93,7 @@
     .note-box textarea{width:100%; min-height:60px; border:1px solid var(--border); border-radius:8px; padding:6px; font-family:inherit; font-size:12px;}
     .note-box.show{display:block;}
 
+    /* Modal adjuntos y utilidades */
     .adj-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;}
     .adj-modal{background:#fff; border-radius:18px; max-width:1200px; width:96vw; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); max-height:94vh; display:flex; flex-direction:column;}
     .adj-head{padding:18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;}
@@ -112,51 +117,55 @@
     .adj-smallbtn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:6px 8px;border-radius:8px;font-size:12px;cursor:pointer;}
     .adj-smallbtn.danger{border-color:#fda4af;color:#b91c1c;}
 
-    /* Loader global */
     .loader-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:3000;}
     .spinner{width:70px;height:70px;border-radius:50%;border:6px solid #e5e7eb;border-top-color:#2f6f4f;animation:spin 0.9s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg);}}
     .toast{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111827; color:#fff; padding:12px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:4000; display:none;}
 
-    /* --- Modal pizarra --- */
-    .board-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2300; padding:18px;}
-    .board-modal{background:#fff; border-radius:18px; max-width:1200px; width:96vw; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); max-height:94vh; display:flex; flex-direction:column;}
+    /* --- Modal pizarra + notas --- */
+    .board-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2300; padding:12px;}
+    .board-modal{background:#fff; border-radius:18px; max-width:98vw; width:98vw; max-height:95vh; height:95vh; border:1px solid var(--border); box-shadow:0 18px 40px rgba(0,0,0,0.18); display:flex; flex-direction:column;}
     .board-head{padding:16px; border-bottom:1px solid var(--border); display:flex; gap:12px; align-items:center; justify-content:space-between;}
     .board-tools{display:flex; gap:8px; flex-wrap:wrap;}
     .tool-btn{padding:8px 12px; border:1px solid #e0e4ea; border-radius:10px; background:#f7f9fb; cursor:pointer; font-weight:700; font-size:12px;}
     .tool-btn.active{background:#2f6f4f; color:#fff; border-color:#2f6f4f;}
     .board-body{
-      padding:0 16px 16px;
-      overflow:auto;
+      padding:12px 16px 12px;
+      overflow:hidden;
       flex:1;
       display:flex;
       gap:12px;
     }
     #board-canvas-wrap{
-      flex:1 1 65%;
+      flex:1 1 60%;
       border:1px solid #dfe4ea;
       border-radius:12px;
-      overflow:hidden;
+      overflow:auto;
       background:#fff;
       position:relative;
+      min-height:70vh;
     }
-    #board-canvas{border:none; width:100%; height:70vh;}
+    #board-canvas{border:none; width:100%; min-height:70vh;}
     #board-notes{
-      flex:1 1 35%;
+      flex:1 1 40%;
       display:flex;
       flex-direction:column;
       gap:8px;
+      min-height:70vh;
     }
+    .note-toolbar{display:flex;flex-wrap:wrap;gap:6px;}
+    .note-tool{padding:6px 10px; border:1px solid #dfe4ea; border-radius:8px; background:#f7f9fb; cursor:pointer; font-size:12px;}
     #board-note-area{
       flex:1;
       width:100%;
-      min-height:120px;
+      min-height:200px;
       border:1px solid #dfe4ea;
       border-radius:12px;
       padding:10px;
       font-family:inherit;
-      font-size:14px;
-      resize:vertical;
+      font-size:15px;
+      resize:both;
+      overflow:auto;
       box-shadow:inset 0 1px 2px rgba(0,0,0,0.03);
     }
     #board-note-save{
@@ -169,6 +178,12 @@
       font-weight:700;
       font-size:12px;
     }
+
+    /* Paleta y slider */
+    .color-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+    .color-swatch{width:22px;height:22px;border-radius:6px;border:1px solid #d5d8de;cursor:pointer;}
+    .size-row{display:flex;align-items:center;gap:8px;}
+    .size-row input{width:140px;}
   </style>
 </head>
 <body>
@@ -247,14 +262,33 @@
           </select>
         </div>
         <div class="board-tools">
+          <div class="color-row" style="margin-right:12px;">
+            <span style="font-size:12px;color:#6b7280;">Color:</span>
+            <div class="color-swatch" style="background:#111827;" data-color="#111827"></div>
+            <div class="color-swatch" style="background:#dc2626;" data-color="#dc2626"></div>
+            <div class="color-swatch" style="background:#f97316;" data-color="#f97316"></div>
+            <div class="color-swatch" style="background:#facc15;" data-color="#facc15"></div>
+            <div class="color-swatch" style="background:#22c55e;" data-color="#22c55e"></div>
+            <div class="color-swatch" style="background:#0ea5e9;" data-color="#0ea5e9"></div>
+            <div class="color-swatch" style="background:#6366f1;" data-color="#6366f1"></div>
+            <div class="color-swatch" style="background:#a855f7;" data-color="#a855f7"></div>
+            <div class="color-swatch" style="background:#ec4899;" data-color="#ec4899"></div>
+            <div class="color-swatch" style="background:#ffffff;border-color:#cbd5e1;" data-color="#ffffff"></div>
+          </div>
+          <div class="size-row" style="margin-right:12px;">
+            <span style="font-size:12px;color:#6b7280;">Tamaño:</span>
+            <input id="pen-size" type="range" min="1" max="30" value="3">
+            <span id="pen-size-label" style="font-size:12px;color:#6b7280;">3px</span>
+          </div>
           <button class="tool-btn active" data-tool="pen">Lapiz</button>
           <button class="tool-btn" data-tool="highlighter">Resaltador</button>
+          <button class="tool-btn" data-tool="eraser">Goma</button>
           <button class="tool-btn" data-tool="text">Texto</button>
           <button class="tool-btn" data-tool="rect">Rectángulo</button>
           <button class="tool-btn" data-tool="select">Mover/Seleccionar</button>
-          <button class="tool-btn" id="board-undo">↶ Undo</button>
-          <button class="tool-btn" id="board-redo">↷ Redo</button>
-          <button class="tool-btn" id="board-clear">🗑 Limpiar</button>
+          <button class="tool-btn" id="board-undo">↶ Deshacer</button>
+          <button class="tool-btn" id="board-redo">↷ Rehacer</button>
+          <button class="tool-btn" id="board-clear">🗑 Limpiar todo</button>
           <button class="tool-btn" id="board-close">Cerrar</button>
         </div>
       </div>
@@ -263,8 +297,19 @@
           <canvas id="board-canvas"></canvas>
         </div>
         <div id="board-notes">
-          <label style="font-size:13px;color:#6b7280;font-weight:700;">Notas rápidas</label>
-          <textarea id="board-note-area" placeholder="Escribe aquí..."></textarea>
+          <div class="note-toolbar">
+            <button class="note-tool" data-cmd="bold"><b>B</b></button>
+            <button class="note-tool" data-cmd="italic"><i>I</i></button>
+            <button class="note-tool" data-cmd="underline"><u>S</u></button>
+            <button class="note-tool" data-cmd="strikeThrough"><s>T</s></button>
+            <button class="note-tool" data-cmd="insertUnorderedList">• Lista</button>
+            <button class="note-tool" data-cmd="insertOrderedList">1. Lista</button>
+            <button class="note-tool" data-cmd="formatBlock" data-value="h3">Título</button>
+            <button class="note-tool" data-cmd="formatBlock" data-value="p">Párrafo</button>
+            <button class="note-tool" data-cmd="fontSize" data-value="4">A+</button>
+            <button class="note-tool" data-cmd="fontSize" data-value="3">A</button>
+          </div>
+          <div id="board-note-area" contenteditable="true" placeholder="Escribe aquí..."></div>
           <button id="board-note-save">Guardar nota</button>
         </div>
       </div>
@@ -312,11 +357,10 @@
     let adjContext={tipo:'cotizacion', bucket:ADJ_BUCKETS.cotizacion, cotId:null};
     let pendingFiles=[]; let isUploading=false;
     let openPartidas=new Set();
-    let realtimeSub = null; // suscripción Realtime etapas
-    let pollId = null;
-    const LIVE_POLL_MS = 4000; // respaldo (puedes ajustar)
+    let realtimeSub = null; let pollId = null;
+    const LIVE_POLL_MS = 4000;
 
-    // Board (pizarra)
+    // Board
     let boardCanvas = null;
     let boardRealtime = null;
     let boardPollId = null;
@@ -369,7 +413,7 @@
       try{
         await cargarDatos();
         await cargarNotasEtapas();
-        await startRealtimeSync();  // realtime + poll
+        await startRealtimeSync();
         applyFiltersAndRender(true);
         wireFileInput();
       }catch(e){
@@ -411,7 +455,7 @@
       });
 
       proyectos = Array.from(map.values());
-      await loadStageStore(); // async + Supabase
+      await loadStageStore();
     }
 
     async function cargarNotasEtapas(){
@@ -922,6 +966,15 @@
       const noteSave = document.getElementById('board-note-save');
       if(noteArea) noteArea.oninput = scheduleSaveBoard;
       if(noteSave) noteSave.onclick = saveBoard;
+      document.querySelectorAll('.note-tool').forEach(btn=>{
+        btn.onclick = ()=>{
+          const cmd = btn.dataset.cmd; const val = btn.dataset.value || null;
+          document.execCommand(cmd, false, val);
+          scheduleSaveBoard();
+        };
+      });
+      wireColorPalette();
+      wireSizeSlider();
     }
 
     function closeBoardModal(){
@@ -935,7 +988,7 @@
       if (!window.fabric) return;
       const canvasEl = document.getElementById('board-canvas');
       canvasEl.width = canvasEl.offsetWidth;
-      canvasEl.height = canvasEl.offsetHeight;
+      canvasEl.height = canvasEl.offsetHeight || 700;
       if (!boardCanvas) {
         boardCanvas = new fabric.Canvas('board-canvas', { isDrawingMode: true, backgroundColor: '#ffffff' });
         setTool('pen');
@@ -944,7 +997,11 @@
         });
         document.getElementById('board-undo').onclick = undoBoard;
         document.getElementById('board-redo').onclick = redoBoard;
-        document.getElementById('board-clear').onclick = clearBoard;
+        document.getElementById('board-clear').onclick = ()=>{
+          const ok = confirm('¿Seguro que quieres limpiar toda la pizarra?');
+          if(!ok) return;
+          clearBoard();
+        };
         document.getElementById('board-close').onclick = closeBoardModal;
         window.addEventListener('paste', handlePasteToBoard);
       }
@@ -953,11 +1010,11 @@
       boardCanvas.on('object:removed', scheduleSaveBoard);
     }
 
-    let undoStack=[]; let redoStack=[]; let saveTimeout=null;
+    let undoStack=[]; let redoStack=[]; let saveBoardTimer=null;
     function snapshot(){
       if(!boardCanvas) return;
       undoStack.push(boardCanvas.toJSON());
-      if(undoStack.length>50) undoStack.shift();
+      if(undoStack.length>100) undoStack.shift();
       redoStack=[];
     }
     function undoBoard(){
@@ -986,37 +1043,54 @@
       document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.remove('active'));
       const btn=document.querySelector(`.tool-btn[data-tool="${tool}"]`); if(btn) btn.classList.add('active');
       if(!boardCanvas) return;
-      boardCanvas.isDrawingMode = (tool==='pen' || tool==='highlighter');
-      if(tool==='pen'){
-        boardCanvas.freeDrawingBrush = new fabric.PencilBrush(boardCanvas);
-        boardCanvas.freeDrawingBrush.color = '#111827';
-        boardCanvas.freeDrawingBrush.width = 2.5;
-        boardCanvas.freeDrawingBrush.opacity = 1;
-      } else if(tool==='highlighter'){
-        boardCanvas.freeDrawingBrush = new fabric.PencilBrush(boardCanvas);
-        boardCanvas.freeDrawingBrush.color = 'rgba(247, 190, 0, 0.4)';
-        boardCanvas.freeDrawingBrush.width = 12;
-        boardCanvas.freeDrawingBrush.opacity = 1;
-      } else if(tool==='text'){
-        boardCanvas.isDrawingMode=false;
-        const t = new fabric.IText('Escribe aquí', {
-          left: 40, top: 40,
-          fontSize: 20,
-          fill: '#111827',
-          width: 240,
-        });
-        // Evita warning textBaseline
-        if (t._setTextStyles) {
-          t._setTextStyles((ctx)=>{ if(ctx) ctx.textBaseline = 'alphabetic'; });
+      const size = Number(document.getElementById('pen-size').value || 3);
+      const color = boardCanvas._currentColor || '#111827';
+      if(tool==='pen' || tool==='highlighter' || tool==='eraser'){
+        boardCanvas.isDrawingMode = true;
+        if(tool==='eraser' && fabric.EraserBrush){
+          boardCanvas.freeDrawingBrush = new fabric.EraserBrush(boardCanvas);
+          boardCanvas.freeDrawingBrush.width = size*2;
+        }else{
+          boardCanvas.freeDrawingBrush = new fabric.PencilBrush(boardCanvas);
+          boardCanvas.freeDrawingBrush.color = (tool==='eraser') ? '#ffffff' : (tool==='highlighter' ? 'rgba(247, 190, 0, 0.4)' : color);
+          boardCanvas.freeDrawingBrush.width = size;
+          boardCanvas._currentColor = boardCanvas.freeDrawingBrush.color;
         }
-        boardCanvas.add(t); boardCanvas.setActiveObject(t); scheduleSaveBoard();
-      } else if(tool==='rect'){
+      } else {
         boardCanvas.isDrawingMode=false;
-        const r = new fabric.Rect({ left:50, top:50, width:120, height:80, fill:'rgba(46,111,79,0.15)', stroke:'#2f6f4f', strokeWidth:2 });
-        boardCanvas.add(r); scheduleSaveBoard();
-      } else { // select
-        boardCanvas.isDrawingMode=false;
+        if(tool==='text'){
+          const t = new fabric.IText('Escribe aquí', { left: 40, top: 40, fontSize: 20, fill: color, width: 240 });
+          if (t._setTextStyles) { t._setTextStyles((ctx)=>{ if(ctx) ctx.textBaseline = 'alphabetic'; }); }
+          boardCanvas.add(t); boardCanvas.setActiveObject(t); scheduleSaveBoard();
+        } else if(tool==='rect'){
+          const r = new fabric.Rect({ left:50, top:50, width:160, height:100, fill:'rgba(46,111,79,0.15)', stroke:'#2f6f4f', strokeWidth:2 });
+          boardCanvas.add(r); scheduleSaveBoard();
+        }
       }
+    }
+
+    function wireColorPalette(){
+      document.querySelectorAll('.color-swatch').forEach(sw=>{
+        sw.onclick = ()=>{
+          const color = sw.dataset.color;
+          boardCanvas._currentColor = color;
+          if(boardCanvas && boardCanvas.freeDrawingBrush && boardCanvas.isDrawingMode && boardCanvas.freeDrawingBrush.color){
+            boardCanvas.freeDrawingBrush.color = color;
+          }
+        };
+      });
+    }
+    function wireSizeSlider(){
+      const slider=document.getElementById('pen-size');
+      const label=document.getElementById('pen-size-label');
+      const update=()=>{
+        label.textContent = slider.value+'px';
+        if(boardCanvas && boardCanvas.freeDrawingBrush){
+          boardCanvas.freeDrawingBrush.width = Number(slider.value);
+        }
+      };
+      slider.oninput = update;
+      update();
     }
 
     function handlePasteToBoard(e){
@@ -1039,19 +1113,18 @@
       }
     }
 
-    let saveBoardTimer=null;
     function scheduleSaveBoard(){
       if(!currentBoardPartida || !boardCanvas) return;
       if(saveBoardTimer) clearTimeout(saveBoardTimer);
-      saveBoardTimer = setTimeout(saveBoard, 500);
+      saveBoardTimer = setTimeout(saveBoard, 600); // un poco más para tecleo rápido
     }
 
     async function saveBoard(){
       if(!boardCanvas || !currentBoardPartida) return;
       const sb = await waitForSupabase();
       const json = boardCanvas.toJSON();
-      const note = document.getElementById('board-note-area')?.value || '';
-      await sb.from('partida_board').upsert({ partida_id: currentBoardPartida, board_json: json, note });
+      const noteHtml = document.getElementById('board-note-area')?.innerHTML || '';
+      await sb.from('partida_board').upsert({ partida_id: currentBoardPartida, board_json: json, note: noteHtml });
     }
 
     async function loadBoard(partidaId){
@@ -1060,14 +1133,15 @@
       const { data, error } = await sb.from('partida_board').select('board_json, note').eq('partida_id', partidaId).maybeSingle();
       if(error){ console.warn(error); }
       if(boardCanvas){
-        boardCanvas.clear(); boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+        boardCanvas.clear();
+        boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
       }
       undoStack=[]; redoStack=[];
       if(data?.board_json && boardCanvas){
         boardCanvas.loadFromJSON(data.board_json, boardCanvas.renderAll.bind(boardCanvas));
       }
       const noteArea = document.getElementById('board-note-area');
-      if(noteArea) noteArea.value = data?.note || '';
+      if(noteArea) noteArea.innerHTML = data?.note || '';
       snapshot(); // estado inicial en undo
       startBoardRealtime(partidaId);
     }
@@ -1088,7 +1162,7 @@
           if(JSON.stringify(incoming) === JSON.stringify(current)) return;
           boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
           const noteArea = document.getElementById('board-note-area');
-          if(noteArea) noteArea.value = row.note || '';
+          if(noteArea) noteArea.innerHTML = row.note || '';
           snapshot();
         }).subscribe();
       boardPollId = setInterval(async ()=>{
@@ -1104,8 +1178,8 @@
           }
           if(data?.note !== undefined){
             const noteArea = document.getElementById('board-note-area');
-            if(noteArea && noteArea.value !== data.note){
-              noteArea.value = data.note || '';
+            if(noteArea && noteArea.innerHTML !== (data.note||'')){
+              noteArea.innerHTML = data.note || '';
             }
           }
         }catch(e){}
