@@ -14,7 +14,7 @@
       --border:#e6e9f0;
       --text:#283040;
       --muted:#7a8191;
-      --shadow:0 14px 40px rgba(17,24,39,0.12);
+      --shadow:0 14px 40px rgba(0,0,0,0.12);
       --primary:#2f6f4f;
       --chip-green:#eaf6ef; --chip-green-text:#1f6c3b;
       --chip-amber:#fff4df; --chip-amber-text:#b47a1b;
@@ -114,7 +114,7 @@
 
     /* Loader global */
     .loader-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:3000;}
-    .spinner{width:70px;height:70px;border-radius:50%;border:6px solid #e5e7eb;border-top-color:var(--primary);animation:spin 0.9s linear infinite;}
+    .spinner{width:70px;height:70px;border-radius:50%;border:6px solid #e5e7eb;border-top-color:#2f6f4f;animation:spin 0.9s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg);}}
     .toast{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111827; color:#fff; padding:12px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:4000; display:none;}
 
@@ -238,7 +238,7 @@
   <script src="../../lib/supabaseConfig.js"></script>
   <script type="module" src="../../js/supabaseBrowserClient.js"></script>
   <script type="module" src="../../js/globalSupabase.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fabric@6.0.0-beta8/dist/fabric.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js"></script>
 
   <script>
     /* Datos y estado */
@@ -276,6 +276,19 @@
     let boardPollId = null;
     let currentBoardPartida = null;
     const BOARD_POLL_MS = 4000;
+
+    const FABRIC_URL = 'https://cdn.jsdelivr.net/npm/fabric@5.3.0/dist/fabric.min.js';
+    async function ensureFabric() {
+      if (window.fabric) return true;
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = FABRIC_URL;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('No se pudo cargar fabric.js'));
+        document.head.appendChild(s);
+      });
+      return !!window.fabric;
+    }
 
     const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
     async function waitForSupabase(maxMs=12000){
@@ -845,7 +858,9 @@
     }
 
     /* --- Pizarra: board por partida --- */
-    function openBoardModal(){
+    async function openBoardModal(){
+      const ok = await ensureFabric().catch(e => { console.error(e); toast('No se pudo cargar la pizarra'); });
+      if(!ok) return;
       const proj = filtered.find(p=>p.key===selectedKey);
       if(!proj){ toast('Selecciona un proyecto'); return; }
       const select = document.getElementById('board-partida-select');
@@ -867,6 +882,7 @@
     }
 
     function initBoardCanvas(){
+      if (!window.fabric) return;
       const canvasEl = document.getElementById('board-canvas');
       canvasEl.width = canvasEl.offsetWidth;
       canvasEl.height = canvasEl.offsetHeight;
@@ -889,25 +905,27 @@
 
     let undoStack=[]; let redoStack=[]; let saveTimeout=null;
     function snapshot(){
+      if(!boardCanvas) return;
       undoStack.push(boardCanvas.toJSON());
       if(undoStack.length>50) undoStack.shift();
       redoStack=[];
     }
     function undoBoard(){
-      if(!undoStack.length) return;
+      if(!undoStack.length || !boardCanvas) return;
       redoStack.push(boardCanvas.toJSON());
       const state=undoStack.pop();
       boardCanvas.loadFromJSON(state, boardCanvas.renderAll.bind(boardCanvas));
       scheduleSaveBoard();
     }
     function redoBoard(){
-      if(!redoStack.length) return;
+      if(!redoStack.length || !boardCanvas) return;
       undoStack.push(boardCanvas.toJSON());
       const state=redoStack.pop();
       boardCanvas.loadFromJSON(state, boardCanvas.renderAll.bind(boardCanvas));
       scheduleSaveBoard();
     }
     function clearBoard(){
+      if(!boardCanvas) return;
       snapshot();
       boardCanvas.clear();
       boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
@@ -917,6 +935,7 @@
     function setTool(tool){
       document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.classList.remove('active'));
       const btn=document.querySelector(`.tool-btn[data-tool="${tool}"]`); if(btn) btn.classList.add('active');
+      if(!boardCanvas) return;
       boardCanvas.isDrawingMode = (tool==='pen' || tool==='highlighter');
       if(tool==='pen'){
         boardCanvas.freeDrawingBrush = new fabric.PencilBrush(boardCanvas);
@@ -963,7 +982,7 @@
 
     let saveBoardTimer=null;
     function scheduleSaveBoard(){
-      if(!currentBoardPartida) return;
+      if(!currentBoardPartida || !boardCanvas) return;
       if(saveBoardTimer) clearTimeout(saveBoardTimer);
       saveBoardTimer = setTimeout(saveBoard, 500);
     }
@@ -980,9 +999,11 @@
       const sb = await waitForSupabase();
       const { data, error } = await sb.from('partida_board').select('board_json').eq('partida_id', partidaId).maybeSingle();
       if(error){ console.warn(error); }
-      boardCanvas.clear(); boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+      if(boardCanvas){
+        boardCanvas.clear(); boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+      }
       undoStack=[]; redoStack=[];
-      if(data?.board_json){
+      if(data?.board_json && boardCanvas){
         boardCanvas.loadFromJSON(data.board_json, boardCanvas.renderAll.bind(boardCanvas));
       }
       snapshot(); // estado inicial en undo
@@ -999,7 +1020,7 @@
       boardRealtime = sb.channel(`rt-board-${partidaId}`)
         .on('postgres_changes',{event:'*',schema:'public',table:'partida_board',filter:`partida_id=eq.${partidaId}`}, payload=>{
           const row = payload.new || payload.old;
-          if(!row) return;
+          if(!row || !boardCanvas) return;
           const incoming = row.board_json;
           const current = boardCanvas.toJSON();
           if(JSON.stringify(incoming) === JSON.stringify(current)) return;
@@ -1009,7 +1030,7 @@
       boardPollId = setInterval(async ()=>{
         try{
           const {data} = await sb.from('partida_board').select('board_json').eq('partida_id', partidaId).maybeSingle();
-          if(data?.board_json){
+          if(data?.board_json && boardCanvas){
             const incoming = data.board_json;
             const current = boardCanvas.toJSON();
             if(JSON.stringify(incoming)!==JSON.stringify(current)){
