@@ -148,7 +148,7 @@
       min-height:100%;
       scrollbar-width:thin;
     }
-    #board-canvas{border:none; width:100%; min-height:2000px;}
+    #board-canvas{border:none; width:100%; min-height:2000px;} /* scroll largo */
     #board-notes{
       border:1px solid #dfe4ea;
       border-radius:12px;
@@ -260,7 +260,6 @@
     }
     .toolbar-spacer{flex:1;}
     .icon-btn{display:inline-flex;align-items:center;gap:6px;}
-    .label-chip{font-size:12px;color:#6b7280;margin-right:4px;}
   </style>
 </head>
 <body>
@@ -342,7 +341,7 @@
         <div id="board-canvas-wrap">
           <div class="canvas-tools">
             <div class="color-row">
-              <span class="label-chip">Color:</span>
+              <span style="font-size:12px;color:#6b7280;">Color:</span>
               <div class="color-swatch" style="background:#111827;" data-color="#111827"></div>
               <div class="color-swatch" style="background:#dc2626;" data-color="#dc2626"></div>
               <div class="color-swatch" style="background:#f97316;" data-color="#f97316"></div>
@@ -355,7 +354,7 @@
               <div class="color-swatch" style="background:#ffffff;border-color:#cbd5e1;" data-color="#ffffff"></div>
             </div>
             <div class="size-row">
-              <span class="label-chip">Tamaño:</span>
+              <span style="font-size:12px;color:#6b7280;">Tamaño:</span>
               <input id="pen-size" type="range" min="1" max="30" value="3">
               <span id="pen-size-label" style="font-size:12px;color:#6b7280;">3px</span>
             </div>
@@ -385,19 +384,19 @@
 
         <div id="board-notes">
           <div class="note-toolbar">
-            <span class="label-chip">Fuente:</span>
-            <select id="note-font" class="note-select" style="min-width:120px;">
+            <label style="font-size:12px;color:#6b7280;">Fuente</label>
+            <select id="note-font" class="note-select">
               <option value="Inter, sans-serif" selected>Inter</option>
               <option value="Calibri, sans-serif">Calibri</option>
               <option value="Arial, sans-serif">Arial</option>
               <option value="Georgia, serif">Georgia</option>
             </select>
-            <span class="label-chip">Tamaño:</span>
-            <input id="note-size" type="number" class="note-select" value="16" min="8" max="72" style="width:72px;">
-            <span class="label-chip">Color texto:</span>
-            <input type="color" id="note-color" value="#1f2937" class="note-select" style="padding:6px 4px;width:46px;">
-            <span class="label-chip">Fondo:</span>
-            <input type="color" id="note-bg" value="#ffffff" class="note-select" style="padding:6px 4px;width:46px;">
+            <label style="font-size:12px;color:#6b7280;">Tamaño</label>
+            <input id="note-size" class="note-select" type="number" min="10" max="48" step="1" value="16" style="width:72px;">
+            <label style="font-size:12px;color:#6b7280;">Color texto</label>
+            <input type="color" id="note-color" value="#1f2937" class="note-select" style="padding:6px 4px;width:50px;">
+            <label style="font-size:12px;color:#6b7280;">Color fondo</label>
+            <input type="color" id="note-bg" value="#ffffff" class="note-select" style="padding:6px 4px;width:50px;">
             <button class="note-tool" data-cmd="bold"><b>B</b></button>
             <button class="note-tool" data-cmd="italic"><i>I</i></button>
             <button class="note-tool" data-cmd="underline"><u>S</u></button>
@@ -465,7 +464,7 @@
     let boardPollId = null;
     let currentBoardPartida = null;
     const BOARD_POLL_MS = 4000;
-    let localEditingNote = false;
+    let localEditingNote = false; // para no pisar mientras escribes
     let localBoardDirty = false;
     let canvasHeight = 2000;
 
@@ -799,7 +798,7 @@
                     const noteId = `note-${pt.id}-${stage.name}`;
                     const doneClass = value==='listo' ? 'done' : '';
                     return `
-                      <div class="stage-item ${doneClass}">
+                    <div class="stage-item ${doneClass}">
                         <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
                         <span class="stage-name">${esc(stage.name)}</span>
                         <span class="stage-owner">${esc(stage.owner)}</span>
@@ -1049,12 +1048,7 @@
       }
     }
 
-    /* --- Pizarra y notas --- */
-    document.addEventListener('click',(e)=>{
-      if(e.target.closest('.shape-panel')) return;
-      const sg=document.getElementById('shape-grid'); if(sg) sg.style.display='none';
-    });
-
+    /* --- Pizarra: board por partida --- */
     async function openBoardModal(){
       const ok = await ensureFabric().catch(e => { console.error(e); toast('No se pudo cargar la pizarra'); });
       if(!ok) return;
@@ -1069,6 +1063,31 @@
       initBoardCanvas();
       loadBoard(currentBoardPartida);
       select.onchange = () => { currentBoardPartida = select.value; loadBoard(currentBoardPartida); };
+      const noteArea = document.getElementById('board-note-area');
+      const noteSave = document.getElementById('board-note-save');
+      if(noteArea){
+        noteArea.oninput = ()=>{ localEditingNote=true; scheduleSaveBoard(); };
+        noteArea.onfocus = ()=>{ localEditingNote=true; };
+        noteArea.onblur  = ()=>{ localEditingNote=false; scheduleSaveBoard(); };
+      }
+      if(noteSave) noteSave.onclick = saveBoard;
+      document.querySelectorAll('.note-tool').forEach(btn=>{
+        btn.onclick = ()=>{
+          const cmd = btn.dataset.cmd; const val = btn.dataset.value || null;
+          document.execCommand(cmd, false, val);
+          localEditingNote=true;
+          scheduleSaveBoard();
+        };
+      });
+      document.getElementById('note-font').onchange = (e)=>{ document.execCommand('fontName', false, e.target.value); scheduleSaveBoard(); };
+      document.getElementById('note-size').onchange = (e)=>{ document.execCommand('fontSize', false, 7); const sels=window.getSelection(); if(sels.rangeCount){ const el=document.createElement('span'); el.style.fontSize=e.target.value+'px'; sels.getRangeAt(0).surroundContents(el);} scheduleSaveBoard(); };
+      document.getElementById('note-color').onchange = (e)=>{ document.execCommand('foreColor', false, e.target.value); scheduleSaveBoard(); };
+      document.getElementById('note-bg').onchange = (e)=>{ document.execCommand('hiliteColor', false, e.target.value); scheduleSaveBoard(); };
+
+      wireColorPalette();
+      wireSizeSlider();
+      wireShapePalette();
+      document.getElementById('extend-canvas').onclick = extendCanvas;
     }
 
     function closeBoardModal(){
@@ -1091,227 +1110,269 @@
         });
         document.getElementById('board-undo').onclick = undoBoard;
         document.getElementById('board-redo').onclick = redoBoard;
-        document.getElementById('board-clear').onclick = clearBoard;
-        document.getElementById('board-close').onclick = closeBoardModal;
-        document.getElementById('extend-canvas').onclick = ()=>extendCanvas(500);
-        window.addEventListener('paste', handlePasteToBoard);
-        document.querySelectorAll('.color-swatch').forEach(sw=>sw.onclick=()=>setColor(sw.dataset.color));
-        document.getElementById('pen-size').oninput = (e)=>{ setPenSize(e.target.value); };
-        document.getElementById('shape-toggle').onclick = (e)=>{
-          e.stopPropagation();
-          const sg=document.getElementById('shape-grid');
-          sg.style.display = sg.style.display==='none'?'grid':'none';
+        document.getElementById('board-clear').onclick = ()=>{
+          const ok = confirm('¿Seguro que quieres limpiar toda la pizarra?');
+          if(!ok) return;
+          clearBoard();
         };
-        document.querySelectorAll('#shape-grid .shape-btn').forEach(b=>{
-          b.onclick = ()=> addShape(b.dataset.shape);
-        });
+        document.getElementById('board-close').onclick = closeBoardModal;
+        window.addEventListener('paste', handlePasteToBoard);
+      }else{
+        boardCanvas.setHeight(canvasHeight);
+        boardCanvas.renderAll();
       }
-      boardCanvas.on('object:added', scheduleSaveBoard);
-      boardCanvas.on('object:modified', scheduleSaveBoard);
-      boardCanvas.on('object:removed', scheduleSaveBoard);
+      boardCanvas.on('object:added', ()=>{ snapshot(); localBoardDirty=true; scheduleSaveBoard(); });
+      boardCanvas.on('object:modified', ()=>{ localBoardDirty=true; scheduleSaveBoard(); });
+      boardCanvas.on('object:removed', ()=>{ localBoardDirty=true; scheduleSaveBoard(); });
     }
 
-    /* Canvas tools */
-    function setColor(color){
-      if(!boardCanvas) return;
-      boardCanvas.freeDrawingBrush.color = color;
-      document.querySelectorAll('.color-swatch').forEach(sw=>sw.style.outline = sw.dataset.color===color?'2px solid #2f6f4f':'none');
-    }
-    function setPenSize(val){
-      if(!boardCanvas) return;
-      const v=Number(val)||3;
-      boardCanvas.freeDrawingBrush.width = v;
-      document.getElementById('pen-size-label').textContent = v+'px';
-    }
-    function setTool(tool){
-      if(!boardCanvas) return;
-      document.querySelectorAll('.tool-pill[data-tool]').forEach(b=>b.classList.remove('active'));
-      const btn=document.querySelector(`.tool-pill[data-tool="${tool}"]`);
-      if(btn) btn.classList.add('active');
-
-      boardCanvas.isDrawingMode = (tool==='pen' || tool==='highlighter' || tool==='eraser');
-      if(tool==='pen'){
-        boardCanvas.freeDrawingBrush = new fabric.PencilBrush(boardCanvas);
-        setPenSize(document.getElementById('pen-size').value);
-      }else if(tool==='highlighter'){
-        const brush = new fabric.PencilBrush(boardCanvas);
-        brush.color = 'rgba(252,211,77,0.55)';
-        brush.width = Number(document.getElementById('pen-size').value)||3;
-        boardCanvas.freeDrawingBrush = brush;
-      }else if(tool==='eraser'){
-        const brush = new fabric.PencilBrush(boardCanvas);
-        brush.color = '#ffffff';
-        brush.width = Number(document.getElementById('pen-size').value)||12;
-        boardCanvas.freeDrawingBrush = brush;
-      }else if(tool==='text'){
-        boardCanvas.isDrawingMode=false;
-        const t = new fabric.IText('Escribe aquí', {
-          left: 80, top: 80, fontSize:16, fill:'#111827'
-        });
-        boardCanvas.add(t).setActiveObject(t);
-      }else if(tool==='select'){
-        boardCanvas.isDrawingMode=false;
-      }
+    function extendCanvas(){
+      canvasHeight += 1000;
+      document.getElementById('board-canvas').height = canvasHeight;
+      if(boardCanvas){ boardCanvas.setHeight(canvasHeight); boardCanvas.renderAll(); localBoardDirty=true; scheduleSaveBoard(); }
     }
 
-    function addShape(shape){
-      if(!boardCanvas) return;
-      let obj=null;
-      switch(shape){
-        case 'line': obj = new fabric.Line([50,50,150,50], { stroke: boardCanvas.freeDrawingBrush.color || '#111827', strokeWidth:3 }); break;
-        case 'arrow': {
-          const line = new fabric.Line([50,50,150,50], { stroke:'#111827', strokeWidth:3 });
-          const tri = new fabric.Triangle({ left:150, top:43, width:12, height:12, fill:'#111827', angle:90 });
-          obj = new fabric.Group([line, tri]);
-          break;
-        }
-        case 'rect': obj = new fabric.Rect({ left:60, top:60, width:120, height:70, stroke:'#111827', strokeWidth:3, fill:'transparent' }); break;
-        case 'circle': obj = new fabric.Circle({ left:60, top:60, radius:40, stroke:'#111827', strokeWidth:3, fill:'transparent' }); break;
-        case 'triangle': obj = new fabric.Triangle({ left:60, top:60, width:100, height:80, stroke:'#111827', strokeWidth:3, fill:'transparent' }); break;
-        case 'star': {
-          const points = [];
-          const cx=100, cy=100, spikes=5, outer=40, inner=18;
-          let rot=Math.PI/2*3, x=cx, y=cy;
-          for(let i=0;i<spikes;i++){
-            x=cx+Math.cos(rot)*outer; y=cy+Math.sin(rot)*outer; points.push({x,y}); rot+=Math.PI/spikes;
-            x=cx+Math.cos(rot)*inner; y=cy+Math.sin(rot)*inner; points.push({x,y}); rot+=Math.PI/spikes;
-          }
-          obj = new fabric.Polygon(points, { stroke:'#111827', strokeWidth:3, fill:'transparent' });
-          break;
-        }
-      }
-      if(obj){ boardCanvas.add(obj).setActiveObject(obj); scheduleSaveBoard(); }
-    }
-
-    function extendCanvas(extra){
-      canvasHeight += extra;
-      const c=document.getElementById('board-canvas');
-      c.height = canvasHeight;
-      boardCanvas.setHeight(canvasHeight);
-      boardCanvas.renderAll();
-    }
-
-    let undoStack=[]; let redoStack=[]; let saveTimeout=null;
+    let undoStack=[]; let redoStack=[]; let saveBoardTimer=null;
     function snapshot(){
       if(!boardCanvas) return;
       undoStack.push(boardCanvas.toJSON());
-      if(undoStack.length>50) undoStack.shift();
+      if(undoStack.length>100) undoStack.shift();
       redoStack=[];
     }
     function undoBoard(){
-      if(!undoStack.length) return;
+      if(!undoStack.length || !boardCanvas) return;
       redoStack.push(boardCanvas.toJSON());
       const state=undoStack.pop();
       boardCanvas.loadFromJSON(state, boardCanvas.renderAll.bind(boardCanvas));
+      localBoardDirty=true;
       scheduleSaveBoard();
     }
     function redoBoard(){
-      if(!redoStack.length) return;
+      if(!redoStack.length || !boardCanvas) return;
       undoStack.push(boardCanvas.toJSON());
       const state=redoStack.pop();
       boardCanvas.loadFromJSON(state, boardCanvas.renderAll.bind(boardCanvas));
+      localBoardDirty=true;
       scheduleSaveBoard();
     }
     function clearBoard(){
       if(!boardCanvas) return;
-      if(!confirm('¿Limpiar todo el lienzo?')) return;
-      boardCanvas.clear();
-      boardCanvas.backgroundColor='#ffffff';
       snapshot();
+      boardCanvas.clear();
+      boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+      localBoardDirty=true;
       scheduleSaveBoard();
     }
-    function handlePasteToBoard(e){
+
+    function setTool(tool){
+      document.querySelectorAll('.tool-pill[data-tool]').forEach(b=>b.classList.remove('active'));
+      const btn=document.querySelector(`.tool-pill[data-tool="${tool}"]`); if(btn) btn.classList.add('active');
       if(!boardCanvas) return;
-      const items = e.clipboardData?.items || [];
-      for (const item of items){
-        if(item.type.startsWith('image/')){
-          const file=item.getAsFile();
-          const reader=new FileReader();
-          reader.onload=(ev)=>{
-            fabric.Image.fromURL(ev.target.result, img=>{
-              img.scaleToWidth(400);
-              boardCanvas.add(img).centerObject(img).setActiveObject(img);
-              snapshot();
-              scheduleSaveBoard();
+      const size = Number(document.getElementById('pen-size').value || 3);
+      const color = boardCanvas._currentColor || '#111827';
+      if(tool==='pen' || tool==='highlighter' || tool==='eraser'){
+        boardCanvas.isDrawingMode = true;
+        if(tool==='eraser' && fabric.EraserBrush){
+          boardCanvas.freeDrawingBrush = new fabric.EraserBrush(boardCanvas);
+          boardCanvas.freeDrawingBrush.width = size*2;
+        }else{
+          boardCanvas.freeDrawingBrush = new fabric.PencilBrush(boardCanvas);
+          boardCanvas.freeDrawingBrush.color = (tool==='eraser') ? '#ffffff' : (tool==='highlighter' ? 'rgba(247, 190, 0, 0.4)' : color);
+          boardCanvas.freeDrawingBrush.width = size;
+          boardCanvas._currentColor = boardCanvas.freeDrawingBrush.color;
+        }
+      } else {
+        boardCanvas.isDrawingMode=false;
+        if(tool==='text'){
+          const t = new fabric.IText('Escribe aquí', { left: 40, top: 40, fontSize: 22, fill: color, width: 260 });
+          boardCanvas.add(t); boardCanvas.setActiveObject(t); snapshot(); localBoardDirty=true; scheduleSaveBoard();
+        } else if(tool==='select'){
+          boardCanvas.isDrawingMode=false;
+        }
+      }
+    }
+
+    function wireColorPalette(){
+      document.querySelectorAll('.color-swatch').forEach(sw=>{
+        sw.onclick = ()=>{
+          const color = sw.dataset.color;
+          boardCanvas._currentColor = color;
+          if(boardCanvas && boardCanvas.freeDrawingBrush && boardCanvas.isDrawingMode && boardCanvas.freeDrawingBrush.color){
+            boardCanvas.freeDrawingBrush.color = color;
+          }
+        };
+      });
+    }
+    function wireSizeSlider(){
+      const slider=document.getElementById('pen-size');
+      const label=document.getElementById('pen-size-label');
+      const update=()=>{
+        label.textContent = slider.value+'px';
+        if(boardCanvas && boardCanvas.freeDrawingBrush){
+          boardCanvas.freeDrawingBrush.width = Number(slider.value);
+        }
+      };
+      slider.oninput = update;
+      update();
+    }
+
+    function wireShapePalette(){
+      const toggle=document.getElementById('shape-toggle');
+      const grid=document.getElementById('shape-grid');
+      toggle.onclick = ()=>{ grid.style.display = grid.style.display==='none'?'grid':'none'; };
+      grid.onmouseleave = ()=>{ grid.style.display='none'; };
+      grid.querySelectorAll('.shape-btn').forEach(btn=>{
+        btn.onclick = ()=>{
+          const shape=btn.dataset.shape;
+          addShape(shape);
+          grid.style.display='none';
+        };
+      });
+    }
+
+    function addShape(shape){
+      if(!boardCanvas) return;
+      const color = boardCanvas._currentColor || '#111827';
+      const size = Number(document.getElementById('pen-size').value || 3);
+      let obj=null;
+      switch(shape){
+        case 'line':
+          obj = new fabric.Line([40,40,200,120], { stroke: color, strokeWidth:size, selectable:true });
+          break;
+        case 'arrow': {
+          const line = new fabric.Line([40,40,200,120], { stroke: color, strokeWidth:size, selectable:true });
+          const head = new fabric.Triangle({ left:190, top:110, width:18, height:20, angle:45, fill:color });
+          obj = new fabric.Group([line, head], { selectable:true });
+          break;
+        }
+        case 'rect':
+          obj = new fabric.Rect({ left:50, top:50, width:160, height:100, fill:'rgba(46,111,79,0.15)', stroke:color, strokeWidth:size });
+          break;
+        case 'circle':
+          obj = new fabric.Circle({ left:60, top:60, radius:60, fill:'rgba(46,111,79,0.10)', stroke:color, strokeWidth:size });
+          break;
+        case 'triangle':
+          obj = new fabric.Triangle({ left:70, top:70, width:140, height:120, fill:'rgba(46,111,79,0.12)', stroke:color, strokeWidth:size });
+          break;
+        case 'star': {
+          const points=[];
+          const cx=90, cy=90, spikes=5, outer=60, inner=26;
+          for(let i=0;i<spikes;i++){
+            let r=(Math.PI/spikes)*2*i;
+            points.push({ x:cx+Math.cos(r)*outer, y:cy+Math.sin(r)*outer });
+            r+=(Math.PI/spikes);
+            points.push({ x:cx+Math.cos(r)*inner, y:cy+Math.sin(r)*inner });
+          }
+          obj = new fabric.Polygon(points,{ fill:'rgba(46,111,79,0.12)', stroke:color, strokeWidth:size });
+          break;
+        }
+      }
+      if(obj){ boardCanvas.add(obj); snapshot(); localBoardDirty=true; scheduleSaveBoard(); }
+    }
+
+    function handlePasteToBoard(e){
+      if(!boardCanvas || document.getElementById('board-backdrop').getAttribute('aria-hidden')==='true') return;
+      const items = (e.clipboardData || e.originalEvent?.clipboardData || {}).items || [];
+      for(const item of items){
+        if(item.type && item.type.indexOf('image') !== -1){
+          const file = item.getAsFile();
+          const reader = new FileReader();
+          reader.onload = (evt)=>{
+            fabric.Image.fromURL(evt.target.result, img=>{
+              img.set({ left:40, top:40, scaleX:0.7, scaleY:0.7 });
+              boardCanvas.add(img); boardCanvas.renderAll(); snapshot(); localBoardDirty=true; scheduleSaveBoard();
             });
           };
           reader.readAsDataURL(file);
+          e.preventDefault();
+          return;
         }
       }
     }
 
     function scheduleSaveBoard(){
-      localBoardDirty=true;
-      if(saveTimeout) clearTimeout(saveTimeout);
-      saveTimeout=setTimeout(saveBoardState, 800);
+      if(!currentBoardPartida) return;
+      if(saveBoardTimer) clearTimeout(saveBoardTimer);
+      saveBoardTimer = setTimeout(saveBoard, localEditingNote ? 900 : 600);
     }
-    async function saveBoardState(){
-      if(!boardCanvas) return;
-      snapshot();
-      // Aquí iría tu lógica real de guardado (supabase/tu backend)
+
+    async function saveBoard(){
+      if(!boardCanvas || !currentBoardPartida) return;
+      const sb = await waitForSupabase();
+      const json = boardCanvas.toJSON();
+      const noteHtml = document.getElementById('board-note-area')?.innerHTML || '';
+      await sb.from('partida_board').upsert({ partida_id: currentBoardPartida, board_json: json, note: noteHtml });
       localBoardDirty=false;
     }
-    function stopBoardRealtime(){
-      // placeholder si tenías realtime
-    }
+
     async function loadBoard(partidaId){
-      if(!boardCanvas) return;
+      stopBoardRealtime();
+      const sb = await waitForSupabase();
+      const { data, error } = await sb.from('partida_board').select('board_json, note').eq('partida_id', partidaId).maybeSingle();
+      if(error){ console.warn(error); }
+      if(boardCanvas){
+        boardCanvas.clear();
+        boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
+      }
       undoStack=[]; redoStack=[];
-      boardCanvas.clear(); boardCanvas.backgroundColor='#ffffff';
-      boardCanvas.renderAll();
-      // Aquí carga real de supabase si aplica
-      snapshot();
+      if(data?.board_json && boardCanvas){
+        boardCanvas.loadFromJSON(data.board_json, boardCanvas.renderAll.bind(boardCanvas));
+      }
+      const noteArea = document.getElementById('board-note-area');
+      if(noteArea) noteArea.innerHTML = data?.note || '';
+      snapshot(); // estado inicial en undo
+      startBoardRealtime(partidaId);
     }
 
-    /* --- Notas (block de texto) --- */
-    const noteArea = document.getElementById('board-note-area');
-    document.querySelectorAll('.note-tool').forEach(btn=>{
-      btn.onclick = ()=>{
-        const cmd = btn.dataset.cmd;
-        const val = btn.dataset.value || null;
-        document.execCommand('styleWithCSS', true);
-        document.execCommand(cmd, false, val);
-        noteArea.focus();
-      };
-    });
-    document.getElementById('note-font').onchange = (e)=>{
-      document.execCommand('fontName', false, e.target.value);
-      noteArea.focus();
-    };
-    document.getElementById('note-color').onchange = (e)=>{
-      document.execCommand('foreColor', false, e.target.value);
-      noteArea.focus();
-    };
-    document.getElementById('note-bg').onchange = (e)=>{
-      document.execCommand('hiliteColor', false, e.target.value);
-      noteArea.focus();
-    };
-    document.getElementById('note-size').onchange = (e)=>{
-      applyFontSizePx(parseInt(e.target.value,10)||16);
-    };
-
-    function applyFontSizePx(px){
-      if(!noteArea) return;
-      document.execCommand('styleWithCSS', true);
-      document.execCommand('fontSize', false, 7); // usar 7 y luego reemplazar
-      const spans = noteArea.querySelectorAll('font[size="7"], span[style*="font-size"]');
-      spans.forEach(sp=>{
-        sp.removeAttribute('size');
-        sp.style.fontSize = px+'px';
-      });
-      noteArea.focus();
+    function stopBoardRealtime(){
+      if(boardRealtime){ try{ boardRealtime.unsubscribe(); }catch(e){} boardRealtime=null; }
+      if(boardPollId){ clearInterval(boardPollId); boardPollId=null; }
     }
 
-    document.getElementById('board-note-save').onclick = ()=>{
-      localEditingNote=false;
-      // aquí guardarías contenido en Supabase si aplica
-      toast('Nota guardada');
-    };
-    noteArea.addEventListener('input', ()=>{ localEditingNote=true; });
+    async function startBoardRealtime(partidaId){
+      const sb = await waitForSupabase();
+      boardRealtime = sb.channel(`rt-board-${partidaId}`)
+        .on('postgres_changes',{event:'*',schema:'public',table:'partida_board',filter:`partida_id=eq.${partidaId}`}, payload=>{
+          const row = payload.new || payload.old;
+          if(!row || !boardCanvas) return;
+          if(localBoardDirty || localEditingNote) return; // evita pisar mientras escribes
+          const incoming = row.board_json;
+          const current = boardCanvas.toJSON();
+          if(JSON.stringify(incoming) !== JSON.stringify(current)){
+            boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
+            snapshot();
+          }
+          const noteArea = document.getElementById('board-note-area');
+          if(noteArea && !localEditingNote) noteArea.innerHTML = row.note || '';
+        }).subscribe();
+      boardPollId = setInterval(async ()=>{
+        try{
+          const {data} = await sb.from('partida_board').select('board_json, note').eq('partida_id', partidaId).maybeSingle();
+          if(data?.board_json && boardCanvas && !localBoardDirty){
+            const incoming = data.board_json;
+            const current = boardCanvas.toJSON();
+            if(JSON.stringify(incoming)!==JSON.stringify(current)){
+              boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
+              snapshot();
+            }
+          }
+          if(data?.note !== undefined && !localEditingNote){
+            const noteArea = document.getElementById('board-note-area');
+            if(noteArea && noteArea.innerHTML !== (data.note||'')){
+              noteArea.innerHTML = data.note || '';
+            }
+          }
+        }catch(e){}
+      }, BOARD_POLL_MS);
+    }
 
-    /* Wire size default */
-    setPenSize(document.getElementById('pen-size').value);
-    setColor('#111827');
+    /* -- Utilidades globales -- */
+    window.cargarCotizaciones = cargarDatos;
+    window.filtrarCotizaciones = applyFiltersAndRender;
+    window.ordenarCotizaciones = applyFiltersAndRender;
+    window.verDetalle = (id)=>{ window.location.href = `detalle.html?id=${id}`; };
+    window.editarCotizacion = (id)=>{ window.location.href = `nueva.html?id=${id}`; };
+    window.duplicarCotizacion = (id)=>{ window.location.href = `nueva.html?duplicate=${id}`; };
   </script>
 </body>
 </html>
