@@ -122,7 +122,7 @@
 
     .loader-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:3000;}
     .spinner{width:70px;height:70px;border-radius:50%;border:6px solid #e5e7eb;border-top-color:#2f6f4f;animation:spin 0.9s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg);}}
+    @keyframes spin{to{transform:rotate(360deg));}}
     .toast{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111827; color:#fff; padding:12px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.2); z-index:4000; display:none;}
 
     /* --- Modal pizarra + notas --- */
@@ -176,7 +176,7 @@
       border-radius:12px;
       padding:12px;
       font-family:inherit;
-      font-size:15px;
+      font-size:16px;
       resize:vertical;
       overflow:auto;
       box-shadow:inset 0 1px 2px rgba(0,0,0,0.03);
@@ -350,7 +350,7 @@
               <div class="color-swatch" style="background:#0ea5e9;" data-color="#0ea5e9"></div>
               <div class="color-swatch" style="background:#6366f1;" data-color="#6366f1"></div>
               <div class="color-swatch" style="background:#a855f7;" data-color="#a855f7"></div>
-              <div class="color-swatch" style="background:#ec4899;" data-color:#ec4899></div>
+              <div class="color-swatch" style="background:#ec4899;" data-color="#ec4899"></div>
               <div class="color-swatch" style="background:#ffffff;border-color:#cbd5e1;" data-color="#ffffff"></div>
             </div>
             <div class="size-row">
@@ -362,7 +362,6 @@
             <button class="tool-pill" data-tool="highlighter">Resaltador</button>
             <button class="tool-pill" data-tool="eraser">Goma</button>
             <button class="tool-pill" data-tool="text">Texto</button>
-            <button class="tool-pill" data-tool="rect">Rectángulo</button>
             <button class="tool-pill" data-tool="select">Mover/Seleccionar</button>
             <div class="shape-panel">
               <button class="tool-pill" id="shape-toggle">Formas ▾</button>
@@ -385,21 +384,19 @@
 
         <div id="board-notes">
           <div class="note-toolbar">
+            <label style="font-size:12px;color:#6b7280;">Fuente</label>
             <select id="note-font" class="note-select">
               <option value="Inter, sans-serif" selected>Inter</option>
               <option value="Calibri, sans-serif">Calibri</option>
               <option value="Arial, sans-serif">Arial</option>
               <option value="Georgia, serif">Georgia</option>
             </select>
-            <select id="note-size" class="note-select">
-              <option value="14">14</option>
-              <option value="16" selected>16</option>
-              <option value="18">18</option>
-              <option value="20">20</option>
-              <option value="24">24</option>
-            </select>
-            <input type="color" id="note-color" value="#1f2937" class="note-select" style="padding:6px 4px;width:46px;">
-            <input type="color" id="note-bg" value="#ffffff" class="note-select" style="padding:6px 4px;width:46px;">
+            <label style="font-size:12px;color:#6b7280;">Tamaño</label>
+            <input id="note-size" class="note-select" type="number" min="10" max="48" step="1" value="16" style="width:72px;">
+            <label style="font-size:12px;color:#6b7280;">Color texto</label>
+            <input type="color" id="note-color" value="#1f2937" class="note-select" style="padding:6px 4px;width:50px;">
+            <label style="font-size:12px;color:#6b7280;">Color fondo</label>
+            <input type="color" id="note-bg" value="#ffffff" class="note-select" style="padding:6px 4px;width:50px;">
             <button class="note-tool" data-cmd="bold"><b>B</b></button>
             <button class="note-tool" data-cmd="italic"><i>I</i></button>
             <button class="note-tool" data-cmd="underline"><u>S</u></button>
@@ -409,16 +406,12 @@
             <button class="note-tool" data-cmd="justifyRight">↦</button>
             <button class="note-tool" data-cmd="insertUnorderedList">• Lista</button>
             <button class="note-tool" data-cmd="insertOrderedList">1. Lista</button>
-            <button class="note-tool" data-cmd="formatBlock" data-value="h3">Título</button>
-            <button class="note-tool" data-cmd="formatBlock" data-value="p">Párrafo</button>
-            <button class="note-tool" data-cmd="fontSize" data-value="4">A+</button>
-            <button class="note-tool" data-cmd="fontSize" data-value="3">A</button>
           </div>
           <div id="board-note-area" contenteditable="true" placeholder="Escribe aquí..."></div>
           <button id="board-note-save">Guardar nota</button>
         </div>
       </div>
-      <small style="color:#6c7a86; padding:0 16px 12px;">Chicos, aca pueden ocupar la herramienta de corte para pegar imagenes mientras pesento el proyecto, es con crtl + V; clasic</small>
+      <small style="color:#6c7a86; padding:0 16px 12px;">Pega una imagen con Ctrl+V, o arrástrala. Todo se guarda en Supabase y se replica en vivo.</small>
     </div>
   </div>
 
@@ -1193,9 +1186,8 @@
         if(tool==='text'){
           const t = new fabric.IText('Escribe aquí', { left: 40, top: 40, fontSize: 22, fill: color, width: 260 });
           boardCanvas.add(t); boardCanvas.setActiveObject(t); snapshot(); localBoardDirty=true; scheduleSaveBoard();
-        } else if(tool==='rect'){
-          const r = new fabric.Rect({ left:50, top:50, width:160, height:100, fill:'rgba(46,111,79,0.15)', stroke:'#2f6f4f', strokeWidth:2 });
-          boardCanvas.add(r); snapshot(); localBoardDirty=true; scheduleSaveBoard();
+        } else if(tool==='select'){
+          boardCanvas.isDrawingMode=false;
         }
       }
     }
@@ -1254,24 +1246,24 @@
           break;
         }
         case 'rect':
-          obj = new fabric.Rect({ left:50, top:50, width:160, height:100, fill:'rgba(0,0,0,0)', stroke:color, strokeWidth:size });
+          obj = new fabric.Rect({ left:50, top:50, width:160, height:100, fill:'rgba(46,111,79,0.15)', stroke:color, strokeWidth:size });
           break;
         case 'circle':
-          obj = new fabric.Circle({ left:70, top:70, radius:60, fill:'rgba(0,0,0,0)', stroke:color, strokeWidth:size });
+          obj = new fabric.Circle({ left:60, top:60, radius:60, fill:'rgba(46,111,79,0.10)', stroke:color, strokeWidth:size });
           break;
         case 'triangle':
-          obj = new fabric.Triangle({ left:70, top:70, width:140, height:120, fill:'rgba(0,0,0,0)', stroke:color, strokeWidth:size });
+          obj = new fabric.Triangle({ left:70, top:70, width:140, height:120, fill:'rgba(46,111,79,0.12)', stroke:color, strokeWidth:size });
           break;
         case 'star': {
           const points=[];
-          const cx=120, cy=120, spikes=5, outer=70, inner=30;
-          let rot=Math.PI/2*3; let x=cx, y=cy;
-          const step=Math.PI/spikes;
+          const cx=90, cy=90, spikes=5, outer=60, inner=26;
           for(let i=0;i<spikes;i++){
-            x=cx+Math.cos(rot)*outer; y=cy+Math.sin(rot)*outer; points.push({x,y}); rot+=step;
-            x=cx+Math.cos(rot)*inner; y=cy+Math.sin(rot)*inner; points.push({x,y}); rot+=step;
+            let r=(Math.PI/spikes)*2*i;
+            points.push({ x:cx+Math.cos(r)*outer, y:cy+Math.sin(r)*outer });
+            r+=(Math.PI/spikes);
+            points.push({ x:cx+Math.cos(r)*inner, y:cy+Math.sin(r)*inner });
           }
-          obj = new fabric.Polygon(points, { left:50, top:50, fill:'rgba(0,0,0,0)', stroke:color, strokeWidth:size });
+          obj = new fabric.Polygon(points,{ fill:'rgba(46,111,79,0.12)', stroke:color, strokeWidth:size });
           break;
         }
       }
@@ -1299,9 +1291,9 @@
     }
 
     function scheduleSaveBoard(){
-      if(!currentBoardPartida || !boardCanvas) return;
+      if(!currentBoardPartida) return;
       if(saveBoardTimer) clearTimeout(saveBoardTimer);
-      saveBoardTimer = setTimeout(saveBoard, 1200);
+      saveBoardTimer = setTimeout(saveBoard, localEditingNote ? 900 : 600);
     }
 
     async function saveBoard(){
@@ -1309,8 +1301,8 @@
       const sb = await waitForSupabase();
       const json = boardCanvas.toJSON();
       const noteHtml = document.getElementById('board-note-area')?.innerHTML || '';
-      localBoardDirty=false; localEditingNote=false;
       await sb.from('partida_board').upsert({ partida_id: currentBoardPartida, board_json: json, note: noteHtml });
+      localBoardDirty=false;
     }
 
     async function loadBoard(partidaId){
@@ -1321,7 +1313,6 @@
       if(boardCanvas){
         boardCanvas.clear();
         boardCanvas.setBackgroundColor('#ffffff', boardCanvas.renderAll.bind(boardCanvas));
-        boardCanvas.setHeight(canvasHeight);
       }
       undoStack=[]; redoStack=[];
       if(data?.board_json && boardCanvas){
@@ -1330,7 +1321,6 @@
       const noteArea = document.getElementById('board-note-area');
       if(noteArea) noteArea.innerHTML = data?.note || '';
       snapshot(); // estado inicial en undo
-      localBoardDirty=false;
       startBoardRealtime(partidaId);
     }
 
@@ -1345,21 +1335,20 @@
         .on('postgres_changes',{event:'*',schema:'public',table:'partida_board',filter:`partida_id=eq.${partidaId}`}, payload=>{
           const row = payload.new || payload.old;
           if(!row || !boardCanvas) return;
-          if(localBoardDirty || localEditingNote) return; // no pisar mientras editas rápido
+          if(localBoardDirty || localEditingNote) return; // evita pisar mientras escribes
           const incoming = row.board_json;
           const current = boardCanvas.toJSON();
-          if(JSON.stringify(incoming) === JSON.stringify(current)) return;
-          boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
+          if(JSON.stringify(incoming) !== JSON.stringify(current)){
+            boardCanvas.loadFromJSON(incoming, boardCanvas.renderAll.bind(boardCanvas));
+            snapshot();
+          }
           const noteArea = document.getElementById('board-note-area');
           if(noteArea && !localEditingNote) noteArea.innerHTML = row.note || '';
-          snapshot();
         }).subscribe();
       boardPollId = setInterval(async ()=>{
         try{
           const {data} = await sb.from('partida_board').select('board_json, note').eq('partida_id', partidaId).maybeSingle();
-          if(!data) return;
-          if(localBoardDirty || localEditingNote) return;
-          if(data.board_json && boardCanvas){
+          if(data?.board_json && boardCanvas && !localBoardDirty){
             const incoming = data.board_json;
             const current = boardCanvas.toJSON();
             if(JSON.stringify(incoming)!==JSON.stringify(current)){
@@ -1367,9 +1356,9 @@
               snapshot();
             }
           }
-          if(data.note !== undefined){
+          if(data?.note !== undefined && !localEditingNote){
             const noteArea = document.getElementById('board-note-area');
-            if(noteArea && noteArea.innerHTML !== (data.note||'') && !localEditingNote){
+            if(noteArea && noteArea.innerHTML !== (data.note||'')){
               noteArea.innerHTML = data.note || '';
             }
           }
@@ -1377,15 +1366,13 @@
       }, BOARD_POLL_MS);
     }
 
-    /* --- helper ver cotización --- */
-    function verCotizacion(cotId){
-      if(!cotId){
-        toast('Esta venta no tiene cotización asociada');
-        return;
-      }
-      const url = `../cotizaciones/detalle.html?id=${encodeURIComponent(cotId)}`;
-      window.open(url, '_blank');
-    }
+    /* -- Utilidades globales -- */
+    window.cargarCotizaciones = cargarDatos;
+    window.filtrarCotizaciones = applyFiltersAndRender;
+    window.ordenarCotizaciones = applyFiltersAndRender;
+    window.verDetalle = (id)=>{ window.location.href = `detalle.html?id=${id}`; };
+    window.editarCotizacion = (id)=>{ window.location.href = `nueva.html?id=${id}`; };
+    window.duplicarCotizacion = (id)=>{ window.location.href = `nueva.html?duplicate=${id}`; };
   </script>
 </body>
 </html>
