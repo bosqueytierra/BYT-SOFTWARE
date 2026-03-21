@@ -18,7 +18,7 @@
         <input id="searchInput" type="text" placeholder="Nombre o SKU">
       </label>
       <span id="lastUpdate"></span>
-      <button id="refreshBtn" disabled>Actualizar (placeholder)</button>
+      <button id="refreshBtn" disabled>Actualizar</button>
     </div>
     <table class="table">
       <thead>
@@ -58,6 +58,7 @@
     const searchInput = document.querySelector('#searchInput');
     const tbody = document.querySelector('#rows');
     const lastUpdate = document.querySelector('#lastUpdate');
+    const refreshBtn = document.querySelector('#refreshBtn');
 
     let products = [];
 
@@ -107,6 +108,29 @@
 
     searchInput.addEventListener('input', renderTable);
     categorySelect.addEventListener('change', renderTable);
+
+    // === Botón Actualizar ===
+    async function syncNow() {
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = "Actualizando...";
+      try {
+        const res = await fetch("/api/imperial/sync", { method: "POST" });
+        if (!res.ok) throw new Error("Error HTTP " + res.status);
+        await loadData(); // recarga tabla y fecha
+        refreshBtn.textContent = "Actualizado";
+      } catch (e) {
+        console.error(e);
+        refreshBtn.textContent = "Error, reintenta";
+      } finally {
+        setTimeout(() => {
+          refreshBtn.textContent = "Actualizar";
+          refreshBtn.disabled = false;
+        }, 1500);
+      }
+    }
+
+    refreshBtn.disabled = false;
+    refreshBtn.addEventListener("click", syncNow);
 
     loadData();
   </script>
