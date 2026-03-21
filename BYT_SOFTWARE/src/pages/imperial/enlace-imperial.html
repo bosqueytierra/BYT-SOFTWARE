@@ -31,9 +31,9 @@
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    // Llena con tus datos públicos
+    // Config pública para el frontend
     const supabaseUrl = 'https://qwbeectinjasekkjzxls.supabase.co';
-    const supabaseKey = 'sb_publishable_xKobpCSW2t6wkzsAgWQwZw_4lPMgScE'; // tu key publishable/anon (no la secret)
+    const supabaseKey = 'sb_publishable_xKobpCSW2t6wkzsAgWQwZw_4lPMgScE';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Categorías oficiales de Imperial
@@ -115,7 +115,6 @@
       refreshBtn.disabled = true;
       refreshBtn.textContent = "Actualizando...";
       try {
-        // Usa la URL de la función ya desplegada
         const res = await fetch("https://qwbeectinjasekkjzxls.functions.supabase.co/imperial-sync", { method: "POST" });
         if (!res.ok) throw new Error("Error HTTP " + res.status);
         await loadData();
