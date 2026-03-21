@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Enlace Imperial</title>
+  <link rel="stylesheet" href="/BYT_SOFTWARE/src/styles/main.css">
+</head>
+<body>
+  <section class="card">
+    <h2>Enlace Imperial</h2>
+    <div class="controls">
+      <label>
+        Categoría:
+        <select id="categorySelect"></select>
+      </label>
+      <label>
+        Buscar:
+        <input id="searchInput" type="text" placeholder="Nombre o SKU">
+      </label>
+      <span id="lastUpdate"></span>
+      <button id="refreshBtn" disabled>Actualizar (placeholder)</button>
+    </div>
+    <table class="table">
+      <thead>
+        <tr><th>Nombre</th><th>SKU</th><th>Precio</th><th>Stock</th><th>Categoría</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+    const supabaseUrl = 'TU_URL_SUPABASE';
+    const supabaseKey = 'TU_ANON_PUBLIC';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Categorías oficiales de Imperial
+    const imperialCategories = [
+      "Maderas y mueblería",
+      "Construcción",
+      "Puertas y ventanas",
+      "Pisos",
+      "Herramientas y maquinarias",
+      "Pinturas y accesorios",
+      "Ferretería",
+      "Baños",
+      "Terminaciones obra gruesa",
+      "Cocina",
+      "Electricidad",
+      "Plomería y gasfitería",
+      "Organización y almacenamiento",
+      "Hogar",
+      "Jardín"
+    ];
+
+    const categorySelect = document.querySelector('#categorySelect');
+    const searchInput = document.querySelector('#searchInput');
+    const tbody = document.querySelector('#rows');
+    const lastUpdate = document.querySelector('#lastUpdate');
+
+    let products = [];
+
+    function renderCategories() {
+      categorySelect.innerHTML =
+        `<option value="">Todas</option>` +
+        imperialCategories.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function setLastUpdate() {
+      const maxDate = products.reduce((max, p) =>
+        !p.updated_at ? max : Math.max(max, new Date(p.updated_at).getTime()), 0);
+      lastUpdate.textContent = maxDate
+        ? 'Última actualización: ' + new Date(maxDate).toLocaleString()
+        : 'Sin registros';
+    }
+
+    function renderTable() {
+      const q = searchInput.value.trim().toLowerCase();
+      const cat = categorySelect.value;
+      const filtered = products.filter(p => {
+        const matchCat = !cat || p.category === cat;
+        const matchTxt = !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
+        return matchCat && matchTxt;
+      });
+      tbody.innerHTML = filtered.map(p => `
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.sku}</td>
+          <td>${p.price}</td>
+          <td>${p.stock || '—'}</td>
+          <td>${p.category}</td>
+        </tr>`).join('');
+    }
+
+    async function loadData() {
+      renderCategories();
+      const { data, error } = await supabase
+        .from('imperial_products')
+        .select('name, sku, price, stock, category, updated_at')
+        .order('name', { ascending: true });
+      if (error) { console.error(error); return; }
+      products = data;
+      renderTable();
+      setLastUpdate();
+    }
+
+    searchInput.addEventListener('input', renderTable);
+    categorySelect.addEventListener('change', renderTable);
+
+    loadData();
+  </script>
+</body>
+</html>
