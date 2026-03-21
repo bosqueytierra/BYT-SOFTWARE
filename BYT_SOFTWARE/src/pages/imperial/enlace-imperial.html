@@ -31,8 +31,9 @@
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    const supabaseUrl = 'TU_URL_SUPABASE';
-    const supabaseKey = 'TU_ANON_PUBLIC';
+    // Llena con tus datos públicos
+    const supabaseUrl = 'https://qwbeectinjasekkjzxls.supabase.co';
+    const supabaseKey = 'sb_publishable_xKobpCSW2t6wkzsAgWQwZw_4lPMgScE'; // tu key publishable/anon (no la secret)
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Categorías oficiales de Imperial
@@ -109,14 +110,15 @@
     searchInput.addEventListener('input', renderTable);
     categorySelect.addEventListener('change', renderTable);
 
-    // === Botón Actualizar ===
+    // Botón Actualizar
     async function syncNow() {
       refreshBtn.disabled = true;
       refreshBtn.textContent = "Actualizando...";
       try {
-        const res = await fetch("/api/imperial/sync", { method: "POST" });
+        // Usa la URL de la función ya desplegada
+        const res = await fetch("https://qwbeectinjasekkjzxls.functions.supabase.co/imperial-sync", { method: "POST" });
         if (!res.ok) throw new Error("Error HTTP " + res.status);
-        await loadData(); // recarga tabla y fecha
+        await loadData();
         refreshBtn.textContent = "Actualizado";
       } catch (e) {
         console.error(e);
