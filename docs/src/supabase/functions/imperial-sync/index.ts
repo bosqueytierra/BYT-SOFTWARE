@@ -14,7 +14,7 @@ const corsHeaders = {
 serve(async (req) => {
   // Preflight CORS
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
@@ -26,18 +26,22 @@ serve(async (req) => {
     const { error } = await supabase
       .from("imperial_products")
       .upsert(products, { onConflict: "sku" });
-
     if (error) throw error;
 
-    return new Response(
-      JSON.stringify({ ok: true, count: products.length }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const headers = new Headers(corsHeaders);
+    headers.set("Content-Type", "application/json");
+
+    return new Response(JSON.stringify({ ok: true, count: products.length }), {
+      status: 200,
+      headers,
+    });
   } catch (e) {
     console.error(e);
-    return new Response(
-      JSON.stringify({ ok: false, error: (e as Error).message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const headers = new Headers(corsHeaders);
+    headers.set("Content-Type", "application/json");
+    return new Response(JSON.stringify({ ok: false, error: (e as Error).message }), {
+      status: 500,
+      headers,
+    });
   }
 });
