@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>Enlace Imperial</title>
-  <link rel="stylesheet" href="/BYT_SOFTWARE/src/styles/main.css">
+  <!-- Ajuste de ruta: dos niveles hacia arriba desde pages/imperial/ -->
+  <link rel="stylesheet" href="../../styles/main.css">
 </head>
 <body>
   <section class="card">
@@ -31,28 +32,19 @@
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-    // Config pública para el frontend
     const supabaseUrl = 'https://qwbeectinjasekkjzxls.supabase.co';
+    // Usa tu anon/publishable key
     const supabaseKey = 'sb_publishable_xKobpCSW2t6wkzsAgWQwZw_4lPMgScE';
+    // Si prefieres, puedes usar directamente la anon JWT completa:
+    const anonJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3YmVlY3Rpbmphc2Vra2p6eGxzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NjM5NjAsImV4cCI6MjA3ODAzOTk2MH0.oqGQKlsJLMe3gpiVqutblOhlT4gn2ZOCWKKpO7Slo4U';
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Categorías oficiales de Imperial
     const imperialCategories = [
-      "Maderas y mueblería",
-      "Construcción",
-      "Puertas y ventanas",
-      "Pisos",
-      "Herramientas y maquinarias",
-      "Pinturas y accesorios",
-      "Ferretería",
-      "Baños",
-      "Terminaciones obra gruesa",
-      "Cocina",
-      "Electricidad",
-      "Plomería y gasfitería",
-      "Organización y almacenamiento",
-      "Hogar",
-      "Jardín"
+      "Maderas y mueblería","Construcción","Puertas y ventanas","Pisos",
+      "Herramientas y maquinarias","Pinturas y accesorios","Ferretería","Baños",
+      "Terminaciones obra gruesa","Cocina","Electricidad","Plomería y gasfitería",
+      "Organización y almacenamiento","Hogar","Jardín"
     ];
 
     const categorySelect = document.querySelector('#categorySelect');
@@ -90,7 +82,7 @@
           <td>${p.name}</td>
           <td>${p.sku}</td>
           <td>${p.price}</td>
-          <td>${p.stock || '—'}</td>
+          <td>${p.stock ?? '—'}</td>
           <td>${p.category}</td>
         </tr>`).join('');
     }
@@ -110,12 +102,19 @@
     searchInput.addEventListener('input', renderTable);
     categorySelect.addEventListener('change', renderTable);
 
-    // Botón Actualizar
     async function syncNow() {
       refreshBtn.disabled = true;
       refreshBtn.textContent = "Actualizando...";
       try {
-        const res = await fetch("https://qwbeectinjasekkjzxls.functions.supabase.co/imperial-sync", { method: "POST" });
+        const res = await fetch("https://qwbeectinjasekkjzxls.functions.supabase.co/imperial-sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": supabaseKey,
+            "Authorization": `Bearer ${supabaseKey}` // o usa anonJwt si lo prefieres
+            // "Authorization": `Bearer ${anonJwt}`
+          }
+        });
         if (!res.ok) throw new Error("Error HTTP " + res.status);
         await loadData();
         refreshBtn.textContent = "Actualizado";
