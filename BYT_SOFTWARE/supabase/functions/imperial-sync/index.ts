@@ -13,7 +13,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    // RESPUESTA SOLO PARA PREFLIGHT
+    console.log("OPTIONS preflight hit");
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
@@ -25,15 +25,15 @@ serve(async (req) => {
     const { error } = await supabase.from("imperial_products").upsert(products, { onConflict: "sku" });
     if (error) throw error;
 
-    return new Response(JSON.stringify({ ok: true, count: products.length }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ ok: true, count: products.length, version: "cors-v5" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     console.error(e);
-    return new Response(JSON.stringify({ ok: false, error: (e as Error).message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ ok: false, error: (e as Error).message, version: "cors-v5" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 });
