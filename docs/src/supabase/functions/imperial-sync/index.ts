@@ -31,13 +31,13 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ ok: true, count: products.length }),
-      { headers: { ...corsHeaders, "content-type": "application/json" } }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
     console.error(e);
     return new Response(
       JSON.stringify({ ok: false, error: (e as Error).message }),
-      { status: 500, headers: { ...corsHeaders, "content-type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
