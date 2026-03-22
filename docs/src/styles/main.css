@@ -1,0 +1,57 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background: #f8f8f8;
+  color: #222;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  max-width: 1100px;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.controls input,
+.controls select,
+.controls button {
+  font-size: 14px;
+  padding: 6px 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  border: 1px solid #e0e0e0;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.table th {
+  background: #f1f1f1;
+  font-weight: 600;
+}
+
+tbody tr:nth-child(odd) {
+  background: #fbfbfb;
+}
+
+#refreshBtn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
