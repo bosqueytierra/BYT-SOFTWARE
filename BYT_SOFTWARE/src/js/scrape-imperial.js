@@ -20,27 +20,38 @@ async function getSessionCookie() {
     redirect: 'follow'
   });
   const setCookie = res.headers.get('set-cookie') || '';
-  return setCookie.split(';')[0]; // p.ej. __cf_bm=...
+  return setCookie.split(';')[0]; // ej. __cf_bm=...
 }
 
 async function getCategories(cookie) {
-  const res = await fetch(CAT_URL, {
-    headers: {
-      'User-Agent': UA,
-      'Accept': 'application/json',
-      'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
-      'Referer': 'https://www.imperial.cl/',
-      'Cookie': cookie
+  try {
+    const res = await fetch(CAT_URL, {
+      headers: {
+        'User-Agent': UA,
+        'Accept': 'application/json',
+        'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
+        'Referer': 'https://www.imperial.cl/',
+        'Cookie': cookie,
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin'
+      }
+    });
+
+    const text = await res.text();
+    console.log(`getCategories status: ${res.status} ${res.statusText}`);
+    console.log(`cookie used: ${cookie}`);
+    console.log(`getCategories body (0-400): ${text.slice(0, 400)}`);
+
+    if (!res.ok) {
+      // No lanzamos error para que alcance a verse el log y continuar debug.
+      return [];
     }
-  });
 
-  const text = await res.text();
-  console.log(`getCategories status: ${res.status} ${res.statusText}`);
-  console.log(`cookie used: ${cookie}`);
-  console.log(`getCategories body (0-300): ${text.slice(0, 300)}`);
-
-  if (!res.ok) throw new Error(`No pude leer categorías (status ${res.status})`);
-  return flatten(JSON.parse(text));
+    return flatten(JSON.parse(text));
+  } catch (e) {
+    console.error('getCategories error detail:', e);
+    return [];
+  }
 }
 
 async function getProductsByCat(catId, cookie) {
@@ -53,7 +64,9 @@ async function getProductsByCat(catId, cookie) {
         'User-Agent': UA,
         'Accept': 'application/json',
         'Referer': 'https://www.imperial.cl/',
-        'Cookie': cookie
+        'Cookie': cookie,
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin'
       }
     });
     if (!res.ok) break;
