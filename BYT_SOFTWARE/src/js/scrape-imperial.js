@@ -22,7 +22,8 @@ async function getCategories() {
 
     const text = await res.text();
     console.log(`getCategories status: ${res.status} ${res.statusText}`);
-    console.log(`getCategories body (primeros 500 chars): ${text.slice(0,500)}`);
+    console.log('getCategories headers:', Object.fromEntries(res.headers));
+    console.log(`getCategories body (0-500): ${text.slice(0, 500)}`);
 
     if (!res.ok) {
       throw new Error(`No pude leer categorías (status ${res.status})`);
@@ -30,7 +31,7 @@ async function getCategories() {
 
     return flatten(JSON.parse(text));
   } catch (e) {
-    console.error('getCategories error:', e);
+    console.error('getCategories error detail:', e);
     throw e;
   }
 }
