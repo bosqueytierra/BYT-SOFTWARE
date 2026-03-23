@@ -1,5 +1,4 @@
-import fetch from 'node-fetch'; // si estás en Node <18; si ya tienes fetch nativo, quita esta línea
-
+// Usa fetch nativo de Node (tienes Node 24, no necesitas node-fetch)
 const CAT_URL = 'https://www.imperial.cl/api/catalog_system/pub/category/tree/3/'; // con slash final
 const PAGE_SIZE = 50;
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
@@ -17,7 +16,8 @@ async function getSessionCookie() {
     headers: {
       'User-Agent': UA,
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8'
+      'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
+      'Referer': 'https://www.imperial.cl/'
     },
     redirect: 'follow'
   });
@@ -28,24 +28,31 @@ async function getSessionCookie() {
 }
 
 async function getCategories(cookie) {
-  const res = await fetch(CAT_URL, {
-    headers: {
-      'User-Agent': UA,
-      'Accept': 'application/json',
-      'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
-      'Referer': 'https://www.imperial.cl/',
-      'Cookie': cookie,
-      'sec-fetch-mode': 'cors',
-      'sec-fetch-site': 'same-origin'
-    }
-  });
+  try {
+    const res = await fetch(CAT_URL, {
+      headers: {
+        'User-Agent': UA,
+        'Accept': 'application/json',
+        'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
+        'Referer': 'https://www.imperial.cl/',
+        'Origin': 'https://www.imperial.cl',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Cookie': cookie,
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin'
+      }
+    });
 
-  const text = await res.text();
-  console.log(`getCategories status: ${res.status} ${res.statusText}`);
-  console.log(`getCategories body (0-400): ${text.slice(0, 400)}`);
+    const text = await res.text();
+    console.log(`getCategories status: ${res.status} ${res.statusText}`);
+    console.log(`getCategories body (0-400): ${text.slice(0, 400)}`);
 
-  if (!res.ok) return [];
-  return flatten(JSON.parse(text));
+    if (!res.ok) return [];
+    return flatten(JSON.parse(text));
+  } catch (e) {
+    console.error('getCategories error detail:', e);
+    return [];
+  }
 }
 
 async function getProductsByCat(catId, cookie) {
@@ -58,6 +65,8 @@ async function getProductsByCat(catId, cookie) {
         'User-Agent': UA,
         'Accept': 'application/json',
         'Referer': 'https://www.imperial.cl/',
+        'Origin': 'https://www.imperial.cl',
+        'X-Requested-With': 'XMLHttpRequest',
         'Cookie': cookie,
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-origin'
@@ -88,6 +97,10 @@ async function getProductsByCat(catId, cookie) {
 async function main() {
   const cookie = await getSessionCookie();
   const cats = await getCategories(cookie);
+  if (!cats.length) {
+    console.log('No obtuve categorías; termina.');
+    return;
+  }
   const all = [];
   for (const c of cats) {
     const prods = await getProductsByCat(c.id, cookie);
