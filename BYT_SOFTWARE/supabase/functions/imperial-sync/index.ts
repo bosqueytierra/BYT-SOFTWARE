@@ -25,7 +25,6 @@ serve(async (req) => {
       return new Response("Payload must be an array of products", { status: 400, headers: corsHeaders });
     }
 
-    // Esperamos campos: sku, name, price, stock, category, updated_at
     const { error } = await supabase
       .from("imperial_products")
       .upsert(body, { onConflict: "sku" });
