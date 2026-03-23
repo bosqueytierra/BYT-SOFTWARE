@@ -1,4 +1,6 @@
-const CAT_URL = 'https://www.imperial.cl/api/catalog_system/pub/category/tree/3';
+import fetch from 'node-fetch'; // si estás en Node <18; si ya tienes fetch nativo, quita esta línea
+
+const CAT_URL = 'https://www.imperial.cl/api/catalog_system/pub/category/tree/3/'; // con slash final
 const PAGE_SIZE = 50;
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
 
@@ -19,39 +21,31 @@ async function getSessionCookie() {
     },
     redirect: 'follow'
   });
-  const setCookie = res.headers.get('set-cookie') || '';
-  return setCookie.split(';')[0]; // ej. __cf_bm=...
+  const raw = res.headers.raw()['set-cookie'] || [];
+  const cookie = raw.map(c => c.split(';')[0]).join('; ');
+  console.log('session cookie:', cookie);
+  return cookie;
 }
 
 async function getCategories(cookie) {
-  try {
-    const res = await fetch(CAT_URL, {
-      headers: {
-        'User-Agent': UA,
-        'Accept': 'application/json',
-        'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
-        'Referer': 'https://www.imperial.cl/',
-        'Cookie': cookie,
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin'
-      }
-    });
-
-    const text = await res.text();
-    console.log(`getCategories status: ${res.status} ${res.statusText}`);
-    console.log(`cookie used: ${cookie}`);
-    console.log(`getCategories body (0-400): ${text.slice(0, 400)}`);
-
-    if (!res.ok) {
-      // No lanzamos error para que alcance a verse el log y continuar debug.
-      return [];
+  const res = await fetch(CAT_URL, {
+    headers: {
+      'User-Agent': UA,
+      'Accept': 'application/json',
+      'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
+      'Referer': 'https://www.imperial.cl/',
+      'Cookie': cookie,
+      'sec-fetch-mode': 'cors',
+      'sec-fetch-site': 'same-origin'
     }
+  });
 
-    return flatten(JSON.parse(text));
-  } catch (e) {
-    console.error('getCategories error detail:', e);
-    return [];
-  }
+  const text = await res.text();
+  console.log(`getCategories status: ${res.status} ${res.statusText}`);
+  console.log(`getCategories body (0-400): ${text.slice(0, 400)}`);
+
+  if (!res.ok) return [];
+  return flatten(JSON.parse(text));
 }
 
 async function getProductsByCat(catId, cookie) {
