@@ -20,13 +20,10 @@ async function getSessionCookie() {
     redirect: 'follow'
   });
   const setCookie = res.headers.get('set-cookie') || '';
-  // ej: "__cf_bm=xxx; path=/; domain=.imperial.cl; ..."
-  const cookie = setCookie.split(';')[0];
-  return cookie;
+  return setCookie.split(';')[0]; // p.ej. __cf_bm=...
 }
 
-async function getCategories() {
-  const cookie = await getSessionCookie();
+async function getCategories(cookie) {
   const res = await fetch(CAT_URL, {
     headers: {
       'User-Agent': UA,
@@ -40,7 +37,7 @@ async function getCategories() {
   const text = await res.text();
   console.log(`getCategories status: ${res.status} ${res.statusText}`);
   console.log(`cookie used: ${cookie}`);
-  console.log(`getCategories body (0-300): ${text.slice(0,300)}`);
+  console.log(`getCategories body (0-300): ${text.slice(0, 300)}`);
 
   if (!res.ok) throw new Error(`No pude leer categorías (status ${res.status})`);
   return flatten(JSON.parse(text));
@@ -83,11 +80,15 @@ async function getProductsByCat(catId, cookie) {
 
 async function main() {
   const cookie = await getSessionCookie();
-  const cats = await getCategories();
+  const cats = await getCategories(cookie);
   const all = [];
   for (const c of cats) {
     const prods = await getProductsByCat(c.id, cookie);
     all.push(...prods);
   }
   const seen = new Set();
-  const unique = all.filter(p => p.sku && !seen
+  const unique = all.filter(p => p.sku && !seen.has(p.sku) && seen.add(p.sku));
+  console.log(JSON.stringify(unique));
+}
+
+main().catch(e => { console.error(e); process.exit(1); });
