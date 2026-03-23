@@ -10,22 +10,29 @@ const flatten = (nodes, acc = []) => {
 };
 
 async function getCategories() {
-  const res = await fetch(CAT_URL, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      'Accept': 'application/json',
-      'Referer': 'https://www.imperial.cl/'
-    }
-  });
+  try {
+    const res = await fetch(CAT_URL, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        'Accept': 'application/json',
+        'Accept-Language': 'es-CL,es;q=0.9,en;q=0.8',
+        'Referer': 'https://www.imperial.cl/'
+      }
+    });
 
-  if (!res.ok) {
     const text = await res.text();
-    console.error(`getCategories failed: status ${res.status} ${res.statusText}`);
-    console.error(text.slice(0, 500));
-    throw new Error('No pude leer categorías');
-  }
+    console.log(`getCategories status: ${res.status} ${res.statusText}`);
+    console.log(`getCategories body (primeros 500 chars): ${text.slice(0,500)}`);
 
-  return flatten(await res.json());
+    if (!res.ok) {
+      throw new Error(`No pude leer categorías (status ${res.status})`);
+    }
+
+    return flatten(JSON.parse(text));
+  } catch (e) {
+    console.error('getCategories error:', e);
+    throw e;
+  }
 }
 
 async function getProductsByCat(catId) {
