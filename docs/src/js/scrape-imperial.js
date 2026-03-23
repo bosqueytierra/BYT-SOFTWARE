@@ -1,4 +1,4 @@
-// Usa fetch nativo de Node (tienes Node 24, no necesitas node-fetch)
+// Usa fetch nativo de Node (>=18)
 const CAT_URL = 'https://www.imperial.cl/api/catalog_system/pub/category/tree/3/'; // con slash final
 const PAGE_SIZE = 50;
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
@@ -11,6 +11,20 @@ const flatten = (nodes, acc = []) => {
   return acc;
 };
 
+function parseCookies(headers) {
+  // Node fetch no tiene raw(); usamos get('set-cookie') o getSetCookie() si existe
+  if (typeof headers.getSetCookie === 'function') {
+    return headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
+  }
+  const h = headers.get('set-cookie') || '';
+  // si vienen varias, las separa por coma; tomamos cada valor hasta el primer ';'
+  return h
+    .split(/,(?=[^ ]*\=)/) // separa en comas que separan cookies
+    .map(c => c.split(';')[0].trim())
+    .filter(Boolean)
+    .join('; ');
+}
+
 async function getSessionCookie() {
   const res = await fetch('https://www.imperial.cl/', {
     headers: {
@@ -21,9 +35,8 @@ async function getSessionCookie() {
     },
     redirect: 'follow'
   });
-  const raw = res.headers.raw()['set-cookie'] || [];
-  const cookie = raw.map(c => c.split(';')[0]).join('; ');
-  console.log('session cookie:', cookie);
+  const cookie = parseCookies(res.headers);
+  console.log('session cookie:', cookie || '(vacío)');
   return cookie;
 }
 
