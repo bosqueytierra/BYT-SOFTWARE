@@ -83,6 +83,8 @@
     .filter-group input, .filter-group select{width:100%;height:30px;padding:4px 6px;font-size:13px;box-sizing:border-box;}
     .range-row{display:flex;gap:6px;}
     .range-row input{flex:1;}
+    .chips-wrap{display:flex;flex-direction:column;gap:6px;}
+    .chip-check{display:flex;align-items:center;gap:6px;font-size:13px;}
   </style>
 </head>
 <body>
@@ -182,6 +184,10 @@
               </div>
             </div>
             <div class="filter-group">
+              <label>Categorías (aa_category_url)</label>
+              <div class="chips-wrap" id="facetBox"></div>
+            </div>
+            <div class="filter-group">
               <label>Resultados</label>
               <small style="color:#6c7a86;">Búsqueda + vendor + marca + rango + orden.</small>
             </div>
@@ -205,7 +211,7 @@
     let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, arrowPor, arrowEnt, togglePorEntregar, toggleEntregados;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
-    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn;
+    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn, facetBox;
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catMateriales = [];
@@ -218,8 +224,8 @@
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
 
-    const prodState = { rowIdx: null, pageSize: 50 };
-    const debounce = (fn, ms=200) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+    const prodState = { rowIdx: null, pageSize: 50, catUrls: [] };
+    const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
@@ -256,6 +262,7 @@
       prodBrandFilter = pickLast('#prodBrandFilter');
       priceMin = pickLast('#priceMin');
       priceMax = pickLast('#priceMax');
+      facetBox = pickLast('#facetBox');
       closeOverlayProductBtn = pickLast('#closeOverlayProduct');
 
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
@@ -330,6 +337,7 @@
       if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
     });
 
+    // ---------- catálogos internos ----------
     async function loadCatalogs() {
       const client = await waitForClient();
       const [enc, uni, mod, est, cats] = await Promise.all([
@@ -340,9 +348,9 @@
         client.from('material_categories').select('name').order('name')
       ]);
       catEncargados = enc.data || [];
-      catUnidades   = uni.data || [];
-      catModos      = mod.data || [];
-      catEstadosPago= est.data || [];
+      catUnidades = uni.data || [];
+      catModos = mod.data || [];
+      catEstadosPago = est.data || [];
       catMateriales = (cats.data || []).map(c => c.name);
 
       const { data: provs } = await client.from('providers').select('id,name').order('name');
@@ -403,12 +411,13 @@
 
     async function fetchCobradoMap() {
       const client = await waitForClient();
-      const { data } = await client.from('ventas').select('cotizacion_id,total_venta').not('cotizacion_id','is',null);
+      const { data } = await client.from('ventas').select('cotizacion_id,total_venta').not('cotizacion_id', 'is', null);
       const map = new Map();
       (data||[]).forEach(v => { if (v.cotizacion_id && v.total_venta != null) map.set(v.cotizacion_id, Number(v.total_venta)); });
       return map;
     }
 
+    // ---------- bloques ----------
     async function loadBlocks() {
       try {
         const client = await waitForClient();
@@ -449,7 +458,7 @@
         const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
-        const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
+        const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : '—';
 
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
@@ -484,13 +493,13 @@
       });
 
       const porEntregarArr = cards.filter(c => !c.isDone);
-      const entregadosArr  = cards.filter(c => c.isDone);
+      const entregadosArr = cards.filter(c => c.isDone);
 
       countPorEntregar.textContent = porEntregarArr.length;
       countEntregados.textContent = entregadosArr.length;
 
       const porEntregar = porEntregarArr.map(c => c.html).join('');
-      const entregados  = entregadosArr.map(c => c.html).join('');
+      const entregados = entregadosArr.map(c => c.html).join('');
 
       if (!porEntregar) { emptyState.style.display = 'block'; blocksContainer.innerHTML = ''; }
       else { emptyState.style.display = 'none'; blocksContainer.innerHTML = porEntregar; }
@@ -502,7 +511,7 @@
       if (bodyEntregados) setSectionState(bodyEntregados, arrowEnt, bodyEntregados.style.maxHeight !== '0px');
     }
 
-    function makeOptions(list, valKey='nombre', labelKey='nombre') {
+    function makeOptions(list, valKey = 'nombre', labelKey = 'nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
     function productOptions(category) {
@@ -516,8 +525,8 @@
       sel.innerHTML = productOptions(row.categoria || '');
       if (row.producto_id) {
         const valid = materiales.find(m => m.id === row.producto_id && (!row.categoria || m.category === row.categoria));
-        if (valid) sel.value = row.producto_id; else { sel.value=''; currentRows[rowIdx].producto_id=null; }
-      } else sel.value='';
+        if (valid) sel.value = row.producto_id; else { sel.value = ''; currentRows[rowIdx].producto_id = null; }
+      } else sel.value = '';
     }
     function setVal(idx, field, value) {
       const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
@@ -545,30 +554,29 @@
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
-        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_vendor,aa_category_id,aa_category_url,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
+        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at,aa_category_url')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
       if (error) { console.error('loadLines', error); currentRows = []; }
       else { await cleanupEmptiesInDB(data, client); currentRows = (data || []).filter(r => isMeaningful(r)); await hydrateAaNames(); }
       renderGrid(currentRows);
     }
-    async function hydrateAaNames(){
-      const ids = [...new Set(currentRows.map(r=>r.aa_product_id).filter(Boolean))];
+    async function hydrateAaNames() {
+      const ids = [...new Set(currentRows.map(r => r.aa_product_id).filter(Boolean))];
       if (!ids.length) return;
       const client = await waitForClient();
       const { data, error } = await client
         .from('aa_products')
-        .select('aa_product_id:id, aa_name, aa_brand, aa_price, aa_url, aa_category_url, aa_category_id, vendor')
+        .select('aa_product_id:id, aa_name, aa_price, aa_url, aa_category_url, vendor')
         .in('aa_product_id', ids);
       if (error) return;
-      const map = new Map((data||[]).map(r=>[r.id, r]));
+      const map = new Map((data || []).map(r => [r.id, r]));
       currentRows = currentRows.map(r => {
         const ref = r.aa_product_id ? map.get(r.aa_product_id) : null;
         return {
           ...r,
           _aa_name: ref ? ref.aa_name : (r._aa_name || ''),
           aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor,
-          aa_category_id: ref ? ref.aa_category_id : r.aa_category_id,
           aa_category_url: ref ? ref.aa_category_url : r.aa_category_url
         };
       });
@@ -602,8 +610,8 @@
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
         overlayLCGrid = document.getElementById('overlayLCGrid');
       }
-      const headers = ['','Encargado','Proveedor','Dirección','Categoría','Producto','Obs','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'];
-      const thead = `<thead><tr>${headers.map((h,idx)=>idx===0?`<th style="width:90px;">${h}</th>`:`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
+      const headers = ['', 'Encargado', 'Proveedor', 'Dirección', 'Categoría', 'Producto', 'Obs', 'Unidad', 'Cantidad', 'Precio Unit', 'Total', 'Modo', 'Estado pago'];
+      const thead = `<thead><tr>${headers.map((h, idx) => idx === 0 ? `<th style="width:90px;">${h}</th>` : `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
       const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c })));
       const bodyRows = rows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
@@ -617,8 +625,8 @@
               </button>
             </td>
             <td><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></td>
-            <td><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></td>
-            <td><input data-f="direccion" data-row="${idx}" type="text" value="${escapeHtml(row.direccion||'')}"></td>
+            <td><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores, 'id', 'name')}</select></td>
+            <td><input data-f="direccion" data-row="${idx}" type="text" value="${escapeHtml(row.direccion || '')}"></td>
             <td><select data-f="categoria" data-row="${idx}">${categoriaOptions}</select></td>
             <td>
               <div class="prod-cell">
@@ -630,29 +638,29 @@
                 <span data-role="aa-vendor" style="color:#6c7a86;"></span>
                 <button class="btn-clear-prod" data-action="clear-prod" data-row="${idx}" title="Quitar">✕</button>
               </div>
-              <input class="prod-label" data-f="aa_product_name" data-row="${idx}" type="text" value="${escapeHtml(row._aa_name||'')}" placeholder="" readonly>
+              <input class="prod-label" data-f="aa_product_name" data-row="${idx}" type="text" value="${escapeHtml(row._aa_name || '')}" placeholder="(catálogo externo)" readonly>
             </td>
-            <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones||'')}"></td>
+            <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones || '')}"></td>
             <td><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></td>
-            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></td>
-            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></td>
-            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total||''}" readonly></td>
+            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad || ''}"></td>
+            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit || ''}"></td>
+            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total || ''}" readonly></td>
             <td><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></td>
             <td><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></td>
           </tr>`;
       }).join('');
       overlayLCGrid.innerHTML = `<div class="table-wrapper"><table class="lc-table">${thead}<tbody>${bodyRows}</tbody></table></div>`;
       rows.forEach((row, idx) => {
-        setVal(idx,'encargado',row.encargado);
-        setVal(idx,'proveedor_id',row.proveedor_id);
-        setVal(idx,'categoria',row.categoria);
+        setVal(idx, 'encargado', row.encargado);
+        setVal(idx, 'proveedor_id', row.proveedor_id);
+        setVal(idx, 'categoria', row.categoria);
         rebuildProductOptions(idx);
-        setVal(idx,'producto_id',row.producto_id);
-        setVal(idx,'observaciones',row.observaciones);
-        setVal(idx,'unidad',row.unidad);
-        setVal(idx,'modo_compra',row.modo_compra);
-        setVal(idx,'estado_pago',row.estado_pago);
-        setVal(idx,'aa_product_name', row._aa_name || '');
+        setVal(idx, 'producto_id', row.producto_id);
+        setVal(idx, 'observaciones', row.observaciones);
+        setVal(idx, 'unidad', row.unidad);
+        setVal(idx, 'modo_compra', row.modo_compra);
+        setVal(idx, 'estado_pago', row.estado_pago);
+        setVal(idx, 'aa_product_name', row._aa_name || '');
         applyEstadoStyle(idx);
         syncProdUI(idx);
       });
@@ -660,7 +668,7 @@
       if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
     }
-    function syncProdUI(idx){
+    function syncProdUI(idx) {
       const row = currentRows[idx] || {};
       const pill = overlayLCGrid?.querySelector?.(`[data-role="aa-pill"][data-row="${idx}"]`);
       const selWrap = overlayLCGrid?.querySelector?.(`select[data-row="${idx}"][data-f="producto_id"]`)?.closest('.prod-cell');
@@ -670,9 +678,9 @@
       if (selWrap) selWrap.classList.toggle('hidden', hasAa);
       if (label) {
         label.value = row._aa_name || '';
-        label.classList.toggle('hidden', !hasAa); // mostramos texto solo cuando es externo
+        label.classList.toggle('hidden', !hasAa);
       }
-      if (hasAa && pill){
+      if (hasAa && pill) {
         const nameEl = pill.querySelector('[data-role="aa-name"]');
         const venEl = pill.querySelector('[data-role="aa-vendor"]');
         if (nameEl) nameEl.textContent = row._aa_name || '(catálogo externo)';
@@ -705,7 +713,6 @@
         producto_id: row.producto_id || null,
         aa_product_id: row.aa_product_id || null,
         aa_vendor: row.aa_vendor || null,
-        aa_category_id: row.aa_category_id || null,
         aa_category_url: row.aa_category_url || null,
         unidad: row.unidad || null,
         cantidad: row.cantidad || null,
@@ -724,20 +731,20 @@
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total);
+          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx, 'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
-          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total); }
+          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx, 'total', data.total); }
         }
       } catch (e) { console.error('Persist error', e); }
       finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
     }
-    async function deleteRow(idx) { const row=currentRows[idx]; if(!row) return; const client=await waitForClient(); try{ if(row.id) await client.from(TABLE).delete().eq('id',row.id); currentRows.splice(idx,1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId);}catch(e){console.error('Delete error',e);} }
-    function duplicateRow(idx) { const src=currentRows[idx]; if(!src) return; const clone={...src,id:null,block_id:currentBlockId,created_at:null,placeholder:false,_saving:false}; currentRows.splice(idx+1,0,clone); renderGrid(currentRows); if(isMeaningful(buildPayload(clone))) persistRow(idx+1).then(()=>recomputeBlockTotals(currentBlockId)); }
-    function applyEstadoStyle(rowIdx) { const sel=overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if(!sel)return; sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar'); const val=(sel.value||'').toLowerCase(); if(val.includes('comprado')) sel.classList.add('estado-comprado'); else if(val.includes('stock')) sel.classList.add('estado-stock'); else if(val.includes('por comprar')||val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
+    async function deleteRow(idx) { const row = currentRows[idx]; if (!row) return; const client = await waitForClient(); try { if (row.id) await client.from(TABLE).delete().eq('id', row.id); currentRows.splice(idx, 1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId); } catch (e) { console.error('Delete error', e); } }
+    function duplicateRow(idx) { const src = currentRows[idx]; if (!src) return; const clone = { ...src, id: null, block_id: currentBlockId, created_at: null, placeholder: false, _saving: false }; currentRows.splice(idx + 1, 0, clone); renderGrid(currentRows); if (isMeaningful(buildPayload(clone))) persistRow(idx + 1).then(() => recomputeBlockTotals(currentBlockId)); }
+    function applyEstadoStyle(rowIdx) { const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if (!sel) return; sel.classList.remove('estado-comprado', 'estado-stock', 'estado-porcomprar'); const val = (sel.value || '').toLowerCase(); if (val.includes('comprado')) sel.classList.add('estado-comprado'); else if (val.includes('stock')) sel.classList.add('estado-stock'); else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
 
-    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{}); } catch(e) { console.warn('cat images', e); } }
+    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a, c) => { a[c.name] = c.image_url; return a; }, {}); } catch (e) { console.warn('cat images', e); } }
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
     async function fetchLines(blockId) {
@@ -796,7 +803,7 @@
       catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
     }
 
-    // buscador catálogo externo
+    // ==== Búsqueda catálogo externo ====
     const runSearch = debounce(async () => {
       if (!prodResults) return;
       const query = (prodSearchInput?.value || '').trim();
@@ -806,25 +813,28 @@
       const maxP = priceMax?.value ? Number(priceMax.value) : null;
       const order = prodOrder?.value || 'name-asc';
       try {
-        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page:0 });
+        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page: 0, catUrls: prodState.catUrls });
         renderProdResults(rows);
+        renderFacetBox(rows); // facetas dinámicas según resultados
       } catch (e) {
-        prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
+        if (prodResults) prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
+        if (facetBox) facetBox.innerHTML = '';
         console.error(e);
       }
     }, 200);
 
-    async function searchProducts({query='', vendor='', brand='', minP=null, maxP=null, order='name-asc', page=0}){
+    async function searchProducts({ query = '', vendor = '', brand = '', minP = null, maxP = null, order = 'name-asc', page = 0, catUrls = [] }) {
       const client = await waitForClient();
       let q = client.from('aa_products')
-        .select('id:aa_product_id, aa_name, aa_price, aa_url, aa_brand, aa_category_url, aa_category_id, vendor', { count:'exact' })
+        .select('id:aa_product_id, aa_name, aa_price, aa_url, aa_brand, aa_category_url, vendor', { count: 'exact' })
         .ilike('aa_name', `%${query}%`)
-        .range(page*prodState.pageSize, page*prodState.pageSize + prodState.pageSize - 1);
+        .range(page * prodState.pageSize, page * prodState.pageSize + prodState.pageSize - 1);
 
       if (vendor) q = q.eq('vendor', vendor);
       if (brand) q = q.ilike('aa_brand', `%${brand}%`);
       if (minP !== null && !Number.isNaN(minP)) q = q.gte('aa_price', minP);
       if (maxP !== null && !Number.isNaN(maxP)) q = q.lte('aa_price', maxP);
+      if (catUrls?.length) q = q.in('aa_category_url', catUrls);
 
       if (order === 'price-asc') q = q.order('aa_price', { ascending: true, nullsFirst: true });
       else if (order === 'price-desc') q = q.order('aa_price', { ascending: false, nullsLast: true });
@@ -835,32 +845,63 @@
       return data || [];
     }
 
-    function renderProdResults(rows){
+    function renderProdResults(rows) {
       if (!prodResults) return;
-      if (!rows.length){ prodResults.innerHTML = '<div style="padding:12px;color:#666;">Sin resultados</div>'; return; }
-      const html = rows.map(r=>`
+      if (!rows.length) { prodResults.innerHTML = '<div style="padding:12px;color:#666;">Sin resultados</div>'; return; }
+      const html = rows.map(r => `
         <div style="display:flex;gap:8px;align-items:center;border-bottom:1px solid #e5e7eb;padding:8px;">
           <div style="flex:1;">
             <div style="font-weight:700;">${escapeHtml(r.aa_name)}</div>
-            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.vendor || '')}${r.aa_brand ? ' · '+escapeHtml(r.aa_brand) : ''}</div>
+            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.vendor || '')}${r.aa_brand ? ' · ' + escapeHtml(r.aa_brand) : ''}</div>
             <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.aa_category_url || '')}</div>
           </div>
           <div style="width:110px;font-weight:600;">${r.aa_price ? fmtCLP(r.aa_price) : '—'}</div>
           <div style="display:flex;gap:6px;">
-            <a href="${escapeHtml(r.aa_url||'#')}" target="_blank" class="btn btn-ghost" style="height:28px;">Ver</a>
+            <a href="${escapeHtml(r.aa_url || '#')}" target="_blank" class="btn btn-ghost" style="height:28px;">Ver</a>
             <button class="btn btn-primary" style="height:28px;" data-action="pick-prod"
               data-id="${r.id}"
-              data-vendor="${escapeHtml(r.vendor||'')}"
+              data-vendor="${escapeHtml(r.vendor || '')}"
               data-name="${escapeHtml(r.aa_name)}"
-              data-price="${r.aa_price||''}"
-              data-caturl="${escapeHtml(r.aa_category_url||'')}"
-              data-catid="${escapeHtml(r.aa_category_id||'')}">Usar</button>
+              data-price="${r.aa_price || ''}"
+              data-caturl="${escapeHtml(r.aa_category_url || '')}"
+            >Usar</button>
           </div>
         </div>`).join('');
       prodResults.innerHTML = html;
     }
 
-    function handlePickProduct(btn){
+    function renderFacetBox(rows) {
+      if (!facetBox) return;
+      const map = new Map();
+      rows.forEach(r => {
+        const url = r.aa_category_url || '';
+        if (!url) return;
+        map.set(url, (map.get(url) || 0) + 1);
+      });
+      const facets = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 30);
+      facetBox.innerHTML = facets.length ? facets.map(([url, count]) => `
+        <label class="chip-check">
+          <input type="checkbox" data-facet="caturl" value="${escapeHtml(url)}" ${prodState.catUrls.includes(url) ? 'checked' : ''}>
+          ${escapeHtml(prettyCat(url))} <span style="color:#6c7a86;">(${count})</span>
+        </label>
+      `).join('') : '<div style="color:#6c7a86;">Sin categorías en estos resultados</div>';
+
+      facetBox.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          prodState.catUrls = [...facetBox.querySelectorAll('input[type=checkbox]:checked')].map(i => i.value);
+          runSearch();
+        });
+      });
+    }
+
+    function prettyCat(url = '') {
+      const parts = url.split('/category/');
+      if (parts.length < 2) return url || '(sin categoría)';
+      const slug = parts[1].split('/')[0] || '';
+      return slug.replace(/-/g, ' ').trim() || url;
+    }
+
+    function handlePickProduct(btn) {
       const idx = prodState.rowIdx;
       if (idx == null || currentRows[idx] == null) { closeProductOverlay(); return; }
       const price = btn.dataset.price ? Number(btn.dataset.price) : null;
@@ -868,12 +909,9 @@
       currentRows[idx].aa_product_id = btn.dataset.id || null;
       currentRows[idx].aa_vendor = btn.dataset.vendor || null;
       currentRows[idx]._aa_name = btn.dataset.name || '';
-      currentRows[idx].aa_category_id = btn.dataset.catid || null;
       currentRows[idx].aa_category_url = btn.dataset.caturl || null;
       currentRows[idx].precio_unit = price ?? currentRows[idx].precio_unit ?? null;
       setVal(idx, 'producto_id', ''); // limpia select interno
-      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
-      if (label) label.value = currentRows[idx]._aa_name || '';
       const priceInput = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="precio_unit"]`);
       if (priceInput && price != null) priceInput.value = price;
       syncProdUI(idx);
@@ -882,39 +920,30 @@
       closeProductOverlay();
     }
 
-    function clearExternalProduct(idx){
+    function clearExternalProduct(idx) {
       const row = currentRows[idx]; if (!row) return;
-      currentRows[idx] = {
-        ...row,
-        aa_product_id:null,
-        aa_vendor:null,
-        aa_category_id:null,
-        aa_category_url:null,
-        _aa_name:'',
-        precio_unit:row.precio_unit
-      };
-      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
-      if (label) label.value = '';
+      currentRows[idx] = { ...row, aa_product_id: null, aa_vendor: null, _aa_name: '', aa_category_url: null };
       syncProdUI(idx);
       persistRow(idx);
     }
 
-    function openProductSearch(rowIdx){
+    function openProductSearch(rowIdx) {
       prodState.rowIdx = rowIdx;
-      if (overlayProduct){ overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
-      if (prodSearchInput){ prodSearchInput.value=''; prodSearchInput.focus(); }
-      if (prodBrandFilter) prodBrandFilter.value='';
-      if (priceMin) priceMin.value='';
-      if (priceMax) priceMax.value='';
-      if (prodOrder) prodOrder.value='name-asc';
+      if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
+      if (prodSearchInput) { prodSearchInput.value = ''; prodSearchInput.focus(); }
+      if (prodBrandFilter) prodBrandFilter.value = '';
+      if (priceMin) priceMin.value = '';
+      if (priceMax) priceMax.value = '';
+      if (prodOrder) prodOrder.value = 'name-asc';
+      prodState.catUrls = [];
       runSearch();
     }
-    function closeProductOverlay(){
-      if (overlayProduct){ overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
+    function closeProductOverlay() {
+      if (overlayProduct) { overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
     }
 
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
-    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
   </script>
 </body>
 </html>
