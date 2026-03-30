@@ -191,13 +191,12 @@
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
 
+    // buscador catálogo
+    const prodState = { rowIdx: null, pageSize: 50 };
+    const debounce = (fn, ms=200) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
-
-    // estado para buscador catálogo
-    const prodState = { rowIdx: null, timer: null, pageSize: 50 };
-
-    function debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
 
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
@@ -292,7 +291,7 @@
       if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
     });
 
-    // ------- catálogo interno y meta -------
+    // ------- catálogos internos -------
     async function loadCatalogs() {
       const client = await waitForClient();
       const [enc, uni, mod, est, cats] = await Promise.all([
@@ -354,45 +353,17 @@
       });
     }
 
-    function filterBlocks(blocks, approvedSet) {
-      if (!approvedSet || approvedSet.size === 0) return blocks || [];
-      return (blocks || []).filter(b => {
-        if (b.deleted_at) return false;
-        if (b.activa === false) return false;
-        if (!b.proyecto_id) return false;
-        return approvedSet.has(b.proyecto_id);
-      });
-    }
-
-    async function fetchCobradoMap() {
-      const client = await waitForClient();
-      const { data } = await client.from('ventas').select('cotizacion_id,total_venta').not('cotizacion_id','is',null);
-      const map = new Map();
-      (data||[]).forEach(v => { if (v.cotizacion_id && v.total_venta != null) map.set(v.cotizacion_id, Number(v.total_venta)); });
-      return map;
-    }
-
+    // ------- bloques -------
     async function loadBlocks() {
       try {
         const client = await waitForClient();
-        const { data: cotAprob } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
-        const approved = new Set((cotAprob || []).map(c => c.id));
-
         const { data } = await client
           .from('purchase_blocks')
           .select('*')
           .order('created_at', { ascending: false });
 
-        const cobradoMap = await fetchCobradoMap();
-
-        const filtered = filterBlocks(data || [], approved);
-        const toRender = filtered.length ? filtered : (data || []);
-        const merged = toRender.map(b => ({
-          ...b,
-          total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
-        }));
-
-        renderBlocks(merged);
+        // SIN filtro adicional: muestra todo como antes
+        renderBlocks(data || []);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
         window.utils?.mostrarNotificacion?.('Error cargando compras', 'error');
@@ -771,32 +742,4 @@
         const idx = prodState.rowIdx;
         if (idx != null){
           const price = pick.dataset.price ? Number(pick.dataset.price) : null;
-          currentRows[idx].producto_id = null; // limpia interno
-          currentRows[idx].aa_product_id = pick.dataset.id || null;
-          currentRows[idx].aa_vendor = pick.dataset.vendor || null;
-          currentRows[idx]._aa_name = pick.dataset.name || '';
-          currentRows[idx].precio_unit = price || currentRows[idx].precio_unit || null;
-          setVal(idx, 'producto_id', ''); // limpia select
-          const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
-          if (label) label.value = currentRows[idx]._aa_name || '';
-          const priceInput = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="precio_unit"]`);
-          if (priceInput && price != null) priceInput.value = price;
-          persistRow(idx);
-          recomputeBlockTotals(currentBlockId);
-        }
-        closeProductOverlay();
-      }
-    });
-
-    function openProductSearch(rowIdx){
-      prodState.rowIdx = rowIdx;
-      if (overlayProduct){ overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
-      if (prodSearchInput){ prodSearchInput.value=''; prodSearchInput.focus(); }
-      runSearch();
-    }
-    function closeProductOverlay(){
-      if (overlayProduct){ overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
-    }
-
-    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
-   
+          currentRows
