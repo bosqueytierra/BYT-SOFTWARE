@@ -28,7 +28,7 @@
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 10px; }
     .overlay.active { display: flex; }
     .overlay-content { background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30); width: 98vw; max-width: 2200px; height: 92vh; padding: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
-    .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
     .table-wrapper { width:100%; overflow:auto; }
@@ -75,11 +75,25 @@
     .arrow { transition:transform .15s ease; font-size:14px; color:#444; }
     .arrow.up { transform:rotate(180deg); }
 
-    /* estilos celda producto + modal catálogo */
+    /* Producto + catálogo */
     .prod-cell{display:flex;align-items:center;gap:6px;padding:2px 4px;}
     .prod-select{flex:1;}
     .btn-search{width:30px;height:28px;border:1px solid #d4d8dd;border-radius:6px;background:#f7f9fb;cursor:pointer;}
     .prod-label{width:100%;margin-top:2px;min-height:26px;font-size:12.5px;padding:4px 6px;border:1px solid #d7dbe0;border-radius:6px;background:#fff;box-sizing:border-box;}
+    .prod-pill{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #d4d8dd;border-radius:10px;background:#eef2f5;font-size:12.5px;}
+    .prod-pill strong{font-weight:700;}
+    .btn-clear-prod{border:none;background:transparent;color:#a11;cursor:pointer;font-weight:700;}
+    .hidden{display:none !important;}
+
+    /* Overlay catálogo layout */
+    .catalog-layout{display:flex;gap:10px;height:100%;}
+    .catalog-filters{width:240px;flex-shrink:0;background:#fff;border:1px solid #d4d8dd;border-radius:10px;padding:10px;overflow:auto;}
+    .catalog-results{flex:1;display:flex;flex-direction:column;gap:8px;}
+    .filter-group{margin-bottom:12px;}
+    .filter-group label{font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:6px;}
+    .filter-group input, .filter-group select{width:100%;height:30px;padding:4px 6px;font-size:13px;box-sizing:border-box;}
+    .range-row{display:flex;gap:6px;}
+    .range-row input{flex:1;}
   </style>
 </head>
 <body>
@@ -145,7 +159,7 @@
     </div>
   </div>
 
-  <!-- Overlay buscador catálogo externo -->
+  <!-- Overlay catálogo externo -->
   <div id="overlayProduct" class="overlay">
     <div class="overlay-content" style="max-width:1200px;height:80vh;">
       <div class="overlay-header">
@@ -156,11 +170,35 @@
             <option value="">Todos los vendors</option>
             <option value="IMPERIAL">IMPERIAL</option>
           </select>
+          <select id="prodOrder" style="height:30px;">
+            <option value="name-asc">Nombre A-Z</option>
+            <option value="price-asc">Precio ↑</option>
+            <option value="price-desc">Precio ↓</option>
+          </select>
           <button class="btn" id="closeOverlayProduct">Cerrar</button>
         </div>
       </div>
-      <div class="lines-wrapper">
-        <div id="prodResults" style="overflow:auto; max-height:calc(80vh - 90px);"></div>
+      <div class="lines-wrapper" style="height:calc(100% - 54px);">
+        <div class="catalog-layout">
+          <div class="catalog-filters">
+            <div class="filter-group">
+              <label>Marca (contiene)</label>
+              <input id="prodBrandFilter" type="text" placeholder="ej: Kutz">
+            </div>
+            <div class="filter-group">
+              <label>Precio</label>
+              <div class="range-row">
+                <input id="priceMin" type="number" min="0" placeholder="Mín">
+                <input id="priceMax" type="number" min="0" placeholder="Máx">
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>Resultados</label>
+              <small style="color:#6c7a86;">Usa búsqueda + filtros y ordena por precio.</small>
+            </div>
+          </div>
+          <div class="catalog-results" id="prodResults"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -178,7 +216,7 @@
     let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, arrowPor, arrowEnt, togglePorEntregar, toggleEntregados;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
-    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, closeOverlayProductBtn;
+    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn;
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catMateriales = [];
@@ -225,6 +263,10 @@
       prodResults = pickLast('#prodResults');
       prodSearchInput = pickLast('#prodSearchInput');
       prodVendorFilter = pickLast('#prodVendorFilter');
+      prodOrder = pickLast('#prodOrder');
+      prodBrandFilter = pickLast('#prodBrandFilter');
+      priceMin = pickLast('#priceMin');
+      priceMax = pickLast('#priceMax');
       closeOverlayProductBtn = pickLast('#closeOverlayProduct');
 
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
@@ -239,6 +281,10 @@
       if (closeOverlayProductBtn) closeOverlayProductBtn.onclick = closeProductOverlay;
       if (prodSearchInput) prodSearchInput.addEventListener('input', runSearch);
       if (prodVendorFilter) prodVendorFilter.addEventListener('change', runSearch);
+      if (prodOrder) prodOrder.addEventListener('change', runSearch);
+      if (prodBrandFilter) prodBrandFilter.addEventListener('input', runSearch);
+      if (priceMin) priceMin.addEventListener('input', debounce(runSearch, 200));
+      if (priceMax) priceMax.addEventListener('input', debounce(runSearch, 200));
     }
 
     function setSectionState(bodyEl, arrowEl, expanded) {
@@ -284,6 +330,7 @@
       const dupBtn = e.target.closest('[data-action="dup-row"]');
       const searchBtn = e.target.closest('[data-action="search-prod"]');
       const pickBtn = e.target.closest('[data-action="pick-prod"]');
+      const clearBtn = e.target.closest('[data-action="clear-prod"]');
 
       if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
       if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
@@ -291,6 +338,7 @@
       if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
       if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
       if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
+      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
     });
 
     // catálogos internos
@@ -578,6 +626,11 @@
                 <select class="prod-select" data-f="producto_id" data-row="${idx}"></select>
                 <button class="btn-search" type="button" title="Buscar en catálogo" data-action="search-prod" data-row="${idx}">🔍</button>
               </div>
+              <div class="prod-pill ${row.aa_product_id ? '' : 'hidden'}" data-row="${idx}" data-role="aa-pill">
+                <span><strong data-role="aa-name"></strong></span>
+                <span data-role="aa-vendor" style="color:#6c7a86;"></span>
+                <button class="btn-clear-prod" data-action="clear-prod" data-row="${idx}" title="Quitar">✕</button>
+              </div>
               <input class="prod-label" data-f="aa_product_name" data-row="${idx}" type="text" value="${escapeHtml(row._aa_name||'')}" placeholder="(catálogo externo)" readonly>
             </td>
             <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones||'')}"></td>
@@ -600,13 +653,30 @@
         setVal(idx,'unidad',row.unidad);
         setVal(idx,'modo_compra',row.modo_compra);
         setVal(idx,'estado_pago',row.estado_pago);
-        const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
-        if (label) label.value = row._aa_name || '';
+        setVal(idx,'aa_product_name', row._aa_name || '');
         applyEstadoStyle(idx);
+        syncProdUI(idx);
       });
       const tbl = overlayLCGrid.querySelector('table.lc-table');
       if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
+    }
+    function syncProdUI(idx){
+      const row = currentRows[idx] || {};
+      const pill = overlayLCGrid?.querySelector?.(`[data-role="aa-pill"][data-row="${idx}"]`);
+      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${idx}"][data-f="producto_id"]`)?.closest('.prod-cell');
+      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
+      if (!pill || !sel) return;
+      const hasAa = !!row.aa_product_id;
+      pill.classList.toggle('hidden', !hasAa);
+      if (label) label.classList.toggle('hidden', !hasAa);
+      sel.classList.toggle('hidden', hasAa);
+      if (hasAa){
+        const nameEl = pill.querySelector('[data-role="aa-name"]');
+        const venEl = pill.querySelector('[data-role="aa-vendor"]');
+        if (nameEl) nameEl.textContent = row._aa_name || '(catálogo externo)';
+        if (venEl) venEl.textContent = row.aa_vendor ? `· ${row.aa_vendor}` : '';
+      }
     }
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
@@ -728,23 +798,35 @@
       if (!prodResults) return;
       const query = (prodSearchInput?.value || '').trim();
       const vendor = prodVendorFilter?.value || '';
+      const brand = (prodBrandFilter?.value || '').trim();
+      const minP = priceMin?.value ? Number(priceMin.value) : null;
+      const maxP = priceMax?.value ? Number(priceMax.value) : null;
+      const order = prodOrder?.value || 'name-asc';
       try {
-        const rows = await searchProducts(query, vendor, 0);
+        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page:0 });
         renderProdResults(rows);
       } catch (e) {
         prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
         console.error(e);
       }
-    }, 250);
+    }, 200);
 
-    async function searchProducts(query='', vendor='', page=0){
+    async function searchProducts({query='', vendor='', brand='', minP=null, maxP=null, order='name-asc', page=0}){
       const client = await waitForClient();
       let q = client.from('aa_products')
         .select('id:aa_product_id, aa_name, aa_price, aa_url, aa_brand, aa_category_url, vendor', { count:'exact' })
         .ilike('aa_name', `%${query}%`)
-        .order('aa_name', { ascending: true })
         .range(page*prodState.pageSize, page*prodState.pageSize + prodState.pageSize - 1);
+
       if (vendor) q = q.eq('vendor', vendor);
+      if (brand) q = q.ilike('aa_brand', `%${brand}%`);
+      if (minP !== null && !Number.isNaN(minP)) q = q.gte('aa_price', minP);
+      if (maxP !== null && !Number.isNaN(maxP)) q = q.lte('aa_price', maxP);
+
+      if (order === 'price-asc') q = q.order('aa_price', { ascending: true, nullsFirst: true });
+      else if (order === 'price-desc') q = q.order('aa_price', { ascending: false, nullsLast: true });
+      else q = q.order('aa_name', { ascending: true });
+
       const { data, error } = await q;
       if (error) throw error;
       return data || [];
@@ -763,7 +845,7 @@
           <div style="width:110px;font-weight:600;">${r.aa_price ? fmtCLP(r.aa_price) : '—'}</div>
           <div style="display:flex;gap:6px;">
             <a href="${escapeHtml(r.aa_url||'#')}" target="_blank" class="btn btn-ghost" style="height:28px;">Ver</a>
-            <button class="btn btn-primary" style="height:28px;" data-action="pick-prod" data-id="${r.id}" data-vendor="${r.vendor||''}" data-name="${escapeHtml(r.aa_name)}" data-price="${r.aa_price||''}">Usar</button>
+            <button class="btn btn-primary" style="height:28px;" data-action="pick-prod" data-id="${r.id}" data-vendor="${escapeHtml(r.vendor||'')}" data-name="${escapeHtml(r.aa_name)}" data-price="${r.aa_price||''}">Usar</button>
           </div>
         </div>`).join('');
       prodResults.innerHTML = html;
@@ -783,15 +865,29 @@
       if (label) label.value = currentRows[idx]._aa_name || '';
       const priceInput = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="precio_unit"]`);
       if (priceInput && price != null) priceInput.value = price;
+      syncProdUI(idx);
       persistRow(idx);
       recomputeBlockTotals(currentBlockId);
       closeProductOverlay();
+    }
+
+    function clearExternalProduct(idx){
+      const row = currentRows[idx]; if (!row) return;
+      currentRows[idx] = { ...row, aa_product_id:null, aa_vendor:null, _aa_name:'', precio_unit:row.precio_unit };
+      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
+      if (label) label.value = '';
+      syncProdUI(idx);
+      persistRow(idx);
     }
 
     function openProductSearch(rowIdx){
       prodState.rowIdx = rowIdx;
       if (overlayProduct){ overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
       if (prodSearchInput){ prodSearchInput.value=''; prodSearchInput.focus(); }
+      if (prodBrandFilter) prodBrandFilter.value='';
+      if (priceMin) priceMin.value='';
+      if (priceMax) priceMax.value='';
+      if (prodOrder) prodOrder.value='name-asc';
       runSearch();
     }
     function closeProductOverlay(){
