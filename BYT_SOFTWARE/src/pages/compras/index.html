@@ -19,7 +19,7 @@
     .chip { background:#eef2f5; color:#2d2d2d; border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
     .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:background .12s ease; height:30px; box-shadow:none; }
     .btn:hover { background:#eef2f5; }
-    .btn-primary { background:var(--primary); color:#fff; border-color:#2e5e4e; }
+    .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
     .btn-primary:hover { background:#264d40; }
     .btn-ghost { background:#f4f5f6; color:#1f2430; border-color:#d4d8dd; }
     .empty { text-align:center; color:#6c7a86; padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
@@ -28,7 +28,7 @@
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 10px; }
     .overlay.active { display: flex; }
     .overlay-content { background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30); width: 98vw; max-width: 2200px; height: 92vh; padding: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
-    .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+    .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
     .table-wrapper { width:100%; overflow:auto; }
@@ -40,9 +40,25 @@
     table.lc-table input[type=number] { appearance:none; -moz-appearance:textfield; }
     table.lc-table input::-webkit-outer-spin-button, table.lc-table input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .readonly-cell { background:#f3f4f6; }
+    .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:18px; }
+    .item-card { border:1px solid #d7dbe0; border-radius:12px; background:#fff; padding:10px; display:flex; gap:12px; box-shadow:0 6px 16px rgba(0,0,0,0.05); min-height:180px; }
+    .item-thumb { width:120px; height:120px; border:1px solid #e2e5ea; border-radius:10px; background:#f5f7fa; object-fit:cover; flex-shrink:0; }
+    .item-body { flex:1; display:flex; flex-direction:column; gap:6px; justify-content:center; }
+    .item-body h4 { margin:0; font-size:16px; }
+    .item-body .muted { color:#6c7a86; font-size:13px; }
+
+    table.lc-table tbody td:nth-child(3),
+    table.lc-table tbody td:nth-child(5),
+    table.lc-table tbody td:nth-child(8) { background:#e8eaed; }
+    table.lc-table tbody td:nth-child(6) { background:#daf2d0; }
 
     .action-cell { display:flex; gap:6px; justify-content:center; align-items:center; }
-    .icon-btn { width:32px; height:32px; border:1px solid #d4d8dd; border-radius:8px; background:#f8f9fb; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; transition:background .12s ease, border-color .12s ease, color .12s ease; color:#cfd5e3; }
+    .icon-btn {
+      width:32px; height:32px; border:1px solid #d4d8dd; border-radius:8px;
+      background:#f8f9fb; display:flex; align-items:center; justify-content:center;
+      cursor:pointer; padding:0; transition:background .12s ease, border-color .12s ease, color .12s ease;
+      color:#cfd5e3;
+    }
     .icon-btn:hover { background:#eef2f7; border-color:#c6cbd3; color:#e6ebf2; }
     .icon-btn svg { width:17px; height:17px; stroke: currentColor; fill: none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 
@@ -58,32 +74,6 @@
     .panel-ent { background:rgba(0,0,0,0.06); }
     .arrow { transition:transform .15s ease; font-size:14px; color:#444; }
     .arrow.up { transform:rotate(180deg); }
-
-    /* Producto + catálogo */
-    .prod-cell{display:flex;align-items:center;gap:6px;padding:2px 4px;}
-    .prod-select{flex:1;}
-    .btn-search{width:30px;height:28px;border:1px solid #d4d8dd;border-radius:6px;background:#f7f9fb;cursor:pointer;}
-    .prod-pill{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #d4d8dd;border-radius:10px;background:#eef2f5;font-size:12.5px;}
-    .prod-pill strong{font-weight:700;}
-    .btn-clear-prod{border:none;background:transparent;color:#a11;cursor:pointer;font-weight:700;}
-    .hidden{display:none !important;}
-    .prod-label{display:none;}
-
-    /* Overlay catálogo layout */
-    .catalog-layout{display:flex;gap:10px;height:100%;}
-    .catalog-filters{width:240px;flex-shrink:0;background:#fff;border:1px solid #d4d8dd;border-radius:10px;padding:10px;overflow:auto;position:relative;}
-    .catalog-results{flex:1;display:flex;flex-direction:column;gap:8px;}
-    .filter-group{margin-bottom:12px;}
-    .filter-group label{font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:6px;}
-    .filter-group input, .filter-group select{width:100%;height:30px;padding:4px 6px;font-size:13px;box-sizing:border-box;}
-    .range-row{display:flex;gap:6px;}
-    .range-row input{flex:1;}
-    .chips-wrap{display:flex;flex-direction:column;gap:6px;}
-    .chip-check{display:flex;align-items:center;gap:6px;font-size:13px;}
-    .dropdown-toggle{width:100%;justify-content:space-between;}
-    .selected-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
-    .chip-mini{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:12px;border:1px solid #d4d8dd;background:#f7f9fb;font-size:12px;}
-    .chip-mini button{border:none;background:transparent;cursor:pointer;font-weight:800;color:#a11;}
   </style>
 </head>
 <body>
@@ -149,61 +139,6 @@
     </div>
   </div>
 
-  <!-- Overlay catálogo externo -->
-  <div id="overlayProduct" class="overlay">
-    <div class="overlay-content" style="max-width:1200px;height:80vh;">
-      <div class="overlay-header" style="gap:10px;">
-        <div class="overlay-title">Buscar producto catálogo</div>
-        <div style="display:flex;gap:8px;align-items:center;flex:1;">
-          <input id="prodSearchInput" type="text" placeholder="Buscar..." style="flex:1;min-width:200px;padding:6px 8px;">
-          <select id="prodVendorFilter" style="height:30px;">
-            <option value="">Todos los vendors</option>
-            <option value="IMPERIAL">IMPERIAL</option>
-          </select>
-          <select id="prodOrder" style="height:30px;">
-            <option value="name-asc">Nombre A-Z</option>
-            <option value="name-desc">Nombre Z-A</option>
-            <option value="price-asc">Precio ↑</option>
-            <option value="price-desc">Precio ↓</option>
-            <option value="cat-asc">Categoría A-Z</option>
-            <option value="cat-desc">Categoría Z-A</option>
-          </select>
-          <button class="btn" id="closeOverlayProduct">✕ Cerrar</button>
-        </div>
-      </div>
-      <div class="lines-wrapper" style="height:calc(100% - 54px);">
-        <div class="catalog-layout">
-          <div class="catalog-filters">
-            <div class="filter-group">
-              <label>Marca (contiene)</label>
-              <input id="prodBrandFilter" type="text" placeholder="ej: Kutz">
-            </div>
-            <div class="filter-group">
-              <label>Precio</label>
-              <div class="range-row">
-                <input id="priceMin" type="number" min="0" placeholder="Mín">
-                <input id="priceMax" type="number" min="0" placeholder="Máx">
-              </div>
-            </div>
-
-            <div class="filter-group">
-              <label>Categorías</label>
-              <button class="btn dropdown-toggle" id="toggleCatFilter">Filtrar por categoría ▼</button>
-              <div id="catDropdown" class="chips-wrap hidden" style="max-height:260px;overflow:auto;margin-top:6px;border:1px solid #d4d8dd;padding:6px;border-radius:8px;background:#fdfdfd;"></div>
-              <div class="selected-chips" id="selectedCatChips"></div>
-            </div>
-
-            <div class="filter-group">
-              <label>Resultados</label>
-              <small style="color:#6c7a86;">Búsqueda + vendor + marca + rango + orden.</small>
-            </div>
-          </div>
-          <div class="catalog-results" id="prodResults"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
@@ -217,83 +152,22 @@
     let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, arrowPor, arrowEnt, togglePorEntregar, toggleEntregados;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
-    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn, catDropdown, toggleCatFilter, selectedCatChips;
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catMateriales = [];
     let catImagesMap = {};
     let currentRows = [];
     let currentBlockId = null;
+    const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
 
     const projectPartsMap = new Map();
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
 
-    const prodState = { rowIdx: null, pageSize: 50, catCodes: [] };
-    const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
-
-    const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
-
-    // util
-    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }); }
-    function extractCode(url = '') { const m = String(url || '').match(/\/(\d{3,})\/?$/); return m ? `/${m[1]}` : ''; }
-    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
-    async function waitForClient(timeoutMs = 4000) {
-      const start = performance.now();
-      while (performance.now() - start < timeoutMs) {
-        const c = getClient(); if (c) return c; await new Promise(r => setTimeout(r, 50));
-      }
-      throw new Error('Supabase client no inicializado');
-    }
-    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
-    function setSectionState(bodyEl, arrowEl, expanded) {
-      if (!bodyEl) return;
-      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
-      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
-    }
-    function toggleSection(bodyEl, arrowEl) {
-      if (!bodyEl) return;
-      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
-      setSectionState(bodyEl, arrowEl, !isOpen);
-    }
-
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      ensureEls();
-      try {
-        const client = await waitForClient();
-        if (!window.supabase && client) window.supabase = client;
-        await loadCatalogs();
-        await loadSalesMeta();
-        await loadBlocks();
-        await loadCategoryImages();
-      } catch (e) {
-        console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      const btnLC = e.target.closest('[data-block-lc]');
-      const btnSummary = e.target.closest('[data-block-summary]');
-      const delBtn = e.target.closest('[data-action="del-row"]');
-      const dupBtn = e.target.closest('[data-action="dup-row"]');
-      const searchBtn = e.target.closest('[data-action="search-prod"]');
-      const pickBtn = e.target.closest('[data-action="pick-prod"]');
-      const clearBtn = e.target.closest('[data-action="clear-prod"]');
-
-      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
-      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
-      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
-      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
-      if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
-      if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
-      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
-    });
-
+    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
       blocksContainer = pickLast('#blocksContainer');
       blocksEntregados = pickLast('#blocksEntregados');
@@ -307,10 +181,15 @@
       arrowEnt = pickLast('#arrowEnt');
       togglePorEntregar = pickLast('#togglePorEntregar');
       toggleEntregados = pickLast('#toggleEntregados');
-      overlay = pickLast('#overlay'); overlayGrid = pickLast('#overlayGrid'); overlayTitle = pickLast('#overlayTitle'); closeOverlayBtn = pickLast('#closeOverlay');
-      overlayLC = pickLast('#overlayLC'); overlayLCGrid = pickLast('#overlayLCGrid'); overlayLCTitle = pickLast('#overlayLCTitle'); closeOverlayLC = pickLast('#closeOverlayLC'); addRowBtn = pickLast('#addRowBtn');
-      overlayProduct = pickLast('#overlayProduct'); prodResults = pickLast('#prodResults'); prodSearchInput = pickLast('#prodSearchInput'); prodVendorFilter = pickLast('#prodVendorFilter'); prodOrder = pickLast('#prodOrder'); prodBrandFilter = pickLast('#prodBrandFilter'); priceMin = pickLast('#priceMin'); priceMax = pickLast('#priceMax'); closeOverlayProductBtn = pickLast('#closeOverlayProduct'); catDropdown = pickLast('#catDropdown'); toggleCatFilter = pickLast('#toggleCatFilter'); selectedCatChips = pickLast('#selectedCatChips');
-
+      overlay = pickLast('#overlay');
+      overlayGrid = pickLast('#overlayGrid');
+      overlayTitle = pickLast('#overlayTitle');
+      closeOverlayBtn = pickLast('#closeOverlay');
+      overlayLC = pickLast('#overlayLC');
+      overlayLCGrid = pickLast('#overlayLCGrid');
+      overlayLCTitle = pickLast('#overlayLCTitle');
+      closeOverlayLC = pickLast('#closeOverlayLC');
+      addRowBtn = pickLast('#addRowBtn');
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (addRowBtn) addRowBtn.onclick = addEmptyRow;
@@ -319,18 +198,55 @@
       if (toggleEntregados) toggleEntregados.onclick = () => toggleSection(bodyEntregados, arrowEnt);
       setSectionState(bodyPorEntregar, arrowPor, true);
       setSectionState(bodyEntregados, arrowEnt, false);
-
-      if (closeOverlayProductBtn) closeOverlayProductBtn.onclick = closeProductOverlay;
-      if (prodSearchInput) prodSearchInput.addEventListener('input', runSearch);
-      if (prodVendorFilter) prodVendorFilter.addEventListener('change', runSearch);
-      if (prodOrder) prodOrder.addEventListener('change', runSearch);
-      if (prodBrandFilter) prodBrandFilter.addEventListener('input', runSearch);
-      if (priceMin) priceMin.addEventListener('input', debounce(runSearch, 200));
-      if (priceMax) priceMax.addEventListener('input', debounce(runSearch, 200));
-      if (toggleCatFilter) toggleCatFilter.onclick = () => catDropdown.classList.toggle('hidden');
     }
 
-    // ---------- catálogos internos ----------
+    function setSectionState(bodyEl, arrowEl, expanded) {
+      if (!bodyEl) return;
+      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
+      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
+    }
+    function toggleSection(bodyEl, arrowEl) {
+      if (!bodyEl) return;
+      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
+      setSectionState(bodyEl, arrowEl, !isOpen);
+    }
+
+    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
+    async function waitForClient(timeoutMs = 4000) {
+      const start = performance.now();
+      while (performance.now() - start < timeoutMs) {
+        const c = getClient();
+        if (c) return c;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      throw new Error('Supabase client no inicializado');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      ensureEls();
+      try {
+        const client = await waitForClient();
+        if (!window.supabase && client) window.supabase = client;
+        await loadCatalogs();
+        await loadSalesMeta();
+        await loadBlocks();
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const btnLC = e.target.closest('[data-block-lc]');
+      const btnSummary = e.target.closest('[data-block-summary]');
+      const delBtn = e.target.closest('[data-action="del-row"]');
+      const dupBtn = e.target.closest('[data-action="dup-row"]');
+      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
+      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
+      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
+      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
+    });
+
     async function loadCatalogs() {
       const client = await waitForClient();
       const [enc, uni, mod, est, cats] = await Promise.all([
@@ -354,22 +270,41 @@
 
     async function loadSalesMeta() {
       const client = await waitForClient();
-      const { data: ventasRows } = await client.from('ventas').select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
-      projectPartsMap.clear(); projectAllDoneMap.clear(); projectFechaLimiteMap.clear();
+
+      const { data: ventasRows } = await client
+        .from('ventas')
+        .select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
+
+      projectPartsMap.clear();
+      projectAllDoneMap.clear();
+      projectFechaLimiteMap.clear();
+
       (ventasRows || []).forEach(v => {
-        const key = v.cotizacion_id; if (!key) return;
+        const key = v.cotizacion_id;
+        if (!key) return;
         const name = v.partida_nombre || v.partida || '';
         if (!projectPartsMap.has(key)) projectPartsMap.set(key, []);
         if (name) projectPartsMap.get(key).push(name);
-        const done = (v.estado || '').toLowerCase() === 'completada';
+
+        const st = (v.estado || '').toLowerCase();
+        const done = st === 'completada';
         if (!projectAllDoneMap.has(key)) projectAllDoneMap.set(key, true);
         if (!done) projectAllDoneMap.set(key, false);
-        if (v.fecha_entrega_limite && !projectFechaLimiteMap.has(key)) projectFechaLimiteMap.set(key, v.fecha_entrega_limite);
+
+        if (v.fecha_entrega_limite && !projectFechaLimiteMap.has(key)) {
+          projectFechaLimiteMap.set(key, v.fecha_entrega_limite);
+        }
       });
 
-      const { data: cotRows } = await client.from('cotizaciones').select('id, fecha_entrega_limite').eq('estado', 'aprobada');
+      const { data: cotRows } = await client
+        .from('cotizaciones')
+        .select('id, fecha_entrega_limite')
+        .eq('estado', 'aprobada');
+
       (cotRows || []).forEach(c => {
-        if (c.id && c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
+        if (c.id && c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) {
+          projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
+        }
       });
     }
 
@@ -397,14 +332,20 @@
         const { data: cotAprob } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
         const approved = new Set((cotAprob || []).map(c => c.id));
 
-        const { data } = await client.from('purchase_blocks').select('*').order('created_at', { ascending:false });
+        const { data } = await client
+          .from('purchase_blocks')
+          .select('*')
+          .order('created_at', { ascending: false });
+
         const cobradoMap = await fetchCobradoMap();
+
         const filtered = filterBlocks(data || [], approved);
         const toRender = filtered.length ? filtered : (data || []);
         const merged = toRender.map(b => ({
           ...b,
           total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
         }));
+
         renderBlocks(merged);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -416,14 +357,17 @@
     function renderBlocks(blocks) {
       ensureEls();
       if (!blocksContainer || !blocksEntregados || !emptyState || !emptyEntregados) return;
+
       const cards = blocks.map(b => {
         const parts = projectPartsMap.get(b.proyecto_id) || [];
         const partesLabel = parts.length ? parts.join(' · ') : 'Sin partidas';
         const fechaLim = projectFechaLimiteMap.get(b.proyecto_id) || b.fecha_entrega_limite || '';
+
         const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
         const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
+
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
           html: `
@@ -475,8 +419,7 @@
       if (bodyEntregados) setSectionState(bodyEntregados, arrowEnt, bodyEntregados.style.maxHeight !== '0px');
     }
 
-    // ---------- options helpers ----------
-    function makeOptions(list, valKey = 'nombre', labelKey = 'nombre') {
+    function makeOptions(list, valKey='nombre', labelKey='nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
     function productOptions(category) {
@@ -490,12 +433,9 @@
       sel.innerHTML = productOptions(row.categoria || '');
       if (row.producto_id) {
         const valid = materiales.find(m => m.id === row.producto_id && (!row.categoria || m.category === row.categoria));
-        sel.value = valid ? row.producto_id : '';
-        if (!valid) currentRows[rowIdx].producto_id = null;
-      } else sel.value = '';
+        if (valid) sel.value = row.producto_id; else { sel.value=''; currentRows[rowIdx].producto_id=null; }
+      } else sel.value='';
     }
-
-    // ---------- filas ----------
     function setVal(idx, field, value) {
       const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
       if (el) el.value = value ?? '';
@@ -503,57 +443,38 @@
     function isMeaningful(payload) {
       return (
         (payload.producto_id && payload.producto_id !== '') ||
-        (payload.aa_product_id && payload.aa_product_id !== '') ||
         (payload.categoria && payload.categoria !== '') ||
         (payload.cantidad && Number(payload.cantidad) > 0) ||
         (payload.precio_unit && Number(payload.precio_unit) > 0) ||
         (payload.observaciones && payload.observaciones.trim() !== '')
       );
     }
-    function addEmptyRow() { if (!currentBlockId) return; currentRows.push({ id:null, block_id:currentBlockId, placeholder:true, _saving:false }); renderGrid(currentRows); }
+    function addEmptyRow() { if (!currentBlockId) return; currentRows.push({ id: null, block_id: currentBlockId, placeholder: true, _saving: false }); renderGrid(currentRows); }
     async function cleanupEmptiesInDB(lines, client) {
       const empties = (lines || []).filter(r => !isMeaningful(r) && r.id);
       if (!empties.length) return;
       const ids = empties.map(r => r.id);
-      try { await client.from(TABLE).delete().in('id', ids); } catch (e) { console.error('cleanupEmptiesInDB', e); }
+      try { await client.from(TABLE).delete().in('id', ids); }
+      catch (e) { console.error('cleanupEmptiesInDB', e); }
     }
     async function loadLines(blockId) {
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
-        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
+        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
         .eq('block_id', blockId)
-        .order('created_at', { ascending:true });
+        .order('created_at', { ascending: true });
       if (error) { console.error('loadLines', error); currentRows = []; }
-      else { await cleanupEmptiesInDB(data, client); currentRows = (data || []).filter(r => isMeaningful(r)); await hydrateAaNames(); }
+      else { await cleanupEmptiesInDB(data, client); currentRows = (data || []).filter(r => isMeaningful(r)); }
       renderGrid(currentRows);
     }
-
-    async function hydrateAaNames() {
-      const ids = [...new Set(currentRows.map(r => r.aa_product_id).filter(Boolean))];
-      if (!ids.length) return;
-      const client = await waitForClient();
-      const { data, error } = await client
-        .from('aa_products')
-        .select('aa_product_id:id, aa_name, aa_price, aa_url, vendor')
-        .in('aa_product_id', ids);
-      if (error) return;
-      const map = new Map((data || []).map(r => [r.id, r]));
-      currentRows = currentRows.map(r => {
-        const ref = r.aa_product_id ? map.get(r.aa_product_id) : null;
-        return {
-          ...r,
-          _aa_name: ref ? ref.aa_name : (r._aa_name || ''),
-          aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor,
-          _aa_code: ref ? extractCode(ref.aa_url) : r._aa_code
-        };
-      });
-    }
-
     async function recomputeBlockTotals(blockId) {
       if (!blockId) return;
       const client = await waitForClient();
-      const { data, error } = await client.from(TABLE).select('cantidad,precio_unit,estado_pago').eq('block_id', blockId);
+      const { data, error } = await client
+        .from(TABLE)
+        .select('cantidad,precio_unit,estado_pago')
+        .eq('block_id', blockId);
       if (error) { console.error('totals', error); return; }
       let totalSum = 0, comprado = 0;
       (data || []).forEach(l => {
@@ -564,20 +485,21 @@
       });
       const porComprar = Math.max(0, totalSum - comprado);
       try {
-        await client.from('purchase_blocks').update({ total_comprado: comprado, total_por_comprar: porComprar }).eq('id', blockId);
+        await client.from('purchase_blocks').update({
+          total_comprado: comprado,
+          total_por_comprar: porComprar
+        }).eq('id', blockId);
         await loadBlocks();
       } catch (e) { console.error('update block totals', e); }
     }
-
-    // ---------- render tabla ----------
     function renderGrid(rows) {
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
         overlayLCGrid = document.getElementById('overlayLCGrid');
       }
-      const headers = ['', 'Encargado', 'Proveedor', 'Dirección', 'Categoría', 'Producto', 'Obs', 'Unidad', 'Cantidad', 'Precio Unit', 'Total', 'Modo', 'Estado pago'];
+      const headers = ['','Encargado','Proveedor','Dirección','Categoría','Producto','Obs','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'];
       const thead = `<thead><tr>${headers.map((h,idx)=>idx===0?`<th style="width:90px;">${h}</th>`:`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
-      const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre:c })));
+      const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c })));
       const bodyRows = rows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
         return `<tr data-row="${idx}" ${idAttr}>
@@ -591,61 +513,35 @@
             </td>
             <td><select data-f="encargado" data-row="${idx}">${makeOptions(catEncargados)}</select></td>
             <td><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></td>
-            <td><input data-f="direccion" data-row="${idx}" type="text" value="${escapeHtml(row.direccion || '')}"></td>
+            <td><input data-f="direccion" data-row="${idx}" type="text" value="${escapeHtml(row.direccion||'')}"></td>
             <td><select data-f="categoria" data-row="${idx}">${categoriaOptions}</select></td>
-            <td>
-              <div class="prod-cell ${row.aa_product_id ? 'hidden' : ''}">
-                <select class="prod-select" data-f="producto_id" data-row="${idx}"></select>
-                <button class="btn-search" type="button" title="Buscar en catálogo" data-action="search-prod" data-row="${idx}">🔍</button>
-              </div>
-              <div class="prod-pill ${row.aa_product_id ? '' : 'hidden'}" data-row="${idx}" data-role="aa-pill">
-                <span><strong data-role="aa-name">${escapeHtml(row._aa_name || '')}</strong></span>
-                <span data-role="aa-vendor" style="color:#6c7a86;">${row.aa_vendor ? '· ' + escapeHtml(row.aa_vendor) : ''}</span>
-                <button class="btn-clear-prod" data-action="clear-prod" data-row="${idx}" title="Quitar">✕</button>
-              </div>
-            </td>
-            <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones || '')}"></td>
+            <td><select data-f="producto_id" data-row="${idx}"></select></td>
+            <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones||'')}"></td>
             <td><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></td>
-            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad || ''}"></td>
-            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit || ''}"></td>
-            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total || ''}" readonly></td>
+            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></td>
+            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></td>
+            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total||''}" readonly></td>
             <td><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></td>
             <td><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></td>
           </tr>`;
       }).join('');
       overlayLCGrid.innerHTML = `<div class="table-wrapper"><table class="lc-table">${thead}<tbody>${bodyRows}</tbody></table></div>`;
       rows.forEach((row, idx) => {
-        setVal(idx, 'encargado', row.encargado);
-        setVal(idx, 'proveedor_id', row.proveedor_id);
-        setVal(idx, 'categoria', row.categoria);
+        setVal(idx,'encargado',row.encargado);
+        setVal(idx,'proveedor_id',row.proveedor_id);
+        setVal(idx,'categoria',row.categoria);
         rebuildProductOptions(idx);
-        setVal(idx, 'producto_id', row.producto_id);
-        setVal(idx, 'observaciones', row.observaciones);
-        setVal(idx, 'unidad', row.unidad);
-        setVal(idx, 'modo_compra', row.modo_compra);
-        setVal(idx, 'estado_pago', row.estado_pago);
-        setVal(idx, 'total', row.total);
+        setVal(idx,'producto_id',row.producto_id);
+        setVal(idx,'observaciones',row.observaciones);
+        setVal(idx,'unidad',row.unidad);
+        setVal(idx,'modo_compra',row.modo_compra);
+        setVal(idx,'estado_pago',row.estado_pago);
         applyEstadoStyle(idx);
-        syncProdUI(idx);
       });
       const tbl = overlayLCGrid.querySelector('table.lc-table');
       if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
     }
-
-    function syncProdUI(idx) {
-      const row = currentRows[idx] || {};
-      const pill = overlayLCGrid?.querySelector?.(`[data-role="aa-pill"][data-row="${idx}"]`);
-      const selWrap = overlayLCGrid?.querySelector?.(`select[data-row="${idx}"][data-f="producto_id"]`)?.closest('.prod-cell');
-      if (pill) {
-        pill.classList.toggle('hidden', !row.aa_product_id);
-        const nameEl = pill.querySelector('[data-role="aa-name"]'); const venEl = pill.querySelector('[data-role="aa-vendor"]');
-        if (nameEl) nameEl.textContent = row._aa_name || '(catálogo)';
-        if (venEl) venEl.textContent = row.aa_vendor ? '· ' + row.aa_vendor : '';
-      }
-      if (selWrap) selWrap.classList.toggle('hidden', !!row.aa_product_id);
-    }
-
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
@@ -653,7 +549,7 @@
       const row = currentRows[rowIdx] || {};
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
-      currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder:false };
+      currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder: false };
       if (field === 'categoria') { currentRows[rowIdx].producto_id = null; rebuildProductOptions(rowIdx); }
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
@@ -662,82 +558,65 @@
       await persistRow(rowIdx);
       await recomputeBlockTotals(currentBlockId);
     }
-
-    function applyEstadoStyle(rowIdx) {
-      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`);
-      if (!sel) return;
-      sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar');
-      const val = (sel.value || '').toLowerCase();
-      if (val.includes('comprado')) sel.classList.add('estado-comprado');
-      else if (val.includes('stock')) sel.classList.add('estado-stock');
-      else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar');
-    }
-
     function buildPayload(row) {
-      return {
-        block_id: row.block_id || currentBlockId,
-        encargado: row.encargado || null,
-        proveedor_id: row.proveedor_id || null,
-        direccion: row.direccion || null,
-        categoria: row.categoria || null,
-        producto_id: row.producto_id || null,
-        aa_product_id: row.aa_product_id || null,
-        aa_vendor: row.aa_vendor || null,
-        unidad: row.unidad || null,
-        cantidad: row.cantidad || null,
-        precio_unit: row.precio_unit || null,
-        modo_compra: row.modo_compra || null,
-        estado_pago: row.estado_pago || null,
-        observaciones: row.observaciones || null
-      };
+      return { block_id: row.block_id || currentBlockId, encargado: row.encargado || null, proveedor_id: row.proveedor_id || null, direccion: row.direccion || null, categoria: row.categoria || null, producto_id: row.producto_id || null, unidad: row.unidad || null, cantidad: row.cantidad || null, precio_unit: row.precio_unit || null, modo_compra: row.modo_compra || null, estado_pago: row.estado_pago || null, observaciones: row.observaciones || null };
     }
-
     async function persistRow(idx) {
       const row = currentRows[idx]; if (!row) return; if (row._saving) return;
       const client = await waitForClient(); const payload = buildPayload(row); const meaningful = isMeaningful(payload);
       if (!row.id && !meaningful) return;
-      currentRows[idx] = { ...row, _saving:true };
+      currentRows[idx] = { ...row, _saving: true };
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data, placeholder:false, _saving:false };
-          setVal(idx, 'total', data.total);
+          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
-          if (data) { currentRows[idx] = { ...row, ...data, placeholder:false, _saving:false }; setVal(idx, 'total', data.total); }
+          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total); }
         }
       } catch (e) { console.error('Persist error', e); }
       finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
     }
-
-    async function deleteRow(idx) {
-      const row = currentRows[idx]; if (!row) return;
+    async function deleteRow(idx) { const row=currentRows[idx]; if(!row) return; const client=await waitForClient(); try{ if(row.id) await client.from(TABLE).delete().eq('id',row.id); currentRows.splice(idx,1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId);}catch(e){console.error('Delete error',e);} }
+    function duplicateRow(idx) { const src=currentRows[idx]; if(!src) return; const clone={...src,id:null,block_id:currentBlockId,created_at:null,placeholder:false,_saving:false}; currentRows.splice(idx+1,0,clone); renderGrid(currentRows); if(isMeaningful(buildPayload(clone))) persistRow(idx+1).then(()=>recomputeBlockTotals(currentBlockId)); }
+    function applyEstadoStyle(rowIdx) { const sel=overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if(!sel)return; sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar'); const val=(sel.value||'').toLowerCase(); if(val.includes('comprado')) sel.classList.add('estado-comprado'); else if(val.includes('stock')) sel.classList.add('estado-stock'); else if(val.includes('por comprar')||val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
+    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{}); } catch(e) { console.warn('cat images', e); } }
+    function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
+    async function fetchLines(blockId) {
       const client = await waitForClient();
-      try { if (row.id) await client.from(TABLE).delete().eq('id', row.id); currentRows.splice(idx,1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId); }
-      catch (e) { console.error('Delete error', e); }
+      const { data, error } = await client
+        .from(TABLE)
+        .select('id,categoria,producto_id,unidad,cantidad,precio_unit,total,observaciones,created_at')
+        .eq('block_id', blockId)
+        .neq('categoria', 'Sin categoría')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
     }
-
-    function duplicateRow(idx) {
-      const src = currentRows[idx]; if (!src) return;
-      const clone = { ...src, id:null, block_id:currentBlockId, created_at:null, placeholder:false, _saving:false };
-      currentRows.splice(idx+1,0,clone); renderGrid(currentRows);
-      if (isMeaningful(buildPayload(clone))) persistRow(idx+1).then(()=>recomputeBlockTotals(currentBlockId));
-    }
-
-    function clearExternalProduct(idx) {
-      if (idx == null) return;
-      if (currentRows[idx]) {
-        currentRows[idx].aa_product_id = null;
-        currentRows[idx]._aa_name = '';
-        currentRows[idx].aa_vendor = null;
-        syncProdUI(idx);
+    function renderSummary(lines) {
+      if (!lines.length) { overlayGrid.innerHTML = '<div style="padding:12px; text-align:center; color:#6c7a86;">Sin líneas</div>'; return; }
+      const byCat = {};
+      for (const l of lines) {
+        const k = l.categoria || 'Sin categoría';
+        if (k === 'Sin categoría') continue;
+        byCat[k] = byCat[k] || { total: 0, count: 0 };
+        byCat[k].total += Number(l.total || 0);
+        byCat[k].count += 1;
       }
-      renderGrid(currentRows);
+      const cards = Object.entries(byCat).map(([cat, info]) => `
+        <div class="item-card">
+          <img class="item-thumb" src="${escapeHtml(pickCategoryImage(cat))}" alt="">
+          <div class="item-body">
+            <h4>${escapeHtml(cat)}</h4>
+            <div class="muted">Items: ${info.count}</div>
+            <div><strong>${fmtCLP(info.total)}</strong></div>
+          </div>
+        </div>
+      `).join('');
+      overlayGrid.innerHTML = `<div class="item-grid">${cards}</div>`;
     }
-
-    // ---------- overlay LC / resumen ----------
     async function openLC(blockId, title) {
       ensureEls();
       currentBlockId = blockId;
@@ -752,206 +631,17 @@
       try { await loadLines(blockId); }
       catch (e) { console.error(e); overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>'; }
     }
-
     async function openSummary(blockId, title) {
-      ensureEls(); if (!overlay || !overlayGrid || !overlayTitle) return;
+      ensureEls();
+      if (!overlay || !overlayGrid || !overlayTitle) return;
       overlayTitle.textContent = 'Ver resumen - ' + (title || blockId);
       overlay.classList.add('active'); document.body.classList.add('overlay-open');
       try { await loadCategoryImages(); const lines = await fetchLines(blockId); renderSummary(lines); }
       catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
     }
 
-    async function fetchLines(blockId) {
-      const client = await waitForClient();
-      const { data, error } = await client
-        .from(TABLE)
-        .select('id,categoria,total')
-        .eq('block_id', blockId)
-        .order('created_at', { ascending:true });
-      if (error) throw error;
-      return data || [];
-    }
-    async function loadCategoryImages() {
-      try {
-        const { data } = await catApi.listCategoriesWithImages();
-        catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; }, {});
-      } catch(e){ console.warn('cat images', e); }
-    }
-    function pickCategoryImage(cat){ return catImagesMap[cat] || PLACEHOLDER_IMG; }
-    function renderSummary(lines) {
-      if (!lines.length) { overlayGrid.innerHTML = '<div style="padding:12px; text-align:center; color:#6c7a86;">Sin líneas</div>'; return; }
-      const byCat = {};
-      for (const l of lines) {
-        const k = l.categoria || 'Sin categoría';
-        byCat[k] = byCat[k] || { total:0, count:0 };
-        byCat[k].total += Number(l.total || 0);
-        byCat[k].count += 1;
-      }
-      const cards = Object.entries(byCat).map(([cat, info]) => `
-        <div class="item-card" style="display:flex;gap:10px;border:1px solid #e5e7eb;border-radius:10px;padding:8px;background:#fff;">
-          <img class="item-thumb" src="${escapeHtml(pickCategoryImage(cat))}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;">
-          <div class="item-body">
-            <h4 style="margin:0 0 4px;">${escapeHtml(cat)}</h4>
-            <div class="muted" style="color:#6c7a86;font-size:12.5px;">Items: ${info.count}</div>
-            <div style="font-weight:700;">${fmtCLP(info.total)}</div>
-          </div>
-        </div>
-      `).join('');
-      overlayGrid.innerHTML = `<div class="item-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">${cards}</div>`;
-    }
-
-    // ---------- catálogo externo ----------
-    function closeProductOverlay() {
-      if (overlayProduct) overlayProduct.classList.remove('active');
-      document.body.classList.remove('overlay-open');
-      prodState.rowIdx = null;
-    }
-    function openProductSearch(rowIdx) {
-      ensureEls();
-      prodState.rowIdx = rowIdx;
-      if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
-      buildCategoryFilter(); // load categories when opening
-      runSearch();
-    }
-
-    async function buildCategoryFilter() {
-      if (!catDropdown) return;
-      catDropdown.innerHTML = '<div style="padding:4px;color:#6c7a86;">Cargando...</div>';
-      const client = await waitForClient();
-      const { data, error } = await client.from('aa_products').select('aa_category_url').order('aa_category_url', { ascending:true }).limit(5000);
-      if (error) { catDropdown.innerHTML = '<div style="padding:4px;color:#c00;">Error cargando categorías</div>'; return; }
-      const codes = [...new Set((data||[]).map(r => extractCode(r.aa_category_url || r.aa_url || r.aa_category_url)))].filter(Boolean).sort();
-      const html = codes.map(code => `
-        <label class="chip-check">
-          <input type="checkbox" data-cat="${code}">
-          <span>${escapeHtml(code)}</span>
-        </label>
-      `).join('');
-      catDropdown.innerHTML = html || '<div style="color:#6c7a86;">Sin categorías</div>';
-      catDropdown.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-        cb.onchange = () => {
-          if (cb.checked) {
-            if (!prodState.catCodes.includes(cb.dataset.cat)) prodState.catCodes.push(cb.dataset.cat);
-          } else {
-            prodState.catCodes = prodState.catCodes.filter(c => c !== cb.dataset.cat);
-          }
-          renderSelectedCatChips();
-          runSearch();
-        };
-      });
-      renderSelectedCatChips();
-    }
-
-    function renderSelectedCatChips() {
-      if (!selectedCatChips) return;
-      selectedCatChips.innerHTML = prodState.catCodes.map(code => `
-        <span class="chip-mini">${escapeHtml(code)}
-          <button title="Quitar" data-cat-remove="${escapeHtml(code)}">✕</button>
-        </span>
-      `).join('');
-      selectedCatChips.querySelectorAll('button[data-cat-remove]').forEach(btn=>{
-        btn.onclick = () => {
-          const code = btn.dataset.catRemove;
-          prodState.catCodes = prodState.catCodes.filter(c => c !== code);
-          const cb = catDropdown?.querySelector(`input[data-cat="${CSS.escape(code)}"]`);
-          if (cb) cb.checked = false;
-          renderSelectedCatChips();
-          runSearch();
-        };
-      });
-    }
-
-    const runSearch = debounce(async () => {
-      if (!prodResults) return;
-      prodResults.innerHTML = '<div style="padding:12px;color:#6c7a86;">Buscando...</div>';
-      const query = (prodSearchInput?.value || '').trim();
-      const vendor = prodVendorFilter?.value || '';
-      const brand = (prodBrandFilter?.value || '').trim();
-      const minP = priceMin?.value ? Number(priceMin.value) : null;
-      const maxP = priceMax?.value ? Number(priceMax.value) : null;
-      const order = prodOrder?.value || 'name-asc';
-      try {
-        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page:0, catCodes: prodState.catCodes });
-        renderProdResults(rows);
-      } catch (e) {
-        console.error(e);
-        prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
-      }
-    }, 200);
-
-    async function searchProducts({ query='', vendor='', brand='', minP=null, maxP=null, order='name-asc', page=0, catCodes=[] }) {
-      const client = await waitForClient();
-      let q = client.from('aa_products')
-        .select('id:aa_product_id, aa_name, aa_price, aa_url, vendor', { count:'exact' })
-        .ilike('aa_name', `%${query}%`)
-        .range(page * prodState.pageSize, page * prodState.pageSize + prodState.pageSize - 1);
-
-      if (vendor) q = q.eq('vendor', vendor);
-      if (brand) q = q.ilike('aa_brand', `%${brand}%`);
-      if (minP !== null && !Number.isNaN(minP)) q = q.gte('aa_price', minP);
-      if (maxP !== null && !Number.isNaN(maxP)) q = q.lte('aa_price', maxP);
-      if (catCodes?.length) q = q.in('aa_category_url', catCodes.map(c => `%${c}`)); // match by tail
-
-      if (order === 'price-asc') q = q.order('aa_price', { ascending:true, nullsFirst:true });
-      else if (order === 'price-desc') q = q.order('aa_price', { ascending:false, nullsLast:true });
-      else if (order === 'cat-asc') q = q.order('aa_category_url', { ascending:true });
-      else if (order === 'cat-desc') q = q.order('aa_category_url', { ascending:false });
-      else if (order === 'name-desc') q = q.order('aa_name', { ascending:false });
-      else q = q.order('aa_name', { ascending:true });
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data || [];
-    }
-
-    function renderProdResults(rows) {
-      if (!prodResults) return;
-      if (!rows.length) { prodResults.innerHTML = '<div style="padding:12px;color:#666;">Sin resultados</div>'; return; }
-      const cards = rows.map(r => {
-        const price = r.aa_price != null ? fmtCLP(r.aa_price) : '—';
-        const code = extractCode(r.aa_url);
-        return `
-          <div style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;display:flex;gap:10px;align-items:flex-start;background:#fff;">
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:800;margin-bottom:4px;">${escapeHtml(r.aa_name || '(sin nombre)')}</div>
-              <div style="color:#6c7a86;font-size:12.5px;">${escapeHtml(r.vendor || '')}</div>
-              <div style="color:#6c7a86;font-size:12.5px;">${escapeHtml(r.aa_url || '')}</div>
-              <div style="color:#6c7a86;font-size:12.5px;">Código: ${escapeHtml(code)}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <div style="font-weight:800;">${price}</div>
-              <button class="btn btn-ghost" type="button" onclick="window.open('${escapeHtml(r.aa_url || '#')}', '_blank')">Ver</button>
-              <button class="btn btn-primary" type="button" data-action="pick-prod" data-id="${r.id}" data-name="${escapeHtml(r.aa_name || '')}" data-vendor="${escapeHtml(r.vendor || '')}" data-url="${escapeHtml(r.aa_url || '')}">Usar</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-      prodResults.innerHTML = cards;
-    }
-
-    function handlePickProduct(btn) {
-      if (!btn) return;
-      const id = btn.dataset.id;
-      const name = btn.dataset.name || '';
-      const vendor = btn.dataset.vendor || '';
-      const url = btn.dataset.url || '';
-      if (prodState.rowIdx == null) return;
-      currentRows[prodState.rowIdx] = {
-        ...(currentRows[prodState.rowIdx] || {}),
-        aa_product_id: id,
-        _aa_name: name,
-        aa_vendor: vendor,
-        _aa_code: extractCode(url),
-        producto_id: null, // ocultar select interno
-        placeholder:false
-      };
-      renderGrid(currentRows);
-      closeProductOverlay();
-    }
-
-    // ---------- category images (for summary) ----------
-    // catImagesMap already handled above
-
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
   </script>
 </body>
 </html>
