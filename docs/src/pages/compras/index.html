@@ -223,7 +223,7 @@
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
 
-    // estado buscador catálogo (ahora filtramos por código derivado de aa_url)
+    // estado buscador catálogo (filtrado por código derivado de aa_url, mostrando aa_name)
     const prodState = { rowIdx: null, pageSize: 50, catCodes: [] };
     const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
@@ -232,37 +232,20 @@
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
 
-    // ---- helpers ---------------------------------------------------------
+    // ----------------- helpers -----------------
     function extractCode(url = '') {
-      const match = url.match(/\/(\d{6,})\/?$/);
-      return match ? `/${match[1]}` : '';
+      const m = url.match(/\/(\d{6,})\/?$/);
+      return m ? `/${m[1]}` : '';
     }
-    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
-    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }); }
+    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length-1] : null; }
+    function setSectionState(bodyEl, arrowEl, expanded) { if(!bodyEl)return; bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight+40+'px' : '0'; if(arrowEl) arrowEl.classList.toggle('up', !expanded); }
+    function toggleSection(bodyEl, arrowEl){ if(!bodyEl)return; const isOpen=bodyEl.style.maxHeight && bodyEl.style.maxHeight!=='0px'; setSectionState(bodyEl,arrowEl,!isOpen); }
+    function getClient(){ return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
+    async function waitForClient(timeoutMs=4000){ const start=performance.now(); while(performance.now()-start<timeoutMs){ const c=getClient(); if(c) return c; await new Promise(r=>setTimeout(r,50)); } throw new Error('Supabase client no inicializado'); }
 
-    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
-    function setSectionState(bodyEl, arrowEl, expanded) {
-      if (!bodyEl) return;
-      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
-      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
-    }
-    function toggleSection(bodyEl, arrowEl) {
-      if (!bodyEl) return;
-      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
-      setSectionState(bodyEl, arrowEl, !isOpen);
-    }
-    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
-    async function waitForClient(timeoutMs = 4000) {
-      const start = performance.now();
-      while (performance.now() - start < timeoutMs) {
-        const c = getClient();
-        if (c) return c;
-        await new Promise(r => setTimeout(r, 50));
-      }
-      throw new Error('Supabase client no inicializado');
-    }
-
-    // ---- init -----------------------------------------------------------
+    // ----------------- init -----------------
     document.addEventListener('DOMContentLoaded', async () => {
       ensureEls();
       try {
@@ -272,7 +255,7 @@
         await loadSalesMeta();
         await loadBlocks();
         await loadCategoryImages();
-        await loadFacets(); // inicializa placeholder facetas
+        await loadFacets(); // prepara chips con código->nombre
       } catch (e) {
         console.error(e);
         window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
@@ -290,14 +273,14 @@
 
       if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
       if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
-      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
-      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
+      if (delBtn) { e.preventDefault(); deleteRow(Number(delBtn.dataset.row)); }
+      if (dupBtn) { e.preventDefault(); duplicateRow(Number(dupBtn.dataset.row)); }
       if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
       if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
       if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
     });
 
-    function ensureEls() {
+    function ensureEls(){
       blocksContainer = pickLast('#blocksContainer');
       blocksEntregados = pickLast('#blocksEntregados');
       emptyState = pickLast('#emptyState');
@@ -373,24 +356,36 @@
 
     async function loadSalesMeta() {
       const client = await waitForClient();
-      const { data: ventasRows } = await client.from('ventas').select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
+      const { data: ventasRows } = await client
+        .from('ventas')
+        .select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
+
       projectPartsMap.clear();
       projectAllDoneMap.clear();
       projectFechaLimiteMap.clear();
+
       (ventasRows || []).forEach(v => {
         const key = v.cotizacion_id;
         if (!key) return;
         const name = v.partida_nombre || v.partida || '';
         if (!projectPartsMap.has(key)) projectPartsMap.set(key, []);
         if (name) projectPartsMap.get(key).push(name);
+
         const st = (v.estado || '').toLowerCase();
         const done = st === 'completada';
         if (!projectAllDoneMap.has(key)) projectAllDoneMap.set(key, true);
         if (!done) projectAllDoneMap.set(key, false);
-        if (v.fecha_entrega_limite && !projectFechaLimiteMap.has(key)) projectFechaLimiteMap.set(key, v.fecha_entrega_limite);
+
+        if (v.fecha_entrega_limite && !projectFechaLimiteMap.has(key)) {
+          projectFechaLimiteMap.set(key, v.fecha_entrega_limite);
+        }
       });
 
-      const { data: cotRows } = await client.from('cotizaciones').select('id, fecha_entrega_limite').eq('estado','aprobada');
+      const { data: cotRows } = await client
+        .from('cotizaciones')
+        .select('id, fecha_entrega_limite')
+        .eq('estado', 'aprobada');
+
       (cotRows || []).forEach(c => {
         if (c.id && c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) {
           projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
@@ -422,14 +417,21 @@
         const client = await waitForClient();
         const { data: cotAprob } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
         const approved = new Set((cotAprob || []).map(c => c.id));
-        const { data } = await client.from('purchase_blocks').select('*').order('created_at', { ascending: false });
+
+        const { data } = await client
+          .from('purchase_blocks')
+          .select('*')
+          .order('created_at', { ascending: false });
+
         const cobradoMap = await fetchCobradoMap();
+
         const filtered = filterBlocks(data || [], approved);
         const toRender = filtered.length ? filtered : (data || []);
         const merged = toRender.map(b => ({
           ...b,
           total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
         }));
+
         renderBlocks(merged);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -441,14 +443,17 @@
     function renderBlocks(blocks) {
       ensureEls();
       if (!blocksContainer || !blocksEntregados || !emptyState || !emptyEntregados) return;
+
       const cards = blocks.map(b => {
         const parts = projectPartsMap.get(b.proyecto_id) || [];
         const partesLabel = parts.length ? parts.join(' · ') : 'Sin partidas';
         const fechaLim = projectFechaLimiteMap.get(b.proyecto_id) || b.fecha_entrega_limite || '';
+
         const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
         const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
+
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
           html: `
@@ -521,10 +526,7 @@
     }
 
     // ---------- filas ----------
-    function setVal(idx, field, value) {
-      const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
-      if (el) el.value = value ?? '';
-    }
+    function setVal(idx, field, value) { const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`); if (el) el.value = value ?? ''; }
     function isMeaningful(payload) {
       return (
         (payload.producto_id && payload.producto_id !== '') ||
@@ -666,6 +668,7 @@
       if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
     }
+
     function syncProdUI(idx) {
       const row = currentRows[idx] || {};
       const pill = overlayLCGrid?.querySelector?.(`[data-role="aa-pill"][data-row="${idx}"]`);
@@ -682,6 +685,8 @@
         if (venEl) venEl.textContent = row.aa_vendor ? `· ${row.aa_vendor}` : '';
       }
     }
+
+    // ---------- editor de celdas ----------
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
@@ -698,8 +703,8 @@
       await persistRow(rowIdx);
       await recomputeBlockTotals(currentBlockId);
     }
+
     function buildPayload(row) {
-      // No enviamos aa_category_url porque la columna no existe en purchase_lines
       return {
         block_id: row.block_id || currentBlockId,
         encargado: row.encargado || null,
@@ -717,6 +722,7 @@
         observaciones: row.observaciones || null
       };
     }
+
     async function persistRow(idx) {
       const row = currentRows[idx]; if (!row) return; if (row._saving) return;
       const client = await waitForClient(); const payload = buildPayload(row); const meaningful = isMeaningful(payload);
@@ -735,31 +741,13 @@
       } catch (e) { console.error('Persist error', e); }
       finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
     }
-    async function deleteRow(idx) {
-      const row = currentRows[idx]; if (!row) return;
-      const client = await waitForClient();
-      try { if (row.id) await client.from(TABLE).delete().eq('id', row.id); currentRows.splice(idx, 1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId); }
-      catch (e) { console.error('Delete error', e); }
-    }
-    function duplicateRow(idx) {
-      const src = currentRows[idx]; if (!src) return;
-      const clone = { ...src, id: null, block_id: currentBlockId, created_at: null, placeholder: false, _saving: false };
-      currentRows.splice(idx + 1, 0, clone);
-      renderGrid(currentRows);
-      if (isMeaningful(buildPayload(clone))) persistRow(idx + 1).then(() => recomputeBlockTotals(currentBlockId));
-    }
-    function applyEstadoStyle(rowIdx) {
-      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`);
-      if (!sel) return;
-      sel.classList.remove('estado-comprado', 'estado-stock', 'estado-porcomprar');
-      const val = (sel.value || '').toLowerCase();
-      if (val.includes('comprado')) sel.classList.add('estado-comprado');
-      else if (val.includes('stock')) sel.classList.add('estado-stock');
-      else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar');
-    }
+
+    async function deleteRow(idx) { const row=currentRows[idx]; if(!row) return; const client=await waitForClient(); try{ if(row.id) await client.from(TABLE).delete().eq('id',row.id); currentRows.splice(idx,1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId);}catch(e){console.error('Delete error',e);} }
+    function duplicateRow(idx) { const src=currentRows[idx]; if(!src) return; const clone={...src,id:null,block_id:currentBlockId,created_at:null,placeholder:false,_saving:false}; currentRows.splice(idx+1,0,clone); renderGrid(currentRows); if(isMeaningful(buildPayload(clone))) persistRow(idx+1).then(()=>recomputeBlockTotals(currentBlockId)); }
+    function applyEstadoStyle(rowIdx) { const sel=overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if(!sel)return; sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar'); const val=(sel.value||'').toLowerCase(); if(val.includes('comprado')) sel.classList.add('estado-comprado'); else if(val.includes('stock')) sel.classList.add('estado-stock'); else if(val.includes('por comprar')||val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
 
     // ---------- catálogo externo ----------
-    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a, c) => { a[c.name] = c.image_url; return a; }, {}); } catch (e) { console.warn('cat images', e); } }
+    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{}); } catch (e) { console.warn('cat images', e); } }
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
     async function fetchLines(blockId) {
@@ -795,6 +783,7 @@
       `).join('');
       overlayGrid.innerHTML = `<div class="item-grid">${cards}</div>`;
     }
+
     async function openLC(blockId, title) {
       ensureEls();
       currentBlockId = blockId;
@@ -809,6 +798,7 @@
       try { await loadLines(blockId); }
       catch (e) { console.error(e); overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>'; }
     }
+
     async function openSummary(blockId, title) {
       ensureEls();
       if (!overlay || !overlayGrid || !overlayTitle) return;
@@ -818,68 +808,101 @@
       catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
     }
 
-    // Facetas iniciales (placeholder)
+    // --------- Facetas (aa_url -> código -> etiqueta con aa_name) ----------
     async function loadFacets() {
-      if (facetBox) facetBox.innerHTML = '<div style="color:#6c7a86;">Busca para ver categorías sugeridas.</div>';
+      try {
+        const client = await waitForClient();
+        // Traemos código + nombre para poder mostrar el nombre en la chip
+        const { data, error } = await client
+          .from('aa_products')
+          .select('aa_url, aa_name')
+          .limit(10000);
+        if (error) { console.warn('facets', error); return; }
+
+        const map = new Map(); // code -> {name, count}
+        (data || []).forEach(r => {
+          const code = extractCode(r.aa_url);
+          if (!code) return;
+          const name = r.aa_name || code;
+          if (!map.has(code)) map.set(code, { name, count: 0 });
+          map.get(code).count += 1;
+        });
+        renderFacetBox(map);
+      } catch (e) {
+        console.warn('facets err', e);
+      }
     }
 
-    // ==== Búsqueda catálogo externo ====
+    function renderFacetBox(codeMap) {
+      if (!facetBox) return;
+      const rows = [...codeMap.entries()]
+        .sort((a,b)=> a[1].name.localeCompare(b[1].name,'es'));
+      facetBox.innerHTML = rows.map(([code, info]) => `
+        <label class="chip-check">
+          <input type="checkbox" data-code="${code}">
+          <span>${escapeHtml(info.name)} <small style="color:#6c7a86;">${code}</small> (${info.count})</span>
+        </label>
+      `).join('');
+      facetBox.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+        cb.onchange = () => {
+          prodState.catCodes = [...facetBox.querySelectorAll('input:checked')].map(i=>i.dataset.code);
+          runSearch();
+        };
+      });
+    }
+
+    // ----------------- Búsqueda catálogo externo -----------------
     const runSearch = debounce(async () => {
       if (!prodResults) return;
-      const query = (prodSearchInput?.value || '').trim();
-      const vendor = prodVendorFilter?.value || '';
-      const brand = (prodBrandFilter?.value || '').trim();
-      const minP = priceMin?.value ? Number(priceMin.value) : null;
-      const maxP = priceMax?.value ? Number(priceMax.value) : null;
-      const order = prodOrder?.value || 'name-asc';
+      prodResults.innerHTML = '<div style="padding:10px;color:#6c7a86;">Buscando...</div>';
       try {
-        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page: 0, catCodes: prodState.catCodes });
-        renderProdResults(rows);
-        renderFacetBox(rows); // facetas dinámicas según resultados
+        const client = await waitForClient();
+        let q = client.from('aa_products')
+          .select('aa_product_id:id, aa_name, aa_price, aa_url, aa_brand, vendor', { count:'exact' })
+          .range(0, prodState.pageSize - 1);
+
+        const text = (prodSearchInput?.value || '').trim();
+        if (text) q = q.ilike('aa_name', `%${text}%`);
+
+        const vendor = prodVendorFilter?.value || '';
+        if (vendor) q = q.eq('vendor', vendor);
+
+        const brand = (prodBrandFilter?.value || '').trim();
+        if (brand) q = q.ilike('aa_brand', `%${brand}%`);
+
+        const min = priceMin?.value ? Number(priceMin.value) : null;
+        const max = priceMax?.value ? Number(priceMax.value) : null;
+        if (min != null && !Number.isNaN(min)) q = q.gte('aa_price', min);
+        if (max != null && !Number.isNaN(max)) q = q.lte('aa_price', max);
+
+        // filtro por códigos derivados de aa_url
+        if (prodState.catCodes.length) {
+          const ors = prodState.catCodes.map(code => `aa_url.ilike.%${code}`).join(',');
+          q = q.or(ors);
+        }
+
+        const order = prodOrder?.value || 'name-asc';
+        if (order === 'price-asc') q = q.order('aa_price', { ascending:true, nullsFirst:true });
+        else if (order === 'price-desc') q = q.order('aa_price', { ascending:false, nullsLast:true });
+        else q = q.order('aa_name', { ascending:true });
+
+        const { data, error } = await q;
+        if (error) throw error;
+        renderProdResults(data || []);
       } catch (e) {
-        if (prodResults) prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
-        if (facetBox) facetBox.innerHTML = '';
         console.error(e);
+        prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
       }
     }, 200);
 
-    async function searchProducts({ query = '', vendor = '', brand = '', minP = null, maxP = null, order = 'name-asc', page = 0, catCodes = [] }) {
-      const client = await waitForClient();
-      let q = client.from('aa_products')
-        .select('id:aa_product_id, aa_name, aa_price, aa_url, aa_brand, aa_subcategory, aa_section, vendor', { count: 'exact' })
-        .ilike('aa_name', `%${query}%`)
-        .range(page * prodState.pageSize, page * prodState.pageSize + prodState.pageSize - 1);
-
-      if (vendor) q = q.eq('vendor', vendor);
-      if (brand) q = q.ilike('aa_brand', `%${brand}%`);
-      if (minP !== null && !Number.isNaN(minP)) q = q.gte('aa_price', minP);
-      if (maxP !== null && !Number.isNaN(maxP)) q = q.lte('aa_price', maxP);
-
-      if (catCodes?.length) {
-        const orFilter = catCodes.map(c => `aa_url.ilike.*${c}`).join(',');
-        q = q.or(orFilter);
-      }
-
-      if (order === 'price-asc') q = q.order('aa_price', { ascending: true, nullsFirst: true });
-      else if (order === 'price-desc') q = q.order('aa_price', { ascending: false, nullsLast: true });
-      else q = q.order('aa_name', { ascending: true });
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data || [];
-    }
-
-    function renderProdResults(rows) {
+    function renderProdResults(rows){
       if (!prodResults) return;
       if (!rows.length) { prodResults.innerHTML = '<div style="padding:12px;color:#666;">Sin resultados</div>'; return; }
-      const html = rows.map(r => {
-        const code = extractCode(r.aa_url || '');
-        return `
+      prodResults.innerHTML = rows.map(r => `
         <div style="display:flex;gap:8px;align-items:center;border-bottom:1px solid #e5e7eb;padding:8px;">
           <div style="flex:1;">
             <div style="font-weight:700;">${escapeHtml(r.aa_name)}</div>
-            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.vendor || '')}${r.aa_brand ? ' · ' + escapeHtml(r.aa_brand) : ''}</div>
-            <div style="font-size:12px;color:#6c7a86;">Cat ID: ${escapeHtml(code || '—')}</div>
+            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.vendor || '')}${r.aa_brand ? ' · '+escapeHtml(r.aa_brand) : ''}</div>
             <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.aa_url || '')}</div>
           </div>
           <div style="width:110px;font-weight:600;">${r.aa_price ? fmtCLP(r.aa_price) : '—'}</div>
@@ -890,37 +913,11 @@
               data-vendor="${escapeHtml(r.vendor || '')}"
               data-name="${escapeHtml(r.aa_name)}"
               data-price="${r.aa_price || ''}"
-              data-catcode="${escapeHtml(code || '')}"
+              data-code="${escapeHtml(extractCode(r.aa_url) || '')}"
             >Usar</button>
           </div>
-        </div>`;
-      }).join('');
-      prodResults.innerHTML = html;
-    }
-
-    function renderFacetBox(rows) {
-      if (!facetBox) return;
-      const map = new Map(); // code -> {count,label}
-      rows.forEach(r => {
-        const code = extractCode(r.aa_url || '');
-        if (!code) return;
-        if (!map.has(code)) map.set(code, { count: 0, label: r.aa_name || code });
-        map.get(code).count += 1;
-      });
-      const facets = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 50);
-      facetBox.innerHTML = facets.length ? facets.map(([code, info]) => `
-        <label class="chip-check">
-          <input type="checkbox" data-facet="catcode" value="${escapeHtml(code)}" ${prodState.catCodes.includes(code) ? 'checked' : ''}>
-          ${escapeHtml(info.label)} <span style="color:#6c7a86;">(${escapeHtml(code)}) · ${info.count}</span>
-        </label>
-      `).join('') : '<div style="color:#6c7a86;">Sin categorías en estos resultados</div>';
-
-      facetBox.querySelectorAll('input[type=checkbox]').forEach(cb => {
-        cb.addEventListener('change', () => {
-          prodState.catCodes = [...facetBox.querySelectorAll('input[type=checkbox]:checked')].map(i => i.value);
-          runSearch();
-        });
-      });
+        </div>
+      `).join('');
     }
 
     function handlePickProduct(btn) {
@@ -931,9 +928,10 @@
       currentRows[idx].aa_product_id = btn.dataset.id || null;
       currentRows[idx].aa_vendor = btn.dataset.vendor || null;
       currentRows[idx]._aa_name = btn.dataset.name || '';
-      currentRows[idx]._aa_category = btn.dataset.catcode || null;
+      currentRows[idx]._aa_category = btn.dataset.code || '';
       currentRows[idx].precio_unit = price ?? currentRows[idx].precio_unit ?? null;
-      setVal(idx, 'producto_id', ''); // limpia select interno
+
+      setVal(idx,'producto_id',''); // limpia select interno
       const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
       if (label) label.value = currentRows[idx]._aa_name || '';
       const priceInput = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="precio_unit"]`);
@@ -953,20 +951,15 @@
       persistRow(idx);
     }
 
-    function openProductSearch(rowIdx) {
+    function openProductSearch(rowIdx){
+      ensureEls();
       prodState.rowIdx = rowIdx;
       if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
-      if (prodSearchInput) { prodSearchInput.value = ''; prodSearchInput.focus(); }
-      if (prodBrandFilter) prodBrandFilter.value = '';
-      if (priceMin) priceMin.value = '';
-      if (priceMax) priceMax.value = '';
-      if (prodOrder) prodOrder.value = 'name-asc';
-      prodState.catCodes = [];
       runSearch();
     }
-    function closeProductOverlay() {
-      if (overlayProduct) { overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
-    }
+    function closeProductOverlay(){ if(overlayProduct){ overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); prodState.rowIdx=null; } }
+
+    // --------------------------------------------------------------
   </script>
 </body>
 </html>
