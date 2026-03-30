@@ -223,21 +223,80 @@
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
 
-    const prodState = { rowIdx: null, pageSize: 50, catUrls: [] };
+    // estado buscador catálogo (ahora filtramos por código derivado de aa_url)
+    const prodState = { rowIdx: null, pageSize: 50, catCodes: [] };
     const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
-    const catLabelMap = new Map(); // idNum -> aa_name
+    const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
 
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
 
-    function extractCat(url) {
-      if (!url) return null;
-      const m = url.match(/\/(\d+)(?:[?#]|$)/);
-      return m ? m[1] : null;
+    // ---- helpers ---------------------------------------------------------
+    function extractCode(url = '') {
+      const match = url.match(/\/(\d{6,})\/?$/);
+      return match ? `/${match[1]}` : '';
     }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
 
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
+    function setSectionState(bodyEl, arrowEl, expanded) {
+      if (!bodyEl) return;
+      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
+      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
+    }
+    function toggleSection(bodyEl, arrowEl) {
+      if (!bodyEl) return;
+      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
+      setSectionState(bodyEl, arrowEl, !isOpen);
+    }
+    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
+    async function waitForClient(timeoutMs = 4000) {
+      const start = performance.now();
+      while (performance.now() - start < timeoutMs) {
+        const c = getClient();
+        if (c) return c;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      throw new Error('Supabase client no inicializado');
+    }
+
+    // ---- init -----------------------------------------------------------
+    document.addEventListener('DOMContentLoaded', async () => {
+      ensureEls();
+      try {
+        const client = await waitForClient();
+        if (!window.supabase && client) window.supabase = client;
+        await loadCatalogs();
+        await loadSalesMeta();
+        await loadBlocks();
+        await loadCategoryImages();
+        await loadFacets(); // inicializa placeholder facetas
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const btnLC = e.target.closest('[data-block-lc]');
+      const btnSummary = e.target.closest('[data-block-summary]');
+      const delBtn = e.target.closest('[data-action="del-row"]');
+      const dupBtn = e.target.closest('[data-action="dup-row"]');
+      const searchBtn = e.target.closest('[data-action="search-prod"]');
+      const pickBtn = e.target.closest('[data-action="pick-prod"]');
+      const clearBtn = e.target.closest('[data-action="clear-prod"]');
+
+      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
+      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
+      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
+      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
+      if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
+      if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
+      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
+    });
+
     function ensureEls() {
       blocksContainer = pickLast('#blocksContainer');
       blocksEntregados = pickLast('#blocksEntregados');
@@ -290,62 +349,6 @@
       if (priceMax) priceMax.addEventListener('input', debounce(runSearch, 200));
     }
 
-    function setSectionState(bodyEl, arrowEl, expanded) {
-      if (!bodyEl) return;
-      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
-      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
-    }
-    function toggleSection(bodyEl, arrowEl) {
-      if (!bodyEl) return;
-      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
-      setSectionState(bodyEl, arrowEl, !isOpen);
-    }
-
-    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
-    async function waitForClient(timeoutMs = 4000) {
-      const start = performance.now();
-      while (performance.now() - start < timeoutMs) {
-        const c = getClient();
-        if (c) return c;
-        await new Promise(r => setTimeout(r, 50));
-      }
-      throw new Error('Supabase client no inicializado');
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      ensureEls();
-      try {
-        const client = await waitForClient();
-        if (!window.supabase && client) window.supabase = client;
-        await loadCatalogs();
-        await loadSalesMeta();
-        await loadBlocks();
-        await loadCategoryImages();
-        await loadFacets(); // chips por aa_url→aa_name
-      } catch (e) {
-        console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      const btnLC = e.target.closest('[data-block-lc]');
-      const btnSummary = e.target.closest('[data-block-summary]');
-      const delBtn = e.target.closest('[data-action="del-row"]');
-      const dupBtn = e.target.closest('[data-action="dup-row"]');
-      const searchBtn = e.target.closest('[data-action="search-prod"]');
-      const pickBtn = e.target.closest('[data-action="pick-prod"]');
-      const clearBtn = e.target.closest('[data-action="clear-prod"]');
-
-      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
-      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
-      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
-      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
-      if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
-      if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
-      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
-    });
-
     // ---------- catálogos internos ----------
     async function loadCatalogs() {
       const client = await waitForClient();
@@ -370,37 +373,24 @@
 
     async function loadSalesMeta() {
       const client = await waitForClient();
-
-      const { data: ventasRows } = await client
-        .from('ventas')
-        .select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
-
+      const { data: ventasRows } = await client.from('ventas').select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
       projectPartsMap.clear();
       projectAllDoneMap.clear();
       projectFechaLimiteMap.clear();
-
       (ventasRows || []).forEach(v => {
         const key = v.cotizacion_id;
         if (!key) return;
         const name = v.partida_nombre || v.partida || '';
         if (!projectPartsMap.has(key)) projectPartsMap.set(key, []);
         if (name) projectPartsMap.get(key).push(name);
-
         const st = (v.estado || '').toLowerCase();
         const done = st === 'completada';
         if (!projectAllDoneMap.has(key)) projectAllDoneMap.set(key, true);
         if (!done) projectAllDoneMap.set(key, false);
-
-        if (v.fecha_entrega_limite && !projectFechaLimiteMap.has(key)) {
-          projectFechaLimiteMap.set(key, v.fecha_entrega_limite);
-        }
+        if (v.fecha_entrega_limite && !projectFechaLimiteMap.has(key)) projectFechaLimiteMap.set(key, v.fecha_entrega_limite);
       });
 
-      const { data: cotRows } = await client
-        .from('cotizaciones')
-        .select('id, fecha_entrega_limite')
-        .eq('estado', 'aprobada');
-
+      const { data: cotRows } = await client.from('cotizaciones').select('id, fecha_entrega_limite').eq('estado','aprobada');
       (cotRows || []).forEach(c => {
         if (c.id && c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) {
           projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
@@ -432,21 +422,14 @@
         const client = await waitForClient();
         const { data: cotAprob } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
         const approved = new Set((cotAprob || []).map(c => c.id));
-
-        const { data } = await client
-          .from('purchase_blocks')
-          .select('*')
-          .order('created_at', { ascending: false });
-
+        const { data } = await client.from('purchase_blocks').select('*').order('created_at', { ascending: false });
         const cobradoMap = await fetchCobradoMap();
-
         const filtered = filterBlocks(data || [], approved);
         const toRender = filtered.length ? filtered : (data || []);
         const merged = toRender.map(b => ({
           ...b,
           total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
         }));
-
         renderBlocks(merged);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -458,17 +441,14 @@
     function renderBlocks(blocks) {
       ensureEls();
       if (!blocksContainer || !blocksEntregados || !emptyState || !emptyEntregados) return;
-
       const cards = blocks.map(b => {
         const parts = projectPartsMap.get(b.proyecto_id) || [];
         const partesLabel = parts.length ? parts.join(' · ') : 'Sin partidas';
         const fechaLim = projectFechaLimiteMap.get(b.proyecto_id) || b.fecha_entrega_limite || '';
-
         const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
         const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
-
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
           html: `
@@ -581,7 +561,7 @@
       const client = await waitForClient();
       const { data, error } = await client
         .from('aa_products')
-        .select('aa_product_id:id, aa_name, aa_price, aa_url, vendor')
+        .select('aa_product_id:id, aa_name, aa_price, aa_url, aa_subcategory, aa_section, vendor')
         .in('aa_product_id', ids);
       if (error) return;
       const map = new Map((data || []).map(r => [r.id, r]));
@@ -591,7 +571,8 @@
           ...r,
           _aa_name: ref ? ref.aa_name : (r._aa_name || ''),
           aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor,
-          _aa_category: ref ? extractCat(ref.aa_url) : r._aa_category
+          aa_price: ref ? ref.aa_price : r.aa_price,
+          _aa_category: ref ? extractCode(ref.aa_url) : r._aa_category
         };
       });
     }
@@ -619,170 +600,6 @@
         }).eq('id', blockId);
         await loadBlocks();
       } catch (e) { console.error('update block totals', e); }
-    }
-
-    // ---------- facetas por aa_url -> aa_name ----------
-    async function loadFacets() {
-      const client = await waitForClient();
-      const { data, error } = await client
-        .from('aa_products')
-        .select('aa_url, aa_name')
-        .limit(20000); // asumir volumen manejable
-      if (error) { console.error(error); return; }
-      catLabelMap.clear();
-      (data || []).forEach(r => {
-        const id = extractCat(r.aa_url);
-        if (id) catLabelMap.set(id, r.aa_name || id);
-      });
-      renderFacetBox(null);
-    }
-
-    function renderFacetBox(rows) {
-      if (!facetBox) return;
-      const counts = new Map();
-      if (rows) {
-        rows.forEach(r => {
-          const id = extractCat(r.aa_category_url || r.aa_url);
-          if (!id) return;
-          counts.set(id, (counts.get(id) || 0) + 1);
-        });
-      } else {
-        // primera carga: mostrar top N sin conteo
-        catLabelMap.forEach((_, id) => counts.set(id, 0));
-      }
-      const items = Array.from(counts.entries()).slice(0, 60);
-      facetBox.innerHTML = items.map(([id, c]) => {
-        const label = catLabelMap.get(id) || id;
-        const checked = prodState.catUrls.includes(id) ? 'checked' : '';
-        return `<label class="chip-check">
-            <input type="checkbox" data-cat="${id}" ${checked}>
-            <span>${escapeHtml(label)}${c ? ` (${c})` : ''}</span>
-          </label>`;
-      }).join('') || '<div style="color:#6c7a86;">Sin categorías</div>';
-
-      facetBox.querySelectorAll('input[type=checkbox]').forEach(cb=>{
-        cb.onchange = ()=>{
-          const id = cb.dataset.cat;
-          if (cb.checked) {
-            if (!prodState.catUrls.includes(id)) prodState.catUrls.push(id);
-          } else {
-            prodState.catUrls = prodState.catUrls.filter(x=>x!==id);
-          }
-          runSearch();
-        };
-      });
-    }
-
-    // ---------- búsqueda catálogo externo ----------
-    const runSearch = debounce(async () => {
-      if (!prodResults) return;
-      const query = (prodSearchInput?.value || '').trim();
-      const vendor = prodVendorFilter?.value || '';
-      const brand = (prodBrandFilter?.value || '').trim();
-      const minP = priceMin?.value ? Number(priceMin.value) : null;
-      const maxP = priceMax?.value ? Number(priceMax.value) : null;
-      const order = prodOrder?.value || 'name-asc';
-      try {
-        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page: 0, catUrls: prodState.catUrls });
-        renderProdResults(rows);
-        renderFacetBox(rows);
-      } catch (e) {
-        if (prodResults) prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
-        console.error(e);
-      }
-    }, 200);
-
-    async function searchProducts({ query = '', vendor = '', brand = '', minP = null, maxP = null, order = 'name-asc', page = 0, catUrls = [] }) {
-      const client = await waitForClient();
-      let q = client.from('aa_products')
-        .select('id:aa_product_id, aa_name, aa_price, aa_url, aa_brand, aa_category_url, vendor', { count: 'exact' })
-        .ilike('aa_name', `%${query}%`)
-        .range(page * prodState.pageSize, page * prodState.pageSize + prodState.pageSize - 1);
-
-      if (vendor) q = q.eq('vendor', vendor);
-      if (brand) q = q.ilike('aa_brand', `%${brand}%`);
-      if (minP !== null && !Number.isNaN(minP)) q = q.gte('aa_price', minP);
-      if (maxP !== null && !Number.isNaN(maxP)) q = q.lte('aa_price', maxP);
-      if (catUrls?.length) q = q.in('aa_category_url', catUrls.map(id=>`/${id}`)); // la BD guarda con slash inicial
-
-      if (order === 'price-asc') q = q.order('aa_price', { ascending: true, nullsFirst: true });
-      else if (order === 'price-desc') q = q.order('aa_price', { ascending: false, nullsLast: true });
-      else q = q.order('aa_name', { ascending: true });
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data || [];
-    }
-
-    function renderProdResults(rows) {
-      if (!prodResults) return;
-      if (!rows.length) { prodResults.innerHTML = '<div style="padding:12px;color:#666;">Sin resultados</div>'; return; }
-      const html = rows.map(r => {
-        const catId = extractCat(r.aa_category_url || r.aa_url);
-        const catName = catId ? (catLabelMap.get(catId) || catId) : '';
-        return `
-        <div style="display:flex;gap:8px;align-items:center;border-bottom:1px solid #e5e7eb;padding:8px;">
-          <div style="flex:1;">
-            <div style="font-weight:700;">${escapeHtml(r.aa_name)}</div>
-            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.vendor || '')}${r.aa_brand ? ' · ' + escapeHtml(r.aa_brand) : ''}</div>
-            <div style="font-size:12px;color:#6c7a86;">Cat ID: ${catId || '—'} · ${escapeHtml(catName)}</div>
-            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.aa_url || '')}</div>
-          </div>
-          <div style="width:110px;font-weight:600;">${r.aa_price ? fmtCLP(r.aa_price) : '—'}</div>
-          <div style="display:flex;gap:6px;">
-            <a href="${escapeHtml(r.aa_url || '#')}" target="_blank" class="btn btn-ghost" style="height:28px;">Ver</a>
-            <button class="btn btn-primary" style="height:28px;" data-action="pick-prod"
-              data-id="${r.id}"
-              data-vendor="${escapeHtml(r.vendor || '')}"
-              data-name="${escapeHtml(r.aa_name)}"
-              data-price="${r.aa_price || ''}"
-              data-url="${escapeHtml(r.aa_url || '')}"
-              data-cat="${catId || ''}"
-            >Usar</button>
-          </div>
-        </div>`;
-      }).join('');
-      prodResults.innerHTML = html;
-    }
-
-    function closeProductOverlay() {
-      if (overlayProduct) overlayProduct.classList.remove('active');
-      document.body.classList.remove('overlay-open');
-      prodState.catUrls = [];
-    }
-
-    function openProductSearch(rowIdx) {
-      prodState.rowIdx = rowIdx;
-      if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
-      runSearch();
-    }
-
-    function handlePickProduct(btn) {
-      const idx = prodState.rowIdx;
-      if (idx == null) return;
-      const id = btn.dataset.id;
-      const vendor = btn.dataset.vendor || null;
-      const name = btn.dataset.name || '';
-      const catId = btn.dataset.cat || null;
-
-      currentRows[idx] = {
-        ...(currentRows[idx] || {}),
-        aa_product_id: id,
-        aa_vendor: vendor,
-        _aa_name: name,
-        _aa_category: catId,
-        producto_id: null, // ocultar dropdown
-      };
-      renderGrid(currentRows);
-      persistRow(idx);
-      closeProductOverlay();
-    }
-
-    function clearExternalProduct(idx) {
-      if (idx == null) return;
-      currentRows[idx] = { ...(currentRows[idx] || {}), aa_product_id: null, _aa_name: '', aa_vendor: null, _aa_category: null };
-      renderGrid(currentRows);
-      persistRow(idx);
     }
 
     // ---------- render tabla ----------
@@ -832,23 +649,39 @@
       }).join('');
       overlayLCGrid.innerHTML = `<div class="table-wrapper"><table class="lc-table">${thead}<tbody>${bodyRows}</tbody></table></div>`;
       rows.forEach((row, idx) => {
-        setVal(idx, 'encargado', row.encargado);
-        setVal(idx, 'proveedor_id', row.proveedor_id);
-        setVal(idx, 'categoria', row.categoria);
+        setVal(idx,'encargado',row.encargado);
+        setVal(idx,'proveedor_id',row.proveedor_id);
+        setVal(idx,'categoria',row.categoria);
         rebuildProductOptions(idx);
-        setVal(idx, 'producto_id', row.producto_id);
-        setVal(idx, 'observaciones', row.observaciones);
-        setVal(idx, 'unidad', row.unidad);
-        setVal(idx, 'modo_compra', row.modo_compra);
-        setVal(idx, 'estado_pago', row.estado_pago);
-        setVal(idx, 'aa_product_name', row._aa_name || '');
+        setVal(idx,'producto_id',row.producto_id);
+        setVal(idx,'observaciones',row.observaciones);
+        setVal(idx,'unidad',row.unidad);
+        setVal(idx,'modo_compra',row.modo_compra);
+        setVal(idx,'estado_pago',row.estado_pago);
+        setVal(idx,'aa_product_name',row._aa_name || '');
         applyEstadoStyle(idx);
+        syncProdUI(idx);
       });
       const tbl = overlayLCGrid.querySelector('table.lc-table');
       if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
     }
-
+    function syncProdUI(idx) {
+      const row = currentRows[idx] || {};
+      const pill = overlayLCGrid?.querySelector?.(`[data-role="aa-pill"][data-row="${idx}"]`);
+      const selWrap = overlayLCGrid?.querySelector?.(`select[data-row="${idx}"][data-f="producto_id"]`)?.closest('.prod-cell');
+      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
+      const hasAa = !!row.aa_product_id;
+      if (pill) pill.classList.toggle('hidden', !hasAa);
+      if (selWrap) selWrap.classList.toggle('hidden', hasAa);
+      if (label) label.classList.toggle('hidden', !hasAa);
+      if (hasAa && pill) {
+        const nameEl = pill.querySelector('[data-role="aa-name"]');
+        const venEl = pill.querySelector('[data-role="aa-vendor"]');
+        if (nameEl) nameEl.textContent = row._aa_name || '(catálogo externo)';
+        if (venEl) venEl.textContent = row.aa_vendor ? `· ${row.aa_vendor}` : '';
+      }
+    }
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
@@ -865,18 +698,8 @@
       await persistRow(rowIdx);
       await recomputeBlockTotals(currentBlockId);
     }
-
-    function applyEstadoStyle(rowIdx) {
-      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`);
-      if (!sel) return;
-      sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar');
-      const v = (sel.value||'').toLowerCase();
-      if (v.includes('comprado')) sel.classList.add('estado-comprado');
-      else if (v.includes('stock')) sel.classList.add('estado-stock');
-      else if (v.includes('por comprar') || v.includes('porcomprar')) sel.classList.add('estado-porcomprar');
-    }
-
     function buildPayload(row) {
+      // No enviamos aa_category_url porque la columna no existe en purchase_lines
       return {
         block_id: row.block_id || currentBlockId,
         encargado: row.encargado || null,
@@ -886,7 +709,6 @@
         producto_id: row.producto_id || null,
         aa_product_id: row.aa_product_id || null,
         aa_vendor: row.aa_vendor || null,
-        aa_category_url: row._aa_category ? `/${row._aa_category}` : null,
         unidad: row.unidad || null,
         cantidad: row.cantidad || null,
         precio_unit: row.precio_unit || null,
@@ -895,7 +717,6 @@
         observaciones: row.observaciones || null
       };
     }
-
     async function persistRow(idx) {
       const row = currentRows[idx]; if (!row) return; if (row._saving) return;
       const client = await waitForClient(); const payload = buildPayload(row); const meaningful = isMeaningful(payload);
@@ -905,16 +726,15 @@
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx, 'total', data.total);
+          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
-          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx, 'total', data.total); }
+          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total); }
         }
       } catch (e) { console.error('Persist error', e); }
       finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
     }
-
     async function deleteRow(idx) {
       const row = currentRows[idx]; if (!row) return;
       const client = await waitForClient();
@@ -928,10 +748,19 @@
       renderGrid(currentRows);
       if (isMeaningful(buildPayload(clone))) persistRow(idx + 1).then(() => recomputeBlockTotals(currentBlockId));
     }
+    function applyEstadoStyle(rowIdx) {
+      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`);
+      if (!sel) return;
+      sel.classList.remove('estado-comprado', 'estado-stock', 'estado-porcomprar');
+      const val = (sel.value || '').toLowerCase();
+      if (val.includes('comprado')) sel.classList.add('estado-comprado');
+      else if (val.includes('stock')) sel.classList.add('estado-stock');
+      else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar');
+    }
 
-    // ---------- resumen ----------
+    // ---------- catálogo externo ----------
     async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a, c) => { a[c.name] = c.image_url; return a; }, {}); } catch (e) { console.warn('cat images', e); } }
-    function pickCategoryImage(cat) { return catImagesMap[cat] || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/></svg>'; }
+    function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
     async function fetchLines(blockId) {
       const client = await waitForClient();
@@ -966,7 +795,6 @@
       `).join('');
       overlayGrid.innerHTML = `<div class="item-grid">${cards}</div>`;
     }
-
     async function openLC(blockId, title) {
       ensureEls();
       currentBlockId = blockId;
@@ -990,9 +818,155 @@
       catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
     }
 
-    // util fmt
-    function fmtCLP(v){ if(v==null||Number.isNaN(v)) return '$0'; return v.toLocaleString('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}); }
-    function escapeHtml(str){ return (str||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+    // Facetas iniciales (placeholder)
+    async function loadFacets() {
+      if (facetBox) facetBox.innerHTML = '<div style="color:#6c7a86;">Busca para ver categorías sugeridas.</div>';
+    }
+
+    // ==== Búsqueda catálogo externo ====
+    const runSearch = debounce(async () => {
+      if (!prodResults) return;
+      const query = (prodSearchInput?.value || '').trim();
+      const vendor = prodVendorFilter?.value || '';
+      const brand = (prodBrandFilter?.value || '').trim();
+      const minP = priceMin?.value ? Number(priceMin.value) : null;
+      const maxP = priceMax?.value ? Number(priceMax.value) : null;
+      const order = prodOrder?.value || 'name-asc';
+      try {
+        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page: 0, catCodes: prodState.catCodes });
+        renderProdResults(rows);
+        renderFacetBox(rows); // facetas dinámicas según resultados
+      } catch (e) {
+        if (prodResults) prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
+        if (facetBox) facetBox.innerHTML = '';
+        console.error(e);
+      }
+    }, 200);
+
+    async function searchProducts({ query = '', vendor = '', brand = '', minP = null, maxP = null, order = 'name-asc', page = 0, catCodes = [] }) {
+      const client = await waitForClient();
+      let q = client.from('aa_products')
+        .select('id:aa_product_id, aa_name, aa_price, aa_url, aa_brand, aa_subcategory, aa_section, vendor', { count: 'exact' })
+        .ilike('aa_name', `%${query}%`)
+        .range(page * prodState.pageSize, page * prodState.pageSize + prodState.pageSize - 1);
+
+      if (vendor) q = q.eq('vendor', vendor);
+      if (brand) q = q.ilike('aa_brand', `%${brand}%`);
+      if (minP !== null && !Number.isNaN(minP)) q = q.gte('aa_price', minP);
+      if (maxP !== null && !Number.isNaN(maxP)) q = q.lte('aa_price', maxP);
+
+      if (catCodes?.length) {
+        const orFilter = catCodes.map(c => `aa_url.ilike.*${c}`).join(',');
+        q = q.or(orFilter);
+      }
+
+      if (order === 'price-asc') q = q.order('aa_price', { ascending: true, nullsFirst: true });
+      else if (order === 'price-desc') q = q.order('aa_price', { ascending: false, nullsLast: true });
+      else q = q.order('aa_name', { ascending: true });
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    }
+
+    function renderProdResults(rows) {
+      if (!prodResults) return;
+      if (!rows.length) { prodResults.innerHTML = '<div style="padding:12px;color:#666;">Sin resultados</div>'; return; }
+      const html = rows.map(r => {
+        const code = extractCode(r.aa_url || '');
+        return `
+        <div style="display:flex;gap:8px;align-items:center;border-bottom:1px solid #e5e7eb;padding:8px;">
+          <div style="flex:1;">
+            <div style="font-weight:700;">${escapeHtml(r.aa_name)}</div>
+            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.vendor || '')}${r.aa_brand ? ' · ' + escapeHtml(r.aa_brand) : ''}</div>
+            <div style="font-size:12px;color:#6c7a86;">Cat ID: ${escapeHtml(code || '—')}</div>
+            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.aa_url || '')}</div>
+          </div>
+          <div style="width:110px;font-weight:600;">${r.aa_price ? fmtCLP(r.aa_price) : '—'}</div>
+          <div style="display:flex;gap:6px;">
+            <a href="${escapeHtml(r.aa_url || '#')}" target="_blank" class="btn btn-ghost" style="height:28px;">Ver</a>
+            <button class="btn btn-primary" style="height:28px;" data-action="pick-prod"
+              data-id="${r.id}"
+              data-vendor="${escapeHtml(r.vendor || '')}"
+              data-name="${escapeHtml(r.aa_name)}"
+              data-price="${r.aa_price || ''}"
+              data-catcode="${escapeHtml(code || '')}"
+            >Usar</button>
+          </div>
+        </div>`;
+      }).join('');
+      prodResults.innerHTML = html;
+    }
+
+    function renderFacetBox(rows) {
+      if (!facetBox) return;
+      const map = new Map(); // code -> {count,label}
+      rows.forEach(r => {
+        const code = extractCode(r.aa_url || '');
+        if (!code) return;
+        if (!map.has(code)) map.set(code, { count: 0, label: r.aa_name || code });
+        map.get(code).count += 1;
+      });
+      const facets = Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count).slice(0, 50);
+      facetBox.innerHTML = facets.length ? facets.map(([code, info]) => `
+        <label class="chip-check">
+          <input type="checkbox" data-facet="catcode" value="${escapeHtml(code)}" ${prodState.catCodes.includes(code) ? 'checked' : ''}>
+          ${escapeHtml(info.label)} <span style="color:#6c7a86;">(${escapeHtml(code)}) · ${info.count}</span>
+        </label>
+      `).join('') : '<div style="color:#6c7a86;">Sin categorías en estos resultados</div>';
+
+      facetBox.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          prodState.catCodes = [...facetBox.querySelectorAll('input[type=checkbox]:checked')].map(i => i.value);
+          runSearch();
+        });
+      });
+    }
+
+    function handlePickProduct(btn) {
+      const idx = prodState.rowIdx;
+      if (idx == null || currentRows[idx] == null) { closeProductOverlay(); return; }
+      const price = btn.dataset.price ? Number(btn.dataset.price) : null;
+      currentRows[idx].producto_id = null; // limpia interno
+      currentRows[idx].aa_product_id = btn.dataset.id || null;
+      currentRows[idx].aa_vendor = btn.dataset.vendor || null;
+      currentRows[idx]._aa_name = btn.dataset.name || '';
+      currentRows[idx]._aa_category = btn.dataset.catcode || null;
+      currentRows[idx].precio_unit = price ?? currentRows[idx].precio_unit ?? null;
+      setVal(idx, 'producto_id', ''); // limpia select interno
+      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
+      if (label) label.value = currentRows[idx]._aa_name || '';
+      const priceInput = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="precio_unit"]`);
+      if (priceInput && price != null) priceInput.value = price;
+      syncProdUI(idx);
+      persistRow(idx);
+      recomputeBlockTotals(currentBlockId);
+      closeProductOverlay();
+    }
+
+    function clearExternalProduct(idx) {
+      const row = currentRows[idx]; if (!row) return;
+      currentRows[idx] = { ...row, aa_product_id: null, aa_vendor: null, _aa_name: '', _aa_category: null, precio_unit: row.precio_unit };
+      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
+      if (label) label.value = '';
+      syncProdUI(idx);
+      persistRow(idx);
+    }
+
+    function openProductSearch(rowIdx) {
+      prodState.rowIdx = rowIdx;
+      if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
+      if (prodSearchInput) { prodSearchInput.value = ''; prodSearchInput.focus(); }
+      if (prodBrandFilter) prodBrandFilter.value = '';
+      if (priceMin) priceMin.value = '';
+      if (priceMax) priceMax.value = '';
+      if (prodOrder) prodOrder.value = 'name-asc';
+      prodState.catCodes = [];
+      runSearch();
+    }
+    function closeProductOverlay() {
+      if (overlayProduct) { overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
+    }
   </script>
 </body>
 </html>
