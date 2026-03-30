@@ -554,7 +554,7 @@
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
-        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at,aa_category_url')
+        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
       if (error) { console.error('loadLines', error); currentRows = []; }
@@ -576,8 +576,7 @@
         return {
           ...r,
           _aa_name: ref ? ref.aa_name : (r._aa_name || ''),
-          aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor,
-          aa_category_url: ref ? ref.aa_category_url : r.aa_category_url
+          aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor
         };
       });
     }
@@ -668,6 +667,7 @@
       if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
     }
+
     function syncProdUI(idx) {
       const row = currentRows[idx] || {};
       const pill = overlayLCGrid?.querySelector?.(`[data-role="aa-pill"][data-row="${idx}"]`);
@@ -687,6 +687,7 @@
         if (venEl) venEl.textContent = row.aa_vendor ? `· ${row.aa_vendor}` : '';
       }
     }
+
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
@@ -703,6 +704,7 @@
       await persistRow(rowIdx);
       await recomputeBlockTotals(currentBlockId);
     }
+
     function buildPayload(row) {
       return {
         block_id: row.block_id || currentBlockId,
@@ -713,7 +715,6 @@
         producto_id: row.producto_id || null,
         aa_product_id: row.aa_product_id || null,
         aa_vendor: row.aa_vendor || null,
-        aa_category_url: row.aa_category_url || null,
         unidad: row.unidad || null,
         cantidad: row.cantidad || null,
         precio_unit: row.precio_unit || null,
@@ -722,6 +723,7 @@
         observaciones: row.observaciones || null
       };
     }
+
     async function persistRow(idx) {
       const row = currentRows[idx]; if (!row) return; if (row._saving) return;
       const client = await waitForClient(); const payload = buildPayload(row); const meaningful = isMeaningful(payload);
@@ -731,20 +733,21 @@
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx, 'total', data.total);
+          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
-          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx, 'total', data.total); }
+          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total); }
         }
       } catch (e) { console.error('Persist error', e); }
       finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
     }
-    async function deleteRow(idx) { const row = currentRows[idx]; if (!row) return; const client = await waitForClient(); try { if (row.id) await client.from(TABLE).delete().eq('id', row.id); currentRows.splice(idx, 1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId); } catch (e) { console.error('Delete error', e); } }
-    function duplicateRow(idx) { const src = currentRows[idx]; if (!src) return; const clone = { ...src, id: null, block_id: currentBlockId, created_at: null, placeholder: false, _saving: false }; currentRows.splice(idx + 1, 0, clone); renderGrid(currentRows); if (isMeaningful(buildPayload(clone))) persistRow(idx + 1).then(() => recomputeBlockTotals(currentBlockId)); }
-    function applyEstadoStyle(rowIdx) { const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if (!sel) return; sel.classList.remove('estado-comprado', 'estado-stock', 'estado-porcomprar'); const val = (sel.value || '').toLowerCase(); if (val.includes('comprado')) sel.classList.add('estado-comprado'); else if (val.includes('stock')) sel.classList.add('estado-stock'); else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
 
-    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a, c) => { a[c.name] = c.image_url; return a; }, {}); } catch (e) { console.warn('cat images', e); } }
+    async function deleteRow(idx) { const row=currentRows[idx]; if(!row) return; const client=await waitForClient(); try{ if(row.id) await client.from(TABLE).delete().eq('id',row.id); currentRows.splice(idx,1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId);}catch(e){console.error('Delete error',e);} }
+    function duplicateRow(idx) { const src=currentRows[idx]; if(!src) return; const clone={...src,id:null,block_id:currentBlockId,created_at:null,placeholder:false,_saving:false}; currentRows.splice(idx+1,0,clone); renderGrid(currentRows); if(isMeaningful(buildPayload(clone))) persistRow(idx+1).then(()=>recomputeBlockTotals(currentBlockId)); }
+    function applyEstadoStyle(rowIdx) { const sel=overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if(!sel)return; sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar'); const val=(sel.value||'').toLowerCase(); if(val.includes('comprado')) sel.classList.add('estado-comprado'); else if(val.includes('stock')) sel.classList.add('estado-stock'); else if(val.includes('por comprar')||val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
+
+    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{}); } catch (e) { console.warn('cat images', e); } }
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
     async function fetchLines(blockId) {
@@ -898,52 +901,66 @@
       const parts = url.split('/category/');
       if (parts.length < 2) return url || '(sin categoría)';
       const slug = parts[1].split('/')[0] || '';
-      return slug.replace(/-/g, ' ').trim() || url;
-    }
-
-    function handlePickProduct(btn) {
-      const idx = prodState.rowIdx;
-      if (idx == null || currentRows[idx] == null) { closeProductOverlay(); return; }
-      const price = btn.dataset.price ? Number(btn.dataset.price) : null;
-      currentRows[idx].producto_id = null; // limpia interno
-      currentRows[idx].aa_product_id = btn.dataset.id || null;
-      currentRows[idx].aa_vendor = btn.dataset.vendor || null;
-      currentRows[idx]._aa_name = btn.dataset.name || '';
-      currentRows[idx].aa_category_url = btn.dataset.caturl || null;
-      currentRows[idx].precio_unit = price ?? currentRows[idx].precio_unit ?? null;
-      setVal(idx, 'producto_id', ''); // limpia select interno
-      const priceInput = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="precio_unit"]`);
-      if (priceInput && price != null) priceInput.value = price;
-      syncProdUI(idx);
-      persistRow(idx);
-      recomputeBlockTotals(currentBlockId);
-      closeProductOverlay();
-    }
-
-    function clearExternalProduct(idx) {
-      const row = currentRows[idx]; if (!row) return;
-      currentRows[idx] = { ...row, aa_product_id: null, aa_vendor: null, _aa_name: '', aa_category_url: null };
-      syncProdUI(idx);
-      persistRow(idx);
+      return slug.replace(/-/g, ' ');
     }
 
     function openProductSearch(rowIdx) {
       prodState.rowIdx = rowIdx;
-      if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
-      if (prodSearchInput) { prodSearchInput.value = ''; prodSearchInput.focus(); }
+      prodState.catUrls = [];
+      if (prodSearchInput) prodSearchInput.value = '';
       if (prodBrandFilter) prodBrandFilter.value = '';
       if (priceMin) priceMin.value = '';
       if (priceMax) priceMax.value = '';
       if (prodOrder) prodOrder.value = 'name-asc';
-      prodState.catUrls = [];
+      if (prodVendorFilter) prodVendorFilter.value = '';
+      if (facetBox) facetBox.innerHTML = '';
+      if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
       runSearch();
     }
-    function closeProductOverlay() {
-      if (overlayProduct) { overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
+    function closeProductOverlay() { if (overlayProduct) overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
+
+    async function handlePickProduct(btn) {
+      if (!btn || prodState.rowIdx === null) return;
+      const rowIdx = prodState.rowIdx;
+      const id = btn.dataset.id;
+      const vendor = btn.dataset.vendor || '';
+      const name = btn.dataset.name || '';
+      const price = btn.dataset.price ? Number(btn.dataset.price) : null;
+      const caturl = btn.dataset.caturl || '';
+      if (!currentRows[rowIdx]) return;
+      currentRows[rowIdx] = {
+        ...currentRows[rowIdx],
+        aa_product_id: id,
+        aa_vendor: vendor,
+        _aa_name: name,
+        producto_id: null,
+        precio_unit: price ?? currentRows[rowIdx].precio_unit,
+        categoria: currentRows[rowIdx].categoria || '',
+        placeholder: false
+      };
+      currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
+      syncProdUI(rowIdx);
+      renderGrid(currentRows);
+      await persistRow(rowIdx);
+      await recomputeBlockTotals(currentBlockId);
+      closeProductOverlay();
+    }
+
+    async function clearExternalProduct(rowIdx) {
+      if (rowIdx == null || !currentRows[rowIdx]) return;
+      currentRows[rowIdx] = {
+        ...currentRows[rowIdx],
+        aa_product_id: null,
+        aa_vendor: null,
+        _aa_name: '',
+      };
+      renderGrid(currentRows);
+      await persistRow(rowIdx);
+      await recomputeBlockTotals(currentBlockId);
     }
 
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
-    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
   </script>
 </body>
 </html>
