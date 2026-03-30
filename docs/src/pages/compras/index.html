@@ -362,7 +362,7 @@
           .select('*')
           .order('created_at', { ascending: false });
 
-        // SIN filtro adicional: muestra todo como antes
+        // sin filtros adicionales: muestra todo
         renderBlocks(data || []);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -742,4 +742,32 @@
         const idx = prodState.rowIdx;
         if (idx != null){
           const price = pick.dataset.price ? Number(pick.dataset.price) : null;
-          currentRows
+          currentRows[idx].producto_id = null; // limpia interno
+          currentRows[idx].aa_product_id = pick.dataset.id || null;
+          currentRows[idx].aa_vendor = pick.dataset.vendor || null;
+          currentRows[idx]._aa_name = pick.dataset.name || '';
+          currentRows[idx].precio_unit = price || currentRows[idx].precio_unit || null;
+          setVal(idx, 'producto_id', ''); // limpia select interno
+          const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
+          if (label) label.value = currentRows[idx]._aa_name || '';
+          const priceInput = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="precio_unit"]`);
+          if (priceInput && price != null) priceInput.value = price;
+          persistRow(idx);
+          recomputeBlockTotals(currentBlockId);
+        }
+        closeProductOverlay();
+      }
+    });
+
+    function openProductSearch(rowIdx){
+      prodState.rowIdx = rowIdx;
+      if (overlayProduct){ overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
+      if (prodSearchInput){ prodSearchInput.value=''; prodSearchInput.focus(); }
+      runSearch();
+    }
+    function closeProductOverlay(){
+      if (overlayProduct){ overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
+    }
+
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[
