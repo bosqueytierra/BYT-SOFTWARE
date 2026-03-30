@@ -76,18 +76,18 @@
 
     /* Overlay catálogo layout */
     .catalog-layout{display:flex;gap:10px;height:100%;}
-    .catalog-filters{width:260px;flex-shrink:0;background:#fff;border:1px solid #d4d8dd;border-radius:10px;padding:10px;overflow:auto;}
+    .catalog-filters{width:240px;flex-shrink:0;background:#fff;border:1px solid #d4d8dd;border-radius:10px;padding:10px;overflow:auto;}
     .catalog-results{flex:1;display:flex;flex-direction:column;gap:8px;}
     .filter-group{margin-bottom:12px;}
     .filter-group label{font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:6px;}
     .filter-group input, .filter-group select{width:100%;height:30px;padding:4px 6px;font-size:13px;box-sizing:border-box;}
     .range-row{display:flex;gap:6px;}
     .range-row input{flex:1;}
-    .chips-wrap{display:flex;flex-direction:column;gap:6px;}
-    .chip-check{display:flex;align-items:center;gap:6px;font-size:13px;}
-    .active-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
-    .chip-pill{background:#eef2f5;border:1px solid #d4d8dd;border-radius:12px;padding:4px 8px;font-size:12px;display:inline-flex;gap:6px;align-items:center;}
-    .chip-pill button{border:none;background:transparent;cursor:pointer;font-weight:700;color:#a11;}
+
+    /* Barra ordenar/filtrar en tabla LC */
+    .toolbar { display:flex; align-items:center; gap:10px; padding:6px 4px; flex-wrap:wrap; }
+    .chip-filter { display:flex; align-items:center; gap:6px; padding:4px 8px; border-radius:10px; background:#eef2f5; border:1px solid #d4d8dd; font-size:12px; }
+    .chip-filter button { border:none; background:transparent; color:#a11; cursor:pointer; font-weight:700; }
   </style>
 </head>
 <body>
@@ -140,8 +140,20 @@
 
   <div id="overlayLC" class="overlay">
     <div class="overlay-content" data-current-block="">
-      <div class="overlay-header">
+      <div class="overlay-header" style="gap:12px; align-items:flex-start;">
         <div class="overlay-title" id="overlayLCTitle">Lista de compras</div>
+        <div class="toolbar" id="lcToolbar">
+          <label style="font-size:12px;font-weight:700;">Ordenar por:</label>
+          <select id="sortSelect" class="btn" style="height:30px;">
+            <option value="none">Sin orden</option>
+            <option value="price-asc">Precio menor-mayor</option>
+            <option value="price-desc">Precio mayor-menor</option>
+            <option value="name-asc">Nombre A-Z</option>
+            <option value="name-desc">Nombre Z-A</option>
+          </select>
+          <label style="font-size:12px;font-weight:700;">Filtrar por categoría:</label>
+          <div id="catFilterBox" style="display:flex;gap:6px;flex-wrap:wrap;min-width:180px;"></div>
+        </div>
         <div style="display:flex; gap:8px; align-items:center;">
           <button class="btn" id="addRowBtn">Agregar fila</button>
           <button class="btn" id="closeOverlayLC">Cerrar</button>
@@ -169,8 +181,6 @@
             <option value="name-desc">Nombre Z-A</option>
             <option value="price-asc">Precio ↑</option>
             <option value="price-desc">Precio ↓</option>
-            <option value="cat-asc">Categoría A-Z</option>
-            <option value="cat-desc">Categoría Z-A</option>
           </select>
           <button class="btn" id="closeOverlayProduct">Cerrar</button>
         </div>
@@ -188,11 +198,6 @@
                 <input id="priceMin" type="number" min="0" placeholder="Mín">
                 <input id="priceMax" type="number" min="0" placeholder="Máx">
               </div>
-            </div>
-            <div class="filter-group">
-              <label>Categorías (multi‑selección)</label>
-              <div class="active-chips" id="activeCatChips"></div>
-              <div class="chips-wrap" id="facetBox"></div>
             </div>
             <div class="filter-group">
               <label>Resultados</label>
@@ -217,8 +222,8 @@
     let blocksContainer, blocksEntregados, emptyState, emptyEntregados;
     let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, arrowPor, arrowEnt, togglePorEntregar, toggleEntregados;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
-    let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
-    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn, facetBox, activeCatChips;
+    let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn, sortSelect, catFilterBox;
+    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn;
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catMateriales = [];
@@ -230,57 +235,23 @@
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
 
-    const prodState = { rowIdx: null, pageSize: 50, catFilters: [] };
+    // estado catálogo: sin facetas numéricas
+    const prodState = { rowIdx: null, pageSize: 50 };
+
+    // filtros locales en tabla LC
+    let lcCategoryFilters = new Set();
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
     const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
+
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
 
-    // ---------------------------------------------------------------------
-    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
-    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
-    function extractCategoryName(row) { return row.aa_subcategory || row.aa_section || '(Sin categoría)'; }
-
-    // ---------------------------------------------------------------------
-    document.addEventListener('DOMContentLoaded', async () => {
-      ensureEls();
-      try {
-        const client = await waitForClient();
-        if (!window.supabase && client) window.supabase = client;
-        await loadCatalogs();
-        await loadSalesMeta();
-        await loadBlocks();
-        await loadCategoryImages();
-        renderFacetBox([]); // vacío
-      } catch (e) {
-        console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      const btnLC = e.target.closest('[data-block-lc]');
-      const btnSummary = e.target.closest('[data-block-summary]');
-      const delBtn = e.target.closest('[data-action="del-row"]');
-      const dupBtn = e.target.closest('[data-action="dup-row"]');
-      const searchBtn = e.target.closest('[data-action="search-prod"]');
-      const pickBtn = e.target.closest('[data-action="pick-prod"]');
-      const clearBtn = e.target.closest('[data-action="clear-prod"]');
-      const chipClose = e.target.closest('[data-role="chip-close"]');
-
-      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
-      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
-      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
-      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
-      if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
-      if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
-      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
-      if (chipClose) { e.preventDefault(); toggleCategoryFilter(chipClose.dataset.cat); }
-    });
-
     function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
+
     function ensureEls() {
       blocksContainer = pickLast('#blocksContainer');
       blocksEntregados = pickLast('#blocksEntregados');
@@ -303,6 +274,8 @@
       overlayLCTitle = pickLast('#overlayLCTitle');
       closeOverlayLC = pickLast('#closeOverlayLC');
       addRowBtn = pickLast('#addRowBtn');
+      sortSelect = pickLast('#sortSelect');
+      catFilterBox = pickLast('#catFilterBox');
 
       overlayProduct = pickLast('#overlayProduct');
       prodResults = pickLast('#prodResults');
@@ -313,8 +286,6 @@
       priceMin = pickLast('#priceMin');
       priceMax = pickLast('#priceMax');
       closeOverlayProductBtn = pickLast('#closeOverlayProduct');
-      facetBox = pickLast('#facetBox');
-      activeCatChips = pickLast('#activeCatChips');
 
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
@@ -328,10 +299,12 @@
       if (closeOverlayProductBtn) closeOverlayProductBtn.onclick = closeProductOverlay;
       if (prodSearchInput) prodSearchInput.addEventListener('input', runSearch);
       if (prodVendorFilter) prodVendorFilter.addEventListener('change', runSearch);
-      if (prodOrder) prodOrder.addEventListener('change', () => { prodState.order = prodOrder.value; runSearch(); });
+      if (prodOrder) prodOrder.addEventListener('change', runSearch);
       if (prodBrandFilter) prodBrandFilter.addEventListener('input', runSearch);
       if (priceMin) priceMin.addEventListener('input', debounce(runSearch, 200));
       if (priceMax) priceMax.addEventListener('input', debounce(runSearch, 200));
+
+      if (sortSelect) sortSelect.addEventListener('change', () => { applySortFilter(); renderGrid(currentRows, false); });
     }
 
     function setSectionState(bodyEl, arrowEl, expanded) {
@@ -356,6 +329,41 @@
       throw new Error('Supabase client no inicializado');
     }
 
+    document.addEventListener('DOMContentLoaded', async () => {
+      ensureEls();
+      try {
+        const client = await waitForClient();
+        if (!window.supabase && client) window.supabase = client;
+        await loadCatalogs();
+        await loadSalesMeta();
+        await loadBlocks();
+        await loadCategoryImages();
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const btnLC = e.target.closest('[data-block-lc]');
+      const btnSummary = e.target.closest('[data-block-summary]');
+      const delBtn = e.target.closest('[data-action="del-row"]');
+      const dupBtn = e.target.closest('[data-action="dup-row"]');
+      const searchBtn = e.target.closest('[data-action="search-prod"]');
+      const pickBtn = e.target.closest('[data-action="pick-prod"]');
+      const clearBtn = e.target.closest('[data-action="clear-prod"]');
+      const chipX = e.target.closest('[data-chip-remove]');
+
+      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
+      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
+      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
+      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
+      if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
+      if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
+      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
+      if (chipX) { const cat = chipX.dataset.cat; lcCategoryFilters.delete(cat); renderCatFilterChips(); renderGrid(currentRows, false); }
+    });
+
     // ---------- catálogos internos ----------
     async function loadCatalogs() {
       const client = await waitForClient();
@@ -378,7 +386,6 @@
       materiales = mats || [];
     }
 
-    // ---------- metadata ventas ----------
     async function loadSalesMeta() {
       const client = await waitForClient();
       const { data: ventasRows } = await client
@@ -477,7 +484,7 @@
         const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
-        const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
+        const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : '—';
 
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
@@ -591,7 +598,7 @@
       const client = await waitForClient();
       const { data, error } = await client
         .from('aa_products')
-        .select('aa_product_id:id, aa_name, aa_price, aa_url, vendor, aa_subcategory, aa_section')
+        .select('aa_product_id:id, aa_name, aa_price, aa_url, vendor')
         .in('aa_product_id', ids);
       if (error) return;
       const map = new Map((data || []).map(r => [r.id, r]));
@@ -601,12 +608,10 @@
           ...r,
           _aa_name: ref ? ref.aa_name : (r._aa_name || ''),
           aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor,
-          aa_price: ref ? ref.aa_price : r.aa_price,
-          _aa_category: ref ? extractCategoryName(ref) : r._aa_category
+          aa_price: ref ? ref.aa_price : r.aa_price
         };
       });
     }
-
     async function recomputeBlockTotals(blockId) {
       if (!blockId) return;
       const client = await waitForClient();
@@ -633,15 +638,70 @@
     }
 
     // ---------- render tabla ----------
-    function renderGrid(rows) {
+    function applySortFilter() {
+      // aplica filtro por categoría y orden local
+      const sort = sortSelect?.value || 'none';
+      let rows = [...currentRows];
+
+      if (lcCategoryFilters.size > 0) {
+        rows = rows.filter(r => lcCategoryFilters.has(r.categoria || ''));
+      }
+
+      if (sort === 'price-asc') rows.sort((a,b)=> (Number(a.precio_unit||0) - Number(b.precio_unit||0)));
+      else if (sort === 'price-desc') rows.sort((a,b)=> (Number(b.precio_unit||0) - Number(a.precio_unit||0)));
+      else if (sort === 'name-asc') rows.sort((a,b)=> ( (a._aa_name||a.categoria||'').localeCompare(b._aa_name||b.categoria||'')));
+      else if (sort === 'name-desc') rows.sort((a,b)=> ( (b._aa_name||b.categoria||'').localeCompare(a._aa_name||a.categoria||'')));
+
+      return rows;
+    }
+
+    function renderCatFilterChips() {
+      if (!catFilterBox) return;
+      catFilterBox.innerHTML = '';
+      if (!catMateriales.length) {
+        catFilterBox.innerHTML = '<small style="color:#6c7a86;">Sin categorías</small>';
+        return;
+      }
+      catMateriales.forEach(cat => {
+        const id = `cat-${cat}`;
+        const checked = lcCategoryFilters.has(cat);
+        const wrapper = document.createElement('label');
+        wrapper.style.display='inline-flex';
+        wrapper.style.alignItems='center';
+        wrapper.style.gap='6px';
+        wrapper.style.fontSize='12px';
+        wrapper.style.cursor='pointer';
+        wrapper.innerHTML = `<input type="checkbox" data-cat="${escapeHtml(cat)}" ${checked?'checked':''}> ${escapeHtml(cat)}`;
+        wrapper.querySelector('input').addEventListener('change', (e)=>{
+          if (e.target.checked) lcCategoryFilters.add(cat); else lcCategoryFilters.delete(cat);
+          renderCatFilterChips();
+          renderGrid(currentRows, false);
+        });
+        catFilterBox.appendChild(wrapper);
+      });
+      // chips seleccionados
+      const chips = document.createElement('div');
+      chips.style.display='flex'; chips.style.flexWrap='wrap'; chips.style.gap='6px';
+      lcCategoryFilters.forEach(cat=>{
+        const chip = document.createElement('span');
+        chip.className='chip-filter';
+        chip.innerHTML = `${escapeHtml(cat)} <button data-chip-remove data-cat="${escapeHtml(cat)}">✕</button>`;
+        chips.appendChild(chip);
+      });
+      catFilterBox.appendChild(chips);
+    }
+
+    function renderGrid(rows, refreshOptions=true) {
+      const workingRows = applySortFilter();
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
         overlayLCGrid = document.getElementById('overlayLCGrid');
       }
+
       const headers = ['', 'Encargado', 'Proveedor', 'Dirección', 'Categoría', 'Producto', 'Obs', 'Unidad', 'Cantidad', 'Precio Unit', 'Total', 'Modo', 'Estado pago'];
-      const thead = `<thead><tr>${headers.map((h,idx)=>idx===0?`<th style="width:90px;">${h}</th>`:`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
+      const thead = `<thead><tr>${headers.map((h, idx) => idx === 0 ? `<th style="width:90px;">${h}</th>` : `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
       const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c })));
-      const bodyRows = rows.map((row, idx) => {
+      const bodyRows = workingRows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
         return `<tr data-row="${idx}" ${idAttr}>
             <td class="action-cell">
@@ -657,7 +717,7 @@
             <td><input data-f="direccion" data-row="${idx}" type="text" value="${escapeHtml(row.direccion || '')}"></td>
             <td><select data-f="categoria" data-row="${idx}">${categoriaOptions}</select></td>
             <td>
-              <div class="prod-cell ${row.aa_product_id ? 'hidden' : ''}" data-role="prod-select-wrap" data-row="${idx}">
+              <div class="prod-cell">
                 <select class="prod-select" data-f="producto_id" data-row="${idx}"></select>
                 <button class="btn-search" type="button" title="Buscar en catálogo" data-action="search-prod" data-row="${idx}">🔍</button>
               </div>
@@ -666,6 +726,7 @@
                 <span data-role="aa-vendor" style="color:#6c7a86;"></span>
                 <button class="btn-clear-prod" data-action="clear-prod" data-row="${idx}" title="Quitar">✕</button>
               </div>
+              <input class="prod-label hidden" data-f="aa_product_name" data-row="${idx}" type="text" value="${escapeHtml(row._aa_name || '')}" readonly>
             </td>
             <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones || '')}"></td>
             <td><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></td>
@@ -676,8 +737,10 @@
             <td><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></td>
           </tr>`;
       }).join('');
+
       overlayLCGrid.innerHTML = `<div class="table-wrapper"><table class="lc-table">${thead}<tbody>${bodyRows}</tbody></table></div>`;
-      rows.forEach((row, idx) => {
+
+      workingRows.forEach((row, idx) => {
         setVal(idx, 'encargado', row.encargado);
         setVal(idx, 'proveedor_id', row.proveedor_id);
         setVal(idx, 'categoria', row.categoria);
@@ -688,25 +751,28 @@
         setVal(idx, 'modo_compra', row.modo_compra);
         setVal(idx, 'estado_pago', row.estado_pago);
         applyEstadoStyle(idx);
-        syncProdUI(idx);
+        syncProdUI(idx, workingRows);
       });
+
       const tbl = overlayLCGrid.querySelector('table.lc-table');
       if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
+      renderCatFilterChips();
     }
 
-    function syncProdUI(idx) {
-      const row = currentRows[idx] || {};
+    function syncProdUI(idx, rowsRef) {
+      const row = rowsRef[idx] || {};
       const pill = overlayLCGrid?.querySelector?.(`[data-role="aa-pill"][data-row="${idx}"]`);
-      const selWrap = overlayLCGrid?.querySelector?.(`[data-role="prod-select-wrap"][data-row="${idx}"]`);
+      const selWrap = overlayLCGrid?.querySelector?.(`select[data-row="${idx}"][data-f="producto_id"]`)?.closest('.prod-cell');
+      const hasAa = !!row.aa_product_id;
       if (pill) {
-        pill.classList.toggle('hidden', !row.aa_product_id);
+        pill.classList.toggle('hidden', !hasAa);
         const nameEl = pill.querySelector('[data-role="aa-name"]');
         const venEl = pill.querySelector('[data-role="aa-vendor"]');
         if (nameEl) nameEl.textContent = row._aa_name || '(catálogo externo)';
         if (venEl) venEl.textContent = row.aa_vendor ? `· ${row.aa_vendor}` : '';
       }
-      if (selWrap) selWrap.classList.toggle('hidden', !!row.aa_product_id);
+      if (selWrap) selWrap.classList.toggle('hidden', hasAa);
     }
 
     async function onCellEdit(e) {
@@ -724,16 +790,7 @@
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
       await persistRow(rowIdx);
       await recomputeBlockTotals(currentBlockId);
-    }
-
-    function applyEstadoStyle(rowIdx) {
-      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`);
-      if (!sel) return;
-      sel.classList.remove('estado-comprado', 'estado-stock', 'estado-porcomprar');
-      const val = (sel.value || '').toLowerCase();
-      if (val.includes('comprado')) sel.classList.add('estado-comprado');
-      else if (val.includes('stock')) sel.classList.add('estado-stock');
-      else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar');
+      renderGrid(currentRows, false);
     }
 
     function buildPayload(row) {
@@ -764,8 +821,7 @@
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false };
-          setVal(idx, 'total', data.total);
+          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx, 'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
@@ -774,11 +830,10 @@
       } catch (e) { console.error('Persist error', e); }
       finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
     }
-
     async function deleteRow(idx) { const row = currentRows[idx]; if (!row) return; const client = await waitForClient(); try { if (row.id) await client.from(TABLE).delete().eq('id', row.id); currentRows.splice(idx, 1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId); } catch (e) { console.error('Delete error', e); } }
     function duplicateRow(idx) { const src = currentRows[idx]; if (!src) return; const clone = { ...src, id: null, block_id: currentBlockId, created_at: null, placeholder: false, _saving: false }; currentRows.splice(idx + 1, 0, clone); renderGrid(currentRows); if (isMeaningful(buildPayload(clone))) persistRow(idx + 1).then(() => recomputeBlockTotals(currentBlockId)); }
+    function applyEstadoStyle(rowIdx) { const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if (!sel) return; sel.classList.remove('estado-comprado', 'estado-stock', 'estado-porcomprar'); const val = (sel.value || '').toLowerCase(); if (val.includes('comprado')) sel.classList.add('estado-comprado'); else if (val.includes('stock')) sel.classList.add('estado-stock'); else if (val.includes('por comprar') || val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
 
-    // ---------- overlays ----------
     async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a, c) => { a[c.name] = c.image_url; return a; }, {}); } catch (e) { console.warn('cat images', e); } }
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
@@ -826,7 +881,7 @@
         overlayLCTitle.textContent = 'Lista de compras - ' + (title || blockId);
         overlayLC.classList.add('active'); document.body.classList.add('overlay-open');
       }
-      try { await loadLines(blockId); }
+      try { await loadLines(blockId); renderGrid(currentRows); }
       catch (e) { console.error(e); overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>'; }
     }
     async function openSummary(blockId, title) {
@@ -838,167 +893,87 @@
       catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
     }
 
-    function closeProductOverlay() { if (overlayProduct) overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
-
-    function openProductSearch(rowIdx) {
-      ensureEls();
-      prodState.rowIdx = rowIdx;
-      if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
-      runSearch();
-    }
-
-    // ---------- búsqueda catálogo externo ----------
+    // ==== Búsqueda catálogo externo ====
     const runSearch = debounce(async () => {
-      if (!prodResults) return;
-      const query = (prodSearchInput?.value || '').trim();
-      const vendor = prodVendorFilter?.value || '';
-      const brand = (prodBrandFilter?.value || '').trim();
-      const minP = priceMin?.value ? Number(priceMin.value) : null;
-      const maxP = priceMax?.value ? Number(priceMax.value) : null;
-      const order = prodOrder?.value || 'name-asc';
-      prodState.order = order;
-
+      if (!overlayProduct?.classList.contains('active')) return;
+      prodResults.innerHTML = '<div style="padding:8px;color:#6c7a86;">Buscando...</div>';
       try {
-        const rows = await searchProducts({ query, vendor, brand, minP, maxP });
-        renderProdResults(rows);
+        const { data, error } = await catApi.searchProducts({
+          q: prodSearchInput?.value || '',
+          vendor: prodVendorFilter?.value || '',
+          brand: prodBrandFilter?.value || '',
+          priceMin: priceMin?.value || '',
+          priceMax: priceMax?.value || '',
+          order: prodOrder?.value || 'name-asc',
+          pageSize: prodState.pageSize
+        });
+        if (error) throw error;
+        renderCatalogResults(data || []);
       } catch (e) {
         console.error(e);
-        prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
-        renderFacetBox([]);
+        prodResults.innerHTML = '<div style="padding:8px;color:#c00;">Error buscando</div>';
       }
-    }, 200);
+    }, 250);
 
-    async function searchProducts({ query = '', vendor = '', brand = '', minP = null, maxP = null }) {
-      const client = await waitForClient();
-      let q = client.from('aa_products')
-        .select('aa_product_id:id, aa_name, vendor, price, aa_url, aa_section, aa_subcategory')
-        .ilike('aa_name', `%${query}%`);
-      if (vendor) q = q.eq('vendor', vendor);
-      if (brand) q = q.ilike('aa_name', `%${brand}%`);
-      if (minP !== null) q = q.gte('price', minP);
-      if (maxP !== null) q = q.lte('price', maxP);
-
-      // ordenar solo por columnas válidas para evitar 400
-      const order = prodState.order || 'name-asc';
-      if (order.startsWith('price')) q = q.order('price', { ascending: order === 'price-asc' });
-      else q = q.order('aa_name', { ascending: order === 'name-asc' });
-
-      const { data, error } = await q.limit(prodState.pageSize);
-      if (error) throw error;
-      return data || [];
-    }
-
-    function sortClient(rows) {
-      const order = prodState.order || 'name-asc';
-      const asc = order.endsWith('asc');
-      switch (order) {
-        case 'name-asc': return rows.sort((a,b)=>a.aa_name.localeCompare(b.aa_name));
-        case 'name-desc': return rows.sort((a,b)=>b.aa_name.localeCompare(a.aa_name));
-        case 'price-asc': return rows.sort((a,b)=>Number(a.price||0)-Number(b.price||0));
-        case 'price-desc': return rows.sort((a,b)=>Number(b.price||0)-Number(a.price||0));
-        case 'cat-asc': return rows.sort((a,b)=>extractCategoryName(a).localeCompare(extractCategoryName(b)) || a.aa_name.localeCompare(b.aa_name));
-        case 'cat-desc': return rows.sort((a,b)=>extractCategoryName(b).localeCompare(extractCategoryName(a)) || a.aa_name.localeCompare(b.aa_name));
-        default: return rows;
+    function renderCatalogResults(list) {
+      if (!list.length) {
+        prodResults.innerHTML = '<div style="padding:8px;color:#6c7a86;">Sin resultados</div>';
+        return;
       }
-    }
-
-    function renderFacetBox(rows) {
-      if (!facetBox) return;
-      const counts = new Map();
-      rows.forEach(r => {
-        const c = extractCategoryName(r);
-        counts.set(c, (counts.get(c)||0)+1);
-      });
-      const items = Array.from(counts.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
-      facetBox.innerHTML = items.map(([cat,count]) => `
-        <label class="chip-check">
-          <input type="checkbox" data-cat="${escapeHtml(cat)}" ${prodState.catFilters.includes(cat) ? 'checked' : ''}>
-          <span>${escapeHtml(cat)} (${count})</span>
-        </label>
-      `).join('') || '<small style="color:#6c7a86;">Sin categorías</small>';
-
-      facetBox.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-        cb.addEventListener('change', ()=> toggleCategoryFilter(cb.getAttribute('data-cat')));
-      });
-
-      renderActiveCatChips();
-    }
-
-    function renderActiveCatChips() {
-      if (!activeCatChips) return;
-      activeCatChips.innerHTML = prodState.catFilters.map(cat=>`
-        <span class="chip-pill">${escapeHtml(cat)}
-          <button data-role="chip-close" data-cat="${escapeHtml(cat)}">✕</button>
-        </span>
+      prodResults.innerHTML = list.map(item => `
+        <div style="display:flex;gap:10px;align-items:flex-start;border:1px solid #e5e7eb;border-radius:10px;padding:10px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800;">${escapeHtml(item.aa_name || item.name || '')}</div>
+            <div style="color:#6c7a86;font-size:12px;">${escapeHtml(item.vendor || '')}</div>
+            <div style="color:#6c7a86;font-size:12px;word-break:break-all;">${escapeHtml(item.aa_url || '')}</div>
+            ${item.code ? `<div style="color:#6c7a86;font-size:12px;">Código: ${escapeHtml(item.code)}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;white-space:nowrap;">
+            <div style="font-weight:700;">${fmtCLP(item.price || item.aa_price || 0)}</div>
+            <div style="display:flex;gap:6px;">
+              <a class="btn btn-ghost" target="_blank" rel="noreferrer" href="${escapeHtml(item.aa_url || '#')}" style="text-decoration:none;">Ver</a>
+              <button class="btn btn-primary" data-action="pick-prod" data-idx="${item._idx || 0}" data-id="${escapeHtml(item.id || '')}" data-name="${escapeHtml(item.aa_name || item.name || '')}" data-price="${item.price || item.aa_price || 0}" data-vendor="${escapeHtml(item.vendor || '')}">Usar</button>
+            </div>
+          </div>
+        </div>
       `).join('');
     }
 
-    function toggleCategoryFilter(cat) {
-      if (!cat) return;
-      const idx = prodState.catFilters.indexOf(cat);
-      if (idx >= 0) prodState.catFilters.splice(idx,1);
-      else prodState.catFilters.push(cat);
-      renderActiveCatChips();
-      runSearch();
-    }
-
-    function renderProdResults(rows) {
-      if (!prodResults) return;
-      const filtered = rows.filter(r => prodState.catFilters.length === 0 || prodState.catFilters.includes(extractCategoryName(r)));
-      const sorted = sortClient(filtered);
-      renderFacetBox(rows); // facetas basadas en resultados crudos
-
-      if (!sorted.length) {
-        prodResults.innerHTML = '<div style="padding:12px;color:#6c7a86;">Sin resultados</div>';
-        return;
+    function openProductSearch(rowIdx) {
+      prodState.rowIdx = rowIdx;
+      if (overlayProduct) {
+        overlayProduct.classList.add('active');
+        document.body.classList.add('overlay-open');
+        prodResults.innerHTML = '';
+        runSearch();
       }
-
-      prodResults.innerHTML = sorted.map(r => {
-        const catLabel = extractCategoryName(r);
-        return `
-          <div style="display:flex;gap:10px;border:1px solid #e2e5ea;border-radius:8px;padding:10px;align-items:flex-start;">
-            <div style="flex:1;">
-              <div style="font-weight:800;font-size:15px;">${escapeHtml(r.aa_name || '')}</div>
-              <div style="color:#6c7a86;font-size:13px;">${escapeHtml(r.vendor || '')}</div>
-              <div style="color:#6c7a86;font-size:12px;">${escapeHtml(r.aa_url || '')}</div>
-              <div style="color:#1f2430;font-size:12px;">Categoría: ${escapeHtml(catLabel)}</div>
-            </div>
-            <div style="width:110px; text-align:right; font-weight:800;">${fmtCLP(r.price)}</div>
-            <div style="display:flex;flex-direction:column;gap:6px;">
-              <a class="btn btn-ghost" href="${escapeHtml(r.aa_url || '#')}" target="_blank" rel="noopener">Ver</a>
-              <button class="btn btn-primary" data-action="pick-prod" data-prod='${JSON.stringify(r).replace(/'/g,"&apos;")}' >Usar</button>
-            </div>
-          </div>
-        `;
-      }).join('');
     }
-
+    function closeProductOverlay() { if (overlayProduct) overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); }
     function handlePickProduct(btn) {
-      const rowIdx = prodState.rowIdx;
-      if (rowIdx === null || rowIdx === undefined) return;
-      const payload = JSON.parse(btn.dataset.prod || '{}');
-      const row = currentRows[rowIdx] || {};
-      currentRows[rowIdx] = {
+      const idx = prodState.rowIdx;
+      if (idx == null) return;
+      const row = currentRows[idx] || {};
+      const name = btn.dataset.name || '';
+      const price = Number(btn.dataset.price || 0);
+      currentRows[idx] = {
         ...row,
-        aa_product_id: payload.id || payload.aa_product_id || null,
-        aa_vendor: payload.vendor || null,
-        _aa_name: payload.aa_name || '',
-        _aa_category: extractCategoryName(payload),
-        producto_id: null, // prioridad catálogo externo
-        placeholder: false
+        aa_product_id: btn.dataset.id || null,
+        _aa_name: name,
+        aa_vendor: btn.dataset.vendor || null,
+        precio_unit: price,
+        cantidad: row.cantidad || 0
       };
-      syncProdUI(rowIdx);
-      persistRow(rowIdx);
+      currentRows[idx].total = Number(currentRows[idx].cantidad || 0) * price;
+      renderGrid(currentRows, false);
+      persistRow(idx).then(()=>recomputeBlockTotals(currentBlockId));
       closeProductOverlay();
     }
-
     function clearExternalProduct(idx) {
-      const row = currentRows[idx] || {};
-      currentRows[idx] = { ...row, aa_product_id: null, aa_vendor: null, _aa_name: '', _aa_category: null };
-      syncProdUI(idx);
-      persistRow(idx);
+      const row = currentRows[idx]; if (!row) return;
+      currentRows[idx] = { ...row, aa_product_id: null, _aa_name: '', aa_vendor: null };
+      renderGrid(currentRows, false);
+      persistRow(idx).then(()=>recomputeBlockTotals(currentBlockId));
     }
-
   </script>
 </body>
 </html>
