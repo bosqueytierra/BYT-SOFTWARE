@@ -83,8 +83,6 @@
     .filter-group input, .filter-group select{width:100%;height:30px;padding:4px 6px;font-size:13px;box-sizing:border-box;}
     .range-row{display:flex;gap:6px;}
     .range-row input{flex:1;}
-    .chips-wrap{display:flex;flex-direction:column;gap:6px;}
-    .chip-check{display:flex;align-items:center;gap:6px;font-size:13px;}
   </style>
 </head>
 <body>
@@ -184,10 +182,6 @@
               </div>
             </div>
             <div class="filter-group">
-              <label>Categorías (aa_url → aa_name)</label>
-              <div class="chips-wrap" id="facetBox"></div>
-            </div>
-            <div class="filter-group">
               <label>Resultados</label>
               <small style="color:#6c7a86;">Búsqueda + vendor + marca + rango + orden.</small>
             </div>
@@ -211,7 +205,7 @@
     let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, arrowPor, arrowEnt, togglePorEntregar, toggleEntregados;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
-    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn, facetBox;
+    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn;
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catMateriales = [];
@@ -223,64 +217,21 @@
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
 
-    // estado buscador catálogo (filtrado por código derivado de aa_url, mostrando aa_name)
-    const prodState = { rowIdx: null, pageSize: 50, catCodes: [] };
-    const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+    const prodState = { rowIdx: null, pageSize: 50 };
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
+
+    const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
 
-    // ----------------- helpers -----------------
-    function extractCode(url = '') {
-      const m = url.match(/\/(\d{6,})\/?$/);
-      return m ? `/${m[1]}` : '';
-    }
-    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style:'currency', currency:'CLP', maximumFractionDigits:0 }); }
-    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length-1] : null; }
-    function setSectionState(bodyEl, arrowEl, expanded) { if(!bodyEl)return; bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight+40+'px' : '0'; if(arrowEl) arrowEl.classList.toggle('up', !expanded); }
-    function toggleSection(bodyEl, arrowEl){ if(!bodyEl)return; const isOpen=bodyEl.style.maxHeight && bodyEl.style.maxHeight!=='0px'; setSectionState(bodyEl,arrowEl,!isOpen); }
-    function getClient(){ return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
-    async function waitForClient(timeoutMs=4000){ const start=performance.now(); while(performance.now()-start<timeoutMs){ const c=getClient(); if(c) return c; await new Promise(r=>setTimeout(r,50)); } throw new Error('Supabase client no inicializado'); }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
 
-    // ----------------- init -----------------
-    document.addEventListener('DOMContentLoaded', async () => {
-      ensureEls();
-      try {
-        const client = await waitForClient();
-        if (!window.supabase && client) window.supabase = client;
-        await loadCatalogs();
-        await loadSalesMeta();
-        await loadBlocks();
-        await loadCategoryImages();
-        await loadFacets(); // prepara chips con código->nombre
-      } catch (e) {
-        console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
-      }
-    });
+    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
 
-    document.addEventListener('click', (e) => {
-      const btnLC = e.target.closest('[data-block-lc]');
-      const btnSummary = e.target.closest('[data-block-summary]');
-      const delBtn = e.target.closest('[data-action="del-row"]');
-      const dupBtn = e.target.closest('[data-action="dup-row"]');
-      const searchBtn = e.target.closest('[data-action="search-prod"]');
-      const pickBtn = e.target.closest('[data-action="pick-prod"]');
-      const clearBtn = e.target.closest('[data-action="clear-prod"]');
-
-      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
-      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
-      if (delBtn) { e.preventDefault(); deleteRow(Number(delBtn.dataset.row)); }
-      if (dupBtn) { e.preventDefault(); duplicateRow(Number(dupBtn.dataset.row)); }
-      if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
-      if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
-      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
-    });
-
-    function ensureEls(){
+    function ensureEls() {
       blocksContainer = pickLast('#blocksContainer');
       blocksEntregados = pickLast('#blocksEntregados');
       emptyState = pickLast('#emptyState');
@@ -311,7 +262,6 @@
       prodBrandFilter = pickLast('#prodBrandFilter');
       priceMin = pickLast('#priceMin');
       priceMax = pickLast('#priceMax');
-      facetBox = pickLast('#facetBox');
       closeOverlayProductBtn = pickLast('#closeOverlayProduct');
 
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
@@ -331,6 +281,61 @@
       if (priceMin) priceMin.addEventListener('input', debounce(runSearch, 200));
       if (priceMax) priceMax.addEventListener('input', debounce(runSearch, 200));
     }
+
+    function setSectionState(bodyEl, arrowEl, expanded) {
+      if (!bodyEl) return;
+      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
+      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
+    }
+    function toggleSection(bodyEl, arrowEl) {
+      if (!bodyEl) return;
+      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
+      setSectionState(bodyEl, arrowEl, !isOpen);
+    }
+
+    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
+    async function waitForClient(timeoutMs = 4000) {
+      const start = performance.now();
+      while (performance.now() - start < timeoutMs) {
+        const c = getClient();
+        if (c) return c;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      throw new Error('Supabase client no inicializado');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      ensureEls();
+      try {
+        const client = await waitForClient();
+        if (!window.supabase && client) window.supabase = client;
+        await loadCatalogs();
+        await loadSalesMeta();
+        await loadBlocks();
+        await loadCategoryImages();
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const btnLC = e.target.closest('[data-block-lc]');
+      const btnSummary = e.target.closest('[data-block-summary]');
+      const delBtn = e.target.closest('[data-action="del-row"]');
+      const dupBtn = e.target.closest('[data-action="dup-row"]');
+      const searchBtn = e.target.closest('[data-action="search-prod"]');
+      const pickBtn = e.target.closest('[data-action="pick-prod"]');
+      const clearBtn = e.target.closest('[data-action="clear-prod"]');
+
+      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
+      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
+      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
+      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
+      if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
+      if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
+      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
+    });
 
     // ---------- catálogos internos ----------
     async function loadCatalogs() {
@@ -452,7 +457,7 @@
         const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
-        const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
+        const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : '—';
 
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
@@ -487,13 +492,13 @@
       });
 
       const porEntregarArr = cards.filter(c => !c.isDone);
-      const entregadosArr  = cards.filter(c => c.isDone);
+      const entregadosArr = cards.filter(c => c.isDone);
 
       countPorEntregar.textContent = porEntregarArr.length;
       countEntregados.textContent = entregadosArr.length;
 
       const porEntregar = porEntregarArr.map(c => c.html).join('');
-      const entregados  = entregadosArr.map(c => c.html).join('');
+      const entregados = entregadosArr.map(c => c.html).join('');
 
       if (!porEntregar) { emptyState.style.display = 'block'; blocksContainer.innerHTML = ''; }
       else { emptyState.style.display = 'none'; blocksContainer.innerHTML = porEntregar; }
@@ -526,7 +531,10 @@
     }
 
     // ---------- filas ----------
-    function setVal(idx, field, value) { const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`); if (el) el.value = value ?? ''; }
+    function setVal(idx, field, value) {
+      const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
+      if (el) el.value = value ?? '';
+    }
     function isMeaningful(payload) {
       return (
         (payload.producto_id && payload.producto_id !== '') ||
@@ -556,7 +564,6 @@
       else { await cleanupEmptiesInDB(data, client); currentRows = (data || []).filter(r => isMeaningful(r)); await hydrateAaNames(); }
       renderGrid(currentRows);
     }
-
     async function hydrateAaNames() {
       const ids = [...new Set(currentRows.map(r => r.aa_product_id).filter(Boolean))];
       if (!ids.length) return;
@@ -573,12 +580,10 @@
           ...r,
           _aa_name: ref ? ref.aa_name : (r._aa_name || ''),
           aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor,
-          aa_price: ref ? ref.aa_price : r.aa_price,
-          _aa_category: ref ? extractCode(ref.aa_url) : r._aa_category
+          aa_price: ref ? ref.aa_price : r.aa_price
         };
       });
     }
-
     async function recomputeBlockTotals(blockId) {
       if (!blockId) return;
       const client = await waitForClient();
@@ -677,7 +682,10 @@
       const hasAa = !!row.aa_product_id;
       if (pill) pill.classList.toggle('hidden', !hasAa);
       if (selWrap) selWrap.classList.toggle('hidden', hasAa);
-      if (label) label.classList.toggle('hidden', !hasAa);
+      if (label) {
+        label.value = row._aa_name || '';
+        label.classList.toggle('hidden', !hasAa);
+      }
       if (hasAa && pill) {
         const nameEl = pill.querySelector('[data-role="aa-name"]');
         const venEl = pill.querySelector('[data-role="aa-vendor"]');
@@ -686,7 +694,6 @@
       }
     }
 
-    // ---------- editor de celdas ----------
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
@@ -750,216 +757,16 @@
     async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{}); } catch (e) { console.warn('cat images', e); } }
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
-    async function fetchLines(blockId) {
-      const client = await waitForClient();
-      const { data, error } = await client
-        .from(TABLE)
-        .select('id,categoria,producto_id,unidad,cantidad,precio_unit,total,observaciones,created_at')
-        .eq('block_id', blockId)
-        .neq('categoria', 'Sin categoría')
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return data || [];
-    }
-    function renderSummary(lines) {
-      if (!lines.length) { overlayGrid.innerHTML = '<div style="padding:12px; text-align:center; color:#6c7a86;">Sin líneas</div>'; return; }
-      const byCat = {};
-      for (const l of lines) {
-        const k = l.categoria || 'Sin categoría';
-        if (k === 'Sin categoría') continue;
-        byCat[k] = byCat[k] || { total: 0, count: 0 };
-        byCat[k].total += Number(l.total || 0);
-        byCat[k].count += 1;
-      }
-      const cards = Object.entries(byCat).map(([cat, info]) => `
-        <div class="item-card">
-          <img class="item-thumb" src="${escapeHtml(pickCategoryImage(cat))}" alt="">
-          <div class="item-body">
-            <h4>${escapeHtml(cat)}</h4>
-            <div class="muted">Items: ${info.count}</div>
-            <div><strong>${fmtCLP(info.total)}</strong></div>
-          </div>
-        </div>
-      `).join('');
-      overlayGrid.innerHTML = `<div class="item-grid">${cards}</div>`;
-    }
-
-    async function openLC(blockId, title) {
-      ensureEls();
-      currentBlockId = blockId;
-      const wrapper = overlayLC?.querySelector?.('.overlay-content');
-      if (wrapper) wrapper.dataset.currentBlock = blockId;
-      currentRows = [];
-      if (overlayLCGrid) overlayLCGrid.innerHTML = '';
-      if (overlayLC && overlayLCGrid && overlayLCTitle) {
-        overlayLCTitle.textContent = 'Lista de compras - ' + (title || blockId);
-        overlayLC.classList.add('active'); document.body.classList.add('overlay-open');
-      }
-      try { await loadLines(blockId); }
-      catch (e) { console.error(e); overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>'; }
-    }
-
-    async function openSummary(blockId, title) {
-      ensureEls();
-      if (!overlay || !overlayGrid || !overlayTitle) return;
-      overlayTitle.textContent = 'Ver resumen - ' + (title || blockId);
-      overlay.classList.add('active'); document.body.classList.add('overlay-open');
-      try { await loadCategoryImages(); const lines = await fetchLines(blockId); renderSummary(lines); }
-      catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
-    }
-
-    // --------- Facetas (aa_url -> código -> etiqueta con aa_name) ----------
-    async function loadFacets() {
-      try {
-        const client = await waitForClient();
-        // Traemos código + nombre para poder mostrar el nombre en la chip
-        const { data, error } = await client
-          .from('aa_products')
-          .select('aa_url, aa_name')
-          .limit(10000);
-        if (error) { console.warn('facets', error); return; }
-
-        const map = new Map(); // code -> {name, count}
-        (data || []).forEach(r => {
-          const code = extractCode(r.aa_url);
-          if (!code) return;
-          const name = r.aa_name || code;
-          if (!map.has(code)) map.set(code, { name, count: 0 });
-          map.get(code).count += 1;
-        });
-        renderFacetBox(map);
-      } catch (e) {
-        console.warn('facets err', e);
-      }
-    }
-
-    function renderFacetBox(codeMap) {
-      if (!facetBox) return;
-      const rows = [...codeMap.entries()]
-        .sort((a,b)=> a[1].name.localeCompare(b[1].name,'es'));
-      facetBox.innerHTML = rows.map(([code, info]) => `
-        <label class="chip-check">
-          <input type="checkbox" data-code="${code}">
-          <span>${escapeHtml(info.name)} <small style="color:#6c7a86;">${code}</small> (${info.count})</span>
-        </label>
-      `).join('');
-      facetBox.querySelectorAll('input[type=checkbox]').forEach(cb=>{
-        cb.onchange = () => {
-          prodState.catCodes = [...facetBox.querySelectorAll('input:checked')].map(i=>i.dataset.code);
-          runSearch();
-        };
-      });
-    }
-
-    // ----------------- Búsqueda catálogo externo -----------------
-    const runSearch = debounce(async () => {
+    async function runSearch() {
       if (!prodResults) return;
-      prodResults.innerHTML = '<div style="padding:10px;color:#6c7a86;">Buscando...</div>';
+      const query = (prodSearchInput?.value || '').trim();
+      const vendor = prodVendorFilter?.value || '';
+      const brand = (prodBrandFilter?.value || '').trim();
+      const minP = priceMin?.value ? Number(priceMin.value) : null;
+      const maxP = priceMax?.value ? Number(priceMax.value) : null;
+      const order = prodOrder?.value || 'name-asc';
       try {
-        const client = await waitForClient();
-        let q = client.from('aa_products')
-          .select('aa_product_id:id, aa_name, aa_price, aa_url, aa_brand, vendor', { count:'exact' })
-          .range(0, prodState.pageSize - 1);
-
-        const text = (prodSearchInput?.value || '').trim();
-        if (text) q = q.ilike('aa_name', `%${text}%`);
-
-        const vendor = prodVendorFilter?.value || '';
-        if (vendor) q = q.eq('vendor', vendor);
-
-        const brand = (prodBrandFilter?.value || '').trim();
-        if (brand) q = q.ilike('aa_brand', `%${brand}%`);
-
-        const min = priceMin?.value ? Number(priceMin.value) : null;
-        const max = priceMax?.value ? Number(priceMax.value) : null;
-        if (min != null && !Number.isNaN(min)) q = q.gte('aa_price', min);
-        if (max != null && !Number.isNaN(max)) q = q.lte('aa_price', max);
-
-        // filtro por códigos derivados de aa_url
-        if (prodState.catCodes.length) {
-          const ors = prodState.catCodes.map(code => `aa_url.ilike.%${code}`).join(',');
-          q = q.or(ors);
-        }
-
-        const order = prodOrder?.value || 'name-asc';
-        if (order === 'price-asc') q = q.order('aa_price', { ascending:true, nullsFirst:true });
-        else if (order === 'price-desc') q = q.order('aa_price', { ascending:false, nullsLast:true });
-        else q = q.order('aa_name', { ascending:true });
-
-        const { data, error } = await q;
-        if (error) throw error;
-        renderProdResults(data || []);
+        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page: 0 });
+        renderProdResults(rows);
       } catch (e) {
-        console.error(e);
-        prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
-      }
-    }, 200);
-
-    function renderProdResults(rows){
-      if (!prodResults) return;
-      if (!rows.length) { prodResults.innerHTML = '<div style="padding:12px;color:#666;">Sin resultados</div>'; return; }
-      prodResults.innerHTML = rows.map(r => `
-        <div style="display:flex;gap:8px;align-items:center;border-bottom:1px solid #e5e7eb;padding:8px;">
-          <div style="flex:1;">
-            <div style="font-weight:700;">${escapeHtml(r.aa_name)}</div>
-            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.vendor || '')}${r.aa_brand ? ' · '+escapeHtml(r.aa_brand) : ''}</div>
-            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.aa_url || '')}</div>
-          </div>
-          <div style="width:110px;font-weight:600;">${r.aa_price ? fmtCLP(r.aa_price) : '—'}</div>
-          <div style="display:flex;gap:6px;">
-            <a href="${escapeHtml(r.aa_url || '#')}" target="_blank" class="btn btn-ghost" style="height:28px;">Ver</a>
-            <button class="btn btn-primary" style="height:28px;" data-action="pick-prod"
-              data-id="${r.id}"
-              data-vendor="${escapeHtml(r.vendor || '')}"
-              data-name="${escapeHtml(r.aa_name)}"
-              data-price="${r.aa_price || ''}"
-              data-code="${escapeHtml(extractCode(r.aa_url) || '')}"
-            >Usar</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function handlePickProduct(btn) {
-      const idx = prodState.rowIdx;
-      if (idx == null || currentRows[idx] == null) { closeProductOverlay(); return; }
-      const price = btn.dataset.price ? Number(btn.dataset.price) : null;
-      currentRows[idx].producto_id = null; // limpia interno
-      currentRows[idx].aa_product_id = btn.dataset.id || null;
-      currentRows[idx].aa_vendor = btn.dataset.vendor || null;
-      currentRows[idx]._aa_name = btn.dataset.name || '';
-      currentRows[idx]._aa_category = btn.dataset.code || '';
-      currentRows[idx].precio_unit = price ?? currentRows[idx].precio_unit ?? null;
-
-      setVal(idx,'producto_id',''); // limpia select interno
-      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
-      if (label) label.value = currentRows[idx]._aa_name || '';
-      const priceInput = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="precio_unit"]`);
-      if (priceInput && price != null) priceInput.value = price;
-      syncProdUI(idx);
-      persistRow(idx);
-      recomputeBlockTotals(currentBlockId);
-      closeProductOverlay();
-    }
-
-    function clearExternalProduct(idx) {
-      const row = currentRows[idx]; if (!row) return;
-      currentRows[idx] = { ...row, aa_product_id: null, aa_vendor: null, _aa_name: '', _aa_category: null, precio_unit: row.precio_unit };
-      const label = overlayLCGrid?.querySelector?.(`input[data-row="${idx}"][data-f="aa_product_name"]`);
-      if (label) label.value = '';
-      syncProdUI(idx);
-      persistRow(idx);
-    }
-
-    function openProductSearch(rowIdx){
-      ensureEls();
-      prodState.rowIdx = rowIdx;
-      if (overlayProduct) { overlayProduct.classList.add('active'); document.body.classList.add('overlay-open'); }
-      runSearch();
-    }
-    function closeProductOverlay(){ if(overlayProduct){ overlayProduct.classList.remove('active'); document.body.classList.remove('overlay-open'); prodState.rowIdx=null; } }
-
-    // --------------------------------------------------------------
-  </script>
-</body>
-</html>
+        if (prodResults) prodResults*
