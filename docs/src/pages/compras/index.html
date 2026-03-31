@@ -28,7 +28,7 @@
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 10px; }
     .overlay.active { display: flex; }
     .overlay-content { background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30); width: 98vw; max-width: 2200px; height: 92vh; padding: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
-    .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+    .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
     .table-wrapper { width:100%; overflow:auto; }
@@ -40,6 +40,17 @@
     table.lc-table input[type=number] { appearance:none; -moz-appearance:textfield; }
     table.lc-table input::-webkit-outer-spin-button, table.lc-table input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .readonly-cell { background:#f3f4f6; }
+    .item-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:18px; }
+    .item-card { border:1px solid #d7dbe0; border-radius:12px; background:#fff; padding:10px; display:flex; gap:12px; box-shadow:0 6px 16px rgba(0,0,0,0.05); min-height:180px; }
+    .item-thumb { width:120px; height:120px; border:1px solid #e2e5ea; border-radius:10px; background:#f5f7fa; object-fit:cover; flex-shrink:0; }
+    .item-body { flex:1; display:flex; flex-direction:column; gap:6px; justify-content:center; }
+    .item-body h4 { margin:0; font-size:16px; }
+    .item-body .muted { color:#6c7a86; font-size:13px; }
+
+    table.lc-table tbody td:nth-child(3),
+    table.lc-table tbody td:nth-child(5),
+    table.lc-table tbody td:nth-child(8) { background:#e8eaed; }
+    table.lc-table tbody td:nth-child(6) { background:#daf2d0; }
 
     .action-cell { display:flex; gap:6px; justify-content:center; align-items:center; }
     .icon-btn {
@@ -63,28 +74,6 @@
     .panel-ent { background:rgba(0,0,0,0.06); }
     .arrow { transition:transform .15s ease; font-size:14px; color:#444; }
     .arrow.up { transform:rotate(180deg); }
-
-    /* Producto + catálogo */
-    .prod-cell{display:flex;align-items:center;gap:6px;padding:2px 4px;}
-    .prod-select{flex:1;}
-    .btn-search{width:30px;height:28px;border:1px solid #d4d8dd;border-radius:6px;background:#f7f9fb;cursor:pointer;}
-    .prod-pill{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #d4d8dd;border-radius:10px;background:#eef2f5;font-size:12.5px;}
-    .prod-pill strong{font-weight:700;}
-    .btn-clear-prod{border:none;background:transparent;color:#a11;cursor:pointer;font-weight:700;}
-    .hidden{display:none !important;}
-
-    /* Overlay catálogo layout */
-    .catalog-layout{display:flex;gap:10px;height:100%;}
-    .catalog-filters{width:240px;flex-shrink:0;background:#fff;border:1px solid #d4d8dd;border-radius:10px;padding:10px;overflow:auto;}
-    .catalog-results{flex:1;display:flex;flex-direction:column;gap:8px;}
-    .filter-group{margin-bottom:12px;}
-    .filter-group label{font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:6px;}
-    .filter-group input, .filter-group select{width:100%;height:30px;padding:4px 6px;font-size:13px;box-sizing:border-box;}
-    .range-row{display:flex;gap:6px;}
-    .range-row input{flex:1;}
-    .selected-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
-    .chip-mini{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:12px;border:1px solid #d4d8dd;background:#f7f9fb;font-size:12px;}
-    .chip-mini button{border:none;background:transparent;cursor:pointer;font-weight:800;color:#a11;}
   </style>
 </head>
 <body>
@@ -144,75 +133,8 @@
           <button class="btn" id="closeOverlayLC">Cerrar</button>
         </div>
       </div>
-
-      <!-- Filtros planilla compras -->
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:0 2px;">
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:240px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Filtrar categoría (multi)</label>
-          <select id="tableFilterCat" multiple style="min-height:34px;padding:4px;">
-          </select>
-          <div class="selected-chips" id="tableFilterCatChips"></div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Ordenar por</label>
-          <select id="tableOrderCat" style="height:30px;">
-            <option value="cat-asc">Categoría A-Z</option>
-            <option value="cat-desc">Categoría Z-A</option>
-            <option value="price-asc">Precio ↑</option>
-            <option value="price-desc">Precio ↓</option>
-          </select>
-        </div>
-      </div>
-
       <div class="lines-wrapper">
         <div id="overlayLCGrid"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Overlay catálogo externo -->
-  <div id="overlayProduct" class="overlay">
-    <div class="overlay-content" style="max-width:1200px;height:80vh;">
-      <div class="overlay-header" style="gap:10px;">
-        <div class="overlay-title">Buscar producto catálogo</div>
-        <div style="display:flex;gap:8px;align-items:center;flex:1;">
-          <input id="prodSearchInput" type="text" placeholder="Buscar..." style="flex:1;min-width:200px;padding:6px 8px;">
-          <select id="prodVendorFilter" style="height:30px;">
-            <option value="">Todos los vendors</option>
-            <option value="IMPERIAL">IMPERIAL</option>
-          </select>
-          <select id="prodOrder" style="height:30px;">
-            <option value="name-asc">Nombre A-Z</option>
-            <option value="name-desc">Nombre Z-A</option>
-            <option value="price-asc">Precio ↑</option>
-            <option value="price-desc">Precio ↓</option>
-            <option value="cat-asc">Categoría A-Z</option>
-            <option value="cat-desc">Categoría Z-A</option>
-          </select>
-          <button class="btn" id="closeOverlayProduct">✕ Cerrar</button>
-        </div>
-      </div>
-      <div class="lines-wrapper" style="height:calc(100% - 54px);">
-        <div class="catalog-layout">
-          <div class="catalog-filters">
-            <div class="filter-group">
-              <label>Marca (contiene)</label>
-              <input id="prodBrandFilter" type="text" placeholder="ej: Kutz">
-            </div>
-            <div class="filter-group">
-              <label>Precio</label>
-              <div class="range-row">
-                <input id="priceMin" type="number" min="0" placeholder="Mín">
-                <input id="priceMax" type="number" min="0" placeholder="Máx">
-              </div>
-            </div>
-            <div class="filter-group">
-              <label>Resultados</label>
-              <small style="color:#6c7a86;">Búsqueda + vendor + marca + rango + orden.</small>
-            </div>
-          </div>
-          <div class="catalog-results" id="prodResults"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -230,87 +152,22 @@
     let bodyPorEntregar, bodyEntregados, countPorEntregar, countEntregados, arrowPor, arrowEnt, togglePorEntregar, toggleEntregados;
     let overlay, overlayGrid, overlayTitle, closeOverlayBtn;
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
-    let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn;
-    let tableFilterCat, tableFilterCatChips, tableOrderCat;
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
     let catMateriales = [];
     let catImagesMap = {};
     let currentRows = [];
-    let allRows = [];
     let currentBlockId = null;
+    const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
 
     const projectPartsMap = new Map();
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
 
-    const prodState = { rowIdx: null, pageSize: 50 };
-    const tableFilters = { cats: new Set(), order: 'cat-asc' };
-
-    const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
-    const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
-
-    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
-    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
-    function extractCode(url = '') { const m = String(url || '').match(/\/(\d{6,})\/?$/); return m ? `/${m[1]}` : ''; }
-    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
-    async function waitForClient(timeoutMs = 4000) {
-      const start = performance.now();
-      while (performance.now() - start < timeoutMs) {
-        const c = getClient();
-        if (c) return c;
-        await new Promise(r => setTimeout(r, 50));
-      }
-      throw new Error('Supabase client no inicializado');
-    }
-    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
-    function setSectionState(bodyEl, arrowEl, expanded) {
-      if (!bodyEl) return;
-      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
-      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
-    }
-    function toggleSection(bodyEl, arrowEl) {
-      if (!bodyEl) return;
-      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
-      setSectionState(bodyEl, arrowEl, !isOpen);
-    }
-
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      ensureEls();
-      try {
-        const client = await waitForClient();
-        if (!window.supabase && client) window.supabase = client;
-        await loadCatalogs();
-        await loadSalesMeta();
-        await loadBlocks();
-        await loadCategoryImages();
-      } catch (e) {
-        console.error(e);
-        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      const btnLC = e.target.closest('[data-block-lc]');
-      const btnSummary = e.target.closest('[data-block-summary]');
-      const delBtn = e.target.closest('[data-action="del-row"]');
-      const dupBtn = e.target.closest('[data-action="dup-row"]');
-      const searchBtn = e.target.closest('[data-action="search-prod"]');
-      const pickBtn = e.target.closest('[data-action="pick-prod"]');
-      const clearBtn = e.target.closest('[data-action="clear-prod"]');
-
-      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
-      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
-      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
-      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
-      if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
-      if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
-      if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
-    });
-
+    function pickLast(sel) { const all = document.querySelectorAll(sel); return all.length ? all[all.length - 1] : null; }
     function ensureEls() {
       blocksContainer = pickLast('#blocksContainer');
       blocksEntregados = pickLast('#blocksEntregados');
@@ -333,21 +190,6 @@
       overlayLCTitle = pickLast('#overlayLCTitle');
       closeOverlayLC = pickLast('#closeOverlayLC');
       addRowBtn = pickLast('#addRowBtn');
-
-      overlayProduct = pickLast('#overlayProduct');
-      prodResults = pickLast('#prodResults');
-      prodSearchInput = pickLast('#prodSearchInput');
-      prodVendorFilter = pickLast('#prodVendorFilter');
-      prodOrder = pickLast('#prodOrder');
-      prodBrandFilter = pickLast('#prodBrandFilter');
-      priceMin = pickLast('#priceMin');
-      priceMax = pickLast('#priceMax');
-      closeOverlayProductBtn = pickLast('#closeOverlayProduct');
-
-      tableFilterCat = pickLast('#tableFilterCat');
-      tableFilterCatChips = pickLast('#tableFilterCatChips');
-      tableOrderCat = pickLast('#tableOrderCat');
-
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (addRowBtn) addRowBtn.onclick = addEmptyRow;
@@ -356,20 +198,55 @@
       if (toggleEntregados) toggleEntregados.onclick = () => toggleSection(bodyEntregados, arrowEnt);
       setSectionState(bodyPorEntregar, arrowPor, true);
       setSectionState(bodyEntregados, arrowEnt, false);
-
-      if (closeOverlayProductBtn) closeOverlayProductBtn.onclick = closeProductOverlay;
-      if (prodSearchInput) prodSearchInput.addEventListener('input', runSearch);
-      if (prodVendorFilter) prodVendorFilter.addEventListener('change', runSearch);
-      if (prodOrder) prodOrder.addEventListener('change', runSearch);
-      if (prodBrandFilter) prodBrandFilter.addEventListener('input', runSearch);
-      if (priceMin) priceMin.addEventListener('input', debounce(runSearch, 200));
-      if (priceMax) priceMax.addEventListener('input', debounce(runSearch, 200));
-
-      if (tableFilterCat) tableFilterCat.addEventListener('change', () => { syncTableFilterCats(); applyTableFilters(); });
-      if (tableOrderCat) tableOrderCat.addEventListener('change', () => { tableFilters.order = tableOrderCat.value; applyTableFilters(); });
     }
 
-    // ---------- catálogos internos ----------
+    function setSectionState(bodyEl, arrowEl, expanded) {
+      if (!bodyEl) return;
+      bodyEl.style.maxHeight = expanded ? bodyEl.scrollHeight + 40 + 'px' : '0';
+      if (arrowEl) arrowEl.classList.toggle('up', !expanded);
+    }
+    function toggleSection(bodyEl, arrowEl) {
+      if (!bodyEl) return;
+      const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
+      setSectionState(bodyEl, arrowEl, !isOpen);
+    }
+
+    function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
+    async function waitForClient(timeoutMs = 4000) {
+      const start = performance.now();
+      while (performance.now() - start < timeoutMs) {
+        const c = getClient();
+        if (c) return c;
+        await new Promise(r => setTimeout(r, 50));
+      }
+      throw new Error('Supabase client no inicializado');
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      ensureEls();
+      try {
+        const client = await waitForClient();
+        if (!window.supabase && client) window.supabase = client;
+        await loadCatalogs();
+        await loadSalesMeta();
+        await loadBlocks();
+      } catch (e) {
+        console.error(e);
+        window.utils?.mostrarNotificacion?.('Error al iniciar Compras', 'error');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const btnLC = e.target.closest('[data-block-lc]');
+      const btnSummary = e.target.closest('[data-block-summary]');
+      const delBtn = e.target.closest('[data-action="del-row"]');
+      const dupBtn = e.target.closest('[data-action="dup-row"]');
+      if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
+      if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
+      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
+      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
+    });
+
     async function loadCatalogs() {
       const client = await waitForClient();
       const [enc, uni, mod, est, cats] = await Promise.all([
@@ -389,15 +266,11 @@
       proveedores = provs || [];
       const { data: mats } = await client.from('materials').select('id,name,category').order('name');
       materiales = mats || [];
-
-      // llena select filtro categoría planilla
-      if (tableFilterCat) {
-        tableFilterCat.innerHTML = catMateriales.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-      }
     }
 
     async function loadSalesMeta() {
       const client = await waitForClient();
+
       const { data: ventasRows } = await client
         .from('ventas')
         .select('cotizacion_id, partida, partida_nombre, estado, fecha_entrega_limite');
@@ -453,7 +326,6 @@
       return map;
     }
 
-    // ---------- bloques ----------
     async function loadBlocks() {
       try {
         const client = await waitForClient();
@@ -547,8 +419,7 @@
       if (bodyEntregados) setSectionState(bodyEntregados, arrowEnt, bodyEntregados.style.maxHeight !== '0px');
     }
 
-    // ---------- util options ----------
-    function makeOptions(list, valKey = 'nombre', labelKey = 'nombre') {
+    function makeOptions(list, valKey='nombre', labelKey='nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
     function productOptions(category) {
@@ -562,11 +433,9 @@
       sel.innerHTML = productOptions(row.categoria || '');
       if (row.producto_id) {
         const valid = materiales.find(m => m.id === row.producto_id && (!row.categoria || m.category === row.categoria));
-        sel.value = valid ? row.producto_id : '';
-        if (!valid) currentRows[rowIdx].producto_id = null;
-      } else sel.value = '';
+        if (valid) sel.value = row.producto_id; else { sel.value=''; currentRows[rowIdx].producto_id=null; }
+      } else sel.value='';
     }
-
     function setVal(idx, field, value) {
       const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
       if (el) el.value = value ?? '';
@@ -574,22 +443,13 @@
     function isMeaningful(payload) {
       return (
         (payload.producto_id && payload.producto_id !== '') ||
-        (payload.aa_product_id && payload.aa_product_id !== '') ||
         (payload.categoria && payload.categoria !== '') ||
         (payload.cantidad && Number(payload.cantidad) > 0) ||
         (payload.precio_unit && Number(payload.precio_unit) > 0) ||
         (payload.observaciones && payload.observaciones.trim() !== '')
       );
     }
-
-    // ---------- filas ----------
-    function addEmptyRow() {
-      if (!currentBlockId) return;
-      const obj = { id: null, block_id: currentBlockId, placeholder: true, _saving: false };
-      allRows.push(obj);
-      applyTableFilters();
-    }
-
+    function addEmptyRow() { if (!currentBlockId) return; currentRows.push({ id: null, block_id: currentBlockId, placeholder: true, _saving: false }); renderGrid(currentRows); }
     async function cleanupEmptiesInDB(lines, client) {
       const empties = (lines || []).filter(r => !isMeaningful(r) && r.id);
       if (!empties.length) return;
@@ -597,44 +457,17 @@
       try { await client.from(TABLE).delete().in('id', ids); }
       catch (e) { console.error('cleanupEmptiesInDB', e); }
     }
-
     async function loadLines(blockId) {
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
-        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
+        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
-      if (error) { console.error('loadLines', error); allRows = []; currentRows = []; renderGrid([]); return; }
-      await cleanupEmptiesInDB(data, client);
-      allRows = (data || []).filter(r => isMeaningful(r));
-      await hydrateAaNames();
-      applyTableFilters();
+      if (error) { console.error('loadLines', error); currentRows = []; }
+      else { await cleanupEmptiesInDB(data, client); currentRows = (data || []).filter(r => isMeaningful(r)); }
+      renderGrid(currentRows);
     }
-
-    async function hydrateAaNames() {
-      const ids = [...new Set(allRows.map(r => r.aa_product_id).filter(Boolean))];
-      if (!ids.length) return;
-      const client = await waitForClient();
-      const { data, error } = await client
-        .from('aa_products')
-        .select('aa_product_id:id, aa_name, aa_price, aa_url, aa_category_url, vendor')
-        .in('aa_product_id', ids);
-      if (error) return;
-      const map = new Map((data || []).map(r => [r.id, r]));
-      allRows = allRows.map(r => {
-        const ref = r.aa_product_id ? map.get(r.aa_product_id) : null;
-        return {
-          ...r,
-          _aa_name: ref ? ref.aa_name : (r._aa_name || ''),
-          aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor,
-          _aa_price: ref ? ref.aa_price : r._aa_price,
-          _aa_code: ref ? extractCode(ref.aa_url) : r._aa_code,
-          _aa_caturl: ref ? ref.aa_category_url : r._aa_caturl
-        };
-      });
-    }
-
     async function recomputeBlockTotals(blockId) {
       if (!blockId) return;
       const client = await waitForClient();
@@ -659,55 +492,12 @@
         await loadBlocks();
       } catch (e) { console.error('update block totals', e); }
     }
-
-    function applyTableFilters() {
-      let rows = [...allRows];
-      if (tableFilters.cats.size) {
-        rows = rows.filter(r => r.categoria && tableFilters.cats.has(r.categoria));
-      }
-      const order = tableFilters.order;
-      rows.sort((a,b)=>{
-        const catA = (a.categoria||'').toLowerCase();
-        const catB = (b.categoria||'').toLowerCase();
-        const priceA = Number(a.precio_unit||0);
-        const priceB = Number(b.precio_unit||0);
-        if (order === 'cat-asc') return catA.localeCompare(catB);
-        if (order === 'cat-desc') return catB.localeCompare(catA);
-        if (order === 'price-asc') return priceA - priceB;
-        if (order === 'price-desc') return priceB - priceA;
-        return 0;
-      });
-      currentRows = rows;
-      renderGrid(currentRows);
-      renderFilterCatChips();
-    }
-
-    function syncTableFilterCats() {
-      tableFilters.cats = new Set([...tableFilterCat.options].filter(o => o.selected).map(o => o.value));
-    }
-
-    function renderFilterCatChips() {
-      if (!tableFilterCatChips) return;
-      const chips = [...tableFilters.cats].map(c => `
-        <span class="chip-mini">${escapeHtml(c)} <button data-cat-remove="${escapeHtml(c)}">×</button></span>
-      `).join('');
-      tableFilterCatChips.innerHTML = chips;
-      tableFilterCatChips.querySelectorAll('button[data-cat-remove]').forEach(btn=>{
-        btn.onclick = () => {
-          const val = btn.dataset.catRemove;
-          [...tableFilterCat.options].forEach(o => { if (o.value === val) o.selected = false; });
-          syncTableFilterCats(); applyTableFilters();
-        };
-      });
-    }
-
-    // ---------- render tabla ----------
     function renderGrid(rows) {
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
         overlayLCGrid = document.getElementById('overlayLCGrid');
       }
-      const headers = ['', 'Encargado', 'Proveedor', 'Dirección', 'Categoría', 'Producto', 'Obs', 'Unidad', 'Cantidad', 'Precio Unit', 'Total', 'Modo', 'Estado pago'];
+      const headers = ['','Encargado','Proveedor','Dirección','Categoría','Producto','Obs','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'];
       const thead = `<thead><tr>${headers.map((h,idx)=>idx===0?`<th style="width:90px;">${h}</th>`:`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
       const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c })));
       const bodyRows = rows.map((row, idx) => {
@@ -725,17 +515,7 @@
             <td><select data-f="proveedor_id" data-row="${idx}">${makeOptions(proveedores,'id','name')}</select></td>
             <td><input data-f="direccion" data-row="${idx}" type="text" value="${escapeHtml(row.direccion||'')}"></td>
             <td><select data-f="categoria" data-row="${idx}">${categoriaOptions}</select></td>
-            <td>
-              <div class="prod-cell ${row.aa_product_id ? 'hidden' : ''}">
-                <select class="prod-select" data-f="producto_id" data-row="${idx}"></select>
-                <button class="btn-search" type="button" title="Buscar en catálogo" data-action="search-prod" data-row="${idx}">🔍</button>
-              </div>
-              <div class="prod-pill ${row.aa_product_id ? '' : 'hidden'}" data-row="${idx}" data-role="aa-pill">
-                <span><strong data-role="aa-name"></strong></span>
-                <span data-role="aa-vendor" style="color:#6c7a86;"></span>
-                <button class="btn-clear-prod" data-action="clear-prod" data-row="${idx}" title="Quitar">✕</button>
-              </div>
-            </td>
+            <td><select data-f="producto_id" data-row="${idx}"></select></td>
             <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones||'')}"></td>
             <td><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></td>
             <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></td>
@@ -756,40 +536,12 @@
         setVal(idx,'unidad',row.unidad);
         setVal(idx,'modo_compra',row.modo_compra);
         setVal(idx,'estado_pago',row.estado_pago);
-        const totalInput = overlayLCGrid.querySelector(`input[data-row="${idx}"][data-f="total"]`);
-        if (totalInput) totalInput.value = row.total || '';
         applyEstadoStyle(idx);
-        syncProdUI(idx);
       });
       const tbl = overlayLCGrid.querySelector('table.lc-table');
       if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
     }
-
-    function syncProdUI(idx) {
-      const row = currentRows[idx] || {};
-      const pill = overlayLCGrid?.querySelector?.(`[data-role="aa-pill"][data-row="${idx}"]`);
-      const selWrap = overlayLCGrid?.querySelector?.(`select[data-row="${idx}"][data-f="producto_id"]`)?.closest('.prod-cell');
-      if (pill) {
-        pill.classList.toggle('hidden', !row.aa_product_id);
-        const nameEl = pill.querySelector('[data-role="aa-name"]');
-        const venEl = pill.querySelector('[data-role="aa-vendor"]');
-        if (nameEl) nameEl.textContent = row._aa_name || '(catálogo externo)';
-        if (venEl) venEl.textContent = row.aa_vendor ? `· ${row.aa_vendor}` : '';
-      }
-      if (selWrap) selWrap.classList.toggle('hidden', !!row.aa_product_id);
-    }
-
-    function applyEstadoStyle(rowIdx) {
-      const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`);
-      if (!sel) return;
-      sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar');
-      const val = (sel.value||'').toLowerCase();
-      if (val.includes('comprado')) sel.classList.add('estado-comprado');
-      else if (val.includes('stock')) sel.classList.add('estado-stock');
-      else if (val.includes('por comprar')||val.includes('porcomprar')) sel.classList.add('estado-porcomprar');
-    }
-
     async function onCellEdit(e) {
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
@@ -798,91 +550,40 @@
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
       currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder: false };
-      // update reference in allRows too
-      const target = allRows.find(r => r.id === row.id) || row;
-      target[field] = val;
-
-      if (field === 'categoria') {
-        currentRows[rowIdx].producto_id = null;
-        target.producto_id = null;
-        rebuildProductOptions(rowIdx);
-      }
+      if (field === 'categoria') { currentRows[rowIdx].producto_id = null; rebuildProductOptions(rowIdx); }
       currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
       await persistRow(rowIdx);
       await recomputeBlockTotals(currentBlockId);
-      applyTableFilters(); // re-aplica filtros/orden
     }
-
     function buildPayload(row) {
-      return {
-        block_id: row.block_id || currentBlockId,
-        encargado: row.encargado || null,
-        proveedor_id: row.proveedor_id || null,
-        direccion: row.direccion || null,
-        categoria: row.categoria || null,
-        producto_id: row.producto_id || null,
-        aa_product_id: row.aa_product_id || null,
-        aa_vendor: row.aa_vendor || null,
-        unidad: row.unidad || null,
-        cantidad: row.cantidad || null,
-        precio_unit: row.precio_unit || null,
-        modo_compra: row.modo_compra || null,
-        estado_pago: row.estado_pago || null,
-        observaciones: row.observaciones || null
-      };
+      return { block_id: row.block_id || currentBlockId, encargado: row.encargado || null, proveedor_id: row.proveedor_id || null, direccion: row.direccion || null, categoria: row.categoria || null, producto_id: row.producto_id || null, unidad: row.unidad || null, cantidad: row.cantidad || null, precio_unit: row.precio_unit || null, modo_compra: row.modo_compra || null, estado_pago: row.estado_pago || null, observaciones: row.observaciones || null };
     }
-
     async function persistRow(idx) {
       const row = currentRows[idx]; if (!row) return; if (row._saving) return;
       const client = await waitForClient(); const payload = buildPayload(row); const meaningful = isMeaningful(payload);
       if (!row.id && !meaningful) return;
-      currentRows[idx]._saving = true;
+      currentRows[idx] = { ...row, _saving: true };
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          Object.assign(currentRows[idx], data, { placeholder:false });
-          const ref = allRows.find(r => r === row);
-          if (ref) Object.assign(ref, data, { placeholder:false });
+          currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total);
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
-          if (data) {
-            Object.assign(currentRows[idx], data, { placeholder:false });
-            const ref = allRows.find(r => r.id === row.id);
-            if (ref) Object.assign(ref, data, { placeholder:false });
-          }
+          if (data) { currentRows[idx] = { ...row, ...data, placeholder: false, _saving: false }; setVal(idx,'total', data.total); }
         }
       } catch (e) { console.error('Persist error', e); }
       finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
     }
-
-    async function deleteRow(idx) {
-      const row = currentRows[idx]; if (!row) return;
-      const client = await waitForClient();
-      try {
-        if (row.id) await client.from(TABLE).delete().eq('id', row.id);
-        allRows = allRows.filter(r => r !== row);
-        applyTableFilters();
-        await recomputeBlockTotals(currentBlockId);
-      } catch (e) { console.error('Delete error', e); }
-    }
-
-    function duplicateRow(idx) {
-      const src = currentRows[idx]; if (!src) return;
-      const clone = { ...src, id: null, block_id: currentBlockId, created_at: null, placeholder: false, _saving: false };
-      allRows.splice(allRows.indexOf(src)+1, 0, clone);
-      applyTableFilters();
-      if (isMeaningful(buildPayload(clone))) persistRow(currentRows.indexOf(clone)).then(()=>recomputeBlockTotals(currentBlockId));
-    }
-
-    // ---------- resumen ----------
-    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a, c) => { a[c.name] = c.image_url; return a; }, {}); } catch (e) { console.warn('cat images', e); } }
+    async function deleteRow(idx) { const row=currentRows[idx]; if(!row) return; const client=await waitForClient(); try{ if(row.id) await client.from(TABLE).delete().eq('id',row.id); currentRows.splice(idx,1); renderGrid(currentRows); await recomputeBlockTotals(currentBlockId);}catch(e){console.error('Delete error',e);} }
+    function duplicateRow(idx) { const src=currentRows[idx]; if(!src) return; const clone={...src,id:null,block_id:currentBlockId,created_at:null,placeholder:false,_saving:false}; currentRows.splice(idx+1,0,clone); renderGrid(currentRows); if(isMeaningful(buildPayload(clone))) persistRow(idx+1).then(()=>recomputeBlockTotals(currentBlockId)); }
+    function applyEstadoStyle(rowIdx) { const sel=overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="estado_pago"]`); if(!sel)return; sel.classList.remove('estado-comprado','estado-stock','estado-porcomprar'); const val=(sel.value||'').toLowerCase(); if(val.includes('comprado')) sel.classList.add('estado-comprado'); else if(val.includes('stock')) sel.classList.add('estado-stock'); else if(val.includes('por comprar')||val.includes('porcomprar')) sel.classList.add('estado-porcomprar'); }
+    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{}); } catch(e) { console.warn('cat images', e); } }
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
-
     async function fetchLines(blockId) {
       const client = await waitForClient();
       const { data, error } = await client
@@ -916,13 +617,11 @@
       `).join('');
       overlayGrid.innerHTML = `<div class="item-grid">${cards}</div>`;
     }
-
     async function openLC(blockId, title) {
       ensureEls();
       currentBlockId = blockId;
       const wrapper = overlayLC?.querySelector?.('.overlay-content');
       if (wrapper) wrapper.dataset.currentBlock = blockId;
-      allRows = [];
       currentRows = [];
       if (overlayLCGrid) overlayLCGrid.innerHTML = '';
       if (overlayLC && overlayLCGrid && overlayLCTitle) {
@@ -932,7 +631,6 @@
       try { await loadLines(blockId); }
       catch (e) { console.error(e); overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>'; }
     }
-
     async function openSummary(blockId, title) {
       ensureEls();
       if (!overlay || !overlayGrid || !overlayTitle) return;
@@ -942,108 +640,8 @@
       catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
     }
 
-    // ---------- catálogo externo ----------
-    function closeProductOverlay() { overlayProduct?.classList.remove('active'); document.body.classList.remove('overlay-open'); prodState.rowIdx = null; }
-    function openProductSearch(rowIdx) {
-      prodState.rowIdx = rowIdx;
-      overlayProduct?.classList.add('active');
-      document.body.classList.add('overlay-open');
-      runSearch();
-    }
-
-    const runSearch = debounce(async () => {
-      if (!prodResults) return;
-      prodResults.innerHTML = '<div style="padding:12px;color:#6c7a86;">Buscando...</div>';
-      const query = (prodSearchInput?.value || '').trim();
-      const vendor = prodVendorFilter?.value || '';
-      const brand = (prodBrandFilter?.value || '').trim();
-      const minP = priceMin?.value ? Number(priceMin.value) : null;
-      const maxP = priceMax?.value ? Number(priceMax.value) : null;
-      const order = prodOrder?.value || 'name-asc';
-      try {
-        const rows = await searchProducts({ query, vendor, brand, minP, maxP, order, page: 0 });
-        renderProdResults(rows);
-      } catch (e) {
-        console.error(e);
-        prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
-      }
-    }, 250);
-
-    async function searchProducts({ query = '', vendor = '', brand = '', minP = null, maxP = null, order = 'name-asc', page = 0 }) {
-      const client = await waitForClient();
-      let q = client.from('aa_products')
-        .select('id:aa_product_id, aa_name, aa_price, aa_url, aa_brand, aa_category_url, vendor', { count: 'exact' })
-        .ilike('aa_name', `%${query}%`)
-        .range(page * prodState.pageSize, page * prodState.pageSize + prodState.pageSize - 1);
-
-      if (vendor) q = q.eq('vendor', vendor);
-      if (brand) q = q.ilike('aa_brand', `%${brand}%`);
-      if (minP !== null && !Number.isNaN(minP)) q = q.gte('aa_price', minP);
-      if (maxP !== null && !Number.isNaN(maxP)) q = q.lte('aa_price', maxP);
-
-      if (order === 'price-asc') q = q.order('aa_price', { ascending: true, nullsFirst: true });
-      else if (order === 'price-desc') q = q.order('aa_price', { ascending: false, nullsLast: true });
-      else if (order === 'cat-asc') q = q.order('aa_category_url', { ascending: true }).order('aa_name', { ascending: true });
-      else if (order === 'cat-desc') q = q.order('aa_category_url', { ascending: false }).order('aa_name', { ascending: true });
-      else if (order === 'name-desc') q = q.order('aa_name', { ascending: false });
-      else q = q.order('aa_name', { ascending: true });
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data || [];
-    }
-
-    function renderProdResults(rows) {
-      if (!prodResults) return;
-      if (!rows.length) { prodResults.innerHTML = '<div style="padding:12px;color:#666;">Sin resultados</div>'; return; }
-      const html = rows.map(r => `
-        <div style="display:flex;gap:8px;align-items:center;border-bottom:1px solid #e5e7eb;padding:8px;">
-          <div style="flex:1;">
-            <div style="font-weight:700;">${escapeHtml(r.aa_name)}</div>
-            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.vendor || '')}${r.aa_brand ? ' · ' + escapeHtml(r.aa_brand) : ''}</div>
-            <div style="font-size:12px;color:#6c7a86;">${escapeHtml(r.aa_url || '')}</div>
-            <div style="font-size:12px;color:#6c7a86;">Código: ${escapeHtml(extractCode(r.aa_url))}</div>
-          </div>
-          <div style="width:110px;font-weight:600;">${r.aa_price ? fmtCLP(r.aa_price) : '—'}</div>
-          <div style="display:flex;gap:6px;">
-            <a href="${escapeHtml(r.aa_url || '#')}" target="_blank" class="btn btn-ghost" style="height:28px;">Ver</a>
-            <button class="btn btn-primary" type="button" data-action="pick-prod" data-prod='${JSON.stringify(r)}' style="height:28px;">Usar</button>
-          </div>
-        </div>
-      `).join('');
-      prodResults.innerHTML = html;
-    }
-
-    function handlePickProduct(btn) {
-      const data = btn.getAttribute('data-prod');
-      if (!data) return;
-      const prod = JSON.parse(data);
-      const idx = prodState.rowIdx;
-      if (idx == null || idx < 0 || idx >= currentRows.length) return;
-      currentRows[idx].aa_product_id = prod.id;
-      currentRows[idx]._aa_name = prod.aa_name;
-      currentRows[idx].aa_vendor = prod.vendor;
-      currentRows[idx].precio_unit = prod.aa_price || currentRows[idx].precio_unit;
-      currentRows[idx].producto_id = null; // ocultar select local
-      currentRows[idx].categoria = currentRows[idx].categoria || '';
-      applyTableFilters();
-      persistRow(idx);
-      recomputeBlockTotals(currentBlockId);
-      closeProductOverlay();
-    }
-
-    function clearExternalProduct(idx) {
-      const row = currentRows[idx]; if (!row) return;
-      row.aa_product_id = null; row._aa_name = ''; row.aa_vendor = null; row._aa_code = null; row._aa_caturl = null;
-      applyTableFilters();
-      persistRow(idx);
-      recomputeBlockTotals(currentBlockId);
-    }
-
-    // Facets removidas: no se usan categorías en el catálogo externo
-    async function loadFacets() {
-      // vacío intencionalmente
-    }
+    function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
+    function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
   </script>
 </body>
 </html>
