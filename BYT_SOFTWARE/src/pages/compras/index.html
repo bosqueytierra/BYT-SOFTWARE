@@ -162,7 +162,6 @@
         <div style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
           <label style="font-size:12px;font-weight:700;color:#333;">Ordenar categoría por</label>
           <select id="tableOrderCat" style="height:30px;">
-            <option value="">Seleccione...</option>
             <option value="cat-asc">Categoría A-Z</option>
             <option value="cat-desc">Categoría Z-A</option>
             <option value="price-asc">Precio ↑</option>
@@ -172,7 +171,6 @@
         <div style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
           <label style="font-size:12px;font-weight:700;color:#333;">Ordenar proveedor por</label>
           <select id="tableOrderProv" style="height:30px;">
-            <option value="">Seleccione...</option>
             <option value="prov-asc">Proveedor A-Z</option>
             <option value="prov-desc">Proveedor Z-A</option>
           </select>
@@ -260,7 +258,7 @@
     const projectFechaLimiteMap = new Map();
 
     const prodState = { rowIdx: null, pageSize: 50 };
-    const tableFilters = { cats: new Set(), provs: new Set(), orderCat: null, orderProv: null };
+    const tableFilters = { cats: new Set(), provs: new Set(), orderCat: 'cat-asc', orderProv: 'prov-asc' };
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
     const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
@@ -384,8 +382,8 @@
 
       if (tableFilterCat) tableFilterCat.addEventListener('change', () => { addCatFilter(tableFilterCat.value); tableFilterCat.value=''; });
       if (tableFilterProv) tableFilterProv.addEventListener('change', () => { addProvFilter(tableFilterProv.value); tableFilterProv.value=''; });
-      if (tableOrderCat) tableOrderCat.addEventListener('change', () => { tableFilters.orderCat = tableOrderCat.value || null; applyTableFilters(); });
-      if (tableOrderProv) tableOrderProv.addEventListener('change', () => { tableFilters.orderProv = tableOrderProv.value || null; applyTableFilters(); });
+      if (tableOrderCat) tableOrderCat.addEventListener('change', () => { tableFilters.orderCat = tableOrderCat.value; applyTableFilters(); });
+      if (tableOrderProv) tableOrderProv.addEventListener('change', () => { tableFilters.orderProv = tableOrderProv.value; applyTableFilters(); });
     }
 
     // ---------- catálogos internos ----------
@@ -408,12 +406,8 @@
       proveedores = provs || [];
       const { data: mats } = await client.from('materials').select('id,name,category').order('name');
       materiales = mats || [];
-
-      // llenar selects de filtros con catálogos completos
-      rebuildFilterOptionsStatic();
     }
 
-    // ---------- metadata ventas ----------
     async function loadSalesMeta() {
       const client = await waitForClient();
       const { data: ventasRows } = await client
@@ -643,15 +637,12 @@
       const map = new Map((data || []).map(r => [r.id, r]));
       allRows = allRows.map(r => {
         const ref = r.aa_product_id ? map.get(r.aa_product_id) : null;
-        const priceFromCat = ref ? ref.aa_price : r._aa_price;
-        const precio_unit = r.precio_unit || (priceFromCat ?? null);
         return {
           ...r,
           _aa_name: ref ? ref.aa_name : (r._aa_name || ''),
           aa_vendor: ref ? (ref.vendor || r.aa_vendor) : r.aa_vendor,
-          _aa_price: priceFromCat,
-          _aa_caturl: ref ? ref.aa_category_url : r._aa_caturl,
-          precio_unit
+          _aa_price: ref ? ref.aa_price : r._aa_price,
+          _aa_caturl: ref ? ref.aa_category_url : r._aa_caturl
         };
       });
     }
@@ -688,50 +679,38 @@
         const provName = proveedores.find(p => p.id === r.proveedor_id)?.name || '';
         return provName && tableFilters.provs.has(provName);
       });
-
+      const orderCat = tableFilters.orderCat;
+      const orderProv = tableFilters.orderProv;
       rows.sort((a,b)=>{
+        const catA = (a.categoria||'').toLowerCase();
+        const catB = (b.categoria||'').toLowerCase();
+        const provA = (proveedores.find(p=>p.id===a.proveedor_id)?.name || '').toLowerCase();
+        const provB = (proveedores.find(p=>p.id===b.proveedor_id)?.name || '').toLowerCase();
+        const priceA = Number(a.precio_unit||0);
+        const priceB = Number(b.precio_unit||0);
+
+        // categoría order
         let cmp = 0;
+        if (orderCat === 'cat-asc') cmp = catA.localeCompare(catB);
+        else if (orderCat === 'cat-desc') cmp = catB.localeCompare(catA);
+        else if (orderCat === 'price-asc') cmp = priceA - priceB;
+        else if (orderCat === 'price-desc') cmp = priceB - priceA;
 
-        if (tableFilters.orderCat) {
-          const catA = (a.categoria||'').toLowerCase();
-          const catB = (b.categoria||'').toLowerCase();
-          const priceA = Number(a.precio_unit||0);
-          const priceB = Number(b.precio_unit||0);
-          if (tableFilters.orderCat === 'cat-asc') cmp = catA.localeCompare(catB);
-          else if (tableFilters.orderCat === 'cat-desc') cmp = catB.localeCompare(catA);
-          else if (tableFilters.orderCat === 'price-asc') cmp = priceA - priceB;
-          else if (tableFilters.orderCat === 'price-desc') cmp = priceB - priceA;
-        }
-
-        if (cmp === 0 && tableFilters.orderProv) {
-          const provA = (proveedores.find(p=>p.id===a.proveedor_id)?.name || '').toLowerCase();
-          const provB = (proveedores.find(p=>p.id===b.proveedor_id)?.name || '').toLowerCase();
-          if (tableFilters.orderProv === 'prov-asc') cmp = provA.localeCompare(provB);
-          else if (tableFilters.orderProv === 'prov-desc') cmp = provB.localeCompare(provA);
+        // si categoría empate, ordenar por proveedor
+        if (cmp === 0) {
+          if (orderProv === 'prov-asc') cmp = provA.localeCompare(provB);
+          else if (orderProv === 'prov-desc') cmp = provB.localeCompare(provA);
         }
         return cmp;
       });
-
       currentRows = rows;
       renderGrid(currentRows);
       renderFilterChips();
     }
 
-    function rebuildFilterOptionsStatic() {
-      if (tableFilterCat) {
-        tableFilterCat.innerHTML = '<option value="">Seleccione...</option>' + catMateriales.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-      }
-      if (tableFilterProv) {
-        const provNames = proveedores.map(p=>p.name);
-        tableFilterProv.innerHTML = '<option value="">Seleccione...</option>' + provNames.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-      }
-    }
-
     function rebuildFilterOptionsFromRows() {
       const catSet = new Set(allRows.map(r => r.categoria).filter(Boolean));
-      catMateriales.forEach(c=>catSet.add(c));
       const provSet = new Set(allRows.map(r => proveedores.find(p=>p.id===r.proveedor_id)?.name).filter(Boolean));
-      proveedores.forEach(p=>provSet.add(p.name));
       if (tableFilterCat) {
         tableFilterCat.innerHTML = '<option value="">Seleccione...</option>' + [...catSet].sort((a,b)=>a.localeCompare(b)).map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
       }
@@ -766,7 +745,7 @@
       }
     }
 
-    // ---------- renderF tabla ----------
+    // ---------- render tabla ----------
     function renderGrid(rows) {
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
@@ -1088,16 +1067,13 @@
         aa_vendor: payload.vendor,
         _aa_price: payload.aa_price,
         _aa_caturl: payload.aa_category_url,
-        producto_id: null,
-        precio_unit: payload.aa_price ?? row.precio_unit ?? null,
+        producto_id: null
       };
-      merged.total = Number(merged.cantidad || 0) * Number(merged.precio_unit || 0);
       currentRows[rowIdx]=merged;
       const ref = allRows.find(r=>r.id===row.id) || row;
       Object.assign(ref, merged);
       renderGrid(currentRows);
       persistRow(rowIdx);
-      recomputeBlockTotals(currentBlockId);
       closeProductOverlay();
     }
 
