@@ -17,7 +17,7 @@
     .meta { color:var(--muted); font-size:13px; font-weight:600; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
     .chip { background:#eef2f5; color:#2d2d2d; border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
-    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; display:inline-flex; align-items:center; gap:6px; transition:background .12s ease; height:30px; box-shadow:none; }
+    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
     .btn:hover { background:#eef2f5; }
     .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
     .btn-primary:hover { background:#264d40; }
@@ -27,7 +27,7 @@
     body.overlay-open { overflow:hidden; }
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 10px; }
     .overlay.active { display: flex; }
-    .overlay-content { background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30); width: 98vw; max-width: 2200px; height: 92vh; padding: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 8px; }
+    .overlay-content { background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30); width: 98vw; max-width: 2200px; height: 92vh; padding: 10px; overflow: hidden; display: flex; flex-direction:column; gap:8px; }
     .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
     .overlay-title { font-weight: 700; font-size: 15px; }
     .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
@@ -36,7 +36,7 @@
     table.lc-table thead th { position: sticky; top: 0; background:#e1e5ec; border:1px solid #d7dbe0; padding:6px 6px; font-size:12.5px; font-weight:700; }
     table.lc-table tbody td { border:1px solid #d7dbe0; background:#fff; padding:0; min-height:28px; }
     table.lc-table tbody tr:nth-child(odd) td { background:#f7f8fa; }
-    table.lc-table select, table.lc-table input[type=number], table.lc-table input[type=text] { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; outline:none; }
+    table.lc-table select, table.lc-table input[type=number], table.lc-table input[type=text] { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; }
     table.lc-table input[type=number] { appearance:none; -moz-appearance:textfield; }
     table.lc-table input::-webkit-outer-spin-button, table.lc-table input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .readonly-cell { background:#f3f4f6; }
@@ -83,6 +83,13 @@
     .selected-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
     .chip-mini{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:12px;border:1px solid #d4d8dd;background:#f7f9fb;font-size:12px;}
     .chip-mini button{border:none;background:transparent;cursor:pointer;font-weight:800;color:#a11;}
+
+    /* resumen */
+    .item-grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:10px; padding:8px;}
+    .item-card{background:#fff; border:1px solid #d4d8dd; border-radius:10px; overflow:hidden; display:flex; gap:10px; padding:10px; align-items:center;}
+    .item-thumb{width:56px;height:56px; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb;}
+    .item-body h4{margin:0 0 4px; font-size:14px;}
+    .muted{color:#6c7a86; font-size:12px;}
   </style>
 </head>
 <body>
@@ -290,7 +297,7 @@
     // IMPORTANTE: orden por defecto vacío para que NO ordene si el usuario no lo pide
     const tableFilters = { cats: new Set(), provs: new Set(), orderCat: '', orderProv: '' };
 
-    const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="16">LC</text></svg>';
+    const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12">Sin imagen</text></svg>';
     const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
@@ -316,6 +323,34 @@
       const isOpen = bodyEl.style.maxHeight && bodyEl.style.maxHeight !== '0px';
       setSectionState(bodyEl, arrowEl, !isOpen);
     }
+
+    // ====== FIX DUPLICADOS / FILAS FANTASMA ======
+    // Identificador local (solo frontend) para poder mapear filas visibles <-> filas reales (allRows)
+    const makeUid = () => `uid_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+    function ensureUid(row) {
+      if (!row) return row;
+      if (!row._uid) row._uid = makeUid();
+      return row;
+    }
+    function ensureUids(list) {
+      (list || []).forEach(r => ensureUid(r));
+      return list;
+    }
+    function getRowUidFromEventTarget(target) {
+      const tr = target?.closest?.('tr[data-uid]');
+      return tr?.dataset?.uid || null;
+    }
+    function findRowByUid(uid) {
+      if (!uid) return null;
+      return allRows.find(r => r && r._uid === uid) || null;
+    }
+    function updateAllRowsRef(uid, patch) {
+      const r = findRowByUid(uid);
+      if (!r) return null;
+      Object.assign(r, patch);
+      return r;
+    }
+    // ============================================
 
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
@@ -348,8 +383,8 @@
 
       if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
       if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
-      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx); }
-      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx); }
+      if (delBtn) { e.preventDefault(); const idx = Number(delBtn.dataset.row); deleteRow(idx, delBtn); }
+      if (dupBtn) { e.preventDefault(); const idx = Number(dupBtn.dataset.row); duplicateRow(idx, dupBtn); }
       if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
       if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
       if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
@@ -652,7 +687,7 @@
     // ---------- filas ----------
     function addEmptyRow() {
       if (!currentBlockId) return;
-      const obj = { id: null, block_id: currentBlockId, placeholder: true, _saving: false };
+      const obj = ensureUid({ id: null, block_id: currentBlockId, placeholder: true, _saving: false });
       allRows.push(obj);
       applyTableFilters();
     }
@@ -676,7 +711,8 @@
 
       if (error) { console.error('loadLines', error); allRows = []; currentRows = []; renderGrid([]); return; }
       await cleanupEmptiesInDB(data, client);
-      allRows = (data || []).filter(r => isMeaningful(r));
+
+      allRows = ensureUids((data || []).filter(r => isMeaningful(r)));
 
       // hidrata _aa_name desde snapshot (sin tocar lo antiguo)
       await hydrateAaNames();
@@ -689,7 +725,7 @@
 
     async function hydrateAaNames() {
       // 1) prioridad snapshot (aa_product_name)
-      allRows = allRows.map(r => ({
+      allRows = allRows.map(r => ensureUid({
         ...r,
         _aa_name: r.aa_product_name || r._aa_name || '',
         _aa_price: r.aa_price_snapshot ?? r._aa_price
@@ -829,7 +865,8 @@
 
       const bodyRows = rows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
-        return `<tr data-row="${idx}" ${idAttr}>
+        const uidAttr = row._uid ? `data-uid="${row._uid}"` : `data-uid=""`;
+        return `<tr data-row="${idx}" ${uidAttr} ${idAttr}>
             <td class="action-cell">
               <button class="icon-btn danger" type="button" title="Eliminar" data-action="del-row" data-row="${idx}">
                 <svg viewBox="0 0 24 24"><path d="M9 11v6M15 11v6M5.5 7h13"/><path d="M10 5.5h4l.7 1.7H9.3l.7-1.7Z"/><rect x="6.5" y="9" width="11" height="10" rx="1.4"/></svg>
@@ -915,29 +952,37 @@
       const rowIdx = Number(e.target.getAttribute('data-row'));
       if (Number.isNaN(rowIdx) || !field) return;
 
-      const row = currentRows[rowIdx] || {};
+      const uid = getRowUidFromEventTarget(e.target);
+      const real = findRowByUid(uid);
+
+      // fallback si no se detecta uid (no debería pasar)
+      const rowVisible = currentRows[rowIdx] || {};
+      const base = real || rowVisible;
+
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
 
-      currentRows[rowIdx] = { ...row, [field]: val, block_id: row.block_id || currentBlockId, placeholder: false };
-      const ref = allRows.find(r => r.id === row.id) || row;
-      ref[field] = val;
+      // actualizar fila real
+      ensureUid(base);
+      base[field] = val;
+      base.block_id = base.block_id || currentBlockId;
+      base.placeholder = false;
 
       if (field === 'categoria') {
-        currentRows[rowIdx].producto_id = null;
-        ref.producto_id = null;
-        rebuildProductOptions(rowIdx);
+        base.producto_id = null;
+        // si cambia categoría y es externo, lo mantiene externo (no tocamos)
+        // pero si había producto interno, lo limpiamos como ya haces
       }
 
-      currentRows[rowIdx].total = Number(currentRows[rowIdx].cantidad || 0) * Number(currentRows[rowIdx].precio_unit || 0);
-      ref.total = currentRows[rowIdx].total;
+      base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
 
+      // reflejar total en UI inmediatamente
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
-      if (totalInput) totalInput.value = currentRows[rowIdx].total || '';
+      if (totalInput) totalInput.value = base.total || '';
 
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
-      await persistRow(rowIdx);
+      await persistRowByUid(base._uid);
       await recomputeBlockTotals(currentBlockId);
 
       applyTableFilters();
@@ -968,54 +1013,79 @@
       };
     }
 
-    async function persistRow(idx) {
-      const row = currentRows[idx]; if (!row) return; if (row._saving) return;
+    async function persistRowByUid(uid) {
+      const row = findRowByUid(uid);
+      if (!row) return;
+      if (row._saving) return;
+
       const client = await waitForClient();
       const payload = buildPayload(row);
       const meaningful = isMeaningful(payload);
       if (!row.id && !meaningful) return;
 
-      currentRows[idx]._saving = true;
+      row._saving = true;
       try {
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
-          Object.assign(currentRows[idx], data, { placeholder:false });
-          const ref = allRows.find(r => r === row);
-          if (ref) Object.assign(ref, data, { placeholder:false });
+          // sincroniza id devuelto
+          Object.assign(row, data, { placeholder:false });
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
           if (error) throw error;
-          if (data) {
-            Object.assign(currentRows[idx], data, { placeholder:false });
-            const ref = allRows.find(r => r.id === row.id);
-            if (ref) Object.assign(ref, data, { placeholder:false });
-          }
+          if (data) Object.assign(row, data, { placeholder:false });
         }
-      } catch (e) { console.error('Persist error', e); }
-      finally { if (currentRows[idx]) currentRows[idx]._saving = false; }
+      } catch (e) {
+        console.error('Persist error', e);
+      } finally {
+        row._saving = false;
+      }
     }
 
-    async function deleteRow(idx) {
-      const row=currentRows[idx]; if(!row) return; const client=await waitForClient();
+    async function deleteRow(idx, clickedEl = null) {
+      const uid = clickedEl ? getRowUidFromEventTarget(clickedEl) : (currentRows[idx]?._uid || null);
+      const row = findRowByUid(uid) || currentRows[idx];
+      if (!row) return;
+
+      const client = await waitForClient();
       try{
         if(row.id) await client.from(TABLE).delete().eq('id',row.id);
-        allRows = allRows.filter(r => r !== row);
+        allRows = allRows.filter(r => r && r._uid !== row._uid);
         applyTableFilters();
         await recomputeBlockTotals(currentBlockId);
       }catch(e){console.error('Delete error',e);}
     }
 
-    function duplicateRow(idx) {
-      const src=currentRows[idx]; if(!src) return;
-      const clone={...src,id:null,block_id:currentBlockId,created_at:null,placeholder:false,_saving:false};
-      allRows.splice(allRows.indexOf(src)+1,0,clone);
+    function duplicateRow(idx, clickedEl = null) {
+      const uid = clickedEl ? getRowUidFromEventTarget(clickedEl) : (currentRows[idx]?._uid || null);
+      const src = findRowByUid(uid) || currentRows[idx];
+      if(!src) return;
+
+      const clone = ensureUid({ ...src, id:null, block_id:currentBlockId, created_at:null, placeholder:false, _saving:false });
+      // no copiar flags internos
+      delete clone._saving;
+
+      // insertar en allRows justo después del src real
+      const pos = allRows.findIndex(r => r && r._uid === src._uid);
+      const insertAt = pos >= 0 ? pos + 1 : allRows.length;
+      allRows.splice(insertAt, 0, clone);
+
       applyTableFilters();
-      if(isMeaningful(buildPayload(clone))) persistRow(currentRows.indexOf(clone)).then(()=>recomputeBlockTotals(currentBlockId));
+
+      // persistir solo si es una fila "con info real"
+      const payload = buildPayload(clone);
+      if(isMeaningful(payload)) {
+        persistRowByUid(clone._uid).then(()=>recomputeBlockTotals(currentBlockId));
+      }
     }
 
     // ---------- resumen ----------
-    async function loadCategoryImages() { try { const { data } = await catApi.listCategoriesWithImages(); catImagesMap = (data || []).reduce((a, c) => { a[c.name] = c.image_url; return a; }, {}); } catch (e) { console.warn('cat images', e); } }
+    async function loadCategoryImages() {
+      try {
+        const { data } = await catApi.listCategoriesWithImages();
+        catImagesMap = (data || []).reduce((a, c) => { a[c.name] = c.image_url; return a; }, {});
+      } catch (e) { console.warn('cat images', e); }
+    }
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
     async function fetchLines(blockId) {
@@ -1159,11 +1229,13 @@
       const visibleIdx = prodState.rowIdx;
       if(visibleIdx == null || visibleIdx < 0 || visibleIdx >= currentRows.length) return;
 
-      // data-prod viene escapado, pero JSON.parse igual funciona si el string es válido
       const payload = JSON.parse(btn.dataset.prod || '{}');
 
-      const row = currentRows[visibleIdx] || {};
-      const ref = row.id ? (allRows.find(r => r.id === row.id) || row) : row;
+      // TOMAR UID REAL de la fila visible actual
+      const uid = currentRows[visibleIdx]?._uid;
+      const ref = findRowByUid(uid) || currentRows[visibleIdx];
+      if (!ref) return;
+      ensureUid(ref);
 
       // snapshot + campos externos
       ref.aa_product_id = payload.id || null;
@@ -1187,17 +1259,14 @@
       const pu = Number(ref.precio_unit || 0);
       ref.total = qty * pu;
 
-      // reflejar a la fila visible
-      currentRows[visibleIdx] = { ...row, ...ref };
-
       applyTableFilters(); // re-render respetando filtros/orden
-      persistRow(visibleIdx).then(() => recomputeBlockTotals(currentBlockId));
+      persistRowByUid(ref._uid).then(() => recomputeBlockTotals(currentBlockId));
       closeProductOverlay();
     }
 
     function clearExternalProduct(idx){
       const row = currentRows[idx]; if(!row) return;
-      const ref = row.id ? (allRows.find(r => r.id === row.id) || row) : row;
+      const ref = findRowByUid(row._uid) || row;
 
       ref.aa_product_id = null;
       ref.aa_vendor = null;
@@ -1207,10 +1276,8 @@
       ref._aa_price = null;
       ref._aa_caturl = null;
 
-      currentRows[idx] = { ...row, ...ref };
-
       applyTableFilters();
-      persistRow(idx).then(() => recomputeBlockTotals(currentBlockId));
+      persistRowByUid(ref._uid).then(() => recomputeBlockTotals(currentBlockId));
     }
 
     // ---------- imprimir ----------
