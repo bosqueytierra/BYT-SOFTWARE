@@ -453,8 +453,17 @@
       if (tableFilterCat) tableFilterCat.addEventListener('change', () => { addCatFilter(tableFilterCat.value); tableFilterCat.value=''; });
       if (tableFilterProv) tableFilterProv.addEventListener('change', () => { addProvFilter(tableFilterProv.value); tableFilterProv.value=''; });
 
-      if (tableOrderCat) tableOrderCat.addEventListener('change', () => { tableFilters.orderCat = tableOrderCat.value || ''; applyTableFilters(); });
-      if (tableOrderProv) tableOrderProv.addEventListener('change', () => { tableFilters.orderProv = tableOrderProv.value || ''; applyTableFilters(); });
+      if (tableOrderCat) tableOrderCat.addEventListener('change', () => {
+  tableFilters.orderCat = tableOrderCat.value || '';
+  applyTableFilters();
+  tableOrderCat.value = ''; // vuelve a "Seleccione..."
+});
+
+if (tableOrderProv) tableOrderProv.addEventListener('change', () => {
+  tableFilters.orderProv = tableOrderProv.value || '';
+  applyTableFilters();
+  tableOrderProv.value = ''; // vuelve a "Seleccione..."
+});
 
       if (printBtn) printBtn.onclick = () => printPurchaseList();
     }
@@ -919,7 +928,11 @@
       });
 
       const tbl = overlayLCGrid.querySelector('table.lc-table');
-      if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
+      if (tbl) {
+  tbl.addEventListener('change', onCellEdit, false);
+  tbl.addEventListener('input', onCellEdit, false);
+  tbl.addEventListener('blur', onCellEdit, true);
+}
       overlayLCGrid._listenersSet = true;
     }
 
@@ -947,46 +960,61 @@
       else if (val.includes('por comprar')||val.includes('porcomprar')) sel.classList.add('estado-porcomprar');
     }
 
-    async function onCellEdit(e) {
-      const field = e.target.getAttribute('data-f');
-      const rowIdx = Number(e.target.getAttribute('data-row'));
-      if (Number.isNaN(rowIdx) || !field) return;
+async function onCellEdit(e) {
+  const field = e.target.getAttribute('data-f');
+  const rowIdx = Number(e.target.getAttribute('data-row'));
+  if (Number.isNaN(rowIdx) || !field) return;
 
-      const uid = getRowUidFromEventTarget(e.target);
-      const real = findRowByUid(uid);
+  const uid = getRowUidFromEventTarget(e.target);
+  const real = findRowByUid(uid);
 
-      // fallback si no se detecta uid (no debería pasar)
-      const rowVisible = currentRows[rowIdx] || {};
-      const base = real || rowVisible;
+  // fallback si no se detecta uid (no debería pasar)
+  const rowVisible = currentRows[rowIdx] || {};
+  const base = real || rowVisible;
 
-      let val = e.target.value;
-      if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
+  const eventType = e.type;
 
-      // actualizar fila real
-      ensureUid(base);
-      base[field] = val;
-      base.block_id = base.block_id || currentBlockId;
-      base.placeholder = false;
+  // si viene blur desde elementos que no son input/select, ignora
+  if (eventType === 'blur') {
+    const t = e.target;
+    if (!t || !(t.matches('input,select,textarea'))) return;
+  }
 
-      if (field === 'categoria') {
-        base.producto_id = null;
-        // si cambia categoría y es externo, lo mantiene externo (no tocamos)
-        // pero si había producto interno, lo limpiamos como ya haces
-      }
+  let val = e.target.value;
+  if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
 
-      base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
+  // actualizar fila real
+  ensureUid(base);
+  base[field] = val;
+  base.block_id = base.block_id || currentBlockId;
+  base.placeholder = false;
 
-      // reflejar total en UI inmediatamente
-      const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
-      if (totalInput) totalInput.value = base.total || '';
+  if (field === 'categoria') {
+    base.producto_id = null;
+    // si cambia categoría y es externo, lo mantiene externo (no tocamos)
+    // pero si había producto interno, lo limpiamos como ya haces
+  }
 
-      if (field === 'estado_pago') applyEstadoStyle(rowIdx);
+  base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
 
-      await persistRowByUid(base._uid);
-      await recomputeBlockTotals(currentBlockId);
+  // reflejar total en UI inmediatamente
+  const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
+  if (totalInput) totalInput.value = base.total || '';
 
-      applyTableFilters();
-    }
+  if (field === 'estado_pago') applyEstadoStyle(rowIdx);
+
+  // NO re-render mientras escribe números
+  if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
+    return;
+  }
+
+  // Persistencia SOLO cuando el usuario termina (change o blur)
+  await persistRowByUid(base._uid);
+  await recomputeBlockTotals(currentBlockId);
+
+  // ahora sí re-render con filtros/orden
+  applyTableFilters();
+}
 
     function buildPayload(row) {
       return {
@@ -1289,13 +1317,29 @@
       return 'other';
     }
 
-    function printPurchaseList() {
-      const mode = printFilter?.value || 'all';
+   function printPurchaseList() {
+  const mode = printFilter?.value || 'all';
 
-      let rows = [...(currentRows || [])];
-      if (mode !== 'all') rows = rows.filter(r => getPrintEstadoKey(r.estado_pago) === mode);
+  const orderCat = tableFilters?.orderCat || '';
+  const orderProv = tableFilters?.orderProv || '';
 
-      const title = overlayLCTitle?.textContent || 'Lista de compras';
+  let orderMsg = 'sin orden específico';
+  if (orderProv) orderMsg = 'ordenando por proveedor';
+  if (orderCat) orderMsg = 'ordenando por categoría';
+
+  const modeLabel = (mode === 'all') ? 'Todo'
+    : (mode === 'comprado') ? 'Comprado'
+    : (mode === 'stock') ? 'En stock'
+    : (mode === 'porcomprar') ? 'Por comprar'
+    : mode;
+
+  const ok = window.confirm(`¿Imprimir ${orderMsg}?\nFiltro: ${modeLabel}`);
+  if (!ok) return;
+
+  let rows = [...(currentRows || [])];
+  if (mode !== 'all') rows = rows.filter(r => getPrintEstadoKey(r.estado_pago) === mode);
+
+  const title = overlayLCTitle?.textContent || 'Lista de compras';
 
       const html = `
       <html>
