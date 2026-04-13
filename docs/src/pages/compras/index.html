@@ -239,6 +239,30 @@
           <button class="btn" id="closeOverlayProduct">✕ Cerrar</button>
         </div>
       </div>
+      <div class="lines-wrapper" style="height:calc(100% - 54px);">
+        <div class="catalog-layout">
+          <div class="catalog-filters">
+            <div class="filter-group">
+              <label>Marca (contiene)</label>
+              <input id="prodBrandFilter" type="text" placeholder="ej: Kutz">
+            </div>
+            <div class="filter-group">
+              <label>Precio</label>
+              <div class="range-row">
+                <input id="priceMin" type="number" min="0" placeholder="Mín">
+                <input id="priceMax" type="number" min="0" placeholder="Máx">
+              </div>
+            </div>
+            <div class="filter-group">
+              <label>Resultados</label>
+              <small style="color:#6c7a86;">Búsqueda + vendor + marca + rango + orden.</small>
+            </div>
+          </div>
+          <div class="catalog-results" id="prodResults"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Overlay opciones de impresión -->
   <div id="overlayPrintOrder" class="overlay">
@@ -265,7 +289,6 @@
       </div>
     </div>
   </div>
-
 
 
 
