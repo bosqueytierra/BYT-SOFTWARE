@@ -84,6 +84,7 @@
     .chip-mini{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:12px;border:1px solid #d4d8dd;background:#f7f9fb;font-size:12px;}
     .chip-mini button{border:none;background:transparent;cursor:pointer;font-weight:800;color:#a11;}
 
+    /* resumen */
     .item-grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:10px; padding:8px;}
     .item-card{background:#fff; border:1px solid #d4d8dd; border-radius:10px; overflow:hidden; display:flex; gap:10px; padding:10px; align-items:center;}
     .item-thumb{width:56px;height:56px; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb;}
@@ -149,6 +150,7 @@
         </div>
       </div>
 
+      <!-- Filtros planilla compras + imprimir -->
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:0 2px;">
         <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
           <label style="font-size:12px;font-weight:700;color:#333;">Filtrar categoría (multi)</label>
@@ -215,6 +217,7 @@
     </div>
   </div>
 
+  <!-- Overlay catálogo externo -->
   <div id="overlayProduct" class="overlay">
     <div class="overlay-content" style="max-width:1200px;height:80vh;">
       <div class="overlay-header" style="gap:10px;">
@@ -261,31 +264,6 @@
     </div>
   </div>
 
-  <div id="overlayPrintOrder" class="overlay">
-    <div class="overlay-content" style="max-width:420px;height:auto;min-height:auto;padding:18px;">
-      <div class="overlay-header">
-        <div class="overlay-title">Opciones de impresión</div>
-        <button class="btn" id="closeOverlayPrintOrder">Cerrar</button>
-      </div>
-
-      <div style="display:flex;flex-direction:column;gap:12px;padding:6px 2px 2px;">
-        <div class="meta" id="printOrderCurrentFilter">Filtro: Todo</div>
-
-        <button class="btn btn-ghost" id="printOrderByCategory" type="button">
-          Imprimir ordenando por categoría
-        </button>
-
-        <button class="btn btn-ghost" id="printOrderByProvider" type="button">
-          Imprimir ordenando por proveedor
-        </button>
-
-        <button class="btn" id="printOrderWithoutSort" type="button">
-          Imprimir sin orden especial
-        </button>
-      </div>
-    </div>
-  </div>
-
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
@@ -301,7 +279,7 @@
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn;
     let tableFilterCat, tableFilterCatChips, tableOrderCat, tableFilterProv, tableFilterProvChips, tableOrderProv;
-    let printFilter, printBtn, overlayPrintOrder, closeOverlayPrintOrder, printOrderCurrentFilter, printOrderByCategory, printOrderByProvider, printOrderWithoutSort;
+    let printFilter, printBtn;
 
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
@@ -316,9 +294,8 @@
     const projectFechaLimiteMap = new Map();
 
     const prodState = { rowIdx: null, pageSize: 50 };
+    // IMPORTANTE: orden por defecto vacío para que NO ordene si el usuario no lo pide
     const tableFilters = { cats: new Set(), provs: new Set(), orderCat: '', orderProv: '' };
-    const pendingPersistByUid = new Map();
-    const pendingTotalsTimerByBlock = new Map();
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12">Sin imagen</text></svg>';
     const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
@@ -347,6 +324,8 @@
       setSectionState(bodyEl, arrowEl, !isOpen);
     }
 
+    // ====== FIX DUPLICADOS / FILAS FANTASMA ======
+    // Identificador local (solo frontend) para poder mapear filas visibles <-> filas reales (allRows)
     const makeUid = () => `uid_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
     function ensureUid(row) {
       if (!row) return row;
@@ -365,26 +344,13 @@
       if (!uid) return null;
       return allRows.find(r => r && r._uid === uid) || null;
     }
-
-    function schedulePersistRow(uid, delay = 120) {
-      if (!uid) return;
-      clearTimeout(pendingPersistByUid.get(uid));
-      const t = setTimeout(async () => {
-        pendingPersistByUid.delete(uid);
-        await persistRowByUid(uid);
-      }, delay);
-      pendingPersistByUid.set(uid, t);
+    function updateAllRowsRef(uid, patch) {
+      const r = findRowByUid(uid);
+      if (!r) return null;
+      Object.assign(r, patch);
+      return r;
     }
-
-    function scheduleRecomputeTotals(blockId, delay = 180) {
-      if (!blockId) return;
-      clearTimeout(pendingTotalsTimerByBlock.get(blockId));
-      const t = setTimeout(async () => {
-        pendingTotalsTimerByBlock.delete(blockId);
-        await recomputeBlockTotals(blockId);
-      }, delay);
-      pendingTotalsTimerByBlock.set(blockId, t);
-    }
+    // ============================================
 
     window._getRows = () => currentRows;
     window._getBlockId = () => currentBlockId;
@@ -398,6 +364,7 @@
         await loadSalesMeta();
         await loadBlocks();
         await loadCategoryImages();
+        // llena selects de filtros desde catálogos (no depende de allRows)
         rebuildFilterOptionsFromCatalogs();
       } catch (e) {
         console.error(e);
@@ -465,12 +432,6 @@
 
       printFilter = pickLast('#printFilter');
       printBtn = pickLast('#printBtn');
-      overlayPrintOrder = pickLast('#overlayPrintOrder');
-      closeOverlayPrintOrder = pickLast('#closeOverlayPrintOrder');
-      printOrderCurrentFilter = pickLast('#printOrderCurrentFilter');
-      printOrderByCategory = pickLast('#printOrderByCategory');
-      printOrderByProvider = pickLast('#printOrderByProvider');
-      printOrderWithoutSort = pickLast('#printOrderWithoutSort');
 
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
@@ -492,39 +453,13 @@
       if (tableFilterCat) tableFilterCat.addEventListener('change', () => { addCatFilter(tableFilterCat.value); tableFilterCat.value=''; });
       if (tableFilterProv) tableFilterProv.addEventListener('change', () => { addProvFilter(tableFilterProv.value); tableFilterProv.value=''; });
 
-      if (tableOrderCat) tableOrderCat.addEventListener('change', () => {
-        const selected = tableOrderCat.value || '';
-        if (!selected) return;
-        applySingleOrder(selected, '');
-        tableOrderCat.value = '';
-      });
+      if (tableOrderCat) tableOrderCat.addEventListener('change', () => { tableFilters.orderCat = tableOrderCat.value || ''; applyTableFilters(); });
+      if (tableOrderProv) tableOrderProv.addEventListener('change', () => { tableFilters.orderProv = tableOrderProv.value || ''; applyTableFilters(); });
 
-      if (tableOrderProv) tableOrderProv.addEventListener('change', () => {
-        const selected = tableOrderProv.value || '';
-        if (!selected) return;
-        applySingleOrder('', selected);
-        tableOrderProv.value = '';
-      });
-
-      if (printBtn) printBtn.onclick = () => openPrintOrderOverlay();
-      if (closeOverlayPrintOrder) closeOverlayPrintOrder.onclick = closePrintOrderOverlay;
-
-      if (printOrderByCategory) printOrderByCategory.onclick = () => {
-        closePrintOrderOverlay();
-        printPurchaseList('category');
-      };
-
-      if (printOrderByProvider) printOrderByProvider.onclick = () => {
-        closePrintOrderOverlay();
-        printPurchaseList('provider');
-      };
-
-      if (printOrderWithoutSort) printOrderWithoutSort.onclick = () => {
-        closePrintOrderOverlay();
-        printPurchaseList('');
-      };
+      if (printBtn) printBtn.onclick = () => printPurchaseList();
     }
 
+    // ---------- catálogos internos ----------
     async function loadCatalogs() {
       const client = await waitForClient();
       const [enc, uni, mod, est, cats] = await Promise.all([
@@ -620,6 +555,7 @@
       return map;
     }
 
+    // ---------- bloques ----------
     async function loadBlocks() {
       try {
         const client = await waitForClient();
@@ -713,6 +649,7 @@
       if (bodyEntregados) setSectionState(bodyEntregados, arrowEnt, bodyEntregados.style.maxHeight !== '0px');
     }
 
+    // ---------- util options ----------
     function makeOptions(list, valKey = 'nombre', labelKey = 'nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
@@ -747,6 +684,7 @@
       );
     }
 
+    // ---------- filas ----------
     function addEmptyRow() {
       if (!currentBlockId) return;
       const obj = ensureUid({ id: null, block_id: currentBlockId, placeholder: true, _saving: false });
@@ -766,6 +704,7 @@
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
+        // NUEVO: aa_product_name + aa_price_snapshot
         .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_product_name,aa_price_snapshot,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
@@ -774,18 +713,25 @@
       await cleanupEmptiesInDB(data, client);
 
       allRows = ensureUids((data || []).filter(r => isMeaningful(r)));
+
+      // hidrata _aa_name desde snapshot (sin tocar lo antiguo)
       await hydrateAaNames();
+
+      // no depende de filas: siempre desde catálogos
       rebuildFilterOptionsFromCatalogs();
+
       applyTableFilters();
     }
 
     async function hydrateAaNames() {
+      // 1) prioridad snapshot (aa_product_name)
       allRows = allRows.map(r => ensureUid({
         ...r,
         _aa_name: r.aa_product_name || r._aa_name || '',
         _aa_price: r.aa_price_snapshot ?? r._aa_price
       }));
 
+      // 2) fallback: lookup a aa_products SOLO si no hay snapshot (filas antiguas)
       const ids = [...new Set(allRows
         .filter(r => r.aa_product_id && !r.aa_product_name)
         .map(r => r.aa_product_id)
@@ -840,14 +786,27 @@
       } catch (e) { console.error('update block totals', e); }
     }
 
-    function sortRows(rows, orderCat = '', orderProv = '') {
+    function applyTableFilters() {
+      let rows = [...allRows];
+
+      // filtros
+      if (tableFilters.cats.size) rows = rows.filter(r => r.categoria && tableFilters.cats.has(r.categoria));
+      if (tableFilters.provs.size) rows = rows.filter(r => {
+        const provName = proveedores.find(p => p.id === r.proveedor_id)?.name || '';
+        return provName && tableFilters.provs.has(provName);
+      });
+
+      // orden (solo si usuario elige)
+      const orderCat = tableFilters.orderCat || '';
+      const orderProv = tableFilters.orderProv || '';
+
       rows.sort((a,b)=>{
-        const catA = (a.categoria || '').toLowerCase();
-        const catB = (b.categoria || '').toLowerCase();
-        const provA = (proveedores.find(p => p.id === a.proveedor_id)?.name || '').toLowerCase();
-        const provB = (proveedores.find(p => p.id === b.proveedor_id)?.name || '').toLowerCase();
-        const priceA = Number(a.precio_unit || 0);
-        const priceB = Number(b.precio_unit || 0);
+        const catA = (a.categoria||'').toLowerCase();
+        const catB = (b.categoria||'').toLowerCase();
+        const provA = (proveedores.find(p=>p.id===a.proveedor_id)?.name || '').toLowerCase();
+        const provB = (proveedores.find(p=>p.id===b.proveedor_id)?.name || '').toLowerCase();
+        const priceA = Number(a.precio_unit||0);
+        const priceB = Number(b.precio_unit||0);
 
         let cmp = 0;
 
@@ -860,42 +819,10 @@
           if (orderProv === 'prov-asc') cmp = provA.localeCompare(provB);
           else if (orderProv === 'prov-desc') cmp = provB.localeCompare(provA);
         }
-
-        if (cmp === 0) {
-          const aCreated = String(a.created_at || '');
-          const bCreated = String(b.created_at || '');
-          cmp = aCreated.localeCompare(bCreated);
-        }
-
         return cmp;
       });
 
-      return rows;
-    }
-
-    function getFilteredRowsBase() {
-      let rows = [...allRows];
-
-      if (tableFilters.cats.size) rows = rows.filter(r => r.categoria && tableFilters.cats.has(r.categoria));
-      if (tableFilters.provs.size) rows = rows.filter(r => {
-        const provName = proveedores.find(p => p.id === r.proveedor_id)?.name || '';
-        return provName && tableFilters.provs.has(provName);
-      });
-
-      return rows;
-    }
-
-    function applyTableFilters() {
-      const rows = getFilteredRowsBase();
       currentRows = rows;
-      renderGrid(currentRows);
-      renderFilterChips();
-    }
-
-    function applySingleOrder(orderCat = '', orderProv = '') {
-      const rows = getFilteredRowsBase();
-      const sorted = sortRows([...rows], orderCat, orderProv);
-      currentRows = sorted;
       renderGrid(currentRows);
       renderFilterChips();
     }
@@ -926,6 +853,7 @@
       }
     }
 
+    // ---------- render tabla ----------
     function renderGrid(rows) {
       if (overlayLCGrid && overlayLCGrid._listenersSet) {
         overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
@@ -991,11 +919,7 @@
       });
 
       const tbl = overlayLCGrid.querySelector('table.lc-table');
-      if (tbl) {
-        tbl.addEventListener('change', onCellEdit, false);
-        tbl.addEventListener('input', onCellEdit, false);
-        tbl.addEventListener('blur', onCellEdit, true);
-      }
+      if (tbl) { tbl.addEventListener('change', onCellEdit, false); tbl.addEventListener('input', onCellEdit, false); }
       overlayLCGrid._listenersSet = true;
     }
 
@@ -1031,19 +955,14 @@
       const uid = getRowUidFromEventTarget(e.target);
       const real = findRowByUid(uid);
 
+      // fallback si no se detecta uid (no debería pasar)
       const rowVisible = currentRows[rowIdx] || {};
       const base = real || rowVisible;
-
-      const eventType = e.type;
-
-      if (eventType === 'blur') {
-        const t = e.target;
-        if (!t || !(t.matches('input,select,textarea'))) return;
-      }
 
       let val = e.target.value;
       if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
 
+      // actualizar fila real
       ensureUid(base);
       base[field] = val;
       base.block_id = base.block_id || currentBlockId;
@@ -1051,32 +970,22 @@
 
       if (field === 'categoria') {
         base.producto_id = null;
+        // si cambia categoría y es externo, lo mantiene externo (no tocamos)
+        // pero si había producto interno, lo limpiamos como ya haces
       }
 
       base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
 
+      // reflejar total en UI inmediatamente
       const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
       if (totalInput) totalInput.value = base.total || '';
 
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
-      const affectsTotals = field === 'cantidad' || field === 'precio_unit' || field === 'estado_pago';
+      await persistRowByUid(base._uid);
+      await recomputeBlockTotals(currentBlockId);
 
-      if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
-        return;
-      }
-
-      // sin re-render para selects/textos: solo persistencia diferida
-      schedulePersistRow(base._uid, 120);
-
-      if (affectsTotals) {
-        scheduleRecomputeTotals(currentBlockId, 180);
-      }
-
-      // re-render solo al terminar edición numérica
-      if ((field === 'cantidad' || field === 'precio_unit') && (eventType === 'change' || eventType === 'blur')) {
-        applyTableFilters();
-      }
+      applyTableFilters();
     }
 
     function buildPayload(row) {
@@ -1087,10 +996,14 @@
         direccion: row.direccion || null,
         categoria: row.categoria || null,
         producto_id: row.producto_id || null,
+
         aa_product_id: row.aa_product_id || null,
         aa_vendor: row.aa_vendor || null,
+
+        // NUEVO snapshot
         aa_product_name: row.aa_product_name || null,
         aa_price_snapshot: row.aa_price_snapshot ?? null,
+
         unidad: row.unidad || null,
         cantidad: row.cantidad || null,
         precio_unit: row.precio_unit || null,
@@ -1115,6 +1028,7 @@
         if (!row.id) {
           const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
+          // sincroniza id devuelto
           Object.assign(row, data, { placeholder:false });
         } else {
           const { data, error } = await client.from(TABLE).update(payload).eq('id', row.id).select().maybeSingle();
@@ -1148,20 +1062,24 @@
       if(!src) return;
 
       const clone = ensureUid({ ...src, id:null, block_id:currentBlockId, created_at:null, placeholder:false, _saving:false });
+      // no copiar flags internos
       delete clone._saving;
 
+      // insertar en allRows justo después del src real
       const pos = allRows.findIndex(r => r && r._uid === src._uid);
       const insertAt = pos >= 0 ? pos + 1 : allRows.length;
       allRows.splice(insertAt, 0, clone);
 
       applyTableFilters();
 
+      // persistir solo si es una fila "con info real"
       const payload = buildPayload(clone);
       if(isMeaningful(payload)) {
         persistRowByUid(clone._uid).then(()=>recomputeBlockTotals(currentBlockId));
       }
     }
 
+    // ---------- resumen ----------
     async function loadCategoryImages() {
       try {
         const { data } = await catApi.listCategoriesWithImages();
@@ -1233,6 +1151,7 @@
       catch (e) { console.error(e); overlayGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando resumen</div>'; }
     }
 
+    // ---------- catálogo externo ----------
     function closeProductOverlay() { overlayProduct?.classList.remove('active'); document.body.classList.remove('overlay-open'); }
     function openProductSearch(rowIdx) {
       prodState.rowIdx = rowIdx;
@@ -1269,7 +1188,7 @@
 
       if (query) req = req.ilike('aa_name', `%${query}%`);
       if (vendor) req = req.eq('vendor', vendor);
-      if (brand) req = req.ilike('aa_url', `%${brand}%`);
+      if (brand) req = req.ilike('aa_url', `%${brand}%`); // fallback sin columna brand
       if (minP!=null) req = req.gte('aa_price', minP);
       if (maxP!=null) req = req.lte('aa_price', maxP);
 
@@ -1311,28 +1230,36 @@
       if(visibleIdx == null || visibleIdx < 0 || visibleIdx >= currentRows.length) return;
 
       const payload = JSON.parse(btn.dataset.prod || '{}');
+
+      // TOMAR UID REAL de la fila visible actual
       const uid = currentRows[visibleIdx]?._uid;
       const ref = findRowByUid(uid) || currentRows[visibleIdx];
       if (!ref) return;
       ensureUid(ref);
 
+      // snapshot + campos externos
       ref.aa_product_id = payload.id || null;
       ref.aa_vendor = payload.vendor || null;
       ref.aa_product_name = payload.aa_name || null;
       ref.aa_price_snapshot = (payload.aa_price != null && payload.aa_price !== '') ? Number(payload.aa_price) : null;
+
+      // UI name
       ref._aa_name = ref.aa_product_name || '';
 
+      // forzar precio unit desde snapshot (esto soluciona “no trae precio”)
       if (ref.aa_price_snapshot != null && !Number.isNaN(ref.aa_price_snapshot)) {
         ref.precio_unit = ref.aa_price_snapshot;
       }
 
+      // oculta selector interno
       ref.producto_id = null;
 
+      // recalcular total
       const qty = Number(ref.cantidad || 0);
       const pu = Number(ref.precio_unit || 0);
       ref.total = qty * pu;
 
-      applyTableFilters();
+      applyTableFilters(); // re-render respetando filtros/orden
       persistRowByUid(ref._uid).then(() => recomputeBlockTotals(currentBlockId));
       closeProductOverlay();
     }
@@ -1353,6 +1280,7 @@
       persistRowByUid(ref._uid).then(() => recomputeBlockTotals(currentBlockId));
     }
 
+    // ---------- imprimir ----------
     function getPrintEstadoKey(estadoPago = '') {
       const v = String(estadoPago || '').toLowerCase();
       if (v.includes('comprado')) return 'comprado';
@@ -1361,38 +1289,10 @@
       return 'other';
     }
 
-    function closePrintOrderOverlay() {
-      overlayPrintOrder?.classList.remove('active');
-      document.body.classList.remove('overlay-open');
-    }
-
-    function openPrintOrderOverlay() {
-      const mode = printFilter?.value || 'all';
-      const modeLabel = (mode === 'all') ? 'Todo'
-        : (mode === 'comprado') ? 'Comprado'
-        : (mode === 'stock') ? 'En stock'
-        : (mode === 'porcomprar') ? 'Por comprar'
-        : mode;
-
-      if (printOrderCurrentFilter) {
-        printOrderCurrentFilter.textContent = `Filtro ya seleccionado para imprimir: ${modeLabel}`;
-      }
-
-      overlayPrintOrder?.classList.add('active');
-      document.body.classList.add('overlay-open');
-    }
-
-    function printPurchaseList(printOrder = '') {
+    function printPurchaseList() {
       const mode = printFilter?.value || 'all';
 
-      let rows = getFilteredRowsBase();
-
-      if (printOrder === 'category') {
-        rows = sortRows([...rows], 'cat-asc', '');
-      } else if (printOrder === 'provider') {
-        rows = sortRows([...rows], '', 'prov-asc');
-      }
-
+      let rows = [...(currentRows || [])];
       if (mode !== 'all') rows = rows.filter(r => getPrintEstadoKey(r.estado_pago) === mode);
 
       const title = overlayLCTitle?.textContent || 'Lista de compras';
@@ -1471,6 +1371,8 @@
       w.focus();
       w.print();
     }
+
   </script>
 </body>
 </html>
+
