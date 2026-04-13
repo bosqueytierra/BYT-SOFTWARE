@@ -1012,50 +1012,55 @@
     }
 
     async function onCellEdit(e) {
-      const field = e.target.getAttribute('data-f');
-      const rowIdx = Number(e.target.getAttribute('data-row'));
-      if (Number.isNaN(rowIdx) || !field) return;
+  const field = e.target.getAttribute('data-f');
+  const rowIdx = Number(e.target.getAttribute('data-row'));
+  if (Number.isNaN(rowIdx) || !field) return;
 
-      const uid = getRowUidFromEventTarget(e.target);
-      const real = findRowByUid(uid);
+  const uid = getRowUidFromEventTarget(e.target);
+  const real = findRowByUid(uid);
 
-      const rowVisible = currentRows[rowIdx] || {};
-      const base = real || rowVisible;
+  const rowVisible = currentRows[rowIdx] || {};
+  const base = real || rowVisible;
 
-      const eventType = e.type;
+  const eventType = e.type;
 
-      if (eventType === 'blur') {
-        const t = e.target;
-        if (!t || !(t.matches('input,select,textarea'))) return;
-      }
+  if (eventType === 'blur') {
+    const t = e.target;
+    if (!t || !(t.matches('input,select,textarea'))) return;
+  }
 
-      let val = e.target.value;
-      if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
+  let val = e.target.value;
+  if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
 
-      ensureUid(base);
-      base[field] = val;
-      base.block_id = base.block_id || currentBlockId;
-      base.placeholder = false;
+  ensureUid(base);
+  base[field] = val;
+  base.block_id = base.block_id || currentBlockId;
+  base.placeholder = false;
 
-      if (field === 'categoria') {
-        base.producto_id = null;
-      }
+  if (field === 'categoria') {
+    base.producto_id = null;
+  }
 
-      base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
+  base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
 
-      const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
-      if (totalInput) totalInput.value = base.total || '';
+  const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
+  if (totalInput) totalInput.value = base.total || '';
 
-      if (field === 'estado_pago') applyEstadoStyle(rowIdx);
+  if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
-      if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
-        return;
-      }
+  // mientras escribe números, no guardar todavía
+  if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
+    return;
+  }
 
-      await persistRowByUid(base._uid);
-      await recomputeBlockTotals(currentBlockId);
-      applyTableFilters();
-    }
+  await persistRowByUid(base._uid);
+  await recomputeBlockTotals(currentBlockId);
+
+  // SOLO re-render para campos numéricos al terminar edición
+  if (field === 'cantidad' || field === 'precio_unit') {
+    applyTableFilters();
+  }
+}
 
     function buildPayload(row) {
       return {
