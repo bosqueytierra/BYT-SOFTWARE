@@ -239,6 +239,42 @@
           <button class="btn" id="closeOverlayProduct">✕ Cerrar</button>
         </div>
       </div>
+
+  <!-- Overlay opciones de impresión -->
+  <div id="overlayPrintOrder" class="overlay">
+    <div class="overlay-content" style="max-width:420px;height:auto;min-height:auto;padding:18px;">
+      <div class="overlay-header">
+        <div class="overlay-title">Opciones de impresión</div>
+        <button class="btn" id="closeOverlayPrintOrder">Cerrar</button>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;padding:6px 2px 2px;">
+        <div class="meta" id="printOrderCurrentFilter">Filtro: Todo</div>
+
+        <button class="btn btn-ghost" id="printOrderByCategory" type="button">
+          Imprimir ordenando por categoría
+        </button>
+
+        <button class="btn btn-ghost" id="printOrderByProvider" type="button">
+          Imprimir ordenando por proveedor
+        </button>
+
+        <button class="btn" id="printOrderWithoutSort" type="button">
+          Imprimir sin orden especial
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+
+
+
+      
+
+
+      
       <div class="lines-wrapper" style="height:calc(100% - 54px);">
         <div class="catalog-layout">
           <div class="catalog-filters">
@@ -279,7 +315,7 @@
     let overlayLC, overlayLCGrid, overlayLCTitle, closeOverlayLC, addRowBtn;
     let overlayProduct, prodResults, prodSearchInput, prodVendorFilter, prodOrder, prodBrandFilter, priceMin, priceMax, closeOverlayProductBtn;
     let tableFilterCat, tableFilterCatChips, tableOrderCat, tableFilterProv, tableFilterProvChips, tableOrderProv;
-    let printFilter, printBtn;
+    let printFilter, printBtn, overlayPrintOrder, closeOverlayPrintOrder, printOrderCurrentFilter, printOrderByCategory, printOrderByProvider, printOrderWithoutSort;
 
     const TABLE = 'purchase_lines';
     let catEncargados = [], catUnidades = [], catModos = [], catEstadosPago = [], proveedores = [], materiales = [];
@@ -430,8 +466,14 @@
       tableOrderCat = pickLast('#tableOrderCat');
       tableOrderProv = pickLast('#tableOrderProv');
 
-      printFilter = pickLast('#printFilter');
-      printBtn = pickLast('#printBtn');
+     printFilter = pickLast('#printFilter');
+printBtn = pickLast('#printBtn');
+overlayPrintOrder = pickLast('#overlayPrintOrder');
+closeOverlayPrintOrder = pickLast('#closeOverlayPrintOrder');
+printOrderCurrentFilter = pickLast('#printOrderCurrentFilter');
+printOrderByCategory = pickLast('#printOrderByCategory');
+printOrderByProvider = pickLast('#printOrderByProvider');
+printOrderWithoutSort = pickLast('#printOrderWithoutSort');
 
       if (closeOverlayBtn) closeOverlayBtn.onclick = () => { overlay.classList.remove('active'); document.body.classList.remove('overlay-open'); };
       if (closeOverlayLC) closeOverlayLC.onclick = () => { overlayLC.classList.remove('active'); document.body.classList.remove('overlay-open'); };
@@ -454,20 +496,51 @@
       if (tableFilterProv) tableFilterProv.addEventListener('change', () => { addProvFilter(tableFilterProv.value); tableFilterProv.value=''; });
 
       if (tableOrderCat) tableOrderCat.addEventListener('change', () => {
-  tableFilters.orderCat = tableOrderCat.value || '';
-  applyTableFilters();
-  tableOrderCat.value = ''; // vuelve a "Seleccione..."
+  const selected = tableOrderCat.value || '';
+  if (!selected) return;
+
+  applySingleOrder(selected, '');
+  tableOrderCat.value = '';
 });
 
 if (tableOrderProv) tableOrderProv.addEventListener('change', () => {
-  tableFilters.orderProv = tableOrderProv.value || '';
-  applyTableFilters();
-  tableOrderProv.value = ''; // vuelve a "Seleccione..."
+  const selected = tableOrderProv.value || '';
+  if (!selected) return;
+
+  applySingleOrder('', selected);
+  tableOrderProv.value = '';
 });
 
-      if (printBtn) printBtn.onclick = () => printPurchaseList();
+    if (printBtn) printBtn.onclick = () => openPrintOrderOverlay();
+      if (closeOverlayPrintOrder) closeOverlayPrintOrder.onclick = closePrintOrderOverlay;
+
+if (printOrderByCategory) printOrderByCategory.onclick = () => {
+  closePrintOrderOverlay();
+  printPurchaseList('category');
+};
+
+if (printOrderByProvider) printOrderByProvider.onclick = () => {
+  closePrintOrderOverlay();
+  printPurchaseList('provider');
+};
+
+if (printOrderWithoutSort) printOrderWithoutSort.onclick = () => {
+  closePrintOrderOverlay();
+  printPurchaseList('');
+};
     }
 
+
+
+
+
+
+
+
+
+
+
+    
     // ---------- catálogos internos ----------
     async function loadCatalogs() {
       const client = await waitForClient();
@@ -795,46 +868,57 @@ if (tableOrderProv) tableOrderProv.addEventListener('change', () => {
       } catch (e) { console.error('update block totals', e); }
     }
 
-    function applyTableFilters() {
-      let rows = [...allRows];
+   function sortRows(rows, orderCat = '', orderProv = '') {
+  rows.sort((a,b)=>{
+    const catA = (a.categoria||'').toLowerCase();
+    const catB = (b.categoria||'').toLowerCase();
+    const provA = (proveedores.find(p=>p.id===a.proveedor_id)?.name || '').toLowerCase();
+    const provB = (proveedores.find(p=>p.id===b.proveedor_id)?.name || '').toLowerCase();
+    const priceA = Number(a.precio_unit||0);
+    const priceB = Number(b.precio_unit||0);
 
-      // filtros
-      if (tableFilters.cats.size) rows = rows.filter(r => r.categoria && tableFilters.cats.has(r.categoria));
-      if (tableFilters.provs.size) rows = rows.filter(r => {
-        const provName = proveedores.find(p => p.id === r.proveedor_id)?.name || '';
-        return provName && tableFilters.provs.has(provName);
-      });
+    let cmp = 0;
 
-      // orden (solo si usuario elige)
-      const orderCat = tableFilters.orderCat || '';
-      const orderProv = tableFilters.orderProv || '';
+    if (orderCat === 'cat-asc') cmp = catA.localeCompare(catB);
+    else if (orderCat === 'cat-desc') cmp = catB.localeCompare(catA);
+    else if (orderCat === 'price-asc') cmp = priceA - priceB;
+    else if (orderCat === 'price-desc') cmp = priceB - priceA;
 
-      rows.sort((a,b)=>{
-        const catA = (a.categoria||'').toLowerCase();
-        const catB = (b.categoria||'').toLowerCase();
-        const provA = (proveedores.find(p=>p.id===a.proveedor_id)?.name || '').toLowerCase();
-        const provB = (proveedores.find(p=>p.id===b.proveedor_id)?.name || '').toLowerCase();
-        const priceA = Number(a.precio_unit||0);
-        const priceB = Number(b.precio_unit||0);
-
-        let cmp = 0;
-
-        if (orderCat === 'cat-asc') cmp = catA.localeCompare(catB);
-        else if (orderCat === 'cat-desc') cmp = catB.localeCompare(catA);
-        else if (orderCat === 'price-asc') cmp = priceA - priceB;
-        else if (orderCat === 'price-desc') cmp = priceB - priceA;
-
-        if (cmp === 0 && orderProv) {
-          if (orderProv === 'prov-asc') cmp = provA.localeCompare(provB);
-          else if (orderProv === 'prov-desc') cmp = provB.localeCompare(provA);
-        }
-        return cmp;
-      });
-
-      currentRows = rows;
-      renderGrid(currentRows);
-      renderFilterChips();
+    if (cmp === 0 && orderProv) {
+      if (orderProv === 'prov-asc') cmp = provA.localeCompare(provB);
+      else if (orderProv === 'prov-desc') cmp = provB.localeCompare(provA);
     }
+    return cmp;
+  });
+
+  return rows;
+}
+
+function getFilteredRowsBase() {
+  let rows = [...allRows];
+
+  if (tableFilters.cats.size) rows = rows.filter(r => r.categoria && tableFilters.cats.has(r.categoria));
+  if (tableFilters.provs.size) rows = rows.filter(r => {
+    const provName = proveedores.find(p => p.id === r.proveedor_id)?.name || '';
+    return provName && tableFilters.provs.has(provName);
+  });
+
+  return rows;
+}
+
+function applyTableFilters() {
+  const rows = getFilteredRowsBase();
+  currentRows = rows;
+  renderGrid(currentRows);
+  renderFilterChips();
+}
+
+function applySingleOrder(orderCat = '', orderProv = '') {
+  const rows = getFilteredRowsBase();
+  currentRows = sortRows(rows, orderCat, orderProv);
+  renderGrid(currentRows);
+  renderFilterChips();
+}
 
     function addCatFilter(val){
       if(!val) return;
@@ -1317,27 +1401,42 @@ async function onCellEdit(e) {
       return 'other';
     }
 
-   function printPurchaseList() {
+    function closePrintOrderOverlay() {
+  overlayPrintOrder?.classList.remove('active');
+  document.body.classList.remove('overlay-open');
+}
+
+function openPrintOrderOverlay() {
   const mode = printFilter?.value || 'all';
-
-  const orderCat = tableFilters?.orderCat || '';
-  const orderProv = tableFilters?.orderProv || '';
-
-  let orderMsg = 'sin orden específico';
-  if (orderProv) orderMsg = 'ordenando por proveedor';
-  if (orderCat) orderMsg = 'ordenando por categoría';
-
   const modeLabel = (mode === 'all') ? 'Todo'
     : (mode === 'comprado') ? 'Comprado'
     : (mode === 'stock') ? 'En stock'
     : (mode === 'porcomprar') ? 'Por comprar'
     : mode;
 
-  const ok = window.confirm(`¿Imprimir ${orderMsg}?\nFiltro: ${modeLabel}`);
-  if (!ok) return;
+  if (printOrderCurrentFilter) {
+    printOrderCurrentFilter.textContent = `Filtro actual: ${modeLabel}`;
+  }
 
-  let rows = [...(currentRows || [])];
+  overlayPrintOrder?.classList.add('active');
+  document.body.classList.add('overlay-open');
+}
+
+    
+
+function printPurchaseList(printOrder = '') {
+  const mode = printFilter?.value || 'all';
+
+  let rows = getFilteredRowsBase();
+
+  if (printOrder === 'category') {
+    rows = sortRows(rows, 'cat-asc', '');
+  } else if (printOrder === 'provider') {
+    rows = sortRows(rows, '', 'prov-asc');
+  }
+
   if (mode !== 'all') rows = rows.filter(r => getPrintEstadoKey(r.estado_pago) === mode);
+
 
   const title = overlayLCTitle?.textContent || 'Lista de compras';
 
