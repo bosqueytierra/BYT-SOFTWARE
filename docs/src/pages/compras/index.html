@@ -84,7 +84,6 @@
     .chip-mini{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:12px;border:1px solid #d4d8dd;background:#f7f9fb;font-size:12px;}
     .chip-mini button{border:none;background:transparent;cursor:pointer;font-weight:800;color:#a11;}
 
-    /* resumen */
     .item-grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:10px; padding:8px;}
     .item-card{background:#fff; border:1px solid #d4d8dd; border-radius:10px; overflow:hidden; display:flex; gap:10px; padding:10px; align-items:center;}
     .item-thumb{width:56px;height:56px; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb;}
@@ -150,7 +149,6 @@
         </div>
       </div>
 
-      <!-- Filtros planilla compras + imprimir -->
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:0 2px;">
         <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
           <label style="font-size:12px;font-weight:700;color:#333;">Filtrar categoría (multi)</label>
@@ -217,7 +215,6 @@
     </div>
   </div>
 
-  <!-- Overlay catálogo externo -->
   <div id="overlayProduct" class="overlay">
     <div class="overlay-content" style="max-width:1200px;height:80vh;">
       <div class="overlay-header" style="gap:10px;">
@@ -264,7 +261,6 @@
     </div>
   </div>
 
-  <!-- Overlay opciones de impresión -->
   <div id="overlayPrintOrder" class="overlay">
     <div class="overlay-content" style="max-width:420px;height:auto;min-height:auto;padding:18px;">
       <div class="overlay-header">
@@ -321,6 +317,8 @@
 
     const prodState = { rowIdx: null, pageSize: 50 };
     const tableFilters = { cats: new Set(), provs: new Set(), orderCat: '', orderProv: '' };
+    const pendingPersistByUid = new Map();
+    const pendingTotalsTimerByBlock = new Map();
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12">Sin imagen</text></svg>';
     const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
@@ -367,11 +365,25 @@
       if (!uid) return null;
       return allRows.find(r => r && r._uid === uid) || null;
     }
-    function updateAllRowsRef(uid, patch) {
-      const r = findRowByUid(uid);
-      if (!r) return null;
-      Object.assign(r, patch);
-      return r;
+
+    function schedulePersistRow(uid, delay = 120) {
+      if (!uid) return;
+      clearTimeout(pendingPersistByUid.get(uid));
+      const t = setTimeout(async () => {
+        pendingPersistByUid.delete(uid);
+        await persistRowByUid(uid);
+      }, delay);
+      pendingPersistByUid.set(uid, t);
+    }
+
+    function scheduleRecomputeTotals(blockId, delay = 180) {
+      if (!blockId) return;
+      clearTimeout(pendingTotalsTimerByBlock.get(blockId));
+      const t = setTimeout(async () => {
+        pendingTotalsTimerByBlock.delete(blockId);
+        await recomputeBlockTotals(blockId);
+      }, delay);
+      pendingTotalsTimerByBlock.set(blockId, t);
     }
 
     window._getRows = () => currentRows;
@@ -1012,55 +1024,60 @@
     }
 
     async function onCellEdit(e) {
-  const field = e.target.getAttribute('data-f');
-  const rowIdx = Number(e.target.getAttribute('data-row'));
-  if (Number.isNaN(rowIdx) || !field) return;
+      const field = e.target.getAttribute('data-f');
+      const rowIdx = Number(e.target.getAttribute('data-row'));
+      if (Number.isNaN(rowIdx) || !field) return;
 
-  const uid = getRowUidFromEventTarget(e.target);
-  const real = findRowByUid(uid);
+      const uid = getRowUidFromEventTarget(e.target);
+      const real = findRowByUid(uid);
 
-  const rowVisible = currentRows[rowIdx] || {};
-  const base = real || rowVisible;
+      const rowVisible = currentRows[rowIdx] || {};
+      const base = real || rowVisible;
 
-  const eventType = e.type;
+      const eventType = e.type;
 
-  if (eventType === 'blur') {
-    const t = e.target;
-    if (!t || !(t.matches('input,select,textarea'))) return;
-  }
+      if (eventType === 'blur') {
+        const t = e.target;
+        if (!t || !(t.matches('input,select,textarea'))) return;
+      }
 
-  let val = e.target.value;
-  if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
+      let val = e.target.value;
+      if (field === 'cantidad' || field === 'precio_unit') val = Number(val || 0);
 
-  ensureUid(base);
-  base[field] = val;
-  base.block_id = base.block_id || currentBlockId;
-  base.placeholder = false;
+      ensureUid(base);
+      base[field] = val;
+      base.block_id = base.block_id || currentBlockId;
+      base.placeholder = false;
 
-  if (field === 'categoria') {
-    base.producto_id = null;
-  }
+      if (field === 'categoria') {
+        base.producto_id = null;
+      }
 
-  base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
+      base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
 
-  const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
-  if (totalInput) totalInput.value = base.total || '';
+      const totalInput = overlayLCGrid.querySelector(`input[data-row="${rowIdx}"][data-f="total"]`);
+      if (totalInput) totalInput.value = base.total || '';
 
-  if (field === 'estado_pago') applyEstadoStyle(rowIdx);
+      if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
-  // mientras escribe números, no guardar todavía
-  if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
-    return;
-  }
+      const affectsTotals = field === 'cantidad' || field === 'precio_unit' || field === 'estado_pago';
 
-  await persistRowByUid(base._uid);
-  await recomputeBlockTotals(currentBlockId);
+      if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
+        return;
+      }
 
-  // SOLO re-render para campos numéricos al terminar edición
-  if (field === 'cantidad' || field === 'precio_unit') {
-    applyTableFilters();
-  }
-}
+      // sin re-render para selects/textos: solo persistencia diferida
+      schedulePersistRow(base._uid, 120);
+
+      if (affectsTotals) {
+        scheduleRecomputeTotals(currentBlockId, 180);
+      }
+
+      // re-render solo al terminar edición numérica
+      if ((field === 'cantidad' || field === 'precio_unit') && (eventType === 'change' || eventType === 'blur')) {
+        applyTableFilters();
+      }
+    }
 
     function buildPayload(row) {
       return {
