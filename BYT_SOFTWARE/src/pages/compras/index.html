@@ -866,14 +866,14 @@ if (printOrderWithoutSort) printOrderWithoutSort.onclick = () => {
       } catch (e) { console.error('update block totals', e); }
     }
 
-   function sortRows(rows, orderCat = '', orderProv = '') {
+ function sortRows(rows, orderCat = '', orderProv = '') {
   rows.sort((a,b)=>{
-    const catA = (a.categoria||'').toLowerCase();
-    const catB = (b.categoria||'').toLowerCase();
-    const provA = (proveedores.find(p=>p.id===a.proveedor_id)?.name || '').toLowerCase();
-    const provB = (proveedores.find(p=>p.id===b.proveedor_id)?.name || '').toLowerCase();
-    const priceA = Number(a.precio_unit||0);
-    const priceB = Number(b.precio_unit||0);
+    const catA = (a.categoria || '').toLowerCase();
+    const catB = (b.categoria || '').toLowerCase();
+    const provA = (proveedores.find(p => p.id === a.proveedor_id)?.name || '').toLowerCase();
+    const provB = (proveedores.find(p => p.id === b.proveedor_id)?.name || '').toLowerCase();
+    const priceA = Number(a.precio_unit || 0);
+    const priceB = Number(b.precio_unit || 0);
 
     let cmp = 0;
 
@@ -886,6 +886,14 @@ if (printOrderWithoutSort) printOrderWithoutSort.onclick = () => {
       if (orderProv === 'prov-asc') cmp = provA.localeCompare(provB);
       else if (orderProv === 'prov-desc') cmp = provB.localeCompare(provA);
     }
+
+    // fallback estable
+    if (cmp === 0) {
+      const aCreated = String(a.created_at || '');
+      const bCreated = String(b.created_at || '');
+      cmp = aCreated.localeCompare(bCreated);
+    }
+
     return cmp;
   });
 
@@ -913,7 +921,8 @@ function applyTableFilters() {
 
 function applySingleOrder(orderCat = '', orderProv = '') {
   const rows = getFilteredRowsBase();
-  currentRows = sortRows(rows, orderCat, orderProv);
+  const sorted = sortRows([...rows], orderCat, orderProv);
+  currentRows = sorted;
   renderGrid(currentRows);
   renderFilterChips();
 }
@@ -1413,7 +1422,7 @@ function openPrintOrderOverlay() {
     : mode;
 
   if (printOrderCurrentFilter) {
-    printOrderCurrentFilter.textContent = `Filtro actual: ${modeLabel}`;
+    printOrderCurrentFilter.textContent = `Filtro ya seleccionado para imprimir: ${modeLabel}`;
   }
 
   overlayPrintOrder?.classList.add('active');
