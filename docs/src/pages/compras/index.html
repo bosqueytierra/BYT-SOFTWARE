@@ -90,10 +90,9 @@
     .item-body h4{margin:0 0 4px; font-size:14px;}
     .muted{color:#6c7a86; font-size:12px;}
 
-    /* Resaltado verde clarito por 0.5s */
     tr.row-flash td {
       background: #dff7df !important;
-      transition: background 0.18s ease;
+      transition: background 0.12s ease;
     }
   </style>
 </head>
@@ -342,11 +341,8 @@
 
     const prodState = { rowIdx: null, pageSize: 50 };
     const tableFilters = { cats: new Set(), provs: new Set(), orderCat: '', orderProv: '' };
-    const pendingPersistByUid = new Map();
-    const pendingTotalsTimerByBlock = new Map();
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12">Sin imagen</text></svg>';
-    const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
@@ -383,7 +379,7 @@
         flashingRowIds.delete(rowId);
         flashClearTimers.delete(rowId);
         if (overlayLC?.classList.contains('active')) renderGrid(currentRows);
-      }, 500);
+      }, 250);
 
       flashClearTimers.set(rowId, timer);
     }
@@ -516,26 +512,6 @@
     function findRowByUid(uid) {
       if (!uid) return null;
       return allRows.find(r => r && r._uid === uid) || null;
-    }
-
-    function schedulePersistRow(uid, delay = 120) {
-      if (!uid) return;
-      clearTimeout(pendingPersistByUid.get(uid));
-      const t = setTimeout(async () => {
-        pendingPersistByUid.delete(uid);
-        await persistRowByUid(uid);
-      }, delay);
-      pendingPersistByUid.set(uid, t);
-    }
-
-    function scheduleRecomputeTotals(blockId, delay = 180) {
-      if (!blockId) return;
-      clearTimeout(pendingTotalsTimerByBlock.get(blockId));
-      const t = setTimeout(async () => {
-        pendingTotalsTimerByBlock.delete(blockId);
-        await recomputeBlockTotals(blockId);
-      }, delay);
-      pendingTotalsTimerByBlock.set(blockId, t);
     }
 
     function clonePurchaseRow(src) {
@@ -717,8 +693,8 @@
       if (prodVendorFilter) prodVendorFilter.addEventListener('change', runSearch);
       if (prodOrder) prodOrder.addEventListener('change', runSearch);
       if (prodBrandFilter) prodBrandFilter.addEventListener('input', runSearch);
-      if (priceMin) priceMin.addEventListener('input', debounce(runSearch, 200));
-      if (priceMax) priceMax.addEventListener('input', debounce(runSearch, 200));
+      if (priceMin) priceMin.addEventListener('input', () => runSearch());
+      if (priceMax) priceMax.addEventListener('input', () => runSearch());
 
       if (tableFilterCat) tableFilterCat.addEventListener('change', () => { addCatFilter(tableFilterCat.value); tableFilterCat.value=''; });
       if (tableFilterProv) tableFilterProv.addEventListener('change', () => { addProvFilter(tableFilterProv.value); tableFilterProv.value=''; });
@@ -1001,11 +977,6 @@
       await loadLines(currentBlockId);
     }
 
-    // FIX: ya no borra filas vacías automáticamente
-    async function cleanupEmptiesInDB() {
-      return;
-    }
-
     async function loadLines(blockId) {
       const client = await waitForClient();
       const { data, error } = await client
@@ -1275,7 +1246,6 @@
 
       const uid = getRowUidFromEventTarget(e.target);
       const real = findRowByUid(uid);
-
       const rowVisible = currentRows[rowIdx] || {};
       const base = real || rowVisible;
 
@@ -1315,27 +1285,18 @@
 
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
-      const affectsTotals = field === 'cantidad' || field === 'precio_unit' || field === 'estado_pago';
-
       if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
         return;
       }
 
-      schedulePersistRow(base._uid, 120);
+      // FIX PRINCIPAL: toda edición es disparador inmediato
+      await persistRowByUid(base._uid);
 
-      if (affectsTotals) {
-        scheduleRecomputeTotals(currentBlockId, 180);
+      if (field === 'cantidad' || field === 'precio_unit' || field === 'estado_pago') {
+        await recomputeBlockTotals(currentBlockId);
       }
 
-      if (eventType === 'change' && base.id) {
-        await persistRowByUid(base._uid);
-        await loadLines(currentBlockId);
-        return;
-      }
-
-      if ((field === 'cantidad' || field === 'precio_unit') && (eventType === 'change' || eventType === 'blur')) {
-        applyTableFilters();
-      }
+      await loadLines(currentBlockId);
     }
 
     function buildPayload(row) {
@@ -1557,7 +1518,7 @@
       return data || [];
     }
 
-    const runSearch = debounce(async () => {
+    const runSearch = async () => {
       if (!prodResults) return;
       prodResults.innerHTML = '<div style="padding:12px;color:#6c7a86;">Buscando...</div>';
       const query = (prodSearchInput?.value || '').trim();
@@ -1572,7 +1533,7 @@
       } catch (e) {
         if (prodResults) prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
       }
-    }, 250);
+    };
 
     function handlePickProduct(btn){
       const visibleIdx = prodState.rowIdx;
