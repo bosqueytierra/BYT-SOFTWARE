@@ -325,6 +325,7 @@
     let currentBlockPollTimer = null;
     let currentBlockLastSignature = '';
     let currentTableEl = null;
+    let localRefreshTimer = null;
 
     const projectPartsMap = new Map();
     const projectAllDoneMap = new Map();
@@ -338,6 +339,13 @@
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
+
+    function queueLocalReload(delay = 180) {
+      clearTimeout(localRefreshTimer);
+      localRefreshTimer = setTimeout(() => {
+        if (currentBlockId) loadLines(currentBlockId);
+      }, delay);
+    }
 
     async function cleanupRealtimeChannel() {
       const client = getClient();
@@ -747,13 +755,12 @@
       });
     }
 
-    function filterBlocks(blocks, approvedSet) {
-      if (!approvedSet || approvedSet.size === 0) return blocks || [];
+    // FIX PRINCIPAL: filtro menos restrictivo para que vuelvan a aparecer proyectos
+    function filterBlocks(blocks) {
       return (blocks || []).filter(b => {
         if (b.deleted_at) return false;
         if (b.activa === false) return false;
-        if (!b.proyecto_id) return false;
-        return approvedSet.has(b.proyecto_id);
+        return true;
       });
     }
 
@@ -768,8 +775,6 @@
     async function loadBlocks() {
       try {
         const client = await waitForClient();
-        const { data: cotAprob } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
-        const approved = new Set((cotAprob || []).map(c => c.id));
 
         const { data } = await client
           .from('purchase_blocks')
@@ -778,9 +783,8 @@
 
         const cobradoMap = await fetchCobradoMap();
 
-        const filtered = filterBlocks(data || [], approved);
-        const toRender = filtered.length ? filtered : (data || []);
-        const merged = toRender.map(b => ({
+        const filtered = filterBlocks(data || []);
+        const merged = filtered.map(b => ({
           ...b,
           total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
         }));
@@ -1217,20 +1221,20 @@
 
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
-      // mientras escribe en numéricos, no persistir todavía
-      if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
-        return;
-      }
+      const shouldPersistNow =
+        (e.target.matches('select') && eventType === 'change') ||
+        (e.target.matches('input[type="text"]') && eventType === 'blur') ||
+        (e.target.matches('input[type="number"]') && (eventType === 'blur' || eventType === 'change'));
 
-      // FIX: persistir, pero NO recargar la tabla local aquí
+      if (!shouldPersistNow) return;
+
       await persistRowByUid(base._uid);
 
       if (field === 'cantidad' || field === 'precio_unit' || field === 'estado_pago') {
         await recomputeBlockTotals(currentBlockId);
       }
 
-      // No loadLines aquí para no cerrar selects / interrumpir el flujo
-      // Los otros navegadores se enteran por realtime/polling
+      queueLocalReload(220);
     }
 
     function buildPayload(row) {
@@ -1498,6 +1502,7 @@
       applyTableFilters();
       persistRowByUid(ref._uid).then(async () => {
         await recomputeBlockTotals(currentBlockId);
+        queueLocalReload(220);
       });
       closeProductOverlay();
     }
@@ -1517,6 +1522,7 @@
       applyTableFilters();
       persistRowByUid(ref._uid).then(async () => {
         await recomputeBlockTotals(currentBlockId);
+        queueLocalReload(220);
       });
     }
 
