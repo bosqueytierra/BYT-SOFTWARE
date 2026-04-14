@@ -90,7 +90,6 @@
     .item-body h4{margin:0 0 4px; font-size:14px;}
     .muted{color:#6c7a86; font-size:12px;}
 
-    /* Resaltado temporal de filas llegadas desde otro lado */
     tr.row-flash td {
       background: #fff5b8 !important;
       transition: background 0.35s ease;
@@ -120,7 +119,7 @@
 
     <div class="panel panel-ent" style="margin-top:12px;">
       <div class="section-title" id="toggleEntregados">
-        <span class="arrow up" id="arrowEnt">���</span>
+        <span class="arrow up" id="arrowEnt">▼</span>
         <span style="font-size:16px; font-weight:800;">Proyectos entregados</span>
         <span class="badge-pill" id="countEntregados">0</span>
       </div>
@@ -330,8 +329,8 @@
     let currentRealtimeChannel = null;
     let currentBlockPollTimer = null;
     let currentBlockLastSignature = '';
+    let currentTableEl = null;
 
-    // Resaltado de filas externas
     let lastLoadedRowSignatures = new Map();
     let flashingRowIds = new Set();
     let flashClearTimers = new Map();
@@ -382,9 +381,7 @@
       const timer = setTimeout(() => {
         flashingRowIds.delete(rowId);
         flashClearTimers.delete(rowId);
-        if (overlayLC?.classList.contains('active')) {
-          renderGrid(currentRows);
-        }
+        if (overlayLC?.classList.contains('active')) renderGrid(currentRows);
       }, 2000);
 
       flashClearTimers.set(rowId, timer);
@@ -405,7 +402,6 @@
       }
 
       lastLoadedRowSignatures = nextMap;
-
       changedIds.forEach(id => flashRowById(id));
     }
 
@@ -1024,7 +1020,6 @@
       await cleanupEmptiesInDB(data, client);
 
       const filtered = ensureUids((data || []).filter(r => r.id || isMeaningful(r)));
-
       detectAndFlashIncomingRows(filtered);
 
       allRows = filtered;
@@ -1184,12 +1179,6 @@
     }
 
     function renderGrid(rows) {
-      if (overlayLCGrid && overlayLCGrid._listenersSet && overlayLCGrid.isConnected) {
-        const cloned = overlayLCGrid.cloneNode(true);
-        overlayLCGrid.replaceWith(cloned);
-        overlayLCGrid = document.getElementById('overlayLCGrid');
-      }
-
       const headers = ['', 'Encargado', 'Proveedor', 'Dirección', 'Categoría', 'Producto', 'Obs', 'Unidad', 'Cantidad', 'Precio Unit', 'Total', 'Modo', 'Estado pago'];
       const thead = `<thead><tr>${headers.map((h,idx)=>idx===0?`<th style="width:90px;">${h}</th>`:`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
       const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c })));
@@ -1250,13 +1239,12 @@
         syncProdUI(idx);
       });
 
-      const tbl = overlayLCGrid.querySelector('table.lc-table');
-      if (tbl) {
-        tbl.addEventListener('change', onCellEdit, false);
-        tbl.addEventListener('input', onCellEdit, false);
-        tbl.addEventListener('blur', onCellEdit, true);
+      currentTableEl = overlayLCGrid.querySelector('table.lc-table');
+      if (currentTableEl) {
+        currentTableEl.addEventListener('change', onCellEdit, false);
+        currentTableEl.addEventListener('input', onCellEdit, false);
+        currentTableEl.addEventListener('blur', onCellEdit, true);
       }
-      overlayLCGrid._listenersSet = true;
     }
 
     function syncProdUI(idx) {
