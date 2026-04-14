@@ -356,24 +356,6 @@
       }
     }
 
-    function computeRowsSignature(rows) {
-      return JSON.stringify(
-        (rows || []).map(r => ({
-          id: r.id || null,
-          uid: r._uid || null,
-          cat: r.categoria || '',
-          prod: r.producto_id || '',
-          aaprod: r.aa_product_id || '',
-          qty: r.cantidad || 0,
-          pu: r.precio_unit || 0,
-          total: r.total || 0,
-          estado: r.estado_pago || '',
-          obs: r.observaciones || '',
-          updated: r.updated_at || r.created_at || ''
-        }))
-      );
-    }
-
     async function refreshBlockIfChanged(blockId) {
       if (!blockId || blockId !== currentBlockId) return;
       try {
@@ -937,38 +919,16 @@
       );
     }
 
-    async function addEmptyRow() {
+    function addEmptyRow() {
       if (!currentBlockId) return;
-
       const obj = ensureUid({
         id: null,
         block_id: currentBlockId,
-        placeholder: false,
-        _saving: false,
-        encargado: null,
-        proveedor_id: null,
-        direccion: null,
-        categoria: null,
-        producto_id: null,
-        aa_product_id: null,
-        aa_product_name: null,
-        aa_price_snapshot: null,
-        aa_vendor: null,
-        unidad: null,
-        cantidad: null,
-        precio_unit: null,
-        total: null,
-        modo_compra: null,
-        estado_pago: null,
-        observaciones: null
+        placeholder: true,
+        _saving: false
       });
-
       allRows.push(obj);
       applyTableFilters();
-
-      // IMPORTANTE: persistir inmediatamente para que realtime lo vea en otros navegadores
-      await persistRowByUid(obj._uid);
-      await loadLines(currentBlockId);
     }
 
     async function cleanupEmptiesInDB(lines, client) {
@@ -990,7 +950,7 @@
       if (error) { console.error('loadLines', error); allRows = []; currentRows = []; renderGrid([]); return; }
       await cleanupEmptiesInDB(data, client);
 
-      allRows = ensureUids((data || []).filter(r => isMeaningful(r) || r.id));
+      allRows = ensureUids((data || []).filter(r => isMeaningful(r)));
       currentBlockLastSignature = JSON.stringify((data || []).map(r => `${r.id}|${r.updated_at || r.created_at || ''}`));
 
       await hydrateAaNames();
