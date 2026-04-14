@@ -745,22 +745,13 @@
 
       const { data: cotRows } = await client
         .from('cotizaciones')
-        .select('id, fecha_entrega_limite')
+        .select('id, nombre, proyecto_nombre, cliente, fecha_entrega_limite, estado')
         .eq('estado', 'aprobada');
 
       (cotRows || []).forEach(c => {
         if (c.id && c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) {
           projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
         }
-      });
-    }
-
-    // FIX PRINCIPAL: filtro menos restrictivo para que vuelvan a aparecer proyectos
-    function filterBlocks(blocks) {
-      return (blocks || []).filter(b => {
-        if (b.deleted_at) return false;
-        if (b.activa === false) return false;
-        return true;
       });
     }
 
@@ -772,23 +763,59 @@
       return map;
     }
 
+    // FIX ROBUSTO: combinar purchase_blocks + cotizaciones aprobadas
     async function loadBlocks() {
       try {
         const client = await waitForClient();
 
-        const { data } = await client
-          .from('purchase_blocks')
-          .select('*')
-          .order('created_at', { ascending: false });
+        const [{ data: blockRows, error: blocksError }, { data: cotRows, error: cotError }] = await Promise.all([
+          client.from('purchase_blocks').select('*').order('created_at', { ascending: false }),
+          client.from('cotizaciones').select('id, nombre, proyecto_nombre, cliente, fecha_entrega_limite, estado').eq('estado', 'aprobada').order('id', { ascending: false })
+        ]);
+
+        if (blocksError) console.error('purchase_blocks error', blocksError);
+        if (cotError) console.error('cotizaciones error', cotError);
 
         const cobradoMap = await fetchCobradoMap();
 
-        const filtered = filterBlocks(data || []);
-        const merged = filtered.map(b => ({
-          ...b,
-          total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
-        }));
+        const safeBlocks = (blockRows || []).filter(b => !b.deleted_at && b.activa !== false);
+        const safeCots = cotRows || [];
 
+        const byProjectId = new Map();
+
+        // 1) bloques reales
+        safeBlocks.forEach(b => {
+          const key = b.proyecto_id || `block_${b.id}`;
+          byProjectId.set(key, {
+            id: b.id,
+            proyecto_id: b.proyecto_id || null,
+            proyecto_nombre: b.proyecto_nombre || 'Proyecto',
+            fecha_entrega_limite: b.fecha_entrega_limite || null,
+            total_comprado: Number(b.total_comprado || 0),
+            total_por_comprar: Number(b.total_por_comprar || 0),
+            total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : Number(b.total_cobrado || 0),
+            _source: 'block'
+          });
+        });
+
+        // 2) fallback con cotizaciones aprobadas que no tengan bloque
+        safeCots.forEach(c => {
+          const key = c.id;
+          if (byProjectId.has(key)) return;
+
+          byProjectId.set(key, {
+            id: `virtual-${c.id}`,
+            proyecto_id: c.id,
+            proyecto_nombre: c.proyecto_nombre || c.nombre || `Cotización ${c.id}`,
+            fecha_entrega_limite: c.fecha_entrega_limite || null,
+            total_comprado: 0,
+            total_por_comprar: 0,
+            total_cobrado: cobradoMap.has(c.id) ? cobradoMap.get(c.id) : 0,
+            _source: 'cotizacion'
+          });
+        });
+
+        const merged = [...byProjectId.values()];
         renderBlocks(merged);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -820,6 +847,7 @@
                   <h3 style="margin:0 0 4px;">${title}</h3>
                   <div class="meta">Partidas: ${escapeHtml(partesLabel)}</div>
                   <div class="meta" style="margin-top:6px;">Fecha de entrega límite: ${fechaLim ? escapeHtml(fechaLim) : '—'}</div>
+                  <div class="meta" style="margin-top:6px;">Origen: ${b._source === 'block' ? 'Bloque real' : 'Cotización aprobada'}</div>
                 </div>
                 <div style="display:flex; gap:6px;">
                   <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
@@ -902,7 +930,7 @@
     }
 
     async function addEmptyRow() {
-      if (!currentBlockId) return;
+      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
       const obj = ensureUid({
         id: null,
         block_id: currentBlockId,
@@ -919,6 +947,13 @@
     }
 
     async function loadLines(blockId) {
+      if (!blockId || String(blockId).startsWith('virtual-')) {
+        allRows = [];
+        currentRows = [];
+        renderGrid([]);
+        return;
+      }
+
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
@@ -973,7 +1008,7 @@
     }
 
     async function recomputeBlockTotals(blockId) {
-      if (!blockId) return;
+      if (!blockId || String(blockId).startsWith('virtual-')) return;
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
@@ -1180,6 +1215,7 @@
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
       if (Number.isNaN(rowIdx) || !field) return;
+      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
 
       const uid = getRowUidFromEventTarget(e.target);
       const real = findRowByUid(uid);
@@ -1290,6 +1326,8 @@
     }
 
     async function deleteRow(idx, clickedEl = null) {
+      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
+
       const uid = clickedEl ? getRowUidFromEventTarget(clickedEl) : (currentRows[idx]?._uid || null);
       const row = findRowByUid(uid) || currentRows[idx];
       if (!row) return;
@@ -1305,6 +1343,8 @@
     }
 
     function duplicateRow(idx, clickedEl = null) {
+      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
+
       const uid = clickedEl ? getRowUidFromEventTarget(clickedEl) : (currentRows[idx]?._uid || null);
       const src = findRowByUid(uid) || currentRows[idx];
       if(!src) return;
@@ -1332,6 +1372,7 @@
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
     async function fetchLines(blockId) {
+      if (!blockId || String(blockId).startsWith('virtual-')) return [];
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
@@ -1383,7 +1424,9 @@
 
       try {
         await loadLines(blockId);
-        await setupRealtimeForBlock(blockId);
+        if (!String(blockId).startsWith('virtual-')) {
+          await setupRealtimeForBlock(blockId);
+        }
       }
       catch (e) {
         console.error(e);
@@ -1476,6 +1519,7 @@
     function handlePickProduct(btn){
       const visibleIdx = prodState.rowIdx;
       if(visibleIdx == null || visibleIdx < 0 || visibleIdx >= currentRows.length) return;
+      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
 
       const payload = JSON.parse(btn.dataset.prod || '{}');
       const uid = currentRows[visibleIdx]?._uid;
@@ -1509,6 +1553,8 @@
 
     function clearExternalProduct(idx){
       const row = currentRows[idx]; if(!row) return;
+      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
+
       const ref = findRowByUid(row._uid) || row;
 
       ref.aa_product_id = null;
