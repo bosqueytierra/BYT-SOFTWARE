@@ -322,10 +322,6 @@
     let allRows = [];
     let currentBlockId = null;
     let currentRealtimeChannel = null;
-    let currentBlockPollTimer = null;
-    let currentBlockLastSignature = '';
-    let currentTableEl = null;
-    let localRefreshTimer = null;
 
     const projectPartsMap = new Map();
     const projectAllDoneMap = new Map();
@@ -333,19 +329,15 @@
 
     const prodState = { rowIdx: null, pageSize: 50 };
     const tableFilters = { cats: new Set(), provs: new Set(), orderCat: '', orderProv: '' };
+    const pendingPersistByUid = new Map();
+    const pendingTotalsTimerByBlock = new Map();
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12">Sin imagen</text></svg>';
+    const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
-
-    function queueLocalReload(delay = 180) {
-      clearTimeout(localRefreshTimer);
-      localRefreshTimer = setTimeout(() => {
-        if (currentBlockId) loadLines(currentBlockId);
-      }, delay);
-    }
 
     async function cleanupRealtimeChannel() {
       const client = getClient();
@@ -353,40 +345,6 @@
       try { await client.removeChannel(currentRealtimeChannel); }
       catch (e) { console.warn('cleanup realtime channel', e); }
       currentRealtimeChannel = null;
-    }
-
-    function stopBlockPolling() {
-      if (currentBlockPollTimer) {
-        clearInterval(currentBlockPollTimer);
-        currentBlockPollTimer = null;
-      }
-    }
-
-    async function refreshBlockIfChanged(blockId) {
-      if (!blockId || blockId !== currentBlockId) return;
-      try {
-        const client = await waitForClient();
-        const { data, error } = await client
-          .from(TABLE)
-          .select('id,updated_at,created_at')
-          .eq('block_id', blockId)
-          .order('created_at', { ascending: true });
-
-        if (error) return;
-        const signature = JSON.stringify((data || []).map(r => `${r.id}|${r.updated_at || r.created_at || ''}`));
-        if (signature !== currentBlockLastSignature) {
-          await loadLines(blockId);
-        }
-      } catch (e) {
-        console.warn('poll refresh error', e);
-      }
-    }
-
-    function startBlockPolling(blockId) {
-      stopBlockPolling();
-      currentBlockPollTimer = setInterval(() => {
-        refreshBlockIfChanged(blockId);
-      }, 1200);
     }
 
     async function setupRealtimeForBlock(blockId) {
@@ -414,8 +372,6 @@
         .subscribe((status) => {
           console.log('Realtime purchase_lines status:', status, 'block:', blockId);
         });
-
-      startBlockPolling(blockId);
     }
 
     async function waitForClient(timeoutMs = 4000) {
@@ -459,6 +415,26 @@
       return allRows.find(r => r && r._uid === uid) || null;
     }
 
+    function schedulePersistRow(uid, delay = 120) {
+      if (!uid) return;
+      clearTimeout(pendingPersistByUid.get(uid));
+      const t = setTimeout(async () => {
+        pendingPersistByUid.delete(uid);
+        await persistRowByUid(uid);
+      }, delay);
+      pendingPersistByUid.set(uid, t);
+    }
+
+    function scheduleRecomputeTotals(blockId, delay = 180) {
+      if (!blockId) return;
+      clearTimeout(pendingTotalsTimerByBlock.get(blockId));
+      const t = setTimeout(async () => {
+        pendingTotalsTimerByBlock.delete(blockId);
+        await recomputeBlockTotals(blockId);
+      }, delay);
+      pendingTotalsTimerByBlock.set(blockId, t);
+    }
+
     function clonePurchaseRow(src) {
       const clone = structuredClone
         ? structuredClone(src)
@@ -469,7 +445,6 @@
       clone._saving = false;
       clone.placeholder = false;
       clone.created_at = null;
-      clone.updated_at = null;
       clone.block_id = currentBlockId;
 
       return clone;
@@ -500,7 +475,10 @@
 
       const rows = [...(currentRows || [])];
 
-      const header = ['Encargado','Proveedor','Dirección','Categoría','Producto','Obs','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'];
+      const header = [
+        'Encargado','Proveedor','Dirección','Categoría','Producto','Obs',
+        'Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'
+      ];
 
       const data = rows.map(r => {
         const prov = proveedores.find(p => p.id === r.proveedor_id)?.name || '';
@@ -624,7 +602,6 @@
         overlayLC.classList.remove('active');
         document.body.classList.remove('overlay-open');
         await cleanupRealtimeChannel();
-        stopBlockPolling();
       };
       if (addRowBtn) addRowBtn.onclick = addEmptyRow;
 
@@ -638,8 +615,8 @@
       if (prodVendorFilter) prodVendorFilter.addEventListener('change', runSearch);
       if (prodOrder) prodOrder.addEventListener('change', runSearch);
       if (prodBrandFilter) prodBrandFilter.addEventListener('input', runSearch);
-      if (priceMin) priceMin.addEventListener('input', runSearch);
-      if (priceMax) priceMax.addEventListener('input', runSearch);
+      if (priceMin) priceMin.addEventListener('input', debounce(runSearch, 200));
+      if (priceMax) priceMax.addEventListener('input', debounce(runSearch, 200));
 
       if (tableFilterCat) tableFilterCat.addEventListener('change', () => { addCatFilter(tableFilterCat.value); tableFilterCat.value=''; });
       if (tableFilterProv) tableFilterProv.addEventListener('change', () => { addProvFilter(tableFilterProv.value); tableFilterProv.value=''; });
@@ -745,13 +722,23 @@
 
       const { data: cotRows } = await client
         .from('cotizaciones')
-        .select('id, nombre, proyecto_nombre, cliente, fecha_entrega_limite, estado')
+        .select('id, fecha_entrega_limite')
         .eq('estado', 'aprobada');
 
       (cotRows || []).forEach(c => {
         if (c.id && c.fecha_entrega_limite && !projectFechaLimiteMap.has(c.id)) {
           projectFechaLimiteMap.set(c.id, c.fecha_entrega_limite);
         }
+      });
+    }
+
+    function filterBlocks(blocks, approvedSet) {
+      if (!approvedSet || approvedSet.size === 0) return blocks || [];
+      return (blocks || []).filter(b => {
+        if (b.deleted_at) return false;
+        if (b.activa === false) return false;
+        if (!b.proyecto_id) return false;
+        return approvedSet.has(b.proyecto_id);
       });
     }
 
@@ -763,59 +750,26 @@
       return map;
     }
 
-    // FIX ROBUSTO: combinar purchase_blocks + cotizaciones aprobadas
     async function loadBlocks() {
       try {
         const client = await waitForClient();
+        const { data: cotAprob } = await client.from('cotizaciones').select('id').eq('estado','aprobada');
+        const approved = new Set((cotAprob || []).map(c => c.id));
 
-        const [{ data: blockRows, error: blocksError }, { data: cotRows, error: cotError }] = await Promise.all([
-          client.from('purchase_blocks').select('*').order('created_at', { ascending: false }),
-          client.from('cotizaciones').select('id, nombre, proyecto_nombre, cliente, fecha_entrega_limite, estado').eq('estado', 'aprobada').order('id', { ascending: false })
-        ]);
-
-        if (blocksError) console.error('purchase_blocks error', blocksError);
-        if (cotError) console.error('cotizaciones error', cotError);
+        const { data } = await client
+          .from('purchase_blocks')
+          .select('*')
+          .order('created_at', { ascending: false });
 
         const cobradoMap = await fetchCobradoMap();
 
-        const safeBlocks = (blockRows || []).filter(b => !b.deleted_at && b.activa !== false);
-        const safeCots = cotRows || [];
+        const filtered = filterBlocks(data || [], approved);
+        const toRender = filtered.length ? filtered : (data || []);
+        const merged = toRender.map(b => ({
+          ...b,
+          total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : (b.total_cobrado || 0)
+        }));
 
-        const byProjectId = new Map();
-
-        // 1) bloques reales
-        safeBlocks.forEach(b => {
-          const key = b.proyecto_id || `block_${b.id}`;
-          byProjectId.set(key, {
-            id: b.id,
-            proyecto_id: b.proyecto_id || null,
-            proyecto_nombre: b.proyecto_nombre || 'Proyecto',
-            fecha_entrega_limite: b.fecha_entrega_limite || null,
-            total_comprado: Number(b.total_comprado || 0),
-            total_por_comprar: Number(b.total_por_comprar || 0),
-            total_cobrado: cobradoMap.has(b.proyecto_id) ? cobradoMap.get(b.proyecto_id) : Number(b.total_cobrado || 0),
-            _source: 'block'
-          });
-        });
-
-        // 2) fallback con cotizaciones aprobadas que no tengan bloque
-        safeCots.forEach(c => {
-          const key = c.id;
-          if (byProjectId.has(key)) return;
-
-          byProjectId.set(key, {
-            id: `virtual-${c.id}`,
-            proyecto_id: c.id,
-            proyecto_nombre: c.proyecto_nombre || c.nombre || `Cotización ${c.id}`,
-            fecha_entrega_limite: c.fecha_entrega_limite || null,
-            total_comprado: 0,
-            total_por_comprar: 0,
-            total_cobrado: cobradoMap.has(c.id) ? cobradoMap.get(c.id) : 0,
-            _source: 'cotizacion'
-          });
-        });
-
-        const merged = [...byProjectId.values()];
         renderBlocks(merged);
       } catch (e) {
         console.error('Error cargando bloques de compras', e);
@@ -847,7 +801,6 @@
                   <h3 style="margin:0 0 4px;">${title}</h3>
                   <div class="meta">Partidas: ${escapeHtml(partesLabel)}</div>
                   <div class="meta" style="margin-top:6px;">Fecha de entrega límite: ${fechaLim ? escapeHtml(fechaLim) : '—'}</div>
-                  <div class="meta" style="margin-top:6px;">Origen: ${b._source === 'block' ? 'Bloque real' : 'Cotización aprobada'}</div>
                 </div>
                 <div style="display:flex; gap:6px;">
                   <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
@@ -891,7 +844,7 @@
     }
 
     function makeOptions(list, valKey = 'nombre', labelKey = 'nombre') {
-      return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`).join('');
+      return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
 
     function productOptions(category) {
@@ -929,43 +882,33 @@
       );
     }
 
-    async function addEmptyRow() {
-      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
-      const obj = ensureUid({
-        id: null,
-        block_id: currentBlockId,
-        placeholder: true,
-        _saving: false
-      });
-
+    function addEmptyRow() {
+      if (!currentBlockId) return;
+      const obj = ensureUid({ id: null, block_id: currentBlockId, placeholder: true, _saving: false });
       allRows.push(obj);
       applyTableFilters();
+    }
 
-      obj.placeholder = false;
-      await persistRowByUid(obj._uid);
-      await loadLines(currentBlockId);
+    async function cleanupEmptiesInDB(lines, client) {
+      const empties = (lines || []).filter(r => !isMeaningful(r) && r.id);
+      if (!empties.length) return;
+      const ids = empties.map(r => r.id);
+      try { await client.from(TABLE).delete().in('id', ids); }
+      catch (e) { console.error('cleanupEmptiesInDB', e); }
     }
 
     async function loadLines(blockId) {
-      if (!blockId || String(blockId).startsWith('virtual-')) {
-        allRows = [];
-        currentRows = [];
-        renderGrid([]);
-        return;
-      }
-
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
-        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_product_name,aa_price_snapshot,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at,updated_at')
+        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_product_name,aa_price_snapshot,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
 
       if (error) { console.error('loadLines', error); allRows = []; currentRows = []; renderGrid([]); return; }
+      await cleanupEmptiesInDB(data, client);
 
-      allRows = ensureUids(data || []);
-      currentBlockLastSignature = JSON.stringify((data || []).map(r => `${r.id}|${r.updated_at || r.created_at || ''}`));
-
+      allRows = ensureUids((data || []).filter(r => isMeaningful(r)));
       await hydrateAaNames();
       rebuildFilterOptionsFromCatalogs();
       applyTableFilters();
@@ -1008,7 +951,7 @@
     }
 
     async function recomputeBlockTotals(blockId) {
-      if (!blockId || String(blockId).startsWith('virtual-')) return;
+      if (!blockId) return;
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
@@ -1120,6 +1063,10 @@
     }
 
     function renderGrid(rows) {
+      if (overlayLCGrid && overlayLCGrid._listenersSet) {
+        overlayLCGrid.replaceWith(overlayLCGrid.cloneNode(true));
+        overlayLCGrid = document.getElementById('overlayLCGrid');
+      }
       const headers = ['', 'Encargado', 'Proveedor', 'Dirección', 'Categoría', 'Producto', 'Obs', 'Unidad', 'Cantidad', 'Precio Unit', 'Total', 'Modo', 'Estado pago'];
       const thead = `<thead><tr>${headers.map((h,idx)=>idx===0?`<th style="width:90px;">${h}</th>`:`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
       const categoriaOptions = makeOptions(catMateriales.map(c => ({ nombre: c })));
@@ -1153,9 +1100,9 @@
             </td>
             <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones||'')}"></td>
             <td><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></td>
-            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad??''}"></td>
-            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit??''}"></td>
-            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total??''}" readonly></td>
+            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></td>
+            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></td>
+            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total||''}" readonly></td>
             <td><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></td>
             <td><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></td>
           </tr>`;
@@ -1174,17 +1121,18 @@
         setVal(idx,'modo_compra',row.modo_compra);
         setVal(idx,'estado_pago',row.estado_pago);
         const totalInput = overlayLCGrid.querySelector(`input[data-row="${idx}"][data-f="total"]`);
-        if (totalInput) totalInput.value = row.total ?? '';
+        if (totalInput) totalInput.value = row.total || '';
         applyEstadoStyle(idx);
         syncProdUI(idx);
       });
 
-      currentTableEl = overlayLCGrid.querySelector('table.lc-table');
-      if (currentTableEl) {
-        currentTableEl.addEventListener('change', onCellEdit, false);
-        currentTableEl.addEventListener('input', onCellEdit, false);
-        currentTableEl.addEventListener('blur', onCellEdit, true);
+      const tbl = overlayLCGrid.querySelector('table.lc-table');
+      if (tbl) {
+        tbl.addEventListener('change', onCellEdit, false);
+        tbl.addEventListener('input', onCellEdit, false);
+        tbl.addEventListener('blur', onCellEdit, true);
       }
+      overlayLCGrid._listenersSet = true;
     }
 
     function syncProdUI(idx) {
@@ -1215,12 +1163,13 @@
       const field = e.target.getAttribute('data-f');
       const rowIdx = Number(e.target.getAttribute('data-row'));
       if (Number.isNaN(rowIdx) || !field) return;
-      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
 
       const uid = getRowUidFromEventTarget(e.target);
       const real = findRowByUid(uid);
+
       const rowVisible = currentRows[rowIdx] || {};
       const base = real || rowVisible;
+
       const eventType = e.type;
 
       if (eventType === 'blur') {
@@ -1239,6 +1188,7 @@
       if (field === 'categoria') {
         base.producto_id = null;
 
+        // FIX: reconstruir inmediatamente el combo producto de esa fila
         if (currentRows[rowIdx]) {
           currentRows[rowIdx].categoria = val;
           currentRows[rowIdx].producto_id = null;
@@ -1257,20 +1207,21 @@
 
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
-      const shouldPersistNow =
-        (e.target.matches('select') && eventType === 'change') ||
-        (e.target.matches('input[type="text"]') && eventType === 'blur') ||
-        (e.target.matches('input[type="number"]') && (eventType === 'blur' || eventType === 'change'));
+      const affectsTotals = field === 'cantidad' || field === 'precio_unit' || field === 'estado_pago';
 
-      if (!shouldPersistNow) return;
-
-      await persistRowByUid(base._uid);
-
-      if (field === 'cantidad' || field === 'precio_unit' || field === 'estado_pago') {
-        await recomputeBlockTotals(currentBlockId);
+      if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
+        return;
       }
 
-      queueLocalReload(220);
+      schedulePersistRow(base._uid, 120);
+
+      if (affectsTotals) {
+        scheduleRecomputeTotals(currentBlockId, 180);
+      }
+
+      if ((field === 'cantidad' || field === 'precio_unit') && (eventType === 'change' || eventType === 'blur')) {
+        applyTableFilters();
+      }
     }
 
     function buildPayload(row) {
@@ -1286,8 +1237,8 @@
         aa_product_name: row.aa_product_name || null,
         aa_price_snapshot: row.aa_price_snapshot ?? null,
         unidad: row.unidad || null,
-        cantidad: row.cantidad ?? null,
-        precio_unit: row.precio_unit ?? null,
+        cantidad: row.cantidad || null,
+        precio_unit: row.precio_unit || null,
         modo_compra: row.modo_compra || null,
         estado_pago: row.estado_pago || null,
         observaciones: row.observaciones || null
@@ -1302,15 +1253,12 @@
       const client = await waitForClient();
       const payload = buildPayload(row);
       const meaningful = isMeaningful(payload);
-      const canInsertPlaceholder = !row.id && row.block_id;
-
-      if (!row.id && !meaningful && !canInsertPlaceholder) return;
+      if (!row.id && !meaningful) return;
 
       row._saving = true;
       try {
         if (!row.id) {
-          const insertPayload = meaningful ? payload : { block_id: row.block_id || currentBlockId };
-          const { data, error } = await client.from(TABLE).insert([insertPayload]).select().single();
+          const { data, error } = await client.from(TABLE).insert([payload]).select().single();
           if (error) throw error;
           Object.assign(row, data, { placeholder:false });
         } else {
@@ -1326,8 +1274,6 @@
     }
 
     async function deleteRow(idx, clickedEl = null) {
-      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
-
       const uid = clickedEl ? getRowUidFromEventTarget(clickedEl) : (currentRows[idx]?._uid || null);
       const row = findRowByUid(uid) || currentRows[idx];
       if (!row) return;
@@ -1338,13 +1284,10 @@
         allRows = allRows.filter(r => r && r._uid !== row._uid);
         applyTableFilters();
         await recomputeBlockTotals(currentBlockId);
-        await loadLines(currentBlockId);
       }catch(e){console.error('Delete error',e);}
     }
 
     function duplicateRow(idx, clickedEl = null) {
-      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
-
       const uid = clickedEl ? getRowUidFromEventTarget(clickedEl) : (currentRows[idx]?._uid || null);
       const src = findRowByUid(uid) || currentRows[idx];
       if(!src) return;
@@ -1357,10 +1300,10 @@
 
       applyTableFilters();
 
-      persistRowByUid(clone._uid).then(async () => {
-        await recomputeBlockTotals(currentBlockId);
-        await loadLines(currentBlockId);
-      });
+      const payload = buildPayload(clone);
+      if (isMeaningful(payload)) {
+        persistRowByUid(clone._uid).then(() => recomputeBlockTotals(currentBlockId));
+      }
     }
 
     async function loadCategoryImages() {
@@ -1372,7 +1315,6 @@
     function pickCategoryImage(cat) { return catImagesMap[cat] || PLACEHOLDER_IMG; }
 
     async function fetchLines(blockId) {
-      if (!blockId || String(blockId).startsWith('virtual-')) return [];
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
@@ -1424,9 +1366,7 @@
 
       try {
         await loadLines(blockId);
-        if (!String(blockId).startsWith('virtual-')) {
-          await setupRealtimeForBlock(blockId);
-        }
+        await setupRealtimeForBlock(blockId);
       }
       catch (e) {
         console.error(e);
@@ -1499,7 +1439,7 @@
       return data || [];
     }
 
-    const runSearch = async () => {
+    const runSearch = debounce(async () => {
       if (!prodResults) return;
       prodResults.innerHTML = '<div style="padding:12px;color:#6c7a86;">Buscando...</div>';
       const query = (prodSearchInput?.value || '').trim();
@@ -1514,12 +1454,11 @@
       } catch (e) {
         if (prodResults) prodResults.innerHTML = '<div style="padding:12px;color:#c00;">Error buscando</div>';
       }
-    };
+    }, 250);
 
     function handlePickProduct(btn){
       const visibleIdx = prodState.rowIdx;
       if(visibleIdx == null || visibleIdx < 0 || visibleIdx >= currentRows.length) return;
-      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
 
       const payload = JSON.parse(btn.dataset.prod || '{}');
       const uid = currentRows[visibleIdx]?._uid;
@@ -1544,17 +1483,12 @@
       ref.total = qty * pu;
 
       applyTableFilters();
-      persistRowByUid(ref._uid).then(async () => {
-        await recomputeBlockTotals(currentBlockId);
-        queueLocalReload(220);
-      });
+      persistRowByUid(ref._uid).then(() => recomputeBlockTotals(currentBlockId));
       closeProductOverlay();
     }
 
     function clearExternalProduct(idx){
       const row = currentRows[idx]; if(!row) return;
-      if (!currentBlockId || String(currentBlockId).startsWith('virtual-')) return;
-
       const ref = findRowByUid(row._uid) || row;
 
       ref.aa_product_id = null;
@@ -1566,10 +1500,7 @@
       ref._aa_caturl = null;
 
       applyTableFilters();
-      persistRowByUid(ref._uid).then(async () => {
-        await recomputeBlockTotals(currentBlockId);
-        queueLocalReload(220);
-      });
+      persistRowByUid(ref._uid).then(() => recomputeBlockTotals(currentBlockId));
     }
 
     function getPrintEstadoKey(estadoPago = '') {
@@ -1700,7 +1631,6 @@
       } catch (e) {
         console.warn('beforeunload realtime cleanup', e);
       }
-      stopBlockPolling();
     });
   </script>
 </body>
