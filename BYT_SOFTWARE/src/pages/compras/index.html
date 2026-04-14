@@ -89,11 +89,6 @@
     .item-thumb{width:56px;height:56px; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb;}
     .item-body h4{margin:0 0 4px; font-size:14px;}
     .muted{color:#6c7a86; font-size:12px;}
-
-    tr.row-flash td {
-      background: #dff7df !important;
-      transition: background 0.12s ease;
-    }
   </style>
 </head>
 <body>
@@ -331,10 +326,6 @@
     let currentBlockLastSignature = '';
     let currentTableEl = null;
 
-    let lastLoadedRowSignatures = new Map();
-    let flashingRowIds = new Set();
-    let flashClearTimers = new Map();
-
     const projectPartsMap = new Map();
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
@@ -347,60 +338,6 @@
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
     function fmtCLP(n) { return Number(n || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }); }
     function getClient() { return window.supabase || window.globalSupabase?.client || window.supabaseClient?.client || null; }
-
-    function rowSignature(row) {
-      return JSON.stringify({
-        id: row.id || null,
-        encargado: row.encargado || '',
-        proveedor_id: row.proveedor_id || '',
-        direccion: row.direccion || '',
-        categoria: row.categoria || '',
-        producto_id: row.producto_id || '',
-        aa_product_id: row.aa_product_id || '',
-        unidad: row.unidad || '',
-        cantidad: row.cantidad || '',
-        precio_unit: row.precio_unit || '',
-        total: row.total || '',
-        modo_compra: row.modo_compra || '',
-        estado_pago: row.estado_pago || '',
-        observaciones: row.observaciones || '',
-        updated_at: row.updated_at || row.created_at || ''
-      });
-    }
-
-    function flashRowById(rowId) {
-      if (!rowId) return;
-      flashingRowIds.add(rowId);
-
-      const oldTimer = flashClearTimers.get(rowId);
-      if (oldTimer) clearTimeout(oldTimer);
-
-      const timer = setTimeout(() => {
-        flashingRowIds.delete(rowId);
-        flashClearTimers.delete(rowId);
-        if (overlayLC?.classList.contains('active')) renderGrid(currentRows);
-      }, 250);
-
-      flashClearTimers.set(rowId, timer);
-    }
-
-    function detectAndFlashIncomingRows(rows) {
-      const nextMap = new Map();
-      const changedIds = [];
-
-      for (const row of rows || []) {
-        if (!row?.id) continue;
-        const sig = rowSignature(row);
-        nextMap.set(row.id, sig);
-
-        const prevSig = lastLoadedRowSignatures.get(row.id);
-        if (prevSig && prevSig !== sig) changedIds.push(row.id);
-        if (!prevSig) changedIds.push(row.id);
-      }
-
-      lastLoadedRowSignatures = nextMap;
-      changedIds.forEach(id => flashRowById(id));
-    }
 
     async function cleanupRealtimeChannel() {
       const client = getClient();
@@ -693,8 +630,8 @@
       if (prodVendorFilter) prodVendorFilter.addEventListener('change', runSearch);
       if (prodOrder) prodOrder.addEventListener('change', runSearch);
       if (prodBrandFilter) prodBrandFilter.addEventListener('input', runSearch);
-      if (priceMin) priceMin.addEventListener('input', () => runSearch());
-      if (priceMax) priceMax.addEventListener('input', () => runSearch());
+      if (priceMin) priceMin.addEventListener('input', runSearch);
+      if (priceMax) priceMax.addEventListener('input', runSearch);
 
       if (tableFilterCat) tableFilterCat.addEventListener('change', () => { addCatFilter(tableFilterCat.value); tableFilterCat.value=''; });
       if (tableFilterProv) tableFilterProv.addEventListener('change', () => { addProvFilter(tableFilterProv.value); tableFilterProv.value=''; });
@@ -922,7 +859,7 @@
     }
 
     function makeOptions(list, valKey = 'nombre', labelKey = 'nombre') {
-      return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
+      return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`).join('');
     }
 
     function productOptions(category) {
@@ -987,10 +924,7 @@
 
       if (error) { console.error('loadLines', error); allRows = []; currentRows = []; renderGrid([]); return; }
 
-      const filtered = ensureUids(data || []);
-      detectAndFlashIncomingRows(filtered);
-
-      allRows = filtered;
+      allRows = ensureUids(data || []);
       currentBlockLastSignature = JSON.stringify((data || []).map(r => `${r.id}|${r.updated_at || r.created_at || ''}`));
 
       await hydrateAaNames();
@@ -1154,8 +1088,7 @@
       const bodyRows = rows.map((row, idx) => {
         const idAttr = row.id ? `data-id="${row.id}"` : '';
         const uidAttr = row._uid ? `data-uid="${row._uid}"` : `data-uid=""`;
-        const flashClass = row.id && flashingRowIds.has(row.id) ? 'row-flash' : '';
-        return `<tr class="${flashClass}" data-row="${idx}" ${uidAttr} ${idAttr}>
+        return `<tr data-row="${idx}" ${uidAttr} ${idAttr}>
             <td class="action-cell">
               <button class="icon-btn danger" type="button" title="Eliminar" data-action="del-row" data-row="${idx}">
                 <svg viewBox="0 0 24 24"><path d="M9 11v6M15 11v6M5.5 7h13"/><path d="M10 5.5h4l.7 1.7H9.3l.7-1.7Z"/><rect x="6.5" y="9" width="11" height="10" rx="1.4"/></svg>
@@ -1248,7 +1181,6 @@
       const real = findRowByUid(uid);
       const rowVisible = currentRows[rowIdx] || {};
       const base = real || rowVisible;
-
       const eventType = e.type;
 
       if (eventType === 'blur') {
@@ -1285,18 +1217,20 @@
 
       if (field === 'estado_pago') applyEstadoStyle(rowIdx);
 
+      // mientras escribe en numéricos, no persistir todavía
       if (eventType === 'input' && (field === 'cantidad' || field === 'precio_unit')) {
         return;
       }
 
-      // FIX PRINCIPAL: toda edición es disparador inmediato
+      // FIX: persistir, pero NO recargar la tabla local aquí
       await persistRowByUid(base._uid);
 
       if (field === 'cantidad' || field === 'precio_unit' || field === 'estado_pago') {
         await recomputeBlockTotals(currentBlockId);
       }
 
-      await loadLines(currentBlockId);
+      // No loadLines aquí para no cerrar selects / interrumpir el flujo
+      // Los otros navegadores se enteran por realtime/polling
     }
 
     function buildPayload(row) {
@@ -1564,7 +1498,6 @@
       applyTableFilters();
       persistRowByUid(ref._uid).then(async () => {
         await recomputeBlockTotals(currentBlockId);
-        await loadLines(currentBlockId);
       });
       closeProductOverlay();
     }
@@ -1584,7 +1517,6 @@
       applyTableFilters();
       persistRowByUid(ref._uid).then(async () => {
         await recomputeBlockTotals(currentBlockId);
-        await loadLines(currentBlockId);
       });
     }
 
