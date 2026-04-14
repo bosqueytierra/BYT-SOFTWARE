@@ -476,18 +476,8 @@
       const rows = [...(currentRows || [])];
 
       const header = [
-        'Encargado',
-        'Proveedor',
-        'Dirección',
-        'Categoría',
-        'Producto',
-        'Obs',
-        'Unidad',
-        'Cantidad',
-        'Precio Unit',
-        'Total',
-        'Modo',
-        'Estado pago'
+        'Encargado','Proveedor','Dirección','Categoría','Producto','Obs',
+        'Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'
       ];
 
       const data = rows.map(r => {
@@ -856,10 +846,12 @@
     function makeOptions(list, valKey = 'nombre', labelKey = 'nombre') {
       return ['<option value="">--</option>', ...list.map(o => `<option value="${escapeHtml(o[valKey])}">${escapeHtml(o[labelKey])}</option>`)].join('');
     }
+
     function productOptions(category) {
       const list = materiales.filter(m => !category || m.category === category);
       return makeOptions(list, 'id', 'name');
     }
+
     function rebuildProductOptions(rowIdx) {
       const row = currentRows[rowIdx] || {};
       const sel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="producto_id"]`);
@@ -869,13 +861,16 @@
         const valid = materiales.find(m => m.id === row.producto_id && (!row.categoria || m.category === row.categoria));
         sel.value = valid ? row.producto_id : '';
         if (!valid) currentRows[rowIdx].producto_id = null;
-      } else sel.value = '';
+      } else {
+        sel.value = '';
+      }
     }
 
     function setVal(idx, field, value) {
       const el = overlayLCGrid?.querySelector?.(`[data-row="${idx}"][data-f="${field}"]`);
       if (el) el.value = value ?? '';
     }
+
     function isMeaningful(payload) {
       return (
         (payload.producto_id && payload.producto_id !== '') ||
@@ -1045,6 +1040,7 @@
       tableFilters.cats.add(val);
       applyTableFilters();
     }
+
     function addProvFilter(val){
       if(!val) return;
       tableFilters.provs.add(val);
@@ -1191,6 +1187,17 @@
 
       if (field === 'categoria') {
         base.producto_id = null;
+
+        // FIX: reconstruir inmediatamente el combo producto de esa fila
+        if (currentRows[rowIdx]) {
+          currentRows[rowIdx].categoria = val;
+          currentRows[rowIdx].producto_id = null;
+        }
+
+        rebuildProductOptions(rowIdx);
+
+        const prodSel = overlayLCGrid?.querySelector?.(`select[data-row="${rowIdx}"][data-f="producto_id"]`);
+        if (prodSel) prodSel.value = '';
       }
 
       base.total = Number(base.cantidad || 0) * Number(base.precio_unit || 0);
