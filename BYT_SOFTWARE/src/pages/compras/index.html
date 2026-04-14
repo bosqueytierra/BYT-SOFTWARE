@@ -90,9 +90,10 @@
     .item-body h4{margin:0 0 4px; font-size:14px;}
     .muted{color:#6c7a86; font-size:12px;}
 
+    /* Resaltado verde clarito por 0.5s */
     tr.row-flash td {
-      background: #fff5b8 !important;
-      transition: background 0.35s ease;
+      background: #dff7df !important;
+      transition: background 0.18s ease;
     }
   </style>
 </head>
@@ -382,7 +383,7 @@
         flashingRowIds.delete(rowId);
         flashClearTimers.delete(rowId);
         if (overlayLC?.classList.contains('active')) renderGrid(currentRows);
-      }, 2000);
+      }, 500);
 
       flashClearTimers.set(rowId, timer);
     }
@@ -1000,12 +1001,9 @@
       await loadLines(currentBlockId);
     }
 
-    async function cleanupEmptiesInDB(lines, client) {
-      const empties = (lines || []).filter(r => !isMeaningful(r) && r.id);
-      if (!empties.length) return;
-      const ids = empties.map(r => r.id);
-      try { await client.from(TABLE).delete().in('id', ids); }
-      catch (e) { console.error('cleanupEmptiesInDB', e); }
+    // FIX: ya no borra filas vacías automáticamente
+    async function cleanupEmptiesInDB() {
+      return;
     }
 
     async function loadLines(blockId) {
@@ -1017,9 +1015,8 @@
         .order('created_at', { ascending: true });
 
       if (error) { console.error('loadLines', error); allRows = []; currentRows = []; renderGrid([]); return; }
-      await cleanupEmptiesInDB(data, client);
 
-      const filtered = ensureUids((data || []).filter(r => r.id || isMeaningful(r)));
+      const filtered = ensureUids(data || []);
       detectAndFlashIncomingRows(filtered);
 
       allRows = filtered;
@@ -1213,9 +1210,9 @@
             </td>
             <td><input data-f="observaciones" data-row="${idx}" type="text" value="${escapeHtml(row.observaciones||'')}"></td>
             <td><select data-f="unidad" data-row="${idx}">${makeOptions(catUnidades)}</select></td>
-            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad||''}"></td>
-            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit||''}"></td>
-            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total||''}" readonly></td>
+            <td><input data-f="cantidad" data-row="${idx}" type="number" step="0.01" value="${row.cantidad??''}"></td>
+            <td><input data-f="precio_unit" data-row="${idx}" type="number" step="0.01" value="${row.precio_unit??''}"></td>
+            <td class="readonly-cell"><input data-f="total" data-row="${idx}" type="number" step="0.01" value="${row.total??''}" readonly></td>
             <td><select data-f="modo_compra" data-row="${idx}">${makeOptions(catModos)}</select></td>
             <td><select data-f="estado_pago" data-row="${idx}">${makeOptions(catEstadosPago)}</select></td>
           </tr>`;
@@ -1234,7 +1231,7 @@
         setVal(idx,'modo_compra',row.modo_compra);
         setVal(idx,'estado_pago',row.estado_pago);
         const totalInput = overlayLCGrid.querySelector(`input[data-row="${idx}"][data-f="total"]`);
-        if (totalInput) totalInput.value = row.total || '';
+        if (totalInput) totalInput.value = row.total ?? '';
         applyEstadoStyle(idx);
         syncProdUI(idx);
       });
@@ -1354,8 +1351,8 @@
         aa_product_name: row.aa_product_name || null,
         aa_price_snapshot: row.aa_price_snapshot ?? null,
         unidad: row.unidad || null,
-        cantidad: row.cantidad || null,
-        precio_unit: row.precio_unit || null,
+        cantidad: row.cantidad ?? null,
+        precio_unit: row.precio_unit ?? null,
         modo_compra: row.modo_compra || null,
         estado_pago: row.estado_pago || null,
         observaciones: row.observaciones || null
@@ -1421,17 +1418,10 @@
 
       applyTableFilters();
 
-      const payload = buildPayload(clone);
-      if (isMeaningful(payload)) {
-        persistRowByUid(clone._uid).then(async () => {
-          await recomputeBlockTotals(currentBlockId);
-          await loadLines(currentBlockId);
-        });
-      } else {
-        persistRowByUid(clone._uid).then(async () => {
-          await loadLines(currentBlockId);
-        });
-      }
+      persistRowByUid(clone._uid).then(async () => {
+        await recomputeBlockTotals(currentBlockId);
+        await loadLines(currentBlockId);
+      });
     }
 
     async function loadCategoryImages() {
