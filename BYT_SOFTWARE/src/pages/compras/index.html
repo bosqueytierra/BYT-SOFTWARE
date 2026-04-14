@@ -322,6 +322,8 @@
     let allRows = [];
     let currentBlockId = null;
     let currentRealtimeChannel = null;
+    let currentBlockPollTimer = null;
+    let currentBlockLastSignature = '';
 
     const projectPartsMap = new Map();
     const projectAllDoneMap = new Map();
@@ -345,6 +347,58 @@
       try { await client.removeChannel(currentRealtimeChannel); }
       catch (e) { console.warn('cleanup realtime channel', e); }
       currentRealtimeChannel = null;
+    }
+
+    function stopBlockPolling() {
+      if (currentBlockPollTimer) {
+        clearInterval(currentBlockPollTimer);
+        currentBlockPollTimer = null;
+      }
+    }
+
+    function computeRowsSignature(rows) {
+      return JSON.stringify(
+        (rows || []).map(r => ({
+          id: r.id || null,
+          uid: r._uid || null,
+          cat: r.categoria || '',
+          prod: r.producto_id || '',
+          aaprod: r.aa_product_id || '',
+          qty: r.cantidad || 0,
+          pu: r.precio_unit || 0,
+          total: r.total || 0,
+          estado: r.estado_pago || '',
+          obs: r.observaciones || '',
+          updated: r.updated_at || r.created_at || ''
+        }))
+      );
+    }
+
+    async function refreshBlockIfChanged(blockId) {
+      if (!blockId || blockId !== currentBlockId) return;
+      try {
+        const client = await waitForClient();
+        const { data, error } = await client
+          .from(TABLE)
+          .select('id,updated_at,created_at')
+          .eq('block_id', blockId)
+          .order('created_at', { ascending: true });
+
+        if (error) return;
+        const signature = JSON.stringify((data || []).map(r => `${r.id}|${r.updated_at || r.created_at || ''}`));
+        if (signature !== currentBlockLastSignature) {
+          await loadLines(blockId);
+        }
+      } catch (e) {
+        console.warn('poll refresh error', e);
+      }
+    }
+
+    function startBlockPolling(blockId) {
+      stopBlockPolling();
+      currentBlockPollTimer = setInterval(() => {
+        refreshBlockIfChanged(blockId);
+      }, 1200);
     }
 
     async function setupRealtimeForBlock(blockId) {
@@ -372,6 +426,8 @@
         .subscribe((status) => {
           console.log('Realtime purchase_lines status:', status, 'block:', blockId);
         });
+
+      startBlockPolling(blockId);
     }
 
     async function waitForClient(timeoutMs = 4000) {
@@ -445,6 +501,7 @@
       clone._saving = false;
       clone.placeholder = false;
       clone.created_at = null;
+      clone.updated_at = null;
       clone.block_id = currentBlockId;
 
       return clone;
@@ -475,10 +532,7 @@
 
       const rows = [...(currentRows || [])];
 
-      const header = [
-        'Encargado','Proveedor','Dirección','Categoría','Producto','Obs',
-        'Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'
-      ];
+      const header = ['Encargado','Proveedor','Dirección','Categoría','Producto','Obs','Unidad','Cantidad','Precio Unit','Total','Modo','Estado pago'];
 
       const data = rows.map(r => {
         const prov = proveedores.find(p => p.id === r.proveedor_id)?.name || '';
@@ -602,6 +656,7 @@
         overlayLC.classList.remove('active');
         document.body.classList.remove('overlay-open');
         await cleanupRealtimeChannel();
+        stopBlockPolling();
       };
       if (addRowBtn) addRowBtn.onclick = addEmptyRow;
 
@@ -882,11 +937,38 @@
       );
     }
 
-    function addEmptyRow() {
+    async function addEmptyRow() {
       if (!currentBlockId) return;
-      const obj = ensureUid({ id: null, block_id: currentBlockId, placeholder: true, _saving: false });
+
+      const obj = ensureUid({
+        id: null,
+        block_id: currentBlockId,
+        placeholder: false,
+        _saving: false,
+        encargado: null,
+        proveedor_id: null,
+        direccion: null,
+        categoria: null,
+        producto_id: null,
+        aa_product_id: null,
+        aa_product_name: null,
+        aa_price_snapshot: null,
+        aa_vendor: null,
+        unidad: null,
+        cantidad: null,
+        precio_unit: null,
+        total: null,
+        modo_compra: null,
+        estado_pago: null,
+        observaciones: null
+      });
+
       allRows.push(obj);
       applyTableFilters();
+
+      // IMPORTANTE: persistir inmediatamente para que realtime lo vea en otros navegadores
+      await persistRowByUid(obj._uid);
+      await loadLines(currentBlockId);
     }
 
     async function cleanupEmptiesInDB(lines, client) {
@@ -901,14 +983,16 @@
       const client = await waitForClient();
       const { data, error } = await client
         .from(TABLE)
-        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_product_name,aa_price_snapshot,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at')
+        .select('id,block_id,encargado,proveedor_id,direccion,categoria,producto_id,aa_product_id,aa_product_name,aa_price_snapshot,aa_vendor,unidad,cantidad,precio_unit,total,modo_compra,estado_pago,observaciones,created_at,updated_at')
         .eq('block_id', blockId)
         .order('created_at', { ascending: true });
 
       if (error) { console.error('loadLines', error); allRows = []; currentRows = []; renderGrid([]); return; }
       await cleanupEmptiesInDB(data, client);
 
-      allRows = ensureUids((data || []).filter(r => isMeaningful(r)));
+      allRows = ensureUids((data || []).filter(r => isMeaningful(r) || r.id));
+      currentBlockLastSignature = JSON.stringify((data || []).map(r => `${r.id}|${r.updated_at || r.created_at || ''}`));
+
       await hydrateAaNames();
       rebuildFilterOptionsFromCatalogs();
       applyTableFilters();
@@ -1188,7 +1272,6 @@
       if (field === 'categoria') {
         base.producto_id = null;
 
-        // FIX: reconstruir inmediatamente el combo producto de esa fila
         if (currentRows[rowIdx]) {
           currentRows[rowIdx].categoria = val;
           currentRows[rowIdx].producto_id = null;
@@ -1284,6 +1367,7 @@
         allRows = allRows.filter(r => r && r._uid !== row._uid);
         applyTableFilters();
         await recomputeBlockTotals(currentBlockId);
+        await loadLines(currentBlockId);
       }catch(e){console.error('Delete error',e);}
     }
 
@@ -1302,7 +1386,10 @@
 
       const payload = buildPayload(clone);
       if (isMeaningful(payload)) {
-        persistRowByUid(clone._uid).then(() => recomputeBlockTotals(currentBlockId));
+        persistRowByUid(clone._uid).then(async () => {
+          await recomputeBlockTotals(currentBlockId);
+          await loadLines(currentBlockId);
+        });
       }
     }
 
@@ -1483,7 +1570,10 @@
       ref.total = qty * pu;
 
       applyTableFilters();
-      persistRowByUid(ref._uid).then(() => recomputeBlockTotals(currentBlockId));
+      persistRowByUid(ref._uid).then(async () => {
+        await recomputeBlockTotals(currentBlockId);
+        await loadLines(currentBlockId);
+      });
       closeProductOverlay();
     }
 
@@ -1500,7 +1590,10 @@
       ref._aa_caturl = null;
 
       applyTableFilters();
-      persistRowByUid(ref._uid).then(() => recomputeBlockTotals(currentBlockId));
+      persistRowByUid(ref._uid).then(async () => {
+        await recomputeBlockTotals(currentBlockId);
+        await loadLines(currentBlockId);
+      });
     }
 
     function getPrintEstadoKey(estadoPago = '') {
@@ -1631,6 +1724,7 @@
       } catch (e) {
         console.warn('beforeunload realtime cleanup', e);
       }
+      stopBlockPolling();
     });
   </script>
 </body>
