@@ -22,6 +22,11 @@
       --toolbar-bg:#f8fafc;
       --toolbar-border:#dfe4ea;
       --btn-soft:#eef2f7;
+      --kpi-bg:#f8fafc;
+      --kpi-border:#dfe7ef;
+      --stage-progress:#eef6ff;
+      --stage-progress-border:#cfe0ff;
+      --stage-progress-text:#285ea8;
     }
     *{box-sizing:border-box;}
     body{
@@ -31,16 +36,89 @@
       color:var(--text);
     }
     .page{max-width:1400px;width:95%;margin:24px auto 48px;}
-    .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
-    @media(max-width:1100px){ .layout{grid-template-columns:1fr;} }
     .header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
     .header h2{margin:0;font-weight:800;font-size:22px;}
+
     .card, .filters-card{
       background:var(--card);
       border:1px solid var(--border);
       border-radius:18px;
       box-shadow:var(--shadow);
     }
+
+    .dashboard-card{
+      padding:16px;
+      margin-bottom:16px;
+    }
+    .dashboard-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .dashboard-title{
+      margin:0;
+      font-weight:800;
+      font-size:18px;
+    }
+    .dashboard-subtitle{
+      margin:4px 0 0;
+      color:var(--muted);
+      font-size:13px;
+    }
+    .dashboard-grid{
+      display:grid;
+      grid-template-columns:repeat(7,minmax(0,1fr));
+      gap:12px;
+    }
+    .kpi-card{
+      background:var(--kpi-bg);
+      border:1px solid var(--kpi-border);
+      border-radius:16px;
+      padding:14px;
+      min-height:94px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      box-shadow:0 6px 18px rgba(0,0,0,0.05);
+    }
+    .kpi-label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .kpi-value{
+      font-size:28px;
+      line-height:1;
+      font-weight:900;
+      margin-top:8px;
+    }
+    .kpi-foot{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+      margin-top:8px;
+    }
+
+    .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
+    @media(max-width:1280px){
+      .dashboard-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+    }
+    @media(max-width:1100px){
+      .layout{grid-template-columns:1fr;}
+      .dashboard-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+    }
+    @media(max-width:760px){
+      .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
+    @media(max-width:520px){
+      .dashboard-grid{grid-template-columns:1fr;}
+    }
+
     .filters-card{padding:16px;margin-bottom:12px;}
     .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
     label{font-size:13px;color:var(--muted);font-weight:700;margin-bottom:6px;display:block;}
@@ -51,7 +129,7 @@
     }
 
     /* Lista izquierda */
-    .list-card{padding:10px;max-height:calc(100vh - 210px);overflow-y:auto;}
+    .list-card{padding:10px;max-height:calc(100vh - 290px);overflow-y:auto;}
     .list-card::-webkit-scrollbar{width:10px;}
     .list-card::-webkit-scrollbar-track{background:rgba(0,0,0,0.04);border-radius:12px;}
     .list-card::-webkit-scrollbar-thumb{background:#c9d3de;border-radius:12px;}
@@ -67,7 +145,7 @@
     .bar-text{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
 
     /* Detalle derecha */
-    .detail-card{padding:16px;max-height:calc(100vh - 140px);overflow-y:auto;}
+    .detail-card{padding:16px;max-height:calc(100vh - 220px);overflow-y:auto;}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 18px;}
     .btn{border:1px solid var(--border);background:#f6f8fb;color:#1f2430;
       padding:9px 14px;border-radius:12px;cursor:pointer;font-weight:700;font-size:12px;
@@ -79,22 +157,37 @@
     .detail-meta{font-size:13px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
     .partidas-container{display:flex;flex-direction:column;gap:16px;margin-top:18px;}
     .partida-wrapper{border:1px solid var(--border);border-radius:14px;background:#fff;box-shadow:0 8px 22px rgba(0,0,0,0.06);padding:10px 12px;}
-    .partida-header{display:flex;align-items:center;gap:10px;cursor:pointer;}
+    .partida-header{display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap;}
     .partida-title{font-weight:800;margin:0;}
     .partida-status{padding:6px 12px;border-radius:999px;font-weight:700;font-size:12px;}
     .p-pend{background:var(--chip-amber);color:var(--chip-amber-text);}
     .p-comp{background:var(--chip-green);color:var(--chip-green-text);}
     .chevron{font-size:16px;color:#6b7280;transition:transform .15s;}
     .stage-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:10px;}
-    .stage-item{border:1px solid var(--border);border-radius:12px;padding:10px;background:#ffffff;display:flex;flex-direction:column;gap:6px;box-shadow:0 3px 12px rgba(0,0,0,0.04);position:relative;}
+    .stage-item{border:1px solid var(--border);border-radius:12px;padding:10px;background:#ffffff;display:flex;flex-direction:column;gap:8px;box-shadow:0 3px 12px rgba(0,0,0,0.04);position:relative;}
     .stage-item.done{background:var(--chip-green);border-color:#c6ead1;}
-    .stage-name{font-weight:400;}
-    .stage-owner{font-size:12px;color:#6b7280;}
+    .stage-item.in-progress{background:var(--stage-progress);border-color:var(--stage-progress-border);}
+    .stage-name{font-weight:700;line-height:1.35;padding-right:18px;}
+    .stage-owner{font-size:12px;color:#4f5f74;font-weight:800;}
     .stage-select{padding:8px 10px;border:1px solid var(--border);border-radius:10px;font-weight:700;}
     .note-toggle{position:absolute; top:6px; right:6px; width:20px; height:20px; border-radius:4px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:12px; display:flex;align-items:center;justify-content:center;}
-    .note-box{margin-top:6px; display:none;}
+    .note-box{margin-top:2px; display:none;}
     .note-box textarea{width:100%; min-height:60px; border:1px solid var(--border); border-radius:8px; padding:6px; font-family:inherit; font-size:12px;}
     .note-box.show{display:block;}
+    .owner-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      width:max-content;
+      max-width:100%;
+      background:#edf6f0;
+      color:#2f6f4f;
+      border:1px solid #d5e9dc;
+      border-radius:999px;
+      padding:5px 10px;
+      font-size:11px;
+      font-weight:800;
+    }
 
     /* Modal adjuntos y utilidades */
     .adj-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px;}
@@ -269,6 +362,8 @@
       <h2>Estado de proyectos</h2>
     </div>
 
+    <div id="kpi-dashboard" class="dashboard-card card"></div>
+
     <div class="layout">
       <!-- Columna izquierda: filtros + lista -->
       <div>
@@ -433,18 +528,40 @@
     /* Datos y estado */
     const STAGES = [
       {name:'Diseño y Cierre', owner:'Luis'},
-      {name:'Traspaso de informacion de proyecto', owner:'Luis → Jano - Jorge'},
-      {name:'Rectificacion del espacio', owner:'Jorge - Jano'},
+      {name:'Traspaso de información de proyecto', owner:'Luis'},
+      {name:'Rectificación del espacio', owner:'Alejandro'},
       {name:'Modelado de planta y mobiliario', owner:'Jorge'},
-      {name:'Explicacion y revisión tecnica del proyecto', owner:'Jorge → Jano'},
-      {name:'Explicacion y revisión de diseño', owner:'Jorge - Jano → Luis'},
-      {name:'Ingreso de compra de quincalleria y otros', owner:'Jano'},
+      {name:'Explicación y revisión técnica del proyecto', owner:'Jorge'},
+      {name:'Conformidad del Modelo', owner:'Alejandro'},
       {name:'Optimizado y estimación de tableros y tapacantos', owner:'Jorge'},
+      {name:'Ingreso de compra de quincallería y otros', owner:'Alejandro'},
       {name:'Planos de armado', owner:'Jorge'},
-      {name:'Compras de Melaminas y tapacantos', owner:'Luis - Jano'},
+      {name:'Compras de Melaminas y tapacantos', owner:'Alejandro'},
       {name:'Cortes en taller', owner:'Taller'},
-      {name:'Listo para instalar', owner:'Tallerar'}
+      {name:'Listo para instalar', owner:'Taller'}
     ];
+
+    const LEGACY_STAGE_MAP = {
+      'Diseño y Cierre':'Diseño y Cierre',
+      'Traspaso de informacion de proyecto':'Traspaso de información de proyecto',
+      'Rectificacion del espacio':'Rectificación del espacio',
+      'Modelado de planta y mobiliario':'Modelado de planta y mobiliario',
+      'Explicacion y revisión tecnica del proyecto':'Explicación y revisión técnica del proyecto',
+      'Explicacion y revisión de diseño':'Conformidad del Modelo',
+      'Ingreso de compra de quincalleria y otros':'Ingreso de compra de quincallería y otros',
+      'Optimizado y estimación de tableros y tapacantos':'Optimizado y estimación de tableros y tapacantos',
+      'Planos de armado':'Planos de armado',
+      'Compras de Melaminas y tapacantos':'Compras de Melaminas y tapacantos',
+      'Cortes en taller':'Cortes en taller',
+      'Listo para instalar':'Listo para instalar',
+      'Traspaso de información de proyecto':'Traspaso de información de proyecto',
+      'Rectificación del espacio':'Rectificación del espacio',
+      'Explicación y revisión técnica del proyecto':'Explicación y revisión técnica del proyecto',
+      'Conformidad del Modelo':'Conformidad del Modelo',
+      'Ingreso de compra de quincallería y otros':'Ingreso de compra de quincallería y otros'
+    };
+
+    const STAGE_NAME_SET = new Set(STAGES.map(s => s.name));
     const ADJ_BUCKETS = { skp:'skp', diagrama:'diagramas_corte', planos:'planos_armado', cotizacion:'cotizaciones' };
     const ADJ_LABELS = { skp:'SKP', diagrama:'Diagrama de corte', planos:'Planos de Armado', cotizacion:'Adjuntos Cotización' };
 
@@ -503,6 +620,138 @@
     function showLoader(flag){document.getElementById('loader').style.display=flag?'flex':'none';}
     function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1800);}
 
+    function normalizeStageName(stage){
+      const key = String(stage ?? '').trim();
+      return LEGACY_STAGE_MAP[key] || key;
+    }
+
+    function isKnownStage(stage){
+      return STAGE_NAME_SET.has(normalizeStageName(stage));
+    }
+
+    function normalizeStageMap(rawMap){
+      const normalized = {};
+      Object.entries(rawMap || {}).forEach(([stage, value])=>{
+        const normalizedStage = normalizeStageName(stage);
+        if(!STAGE_NAME_SET.has(normalizedStage)) return;
+        normalized[normalizedStage] = value || 'pendiente';
+      });
+      return normalized;
+    }
+
+    function getStageValue(stageMap, stageName){
+      const normalizedStage = normalizeStageName(stageName);
+      return stageMap?.[normalizedStage] || 'pendiente';
+    }
+
+    function getPartidaPendingCount(partidaId){
+      const stMap = stageStore.get(partidaId) || {};
+      let pending = 0;
+      STAGES.forEach(stage=>{
+        if(getStageValue(stMap, stage.name) !== 'listo') pending += 1;
+      });
+      return pending;
+    }
+
+    function isPartidaComplete(partidaId){
+      return getPartidaPendingCount(partidaId) === 0;
+    }
+
+    function getProjectPendingPartidas(project){
+      return project.partidas.filter(pt => !isPartidaComplete(pt.id)).length;
+    }
+
+    function isProjectComplete(project){
+      return getProjectPendingPartidas(project) === 0;
+    }
+
+    function computeKpis(){
+      const byOwner = { Alejandro:0, Jorge:0, Luis:0, Taller:0 };
+      let totalPendientes = 0;
+      let totalStages = 0;
+      let totalListo = 0;
+      let proyectosActivos = 0;
+
+      proyectos.forEach(project=>{
+        if(!isProjectComplete(project)) proyectosActivos += 1;
+        project.partidas.forEach(pt=>{
+          const stMap = stageStore.get(pt.id) || {};
+          STAGES.forEach(stage=>{
+            const value = getStageValue(stMap, stage.name);
+            totalStages += 1;
+            if(value === 'listo') totalListo += 1;
+            if(value === 'pendiente'){
+              totalPendientes += 1;
+              if(byOwner[stage.owner] !== undefined){
+                byOwner[stage.owner] += 1;
+              }
+            }
+          });
+        });
+      });
+
+      const promedioAvance = totalStages ? Math.round((totalListo/totalStages)*100) : 0;
+      return { byOwner, totalPendientes, proyectosActivos, promedioAvance };
+    }
+
+    function renderKpis(){
+      const wrap = document.getElementById('kpi-dashboard');
+      if(!wrap) return;
+
+      const kpis = computeKpis();
+      wrap.innerHTML = `
+        <div class="dashboard-head">
+          <div>
+            <h3 class="dashboard-title">Dashboard de gestión</h3>
+            <p class="dashboard-subtitle">Resumen ejecutivo calculado sobre las etapas visibles y su estado actual.</p>
+          </div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Alejandro</div>
+            <div class="kpi-value">${kpis.byOwner.Alejandro}</div>
+            <div class="kpi-foot">tareas pendientes</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Jorge</div>
+            <div class="kpi-value">${kpis.byOwner.Jorge}</div>
+            <div class="kpi-foot">tareas pendientes</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Luis</div>
+            <div class="kpi-value">${kpis.byOwner.Luis}</div>
+            <div class="kpi-foot">tareas pendientes</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Taller</div>
+            <div class="kpi-value">${kpis.byOwner.Taller}</div>
+            <div class="kpi-foot">tareas pendientes</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total pendientes</div>
+            <div class="kpi-value">${kpis.totalPendientes}</div>
+            <div class="kpi-foot">solo estado pendiente</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Proyectos activos</div>
+            <div class="kpi-value">${kpis.proyectosActivos}</div>
+            <div class="kpi-foot">proyectos no completados</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Promedio avance</div>
+            <div class="kpi-value">${kpis.promedioAvance}%</div>
+            <div class="kpi-foot">según etapas en listo</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function rerenderMainUI(){
+      renderKpis();
+      renderLista();
+      renderDetalle();
+    }
+
     document.addEventListener('DOMContentLoaded',()=>bootstrapEstado());
     window.addEventListener('beforeunload', () => {
       if(realtimeSub) { try{ realtimeSub.unsubscribe(); }catch(e){} realtimeSub=null; }
@@ -520,6 +769,7 @@
       }catch(e){
         console.error(e);
         document.getElementById('proyectos-list').innerHTML='<div style="padding:22px;text-align:center;color:#b91c1c;">No se pudo cargar información</div>';
+        renderKpis();
       }
     }
 
@@ -566,8 +816,10 @@
         .not('partida_id','is',null);
       const m=new Map();
       (partData||[]).forEach(r=>{
+        const normalizedStage = normalizeStageName(r.etapa);
+        if(!STAGE_NAME_SET.has(normalizedStage)) return;
         if(!m.has(r.partida_id)) m.set(r.partida_id,{});
-        m.get(r.partida_id)[r.etapa]=r.nota||'';
+        m.get(r.partida_id)[normalizedStage]=r.nota||'';
       });
       stageNotesByPartida = m;
 
@@ -575,7 +827,11 @@
         .select('etapa, nota')
         .is('partida_id', null);
       globalStageNotes = {};
-      (globData||[]).forEach(r=>{ globalStageNotes[r.etapa]=r.nota||''; });
+      (globData||[]).forEach(r=>{
+        const normalizedStage = normalizeStageName(r.etapa);
+        if(!STAGE_NAME_SET.has(normalizedStage)) return;
+        globalStageNotes[normalizedStage]=r.nota||'';
+      });
     }
 
     function parseCliente(cli){
@@ -594,16 +850,19 @@
       if (error) { console.warn('loadStageStoreFromSupabase', error); return; }
       stageStore.clear();
       (data || []).forEach(r => {
+        const normalizedStage = normalizeStageName(r.etapa);
+        if(!STAGE_NAME_SET.has(normalizedStage)) return;
         const map = stageStore.get(r.partida_id) || {};
-        map[r.etapa] = r.estado || 'pendiente';
+        map[normalizedStage] = r.estado || 'pendiente';
         stageStore.set(r.partida_id, map);
       });
     }
 
     async function saveStageStatus(partidaId, etapa, estado) {
       const sb = await waitForSupabase();
+      const normalizedStage = normalizeStageName(etapa);
       const { error } = await sb.from('etapa_estado')
-        .upsert({ partida_id: partidaId, etapa, estado }, { onConflict: 'partida_id,etapa' });
+        .upsert({ partida_id: partidaId, etapa: normalizedStage, estado }, { onConflict: 'partida_id,etapa' });
       if (error) console.error('saveStageStatus', error);
     }
 
@@ -618,22 +877,23 @@
         .on('postgres_changes', { event:'*', schema:'public', table:'etapa_estado' }, payload => {
           const row = payload.new || payload.old;
           if(!row) return;
-          const { partida_id, etapa, estado } = row;
+          const partida_id = row.partida_id;
+          const etapa = normalizeStageName(row.etapa);
+          const estado = row.estado || 'pendiente';
+          if(!STAGE_NAME_SET.has(etapa)) return;
           const map = stageStore.get(partida_id) || {};
           if (map[etapa] === estado) return;
-          map[etapa] = estado || 'pendiente';
+          map[etapa] = estado;
           stageStore.set(partida_id, map);
           saveStageStore();
-          renderDetalle();
-          renderLista();
+          rerenderMainUI();
         })
         .subscribe(status => { console.log('Realtime etapa_estado:', status); });
 
       pollId = setInterval(async () => {
         try {
           await loadStageStoreFromSupabase();
-          renderDetalle();
-          renderLista();
+          rerenderMainUI();
         } catch(e){}
       }, LIVE_POLL_MS);
     }
@@ -645,7 +905,7 @@
         if(raw){
           const obj=JSON.parse(raw);
           Object.keys(obj).forEach(k=>{
-            const merged = { ...(stageStore.get(k)||{}), ...obj[k] };
+            const merged = { ...(stageStore.get(k)||{}), ...normalizeStageMap(obj[k]) };
             stageStore.set(k, merged);
           });
         }
@@ -653,7 +913,8 @@
     }
 
     function saveStageStore(){
-      const obj={}; stageStore.forEach((v,k)=>{obj[k]=v;});
+      const obj={}; 
+      stageStore.forEach((v,k)=>{obj[k]=normalizeStageMap(v);});
       localStorage.setItem('byt_estado_proyectos_stages_v2', JSON.stringify(obj));
     }
 
@@ -673,15 +934,15 @@
       const est=document.getElementById('filtro-estado').value;
 
       filtered = proyectos.filter(p=>{
-        const pend = p.partidas.some(pt=>pt.estado!=='completada');
+        const pend = getProjectPendingPartidas(p) > 0;
         const matchTxt = !txt || p.display.toLowerCase().includes(txt) || p.cliente.toLowerCase().includes(txt);
         const matchEst = est==='todos' ? true : (est==='abierto'? pend : !pend);
         return matchTxt && matchEst;
       });
 
       filtered.sort((a,b)=>{
-        const pa = a.partidas.some(pt=>pt.estado!=='completada') ? 0 : 1;
-        const pb = b.partidas.some(pt=>pt.estado!=='completada') ? 0 : 1;
+        const pa = getProjectPendingPartidas(a) > 0 ? 0 : 1;
+        const pb = getProjectPendingPartidas(b) > 0 ? 0 : 1;
         if(pa!==pb) return pa-pb;
         return (a.display||'').localeCompare(b.display||'');
       });
@@ -690,8 +951,7 @@
         selectedKey = filtered.length ? filtered[0].key : null;
       }
 
-      renderLista();
-      renderDetalle();
+      rerenderMainUI();
     }
 
     function computeProgress(proj){
@@ -700,7 +960,7 @@
         const stMap = stageStore.get(pt.id) || {};
         STAGES.forEach(s=>{
           total += 1;
-          if(stMap[s.name]==='listo') done += 1;
+          if(getStageValue(stMap, s.name)==='listo') done += 1;
         });
       });
       const percent = total ? Math.round((done/total)*100) : 0;
@@ -715,7 +975,7 @@
       }
       list.innerHTML = filtered.map(p=>{
         const prog=computeProgress(p);
-        const pendientes = p.partidas.filter(pt=>pt.estado!=='completada').length;
+        const pendientes = getProjectPendingPartidas(p);
         return `
           <div class="proj-item ${p.key===selectedKey?'active':''}" onclick="selectProject('${attr(p.key)}')">
             <div style="display:flex;align-items:flex-start;gap:8px;">
@@ -740,7 +1000,7 @@
       selectedKey = key;
       const proj = filtered.find(p=>p.key===key);
       openPartidas.clear();
-      if(proj && proj.partidas.length){ openPartidas.add(proj.partidas[0].id); }
+      if(proj && proj.partidas.length){ openPartidas.add(String(proj.partidas[0].id)); }
       renderLista();
       renderDetalle();
     }
@@ -759,10 +1019,10 @@
           <h3>${esc(proj.display)}</h3>
           <div class="detail-meta">
             <span>Cliente: ${esc(proj.cliente||'N/A')}</span>
-            <span>Partidas pendientes: ${proj.partidas.filter(pt=>pt.estado!=='completada').length}</span>
+            <span>Partidas pendientes: ${getProjectPendingPartidas(proj)}</span>
           </div>
           <div class="progress-wrap" style="margin:10px 0;">
-            <div class="progress-bar"><div class="bar-fill" style="width:${prog.percent}%;"></div></div>
+            <div class="bar"><div class="bar-fill" style="width:${prog.percent}%;"></div></div>
           </div>
         </div>
 
@@ -781,9 +1041,10 @@
           ${proj.partidas.map(pt=>{
             const stMap = stageStore.get(pt.id) || {};
             const notes = stageNotesByPartida.get(pt.id) || {};
-            const pending = pt.estado!=='completada';
+            const pending = !isPartidaComplete(pt.id);
             const partId = attr(pt.id);
-            const isOpen = openPartidas.has(pt.id);
+            const partIdRaw = String(pt.id);
+            const isOpen = openPartidas.has(partIdRaw) || openPartidas.has(partId);
             return `
               <div class="partida-wrapper">
                 <div class="partida-header" onclick="togglePartida('${partId}')">
@@ -793,22 +1054,23 @@
                 </div>
                 <div class="stage-grid" id="stages-${partId}" style="display:${isOpen?'grid':'none'};">
                   ${STAGES.map(stage=>{
-                    const value = stMap[stage.name] || 'pendiente';
-                    const nota = notes[stage.name] ?? globalStageNotes[stage.name] ?? '';
-                    const noteId = `note-${pt.id}-${stage.name}`;
-                    const doneClass = value==='listo' ? 'done' : '';
+                    const normalizedStage = normalizeStageName(stage.name);
+                    const value = getStageValue(stMap, normalizedStage);
+                    const nota = notes[normalizedStage] ?? globalStageNotes[normalizedStage] ?? '';
+                    const noteId = `note-${pt.id}-${normalizedStage}`;
+                    const doneClass = value==='listo' ? 'done' : (value==='en_progreso' ? 'in-progress' : '');
                     return `
                     <div class="stage-item ${doneClass}">
                         <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
-                        <span class="stage-name">${esc(stage.name)}</span>
-                        <span class="stage-owner">${esc(stage.owner)}</span>
-                        <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(stage.name)}', this.value, true)">
+                        <span class="stage-name">${esc(normalizedStage)}</span>
+                        <span class="stage-owner"><span class="owner-badge">Responsable: ${esc(stage.owner)}</span></span>
+                        <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(normalizedStage)}', this.value, true)">
                           <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
                           <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
                           <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
                         </select>
                         <div id="${attr(noteId)}" class="note-box">
-                          <textarea data-stage="${attr(stage.name)}" placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(stage.name)}', this.value)">${esc(nota)}</textarea>
+                          <textarea data-stage="${attr(normalizedStage)}" placeholder="Descripción / comentarios" onblur="saveStageNote('${attr(pt.id)}','${attr(normalizedStage)}', this.value)">${esc(nota)}</textarea>
                         </div>
                       </div>
                     `;
@@ -827,7 +1089,7 @@
       const show = grid.style.display==='none';
       grid.style.display= show ? 'grid':'none';
       if(chev) chev.style.transform = show ? 'rotate(90deg)' : 'rotate(0deg)';
-      if(show) openPartidas.add(partId); else openPartidas.delete(partId);
+      if(show) openPartidas.add(String(partId)); else openPartidas.delete(String(partId));
     }
 
     /* Notas y etapas */
@@ -838,14 +1100,14 @@
     }
 
     function setStage(partidaId, stage, value, keepOpen=false){
-      if(keepOpen) openPartidas.add(partidaId);
-      const current = stageStore.get(partidaId) || {};
-      current[stage] = value;
+      const normalizedStage = normalizeStageName(stage);
+      if(keepOpen) openPartidas.add(String(partidaId));
+      const current = normalizeStageMap(stageStore.get(partidaId) || {});
+      current[normalizedStage] = value;
       stageStore.set(partidaId, current);
       saveStageStore();                    // offline
-      saveStageStatus(partidaId, stage, value); // online
-      renderDetalle();
-      renderLista();
+      saveStageStatus(partidaId, normalizedStage, value); // online
+      rerenderMainUI();
     }
 
     function refreshStageNotesInDOM(etapa, nota){
@@ -853,13 +1115,14 @@
     }
     async function saveStageNote(partidaId, etapa, nota){
       const sb=await waitForSupabase();
+      const normalizedStage = normalizeStageName(etapa);
       const current = stageNotesByPartida.get(partidaId) || {};
-      current[etapa]=nota;
+      current[normalizedStage]=nota;
       stageNotesByPartida.set(partidaId,current);
-      await sb.from('etapa_notas').upsert({ partida_id: partidaId, etapa, nota });
-      globalStageNotes[etapa]=nota;
-      await sb.from('etapa_notas').upsert({ partida_id: null, etapa, nota });
-      refreshStageNotesInDOM(etapa, nota);
+      await sb.from('etapa_notas').upsert({ partida_id: partidaId, etapa: normalizedStage, nota });
+      globalStageNotes[normalizedStage]=nota;
+      await sb.from('etapa_notas').upsert({ partida_id: null, etapa: normalizedStage, nota });
+      refreshStageNotesInDOM(normalizedStage, nota);
       toast('Nota guardada');
     }
 
@@ -1364,6 +1627,14 @@
           }
         }catch(e){}
       }, BOARD_POLL_MS);
+    }
+
+    function verCotizacion(id){
+      if(!id){ 
+        toast('Cotización no disponible');
+        return;
+      }
+      window.location.href = `detalle.html?id=${id}`;
     }
 
     /* -- Utilidades globales -- */
