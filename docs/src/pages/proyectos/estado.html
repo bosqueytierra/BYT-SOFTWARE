@@ -206,10 +206,16 @@
       font-weight:600;
     }
     .top8-list{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:24px;
+      align-items:start;
+    }
+    .top8-column{
       display:flex;
       flex-direction:column;
       gap:0;
-      background:#fff;
+      min-width:0;
     }
     .top8-item{
       display:grid;
@@ -269,6 +275,7 @@
     }
     @media(max-width:760px){
       .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .top8-list{grid-template-columns:1fr;}
     }
     @media(max-width:520px){
       .dashboard-grid{grid-template-columns:1fr;}
@@ -906,6 +913,8 @@
 
       function renderTop8(){
         const items = kpis.topPendingStages || [];
+        const leftColumn = items.slice(0, 4);
+        const rightColumn = items.slice(4, 8);
 
         return `
           <div class="dashboard-extra">
@@ -916,13 +925,24 @@
                 items.length
                   ? `
                     <div class="top8-list">
-                      ${items.map((item, index)=>`
-                        <div class="top8-item">
-                          <div class="top8-rank">${index + 1}</div>
-                          <div class="top8-stage">${esc(item.stage)}</div>
-                          <div class="top8-count">${item.count}</div>
-                        </div>
-                      `).join('')}
+                      <div class="top8-column">
+                        ${leftColumn.map((item, index)=>`
+                          <div class="top8-item">
+                            <div class="top8-rank">${index + 1}</div>
+                            <div class="top8-stage">${esc(item.stage)}</div>
+                            <div class="top8-count">${item.count}</div>
+                          </div>
+                        `).join('')}
+                      </div>
+                      <div class="top8-column">
+                        ${rightColumn.map((item, index)=>`
+                          <div class="top8-item">
+                            <div class="top8-rank">${index + 5}</div>
+                            <div class="top8-stage">${esc(item.stage)}</div>
+                            <div class="top8-count">${item.count}</div>
+                          </div>
+                        `).join('')}
+                      </div>
                     </div>
                   `
                   : `<div class="top8-empty">Sin actividades pendientes</div>`
