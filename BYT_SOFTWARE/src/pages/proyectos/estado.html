@@ -305,6 +305,7 @@
     .bar{height:8px;border-radius:999px;background:#edf0f5;overflow:hidden;width:100%;}
     .bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#ef4444,#22c55e);}
     .bar-text{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
+    .proj-deadline{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
 
     /* Detalle derecha */
     .detail-card{padding:16px;max-height:calc(100vh - 220px);overflow-y:auto;}
@@ -735,6 +736,7 @@
     let pendingFiles=[]; let isUploading=false;
     let openPartidas=new Set();
     let realtimeSub = null; let pollId = null;
+    let projectFechaLimiteMap = new Map();
     const LIVE_POLL_MS = 4000;
 
     // Board
@@ -825,6 +827,28 @@
 
     function isProjectComplete(project){
       return getProjectPendingPartidas(project) === 0;
+    }
+
+    function formatInstalacionText(fechaLimite){
+      if(!fechaLimite) return '';
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      const target = new Date(`${fechaLimite}T00:00:00`);
+      if(Number.isNaN(target.getTime())) return '';
+
+      const diffMs = target.getTime() - today.getTime();
+      const dias = Math.ceil(diffMs / 86400000);
+
+      if(dias > 1) return `Instalación en ${dias} días`;
+      if(dias === 1) return 'Instalación mañana';
+      if(dias === 0) return 'Vence hoy';
+      return `Atrasado ${Math.abs(dias)} días`;
+    }
+
+    function getProjectInstalacionText(project){
+      const fechaLimite = projectFechaLimiteMap.get(project.cotizacionId) || project.fecha_entrega_limite || '';
+      return formatInstalacionText(fechaLimite);
     }
 
     function computeKpis(){
@@ -1041,6 +1065,38 @@
       if(errCot) throw errCot;
       const approved = new Set((cotAprob||[]).map(c=>c.id));
 
+      const { data:ventasFechaData, error:ventasFechaErr } = await sb
+        .from('ventas')
+        .select('cotizacion_id, fecha_entrega_limite')
+        .not('cotizacion_id','is',null)
+        .not('fecha_entrega_limite','is',null);
+      if(ventasFechaErr) throw ventasFechaErr;
+
+      const fechaMap = new Map();
+      (ventasFechaData || []).forEach(row=>{
+        if(!fechaMap.has(row.cotizacion_id) && row.fecha_entrega_limite){
+          fechaMap.set(row.cotizacion_id, row.fecha_entrega_limite);
+        }
+      });
+
+      const missingCotIds = Array.from(approved).filter(id => !fechaMap.has(id));
+      if(missingCotIds.length){
+        const { data:cotFechaData, error:cotFechaErr } = await sb
+          .from('cotizaciones')
+          .select('id, fecha_entrega_limite, estado')
+          .eq('estado','aprobada')
+          .in('id', missingCotIds);
+        if(cotFechaErr) throw cotFechaErr;
+
+        (cotFechaData || []).forEach(row=>{
+          if(!fechaMap.has(row.id) && row.fecha_entrega_limite){
+            fechaMap.set(row.id, row.fecha_entrega_limite);
+          }
+        });
+      }
+
+      projectFechaLimiteMap = fechaMap;
+
       const res=await sbClient.listarVentas();
       if(!res.success) throw new Error(res.error||'listarVentas sin éxito');
       const ventas=(res.data||[]).filter(v=>approved.has(v.cotizacion_id));
@@ -1054,6 +1110,7 @@
           display:v.proyecto||'Proyecto sin nombre',
           cliente:parseCliente(v.cliente),
           cotizacionId:v.cotizacion_id,
+          fecha_entrega_limite: fechaMap.get(v.cotizacion_id) || '',
           partidas:[]
         });
         map.get(key).partidas.push({
@@ -1234,6 +1291,7 @@
       list.innerHTML = filtered.map(p=>{
         const prog=computeProgress(p);
         const pendientes = getProjectPendingPartidas(p);
+        const instalacionText = getProjectInstalacionText(p);
         return `
           <div class="proj-item ${p.key===selectedKey?'active':''}" onclick="selectProject('${attr(p.key)}')">
             <div style="display:flex;align-items:flex-start;gap:8px;">
@@ -1243,6 +1301,7 @@
                   <span>Cliente: ${esc(p.cliente||'N/A')}</span>
                   <span>Partidas pendientes: ${pendientes}</span>
                 </div>
+                ${instalacionText ? `<div class="proj-deadline">${esc(instalacionText)}</div>` : ''}
                 <div class="proj-progress">
                   <div class="bar"><div class="bar-fill" style="width:${prog.percent}%;"></div></div>
                   <div class="bar-text">${prog.percent}% completado</div>
@@ -1272,11 +1331,13 @@
       }
       captureOpenPartidas();
       const prog=computeProgress(proj);
+      const instalacionText = getProjectInstalacionText(proj);
       wrap.innerHTML = `
         <div class="detail-header">
           <h3>${esc(proj.display)}</h3>
           <div class="detail-meta">
             <span>Cliente: ${esc(proj.cliente||'N/A')}</span>
+            ${instalacionText ? `<span>${esc(instalacionText)}</span>` : ''}
             <span>Partidas pendientes: ${getProjectPendingPartidas(proj)}</span>
           </div>
           <div class="progress-wrap" style="margin:10px 0;">
