@@ -265,25 +265,28 @@
       font-weight:700;
     }
     .upcoming-list{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:24px;
+      align-items:start;
+    }
+    .upcoming-column{
       display:flex;
       flex-direction:column;
       gap:0;
-      background:#fff;
+      min-width:0;
     }
     .upcoming-item{
       display:grid;
       grid-template-columns:minmax(0,1fr) auto;
       gap:12px;
       align-items:center;
-      padding:10px 0;
-      border-bottom:1px solid #eceff3;
-      background:#fff;
-    }
-    .upcoming-item:last-child{
-      border-bottom:none;
-    }
-    .upcoming-item:hover{
-      background:#f8fafc;
+      padding:10px 12px;
+      border:1px solid rgba(239, 68, 68, 0.12);
+      border-bottom-width:1px;
+      border-radius:10px;
+      margin-bottom:8px;
+      box-shadow:none;
     }
     .upcoming-main{
       min-width:0;
@@ -304,6 +307,10 @@
       font-weight:700;
       line-height:1.3;
     }
+    .upcoming-time{
+      color:#7f1d1d;
+      font-weight:800;
+    }
     .upcoming-progress{
       display:inline-flex;
       align-items:center;
@@ -311,8 +318,8 @@
       min-width:48px;
       padding:4px 10px;
       border-radius:999px;
-      background:#f1f5f9;
-      border:1px solid #dbe2ea;
+      background:rgba(255,255,255,0.72);
+      border:1px solid rgba(148,163,184,0.35);
       color:#253041;
       font-size:12px;
       font-weight:900;
@@ -330,6 +337,7 @@
     @media(max-width:760px){
       .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
       .top8-list{grid-template-columns:1fr;}
+      .upcoming-list{grid-template-columns:1fr;}
       .upcoming-item{grid-template-columns:1fr;}
       .upcoming-progress{justify-self:start;}
     }
@@ -971,13 +979,15 @@
           if(diasRestantes === null || !instalacionText) return null;
 
           const progress = computeProgress(project);
+          if(progress.done === progress.total) return null;
+
           return {
             key: project.key,
             display: project.display || 'Proyecto sin nombre',
             diasRestantes,
             instalacionText,
             doneStages: progress.done,
-            totalStages: STAGES.length,
+            totalStages: progress.total,
             pendingPartidas: getProjectPendingPartidas(project)
           };
         })
@@ -1067,6 +1077,31 @@
 
       function renderUpcomingProjects(){
         const items = kpis.upcomingInstallProjects || [];
+        const leftColumn = items.slice(0, 4);
+        const rightColumn = items.slice(4, 8);
+        const criticalStyles = [
+          'background:linear-gradient(90deg, rgba(239,68,68,0.24), rgba(255,255,255,0.94)); border-color:rgba(239,68,68,0.30);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.20), rgba(255,255,255,0.95)); border-color:rgba(239,68,68,0.26);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.17), rgba(255,255,255,0.96)); border-color:rgba(239,68,68,0.22);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.14), rgba(255,255,255,0.97)); border-color:rgba(239,68,68,0.18);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.12), rgba(255,255,255,0.98)); border-color:rgba(239,68,68,0.16);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.10), rgba(255,255,255,0.98)); border-color:rgba(239,68,68,0.14);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.08), rgba(255,255,255,0.99)); border-color:rgba(239,68,68,0.12);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.06), rgba(255,255,255,0.99)); border-color:rgba(239,68,68,0.10);'
+        ];
+
+        function renderItem(item, rank){
+          return `
+            <div class="upcoming-item" style="${criticalStyles[rank-1] || criticalStyles[criticalStyles.length-1]}">
+              <div class="upcoming-main">
+                <div class="upcoming-project">${esc(item.display)}</div>
+                <div class="upcoming-meta"><span class="upcoming-time">${esc(item.instalacionText)}</span> · ${item.doneStages}/${item.totalStages}</div>
+              </div>
+              <div class="upcoming-progress">${item.doneStages}/${item.totalStages}</div>
+            </div>
+          `;
+        }
+
         return `
           <div class="upcoming-card">
             <h4 class="upcoming-title">Próximos 8 proyectos a instalar</h4>
@@ -1075,15 +1110,12 @@
               items.length
                 ? `
                   <div class="upcoming-list">
-                    ${items.map(item=>`
-                      <div class="upcoming-item">
-                        <div class="upcoming-main">
-                          <div class="upcoming-project">${esc(item.display)}</div>
-                          <div class="upcoming-meta">${esc(item.instalacionText)} · ${item.doneStages}/${item.totalStages}</div>
-                        </div>
-                        <div class="upcoming-progress">${item.doneStages}/${item.totalStages}</div>
-                      </div>
-                    `).join('')}
+                    <div class="upcoming-column">
+                      ${leftColumn.map((item, index)=>renderItem(item, index + 1)).join('')}
+                    </div>
+                    <div class="upcoming-column">
+                      ${rightColumn.map((item, index)=>renderItem(item, index + 5)).join('')}
+                    </div>
                   </div>
                 `
                 : `<div class="upcoming-empty">Sin proyectos con fecha de instalación disponible</div>`
