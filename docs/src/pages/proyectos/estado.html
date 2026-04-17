@@ -193,8 +193,17 @@
       padding:14px;
       box-shadow:0 6px 18px rgba(0,0,0,0.05);
     }
+    .top8-title-wrap, .upcoming-title-wrap{
+      display:inline-flex;
+      align-items:center;
+      background:#f3f6fa;
+      border:1px solid #e3e9f1;
+      border-radius:10px;
+      padding:6px 10px;
+      margin-bottom:6px;
+    }
     .top8-title, .upcoming-title{
-      margin:0 0 4px;
+      margin:0;
       font-size:15px;
       font-weight:800;
       color:var(--text);
@@ -997,7 +1006,7 @@
           if(a.pendingPartidas !== b.pendingPartidas) return b.pendingPartidas - a.pendingPartidas;
           return (a.display || '').localeCompare(b.display || '');
         })
-        .slice(0, 8);
+        .slice(0, 10);
 
       const promedioAvance = totalStages ? Math.round((totalListo/totalStages)*100) : 0;
       return { byOwner, byOwnerBreakdown: breakdownOrdered, topPendingStages, upcomingInstallProjects, totalPendientes, proyectosActivos, promedioAvance };
@@ -1043,7 +1052,9 @@
 
         return `
           <div class="top8-card">
-            <h4 class="top8-title">Top 8 de actividades con más pendientes</h4>
+            <div class="top8-title-wrap">
+              <h4 class="top8-title">Top 8 de actividades con más pendientes</h4>
+            </div>
             <p class="top8-subtitle">Ranking global calculado sobre todas las partidas y proyectos cargados.</p>
             ${
               items.length
@@ -1077,8 +1088,8 @@
 
       function renderUpcomingProjects(){
         const items = kpis.upcomingInstallProjects || [];
-        const leftColumn = items.slice(0, 4);
-        const rightColumn = items.slice(4, 8);
+        const leftColumn = items.slice(0, 5);
+        const rightColumn = items.slice(5, 10);
         const criticalStyles = [
           'background:linear-gradient(90deg, rgba(239,68,68,0.24), rgba(255,255,255,0.94)); border-color:rgba(239,68,68,0.30);',
           'background:linear-gradient(90deg, rgba(239,68,68,0.20), rgba(255,255,255,0.95)); border-color:rgba(239,68,68,0.26);',
@@ -1087,7 +1098,9 @@
           'background:linear-gradient(90deg, rgba(239,68,68,0.12), rgba(255,255,255,0.98)); border-color:rgba(239,68,68,0.16);',
           'background:linear-gradient(90deg, rgba(239,68,68,0.10), rgba(255,255,255,0.98)); border-color:rgba(239,68,68,0.14);',
           'background:linear-gradient(90deg, rgba(239,68,68,0.08), rgba(255,255,255,0.99)); border-color:rgba(239,68,68,0.12);',
-          'background:linear-gradient(90deg, rgba(239,68,68,0.06), rgba(255,255,255,0.99)); border-color:rgba(239,68,68,0.10);'
+          'background:linear-gradient(90deg, rgba(239,68,68,0.06), rgba(255,255,255,0.99)); border-color:rgba(239,68,68,0.10);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.05), rgba(255,255,255,0.995)); border-color:rgba(239,68,68,0.09);',
+          'background:linear-gradient(90deg, rgba(239,68,68,0.04), rgba(255,255,255,0.995)); border-color:rgba(239,68,68,0.08);'
         ];
 
         function renderItem(item, rank){
@@ -1104,7 +1117,9 @@
 
         return `
           <div class="upcoming-card">
-            <h4 class="upcoming-title">Próximos 8 proyectos a instalar</h4>
+            <div class="upcoming-title-wrap">
+              <h4 class="upcoming-title">Próximos 10 proyectos a instalar</h4>
+            </div>
             <p class="upcoming-subtitle">Ordenados de mayor urgencia a menor según fecha de instalación.</p>
             ${
               items.length
@@ -1114,7 +1129,7 @@
                       ${leftColumn.map((item, index)=>renderItem(item, index + 1)).join('')}
                     </div>
                     <div class="upcoming-column">
-                      ${rightColumn.map((item, index)=>renderItem(item, index + 5)).join('')}
+                      ${rightColumn.map((item, index)=>renderItem(item, index + 6)).join('')}
                     </div>
                   </div>
                 `
