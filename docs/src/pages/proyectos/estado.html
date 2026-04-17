@@ -136,7 +136,8 @@
     .kpi-hover-list{
       display:flex;
       flex-direction:column;
-      gap:8px;
+      gap:0;
+      background:#fff;
     }
     .kpi-hover-empty{
       font-size:12px;
@@ -148,10 +149,15 @@
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid rgba(224, 198, 161, 0.35);
-      background:rgba(245, 158, 11, 0.08);
+      padding:7px 0;
+      border-bottom:1px solid #eceff3;
+      background:#fff;
+    }
+    .kpi-hover-item:last-child{
+      border-bottom:none;
+    }
+    .kpi-hover-item:hover{
+      background:#f8fafc;
     }
     .kpi-hover-stage{
       color:var(--text);
@@ -165,10 +171,10 @@
       align-items:center;
       justify-content:center;
       min-width:32px;
-      padding:4px 10px;
+      padding:3px 9px;
       border-radius:999px;
-      background:#eef2f7;
-      border:1px solid #d9e2ec;
+      background:#f1f5f9;
+      border:1px solid #dbe2ea;
       color:#253041;
       font-weight:900;
       font-size:12px;
@@ -202,22 +208,28 @@
     .top8-list{
       display:flex;
       flex-direction:column;
-      gap:8px;
+      gap:0;
+      background:#fff;
     }
     .top8-item{
       display:grid;
       grid-template-columns:28px 1fr auto;
       align-items:center;
       gap:10px;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(224, 198, 161, 0.35);
-      background:rgba(245, 158, 11, 0.08);
+      padding:7px 0;
+      border-bottom:1px solid #eceff3;
+      background:#fff;
+    }
+    .top8-item:last-child{
+      border-bottom:none;
+    }
+    .top8-item:hover{
+      background:#f8fafc;
     }
     .top8-rank{
       font-size:12px;
       font-weight:900;
-      color:#7c5a18;
+      color:#6b7280;
       text-align:center;
     }
     .top8-stage{
@@ -232,10 +244,10 @@
       align-items:center;
       justify-content:center;
       min-width:36px;
-      padding:5px 10px;
+      padding:4px 10px;
       border-radius:999px;
-      background:#eef2f7;
-      border:1px solid #d9e2ec;
+      background:#f1f5f9;
+      border:1px solid #dbe2ea;
       color:#253041;
       font-size:12px;
       font-weight:900;
@@ -827,10 +839,14 @@
             if(value === 'listo') totalListo += 1;
             if(value === 'pendiente'){
               totalPendientes += 1;
-              globalStageCounts[stage.name] = (globalStageCounts[stage.name] || 0) + 1;
+              if(stage.name !== 'Listo para instalar'){
+                globalStageCounts[stage.name] = (globalStageCounts[stage.name] || 0) + 1;
+              }
               if(byOwner[stage.owner] !== undefined){
                 byOwner[stage.owner] += 1;
-                byOwnerBreakdown[stage.owner][stage.name] = (byOwnerBreakdown[stage.owner][stage.name] || 0) + 1;
+                if(stage.name !== 'Listo para instalar'){
+                  byOwnerBreakdown[stage.owner][stage.name] = (byOwnerBreakdown[stage.owner][stage.name] || 0) + 1;
+                }
               }
             }
           });
@@ -840,13 +856,13 @@
       const breakdownOrdered = {};
       Object.keys(byOwnerBreakdown).forEach(owner=>{
         const entries = Object.entries(byOwnerBreakdown[owner])
-          .filter(([, count]) => count > 0)
+          .filter(([stage, count]) => stage !== 'Listo para instalar' && count > 0)
           .sort((a,b)=> b[1] - a[1] || a[0].localeCompare(b[0]));
         breakdownOrdered[owner] = entries.map(([stage, count])=>({ stage, count }));
       });
 
       const topPendingStages = Object.entries(globalStageCounts)
-        .filter(([, count]) => count > 0)
+        .filter(([stage, count]) => stage !== 'Listo para instalar' && count > 0)
         .sort((a,b)=> b[1] - a[1] || a[0].localeCompare(b[0]))
         .slice(0, 8)
         .map(([stage, count])=>({ stage, count }));
@@ -861,16 +877,8 @@
 
       const kpis = computeKpis();
 
-      function getHeatStyle(count, maxCount){
-        const ratio = maxCount ? (count / maxCount) : 0;
-        const alpha = 0.06 + (ratio * 0.20);
-        const borderAlpha = 0.22 + (ratio * 0.30);
-        return `background:rgba(245, 158, 11, ${alpha.toFixed(3)});border-color:rgba(224, 198, 161, ${borderAlpha.toFixed(3)});`;
-      }
-
       function renderOwnerHover(owner){
         const items = kpis.byOwnerBreakdown[owner] || [];
-        const maxCount = items.length ? Math.max(...items.map(item=>item.count)) : 0;
 
         if(!items.length){
           return `
@@ -886,7 +894,7 @@
             <div class="kpi-hover-title">Desglose de pendientes</div>
             <div class="kpi-hover-list">
               ${items.map(item=>`
-                <div class="kpi-hover-item" style="${getHeatStyle(item.count, maxCount)}">
+                <div class="kpi-hover-item">
                   <div class="kpi-hover-stage">${esc(item.stage)}</div>
                   <div class="kpi-hover-count">${item.count}</div>
                 </div>
@@ -898,7 +906,6 @@
 
       function renderTop8(){
         const items = kpis.topPendingStages || [];
-        const maxCount = items.length ? Math.max(...items.map(item=>item.count)) : 0;
 
         return `
           <div class="dashboard-extra">
@@ -910,7 +917,7 @@
                   ? `
                     <div class="top8-list">
                       ${items.map((item, index)=>`
-                        <div class="top8-item" style="${getHeatStyle(item.count, maxCount)}">
+                        <div class="top8-item">
                           <div class="top8-rank">${index + 1}</div>
                           <div class="top8-stage">${esc(item.stage)}</div>
                           <div class="top8-count">${item.count}</div>
