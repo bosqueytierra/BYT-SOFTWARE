@@ -196,7 +196,7 @@
     .top8-title-wrap, .upcoming-title-wrap{
       display:inline-flex;
       align-items:center;
-      background:#f3f6fa;
+      background:#eef2f7;
       border:1px solid #e3e9f1;
       border-radius:10px;
       padding:6px 10px;
@@ -296,6 +296,7 @@
       border-radius:10px;
       margin-bottom:8px;
       box-shadow:none;
+      cursor:pointer;
     }
     .upcoming-main{
       min-width:0;
@@ -708,7 +709,7 @@
             <button class="tool-pill icon-btn" id="extend-canvas">⬇ Extender lienzo</button>
             <button class="tool-pill icon-btn" id="board-undo">↶ Deshacer</button>
             <button class="tool-pill icon-btn" id="board-redo">↷ Rehacer</button>
-            <button class="tool-pill icon-btn" id="board-clear">🗑 Limpiar todo</button>
+            <button class="tool-pill icon-btn" id="board-clear">���� Limpiar todo</button>
           </div>
           <canvas id="board-canvas"></canvas>
         </div>
@@ -1105,10 +1106,10 @@
 
         function renderItem(item, rank){
           return `
-            <div class="upcoming-item" style="${criticalStyles[rank-1] || criticalStyles[criticalStyles.length-1]}">
+            <div class="upcoming-item" style="${criticalStyles[rank-1] || criticalStyles[criticalStyles.length-1]}" onclick="goToProjectFromUpcoming('${attr(item.key)}')">
               <div class="upcoming-main">
                 <div class="upcoming-project">${esc(item.display)}</div>
-                <div class="upcoming-meta"><span class="upcoming-time">${esc(item.instalacionText)}</span> · ${item.doneStages}/${item.totalStages}</div>
+                <div class="upcoming-meta"><span class="upcoming-time">${esc(item.instalacionText)}</span></div>
               </div>
               <div class="upcoming-progress">${item.doneStages}/${item.totalStages}</div>
             </div>
@@ -1198,6 +1199,16 @@
       renderKpis();
       renderLista();
       renderDetalle();
+    }
+
+    function goToProjectFromUpcoming(key){
+      selectProject(key);
+      setTimeout(() => {
+        const detalle = document.getElementById('detalle-wrapper');
+        if(detalle){
+          detalle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 150);
     }
 
     document.addEventListener('DOMContentLoaded',()=>bootstrapEstado());
