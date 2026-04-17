@@ -468,6 +468,42 @@
       color:#1f2937;
       white-space:nowrap;
     }
+    .intro-welcome{
+      display:grid;
+      grid-template-columns:220px 1fr;
+      gap:18px;
+      align-items:center;
+      margin-bottom:18px;
+    }
+    .intro-gif-wrap{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px;
+      border-radius:20px;
+      background:#f8fafc;
+      border:1px solid #e5e7eb;
+      min-height:220px;
+    }
+    .intro-gif{
+      width:100%;
+      max-width:180px;
+      height:auto;
+      display:block;
+    }
+    .intro-quote-box{
+      border:1px solid #e5e7eb;
+      border-radius:18px;
+      background:#fbfcfe;
+      padding:18px;
+    }
+    .intro-quote{
+      margin:0;
+      color:#111827;
+      font-size:16px;
+      line-height:1.6;
+      font-weight:700;
+    }
     .intro-footer{
       display:flex;
       justify-content:flex-end;
@@ -509,6 +545,7 @@
       .intro-grid{grid-template-columns:1fr;}
       .intro-list-item{grid-template-columns:1fr;}
       .intro-item-badge{justify-self:start;}
+      .intro-welcome{grid-template-columns:1fr;}
     }
     @media(max-width:520px){
       .dashboard-grid{grid-template-columns:1fr;}
@@ -963,10 +1000,217 @@
       'Ingreso de compra de quincallería y otros':'Ingreso de compra de quincallería y otros'
     };
 
-    const STAGE_NAME_SET = new Set(STAGES.map(s => s.name));
     const ADJ_BUCKETS = { skp:'skp', diagrama:'diagramas_corte', planos:'planos_armado', cotizacion:'cotizaciones' };
     const ADJ_LABELS = { skp:'SKP', diagrama:'Diagrama de corte', planos:'Planos de Armado', cotizacion:'Adjuntos Cotización' };
     const INTRO_STORAGE_KEY = 'byt_estado_intro_seen_date';
+    const STAGE_NAME_SET = new Set(STAGES.map(s => s.name));
+
+    const ALINEARCITO_QUOTES = [
+      "La prioridad correcta a tiempo vale más que diez tareas mal elegidas.",
+      "Cada detalle revisado con calma hoy evita horas de corrección en obra mañana.",
+      "Un buen proyecto no avanza más rápido, avanza con menos errores acumulados.",
+      "Antes de fabricar cualquier pieza, asegúrate de que el plano realmente responde a la realidad.",
+      "El tiempo que inviertes en entender bien un proyecto es tiempo que recuperas en ejecución.",
+      "Lo urgente no siempre se ve a simple vista, pero siempre se siente cuando llega tarde.",
+      "Medir bien y confirmar dos veces es más eficiente que corregir una vez en terreno.",
+      "Un error pequeño en diseño puede transformarse en un problema grande en instalación.",
+      "El equipo que se detiene a revisar es el que logra avanzar sin fricciones.",
+      "Trabajar con claridad reduce la necesidad de improvisar.",
+      "Cada decisión bien tomada en oficina impacta directamente el trabajo en taller.",
+      "El orden no es solo estética, es una herramienta para ejecutar mejor.",
+      "Una buena planificación evita que el proyecto te controle a ti.",
+      "Cuando todo está claro, el equipo trabaja con más confianza y menos dudas.",
+      "El estándar alto no se declara, se demuestra en cada etapa del proceso.",
+      "Lo que no se revisa a tiempo se paga después en retrabajo.",
+      "La diferencia entre un proyecto normal y uno bien ejecutado está en los detalles.",
+      "Un plano claro elimina conversaciones innecesarias en taller.",
+      "La ejecución eficiente comienza con información bien definida.",
+      "Cada etapa bien cerrada permite avanzar con seguridad a la siguiente.",
+      "El equipo que entiende el objetivo trabaja mejor que el que solo ejecuta tareas.",
+      "La calidad no aparece al final, se construye desde el inicio.",
+      "Un buen sistema no depende de la memoria, depende de la estructura.",
+      "El orden del proyecto es el reflejo del orden del equipo.",
+      "Si todo parece urgente, probablemente falta criterio en la priorización.",
+      "La revisión constante no retrasa, acelera el proceso completo.",
+      "Lo que se hace bien a la primera siempre cuesta menos que corregir después.",
+      "Un proyecto claro permite tomar decisiones rápidas sin perder precisión.",
+      "El tiempo que ahorras en ejecución viene de lo que ordenas antes.",
+      "Un equipo alineado evita duplicar esfuerzos innecesarios.",
+      "El detalle bien pensado elimina problemas invisibles.",
+      "El control del proceso es control del resultado final.",
+      "Cuando sabes qué es prioridad, todo lo demás pierde ruido.",
+      "Cada error evitado es tiempo ganado para el equipo completo.",
+      "El foco no es hacer más, es hacer lo correcto en el momento adecuado.",
+      "Un sistema ordenado permite que todos trabajen con la misma lógica.",
+      "El trabajo bien hecho no necesita explicaciones adicionales.",
+      "Revisar antes de avanzar es parte del avance.",
+      "Una buena decisión a tiempo evita diez malas después.",
+      "La claridad en la información es velocidad en la ejecución.",
+      "Un proyecto bien definido se construye con menos esfuerzo y mejores resultados.",
+      "La diferencia entre avanzar y avanzar bien está en la calidad de las decisiones.",
+      "Cuando el equipo entiende el detalle, la ejecución fluye sin fricciones.",
+      "Lo que hoy se deja ambiguo, mañana se transforma en problema.",
+      "Un buen proceso no depende de personas, depende de estructura clara.",
+      "El orden en los proyectos permite escalar sin perder calidad.",
+      "Cada revisión es una inversión en tranquilidad futura.",
+      "El tiempo se pierde más en dudas que en ejecución.",
+      "Un equipo que revisa bien, instala mejor.",
+      "Lo importante no es solo terminar, es terminar correctamente.",
+      "El estándar se construye en cada pequeña decisión.",
+      "Un proyecto ordenado se siente en cada etapa.",
+      "El detalle es lo que diferencia un buen trabajo de uno excelente.",
+      "Lo que se corrige en plano no se sufre en obra.",
+      "El criterio es la herramienta más valiosa en la gestión.",
+      "Una buena planificación reduce la presión en taller.",
+      "El orden reduce la necesidad de urgencias.",
+      "Cada minuto invertido en entender evita horas de corrección.",
+      "Un proyecto claro es un proyecto controlable.",
+      "La ejecución sin claridad siempre termina en retrabajo.",
+      "El control del proceso permite anticiparse a los problemas.",
+      "Un equipo organizado toma mejores decisiones.",
+      "La calidad es la suma de muchos pequeños aciertos.",
+      "El foco correcto evita desgaste innecesario.",
+      "Cada etapa bien hecha simplifica la siguiente.",
+      "El orden no es opcional si buscas eficiencia real.",
+      "Un proyecto sin estructura depende de la suerte.",
+      "El tiempo se gana en la preparación, no en la ejecución.",
+      "Lo que no se define, se interpreta, y eso siempre genera errores.",
+      "Un buen sistema reduce la dependencia del caos.",
+      "El detalle es lo que permite que todo encaje correctamente.",
+      "El equipo necesita claridad más que velocidad.",
+      "Un buen resultado comienza con una buena base.",
+      "Cada decisión impacta más de lo que parece.",
+      "El control permite avanzar con seguridad.",
+      "El proceso es lo que transforma el esfuerzo en resultado.",
+      "El estándar alto evita discusiones posteriores.",
+      "El orden elimina incertidumbre.",
+      "El trabajo bien estructurado se ejecuta mejor.",
+      "La preparación define el resultado final.",
+      "El proyecto no falla en obra, falla antes si no se revisa bien.",
+      "Un buen equipo se nota en la forma en que trabaja, no solo en lo que entrega.",
+      "El tiempo bien utilizado comienza con claridad.",
+      "El orden reduce el margen de error.",
+      "La revisión es parte del trabajo, no un extra.",
+      "El control es una forma de respeto al proyecto.",
+      "La ejecución correcta depende de decisiones correctas.",
+      "El foco elimina distracciones innecesarias.",
+      "La calidad es consecuencia de buenos procesos.",
+      "Un proyecto bien llevado genera confianza.",
+      "El detalle bien ejecutado es invisible, pero fundamental.",
+      "El orden permite tomar mejores decisiones.",
+      "La claridad reduce la carga mental del equipo.",
+      "Un sistema ordenado permite avanzar sin fricciones.",
+      "El estándar alto se mantiene con disciplina.",
+      "Cada tarea bien hecha aporta al resultado final.",
+      "El control evita sorpresas.",
+      "La planificación es una forma de anticiparse.",
+      "El equipo responde mejor cuando todo está claro.",
+      "El proceso es lo que asegura consistencia.",
+      "El avance real es el que no necesita correcciones posteriores.",
+      "El detalle no es opcional cuando se busca excelencia.",
+      "Un buen proyecto se siente antes de terminarse.",
+      "El orden permite ver lo importante.",
+      "La claridad evita conflictos.",
+      "El control mejora la ejecución.",
+      "El sistema guía al equipo.",
+      "El proceso sostiene el resultado.",
+      "El estándar protege la calidad.",
+      "El foco define el avance.",
+      "El orden permite crecer.",
+      "El detalle asegura el encaje.",
+      "El control reduce errores.",
+      "La claridad mejora la velocidad.",
+      "El sistema evita improvisaciones.",
+      "El proceso da estructura.",
+      "El equipo necesita dirección.",
+      "El foco elimina ruido.",
+      "El estándar da confianza.",
+      "El orden genera eficiencia.",
+      "Un proyecto bien pensado se ejecuta con menos esfuerzo.",
+      "El detalle bien definido evita incertidumbre en taller.",
+      "El tiempo invertido en planificación siempre vuelve en eficiencia.",
+      "Un equipo con claridad avanza con menos desgaste.",
+      "El orden en los procesos permite que todo funcione mejor.",
+      "Cada error evitado es una mejora directa en rentabilidad.",
+      "El foco correcto permite tomar decisiones con seguridad.",
+      "Un sistema claro elimina la necesidad de improvisar constantemente.",
+      "El control del proyecto permite anticipar problemas antes de que ocurran.",
+      "El detalle revisado a tiempo evita conflictos en terreno.",
+      "Una buena ejecución comienza mucho antes del taller.",
+      "El estándar alto protege el resultado final del proyecto.",
+      "El orden permite que cada etapa fluya correctamente.",
+      "Un proyecto claro reduce el margen de error del equipo.",
+      "El criterio aplicado a tiempo mejora todo el proceso.",
+      "El control constante permite mantener la calidad.",
+      "Cada decisión impacta más de lo que parece en el resultado final.",
+      "Un equipo alineado trabaja con mayor eficiencia.",
+      "El detalle bien ejecutado marca la diferencia.",
+      "El orden es una herramienta de trabajo, no solo estética.",
+      "Cuando el proceso es claro, la ejecución se vuelve natural.",
+      "El tiempo se gana cuando el equipo sabe exactamente qué hacer.",
+      "Un proyecto ordenado permite tomar mejores decisiones.",
+      "El control reduce la necesidad de urgencias.",
+      "El foco evita desperdicio de energía.",
+      "El detalle bien definido evita dudas.",
+      "El sistema ordenado mejora la productividad.",
+      "El estándar claro mejora la calidad.",
+      "El proceso bien armado evita errores.",
+      "El equipo necesita dirección clara.",
+      "El control permite avanzar con confianza.",
+      "El orden elimina incertidumbre.",
+      "El detalle mejora el resultado final.",
+      "El foco permite priorizar correctamente.",
+      "El estándar define la forma de trabajar.",
+      "El proceso facilita la ejecución.",
+      "El equipo mejora con estructura.",
+      "El control asegura consistencia.",
+      "El orden simplifica decisiones.",
+      "El detalle evita retrabajo.",
+      "El proceso claro es la base de una ejecución eficiente.",
+      "El equipo responde mejor cuando todo está bien definido.",
+      "El orden permite mantener el control del proyecto.",
+      "El detalle revisado mejora el resultado final.",
+      "El foco correcto evita desviaciones innecesarias.",
+      "El estándar alto mantiene la calidad constante.",
+      "El sistema ordenado reduce el error humano.",
+      "El control permite tomar decisiones informadas.",
+      "El proceso mejora la coordinación del equipo.",
+      "El orden reduce la presión en ejecución.",
+      "El detalle bien trabajado mejora la precisión.",
+      "El foco elimina tareas innecesarias.",
+      "El estándar da dirección al equipo.",
+      "El control mantiene la estabilidad del proyecto.",
+      "El proceso evita improvisaciones.",
+      "El orden facilita el trabajo en equipo.",
+      "El detalle asegura la calidad final.",
+      "El foco permite avanzar con claridad.",
+      "El estándar mejora la consistencia.",
+      "El control evita desviaciones.",
+      "El proyecto bien gestionado fluye mejor en todas sus etapas.",
+      "El detalle bien definido reduce el margen de error.",
+      "El orden permite que el equipo avance con seguridad.",
+      "El control constante mejora la calidad final.",
+      "El foco correcto permite tomar mejores decisiones.",
+      "El estándar alto mantiene el nivel del proyecto.",
+      "El sistema ordenado mejora la eficiencia general.",
+      "El proceso bien estructurado facilita la ejecución.",
+      "El equipo necesita claridad para rendir mejor.",
+      "El control permite anticipar problemas.",
+      "El orden evita conflictos innecesarios.",
+      "El detalle marca la diferencia en el resultado final.",
+      "El foco reduce el desgaste del equipo.",
+      "El estándar define el nivel de trabajo.",
+      "El proceso mejora la coordinación.",
+      "El control asegura resultados.",
+      "El orden mejora la productividad.",
+      "El detalle evita errores.",
+      "El foco permite avanzar.",
+      "El estándar mantiene calidad."
+    ];
+
+    function getRandomAlinearcitoQuote() {
+      return ALINEARCITO_QUOTES[Math.floor(Math.random() * ALINEARCITO_QUOTES.length)];
+    }
 
     let proyectos=[]; let filtered=[]; let selectedKey=null;
     let stageStore=new Map();
@@ -977,7 +1221,7 @@
     let openPartidas=new Set();
     let realtimeSub = null; let pollId = null;
     let projectFechaLimiteMap = new Map();
-    let introState = { step: 1, countdown: 5, timer: null };
+    let introState = { step: 0, countdown: 5, timer: null, quote: '' };
     const LIVE_POLL_MS = 4000;
 
     // Board
@@ -1110,9 +1354,10 @@
       const today = getTodayIntroDate();
       const seen = localStorage.getItem(INTRO_STORAGE_KEY);
       if(seen === today) return;
-      introState.step = 1;
+      introState.step = 0;
+      introState.quote = getRandomAlinearcitoQuote();
       showIntroOverlay();
-      renderIntroStep(1);
+      renderIntroStep(0);
     }
 
     function showIntroOverlay(){
@@ -1176,9 +1421,30 @@
 
       const kpis = computeKpis();
 
+      if(step === 0){
+        modal.innerHTML = `
+          <div class="intro-step-label">Paso 1 de 4</div>
+          <h3 class="intro-title">¡Feliz día! Soy Alinearcito y hoy te quiero recordar que…</h3>
+          <p class="intro-subtitle">Antes de entrar al tablero, tómate unos segundos para comenzar con foco y criterio.</p>
+          <div class="intro-welcome">
+            <div class="intro-gif-wrap">
+              <img class="intro-gif" src="../../assets/Alinearcito.gif" alt="Alinearcito">
+            </div>
+            <div class="intro-quote-box">
+              <p class="intro-quote">${esc(introState.quote || getRandomAlinearcitoQuote())}</p>
+            </div>
+          </div>
+          <div class="intro-footer">
+            <button id="intro-next-btn" class="intro-btn" onclick="renderIntroStep(1)" disabled></button>
+          </div>
+        `;
+        startIntroCountdown('Comenzar');
+        return;
+      }
+
       if(step === 1){
         modal.innerHTML = `
-          <div class="intro-step-label">Paso 1 de 3</div>
+          <div class="intro-step-label">Paso 2 de 4</div>
           <h3 class="intro-title">Hola, antes de comenzar te recuerdo que hoy tienes:</h3>
           <p class="intro-subtitle">Resumen de tareas pendientes por responsable, calculado con los mismos datos actuales del dashboard.</p>
           <div class="intro-grid">
@@ -1214,7 +1480,7 @@
       if(step === 2){
         const items = kpis.upcomingInstallProjects || [];
         modal.innerHTML = `
-          <div class="intro-step-label">Paso 2 de 3</div>
+          <div class="intro-step-label">Paso 3 de 4</div>
           <h3 class="intro-title">Próximos 10 proyectos a instalar</h3>
           <p class="intro-subtitle">Vista priorizada usando exactamente el mismo ranking temporal que ya alimenta este bloque del dashboard.</p>
           <div class="intro-list">
@@ -1242,7 +1508,7 @@
 
       const topItems = kpis.topPendingStages || [];
       modal.innerHTML = `
-        <div class="intro-step-label">Paso 3 de 3</div>
+        <div class="intro-step-label">Paso 4 de 4</div>
         <h3 class="intro-title">Top 8 de actividades con más pendientes</h3>
         <p class="intro-subtitle">Estas actividades representan la mayor carga acumulada actual del flujo y usan el mismo dataset del dashboard principal.</p>
         <div class="intro-list">
