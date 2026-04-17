@@ -186,20 +186,20 @@
       grid-template-columns:minmax(0,1fr);
       gap:12px;
     }
-    .top8-card{
+    .top8-card, .upcoming-card{
       background:var(--kpi-bg);
       border:1px solid var(--kpi-border);
       border-radius:16px;
       padding:14px;
       box-shadow:0 6px 18px rgba(0,0,0,0.05);
     }
-    .top8-title{
+    .top8-title, .upcoming-title{
       margin:0 0 4px;
       font-size:15px;
       font-weight:800;
       color:var(--text);
     }
-    .top8-subtitle{
+    .top8-subtitle, .upcoming-subtitle{
       margin:0 0 12px;
       font-size:12px;
       color:var(--muted);
@@ -259,10 +259,64 @@
       font-weight:900;
       white-space:nowrap;
     }
-    .top8-empty{
+    .top8-empty, .upcoming-empty{
       font-size:12px;
       color:var(--muted);
       font-weight:700;
+    }
+    .upcoming-list{
+      display:flex;
+      flex-direction:column;
+      gap:0;
+      background:#fff;
+    }
+    .upcoming-item{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:12px;
+      align-items:center;
+      padding:10px 0;
+      border-bottom:1px solid #eceff3;
+      background:#fff;
+    }
+    .upcoming-item:last-child{
+      border-bottom:none;
+    }
+    .upcoming-item:hover{
+      background:#f8fafc;
+    }
+    .upcoming-main{
+      min-width:0;
+    }
+    .upcoming-project{
+      font-size:13px;
+      font-weight:800;
+      color:var(--text);
+      line-height:1.35;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .upcoming-meta{
+      margin-top:3px;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:700;
+      line-height:1.3;
+    }
+    .upcoming-progress{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:48px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:#f1f5f9;
+      border:1px solid #dbe2ea;
+      color:#253041;
+      font-size:12px;
+      font-weight:900;
+      white-space:nowrap;
     }
 
     .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
@@ -276,6 +330,8 @@
     @media(max-width:760px){
       .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
       .top8-list{grid-template-columns:1fr;}
+      .upcoming-item{grid-template-columns:1fr;}
+      .upcoming-progress{justify-self:start;}
     }
     @media(max-width:520px){
       .dashboard-grid{grid-template-columns:1fr;}
@@ -846,6 +902,16 @@
       return `Atrasado ${Math.abs(dias)} días`;
     }
 
+    function getProjectDiasRestantes(project){
+      const fechaLimite = projectFechaLimiteMap.get(project.cotizacionId) || project.fecha_entrega_limite || '';
+      if(!fechaLimite) return null;
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      const target = new Date(`${fechaLimite}T00:00:00`);
+      if(Number.isNaN(target.getTime())) return null;
+      return Math.ceil((target.getTime() - today.getTime()) / 86400000);
+    }
+
     function getProjectInstalacionText(project){
       const fechaLimite = projectFechaLimiteMap.get(project.cotizacionId) || project.fecha_entrega_limite || '';
       return formatInstalacionText(fechaLimite);
@@ -898,8 +964,33 @@
         .slice(0, 8)
         .map(([stage, count])=>({ stage, count }));
 
+      const upcomingInstallProjects = proyectos
+        .map(project=>{
+          const diasRestantes = getProjectDiasRestantes(project);
+          const instalacionText = getProjectInstalacionText(project);
+          if(diasRestantes === null || !instalacionText) return null;
+
+          const progress = computeProgress(project);
+          return {
+            key: project.key,
+            display: project.display || 'Proyecto sin nombre',
+            diasRestantes,
+            instalacionText,
+            doneStages: progress.done,
+            totalStages: STAGES.length,
+            pendingPartidas: getProjectPendingPartidas(project)
+          };
+        })
+        .filter(Boolean)
+        .sort((a,b)=>{
+          if(a.diasRestantes !== b.diasRestantes) return a.diasRestantes - b.diasRestantes;
+          if(a.pendingPartidas !== b.pendingPartidas) return b.pendingPartidas - a.pendingPartidas;
+          return (a.display || '').localeCompare(b.display || '');
+        })
+        .slice(0, 8);
+
       const promedioAvance = totalStages ? Math.round((totalListo/totalStages)*100) : 0;
-      return { byOwner, byOwnerBreakdown: breakdownOrdered, topPendingStages, totalPendientes, proyectosActivos, promedioAvance };
+      return { byOwner, byOwnerBreakdown: breakdownOrdered, topPendingStages, upcomingInstallProjects, totalPendientes, proyectosActivos, promedioAvance };
     }
 
     function renderKpis(){
@@ -941,37 +1032,62 @@
         const rightColumn = items.slice(4, 8);
 
         return `
-          <div class="dashboard-extra">
-            <div class="top8-card">
-              <h4 class="top8-title">Top 8 de actividades con más pendientes</h4>
-              <p class="top8-subtitle">Ranking global calculado sobre todas las partidas y proyectos cargados.</p>
-              ${
-                items.length
-                  ? `
-                    <div class="top8-list">
-                      <div class="top8-column">
-                        ${leftColumn.map((item, index)=>`
-                          <div class="top8-item">
-                            <div class="top8-rank">${index + 1}</div>
-                            <div class="top8-stage">${esc(item.stage)}</div>
-                            <div class="top8-count">${item.count}</div>
-                          </div>
-                        `).join('')}
-                      </div>
-                      <div class="top8-column">
-                        ${rightColumn.map((item, index)=>`
-                          <div class="top8-item">
-                            <div class="top8-rank">${index + 5}</div>
-                            <div class="top8-stage">${esc(item.stage)}</div>
-                            <div class="top8-count">${item.count}</div>
-                          </div>
-                        `).join('')}
-                      </div>
+          <div class="top8-card">
+            <h4 class="top8-title">Top 8 de actividades con más pendientes</h4>
+            <p class="top8-subtitle">Ranking global calculado sobre todas las partidas y proyectos cargados.</p>
+            ${
+              items.length
+                ? `
+                  <div class="top8-list">
+                    <div class="top8-column">
+                      ${leftColumn.map((item, index)=>`
+                        <div class="top8-item">
+                          <div class="top8-rank">${index + 1}</div>
+                          <div class="top8-stage">${esc(item.stage)}</div>
+                          <div class="top8-count">${item.count}</div>
+                        </div>
+                      `).join('')}
                     </div>
-                  `
-                  : `<div class="top8-empty">Sin actividades pendientes</div>`
-              }
-            </div>
+                    <div class="top8-column">
+                      ${rightColumn.map((item, index)=>`
+                        <div class="top8-item">
+                          <div class="top8-rank">${index + 5}</div>
+                          <div class="top8-stage">${esc(item.stage)}</div>
+                          <div class="top8-count">${item.count}</div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+                `
+                : `<div class="top8-empty">Sin actividades pendientes</div>`
+            }
+          </div>
+        `;
+      }
+
+      function renderUpcomingProjects(){
+        const items = kpis.upcomingInstallProjects || [];
+        return `
+          <div class="upcoming-card">
+            <h4 class="upcoming-title">Próximos 8 proyectos a instalar</h4>
+            <p class="upcoming-subtitle">Ordenados de mayor urgencia a menor según fecha de instalación.</p>
+            ${
+              items.length
+                ? `
+                  <div class="upcoming-list">
+                    ${items.map(item=>`
+                      <div class="upcoming-item">
+                        <div class="upcoming-main">
+                          <div class="upcoming-project">${esc(item.display)}</div>
+                          <div class="upcoming-meta">${esc(item.instalacionText)} · ${item.doneStages}/${item.totalStages}</div>
+                        </div>
+                        <div class="upcoming-progress">${item.doneStages}/${item.totalStages}</div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `
+                : `<div class="upcoming-empty">Sin proyectos con fecha de instalación disponible</div>`
+            }
           </div>
         `;
       }
@@ -1024,7 +1140,10 @@
             <div class="kpi-foot">según etapas en listo</div>
           </div>
         </div>
-        ${renderTop8()}
+        <div class="dashboard-extra">
+          ${renderUpcomingProjects()}
+          ${renderTop8()}
+        </div>
       `;
     }
 
