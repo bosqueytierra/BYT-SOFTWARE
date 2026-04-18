@@ -1004,6 +1004,42 @@
       -webkit-box-orient:vertical;
       overflow:hidden;
     }
+    .alinearcito-priority-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:6px;
+    }
+    .alinearcito-priority-nav{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .alinearcito-priority-btn{
+      width:28px;
+      height:28px;
+      border-radius:999px;
+      border:1px solid #d7dee8;
+      background:#fff;
+      color:#374151;
+      font-weight:900;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+    }
+    .alinearcito-priority-btn:hover{
+      background:#f3f6fa;
+    }
+    .alinearcito-priority-index{
+      font-size:12px;
+      color:#6b7280;
+      font-weight:800;
+      min-width:38px;
+      text-align:center;
+    }
 
     .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
     @media(max-width:1280px){
@@ -1095,9 +1131,9 @@
       gap:6px;
       width:max-content;
       max-width:100%;
-      background:#edf6f0;
-      color:#2f6f4f;
-      border:1px solid #d5e9dc;
+      background:#f5f7fa;
+      color:#475569;
+      border:1px solid #dbe2ea;
       border-radius:999px;
       padding:5px 10px;
       font-size:11px;
@@ -1807,6 +1843,7 @@
     let currentArtefactoImageFile = null;
     let currentArtefactoImageUrl = '';
     let currentAlinearcitoOwner = 'Luis';
+    let alinearcitoPriorityIndex = 0;
     const LIVE_POLL_MS = 4000;
 
     // Board
@@ -2618,30 +2655,61 @@
       return entries;
     }
 
-    function getAlinearcitoMostUrgent(ownerEntries){
-      const withDeadline = ownerEntries
-        .filter(entry => entry.diasRestantes !== null)
+    function getAlinearcitoPriorities(ownerEntries){
+      return ownerEntries
+        .slice()
         .sort((a,b)=>{
-          if(a.diasRestantes !== b.diasRestantes) return a.diasRestantes - b.diasRestantes;
+          const aDepsReady = a.dependsOn.every(dep => getStageValue(stageStore.get(a.partida.id) || {}, dep) === 'listo') ? 1 : 0;
+          const bDepsReady = b.dependsOn.every(dep => getStageValue(stageStore.get(b.partida.id) || {}, dep) === 'listo') ? 1 : 0;
+          if(aDepsReady !== bDepsReady) return bDepsReady - aDepsReady;
+          if((a.diasRestantes ?? 9999) !== (b.diasRestantes ?? 9999)) return (a.diasRestantes ?? 9999) - (b.diasRestantes ?? 9999);
+          if(a.peso !== b.peso) return b.peso - a.peso;
           return (a.project.display || '').localeCompare(b.project.display || '');
-        });
-      return withDeadline[0] || ownerEntries[0] || null;
+        })
+        .slice(0, 3);
     }
 
-    function detectAlinearcitoBlock(ownerEntries){
-      const blocking = ownerEntries.filter(entry=>{
-        return entry.dependsOn.some(depStage=>{
-          const depValue = getStageValue(stageStore.get(entry.partida.id) || {}, depStage);
-          return depValue !== 'listo';
-        });
-      }).sort((a,b)=>{
-        const aBlocked = a.dependsOn.filter(depStage => getStageValue(stageStore.get(a.partida.id) || {}, depStage) !== 'listo').length;
-        const bBlocked = b.dependsOn.filter(depStage => getStageValue(stageStore.get(b.partida.id) || {}, depStage) !== 'listo').length;
-        if(aBlocked !== bBlocked) return bBlocked - aBlocked;
-        return (b.peso || 0) - (a.peso || 0);
-      });
+    function getAlinearcitoMostUrgent(ownerEntries){
+      const priorities = getAlinearcitoPriorities(ownerEntries);
+      return priorities[alinearcitoPriorityIndex] || priorities[0] || null;
+    }
 
-      return blocking[0] || null;
+    function detectAlinearcitoBlock(owner){
+      const projectCandidates = proyectos
+        .filter(project => {
+          return project.partidas.some(pt=>{
+            const stMap = stageStore.get(pt.id) || {};
+            return STAGES.some(stage => stage.owner === owner && getStageValue(stMap, stage.name) === 'pendiente');
+          });
+        })
+        .map(project => ({
+          project,
+          diasRestantes: getProjectDiasRestantes(project)
+        }))
+        .sort((a,b)=>{
+          if((a.diasRestantes ?? 9999) !== (b.diasRestantes ?? 9999)) return (a.diasRestantes ?? 9999) - (b.diasRestantes ?? 9999);
+          return (a.project.display || '').localeCompare(b.project.display || '');
+        });
+
+      const targetProject = projectCandidates[0]?.project || null;
+      if(!targetProject) return null;
+
+      for(const pt of targetProject.partidas){
+        const stMap = stageStore.get(pt.id) || {};
+        for(let i=0;i<STAGES.length;i++){
+          const stage = STAGES[i];
+          const status = getStageValue(stMap, stage.name);
+          if(status === 'pendiente'){
+            return {
+              project: targetProject,
+              partida: pt,
+              stageName: stage.name,
+              nextStage: STAGES[i + 1]?.name || null
+            };
+          }
+        }
+      }
+      return null;
     }
 
     function calculateAlinearcitoWeight(ownerEntries){
@@ -2650,31 +2718,23 @@
 
     function buildAlinearcitoMessages(owner){
       const ownerEntries = getOwnerPendingEntries(owner);
+      const priorities = getAlinearcitoPriorities(ownerEntries);
       const totalTasks = ownerEntries.length;
       const totalWeight = calculateAlinearcitoWeight(ownerEntries);
-      const urgent = getAlinearcitoMostUrgent(ownerEntries);
-      const block = detectAlinearcitoBlock(ownerEntries);
-      const recommended = ownerEntries
-        .slice()
-        .sort((a,b)=>{
-          const aDepsReady = a.dependsOn.every(dep => getStageValue(stageStore.get(a.partida.id) || {}, dep) === 'listo') ? 1 : 0;
-          const bDepsReady = b.dependsOn.every(dep => getStageValue(stageStore.get(b.partida.id) || {}, dep) === 'listo') ? 1 : 0;
-          if(aDepsReady !== bDepsReady) return bDepsReady - aDepsReady;
-          if(a.peso !== b.peso) return b.peso - a.peso;
-          if((a.diasRestantes ?? 9999) !== (b.diasRestantes ?? 9999)) return (a.diasRestantes ?? 9999) - (b.diasRestantes ?? 9999);
-          return (a.project.display || '').localeCompare(b.project.display || '');
-        })[0] || null;
+      const urgent = priorities[alinearcitoPriorityIndex] || priorities[0] || null;
+      const block = detectAlinearcitoBlock(owner);
+      const recommended = priorities[alinearcitoPriorityIndex] || priorities[0] || null;
 
       const summaryText = totalTasks
         ? `Hoy tienes ${totalTasks} tareas pendientes. Más importante que la cantidad es cómo están distribuidas.`
         : `Hoy no tienes tareas pendientes asignadas. Mantén el foco en acompañar el flujo del equipo.`;
 
       const urgentText = urgent
-        ? `${urgent.project.display} es tu proyecto más urgente. ${urgent.diasRestantes !== null ? `Quedan ${Math.abs(urgent.diasRestantes)} ${urgent.diasRestantes === 1 ? 'día' : 'días'} para instalación.` : 'No tiene fecha de instalación visible.'}`
+        ? `${urgent.project.display} es tu prioridad ${Math.min(alinearcitoPriorityIndex + 1, priorities.length || 1)}. ${urgent.diasRestantes !== null ? `Quedan ${Math.abs(urgent.diasRestantes)} ${urgent.diasRestantes === 1 ? 'día' : 'días'} para instalación.` : 'No tiene fecha de instalación visible.'}`
         : `No hay un proyecto urgente asignado hoy. Tu foco puede estar en orden y anticipación.`;
 
       const blockText = block
-        ? `El flujo está retenido en ${block.stageName}. Mientras no se cumpla su dependencia anterior, el avance queda frenado.`
+        ? `El proyecto hoy está retenido en ${block.stageName}. ${block.nextStage ? `Mientras esta etapa no se cierre, no podrá avanzar a ${block.nextStage}.` : 'Mientras esta etapa no se cierre, el flujo no podrá avanzar.'}`
         : `No se detecta un bloqueo principal activo. Hoy el flujo depende más de priorizar con criterio que de destrabar dependencias.`;
 
       const weightText = totalTasks
@@ -2690,7 +2750,8 @@
         urgent: urgentText,
         block: blockText,
         weight: weightText,
-        action: actionText
+        action: actionText,
+        prioritiesCount: priorities.length || 1
       };
     }
 
@@ -2698,13 +2759,23 @@
       const grid = document.getElementById('alinearcito-grid');
       if(!grid) return;
       const msg = buildAlinearcitoMessages(owner);
+      const maxIndex = Math.max((msg.prioritiesCount || 1) - 1, 0);
+      if(alinearcitoPriorityIndex > maxIndex) alinearcitoPriorityIndex = 0;
+
       grid.innerHTML = `
         <div class="alinearcito-block">
           <h4>Resumen del día</h4>
           <p>${esc(msg.summary)}</p>
         </div>
         <div class="alinearcito-block">
-          <h4>Proyecto más urgente</h4>
+          <div class="alinearcito-priority-head">
+            <h4>Proyecto más urgente</h4>
+            <div class="alinearcito-priority-nav">
+              <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(-1)">‹</button>
+              <span class="alinearcito-priority-index">${Math.min(alinearcitoPriorityIndex + 1, msg.prioritiesCount)}/${msg.prioritiesCount}</span>
+              <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(1)">›</button>
+            </div>
+          </div>
           <p>${esc(msg.urgent)}</p>
         </div>
         <div class="alinearcito-block">
@@ -2716,14 +2787,30 @@
           <p>${esc(msg.weight)}</p>
         </div>
         <div class="alinearcito-block">
-          <h4>Acción recomendada</h4>
+          <div class="alinearcito-priority-head">
+            <h4>Acción recomendada</h4>
+            <div class="alinearcito-priority-nav">
+              <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(-1)">‹</button>
+              <span class="alinearcito-priority-index">${Math.min(alinearcitoPriorityIndex + 1, msg.prioritiesCount)}/${msg.prioritiesCount}</span>
+              <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(1)">›</button>
+            </div>
+          </div>
           <p>${esc(msg.action)}</p>
         </div>
       `;
     }
 
+    function moveAlinearcitoPriority(direction){
+      const ownerEntries = getOwnerPendingEntries(currentAlinearcitoOwner);
+      const priorities = getAlinearcitoPriorities(ownerEntries);
+      const total = priorities.length || 1;
+      alinearcitoPriorityIndex = (alinearcitoPriorityIndex + direction + total) % total;
+      renderAlinearcitoMessages(currentAlinearcitoOwner);
+    }
+
     function selectAlinearcitoOwner(owner){
       currentAlinearcitoOwner = owner;
+      alinearcitoPriorityIndex = 0;
       document.querySelectorAll('.alinearcito-chip').forEach(chip=>{
         chip.classList.toggle('active', chip.dataset.owner === owner);
       });
