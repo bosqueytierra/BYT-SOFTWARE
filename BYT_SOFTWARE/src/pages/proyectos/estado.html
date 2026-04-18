@@ -999,10 +999,10 @@
       color:#111827;
       line-height:1.45;
       font-weight:700;
-      display:-webkit-box;
-      -webkit-line-clamp:2;
-      -webkit-box-orient:vertical;
-      overflow:hidden;
+      display:block;
+      overflow:visible;
+      white-space:normal;
+      word-break:break-word;
     }
     .alinearcito-priority-head{
       display:flex;
@@ -1693,7 +1693,7 @@
       "Cada decisión impacta más de lo que parece.",
       "El control permite avanzar con seguridad.",
       "El proceso es lo que transforma el esfuerzo en resultado.",
-      "El estándar alto evita discusiones posteriores.",
+      "El est��ndar alto evita discusiones posteriores.",
       "El orden elimina incertidumbre.",
       "El trabajo bien estructurado se ejecuta mejor.",
       "La preparación define el resultado final.",
@@ -2704,6 +2704,7 @@
               project: targetProject,
               partida: pt,
               stageName: stage.name,
+              owner: stage.owner,
               nextStage: STAGES[i + 1]?.name || null
             };
           }
@@ -2733,9 +2734,14 @@
         ? `${urgent.project.display} es tu prioridad ${Math.min(alinearcitoPriorityIndex + 1, priorities.length || 1)}. ${urgent.diasRestantes !== null ? `Quedan ${Math.abs(urgent.diasRestantes)} ${urgent.diasRestantes === 1 ? 'día' : 'días'} para instalación.` : 'No tiene fecha de instalación visible.'}`
         : `No hay un proyecto urgente asignado hoy. Tu foco puede estar en orden y anticipación.`;
 
-      const blockText = block
-        ? `El proyecto hoy está retenido en ${block.stageName}. ${block.nextStage ? `Mientras esta etapa no se cierre, no podrá avanzar a ${block.nextStage}.` : 'Mientras esta etapa no se cierre, el flujo no podrá avanzar.'}`
-        : `No se detecta un bloqueo principal activo. Hoy el flujo depende más de priorizar con criterio que de destrabar dependencias.`;
+      let blockText = `No se detecta un bloqueo principal activo. Hoy el flujo depende más de priorizar con criterio que de destrabar dependencias.`;
+      if(block){
+        if(block.owner === owner){
+          blockText = `El flujo hoy está retenido por ti en ${block.stageName}. ${block.nextStage ? `Si cierras esta etapa, el proyecto podrá seguir avanzando a ${block.nextStage}.` : 'Si cierras esta etapa, el proyecto podrá seguir avanzando.'}`;
+        }else{
+          blockText = `El flujo hoy está retenido por ${block.owner} en ${block.stageName}. ${block.nextStage ? `Pídele a ${block.owner} que realice esta tarea para que el proyecto pueda continuar a ${block.nextStage}.` : `Coordina con ${block.owner} para destrabar el flujo.`}`;
+        }
+      }
 
       const weightText = totalTasks
         ? `Tu carga real hoy suma ${totalWeight} puntos de peso. No todas las tareas pendientes tienen el mismo impacto operativo.`
