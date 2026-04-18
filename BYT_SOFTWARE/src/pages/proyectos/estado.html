@@ -528,6 +528,142 @@
       box-shadow:none;
     }
 
+    .video-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(20,25,35,0.48);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9100;
+      padding:20px;
+    }
+    .video-modal{
+      width:min(900px, 96vw);
+      max-height:92vh;
+      overflow:auto;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:20px;
+      box-shadow:0 24px 60px rgba(15,23,42,0.24);
+    }
+    .video-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--border);
+    }
+    .video-title{
+      margin:0;
+      font-size:18px;
+      font-weight:800;
+      color:var(--text);
+    }
+    .video-close{
+      border:none;
+      background:transparent;
+      font-size:24px;
+      color:#6b7280;
+      cursor:pointer;
+      line-height:1;
+    }
+    .video-body{
+      padding:18px;
+    }
+    .video-status{
+      font-size:13px;
+      color:var(--muted);
+      font-weight:700;
+      margin-bottom:12px;
+    }
+    .video-form{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .video-input{
+      width:100%;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      font-family:inherit;
+      font-size:14px;
+      background:#fff;
+      color:#111827;
+    }
+    .video-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .video-btn{
+      border:1px solid var(--border);
+      background:#f6f8fb;
+      color:#1f2430;
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+    }
+    .video-btn:hover{
+      background:#eef2f7;
+      border-color:#cfd6e3;
+    }
+    .video-btn-primary{
+      background:#111827;
+      color:#fff;
+      border-color:#111827;
+    }
+    .video-btn-primary:hover{
+      filter:brightness(1.05);
+      background:#111827;
+      border-color:#111827;
+    }
+    .video-preview{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    .video-play-wrap{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:220px;
+      border:1px dashed #d8dee7;
+      border-radius:18px;
+      background:#f8fafc;
+      cursor:pointer;
+    }
+    .video-play-btn{
+      width:86px;
+      height:86px;
+      border:none;
+      border-radius:50%;
+      background:#111827;
+      color:#fff;
+      font-size:30px;
+      cursor:pointer;
+      box-shadow:0 14px 36px rgba(17,24,39,0.20);
+    }
+    .video-iframe-wrap{
+      position:relative;
+      width:100%;
+      padding-top:56.25%;
+      border-radius:18px;
+      overflow:hidden;
+      background:#000;
+    }
+    .video-iframe-wrap iframe{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      border:none;
+    }
+
     .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
     @media(max-width:1280px){
       .dashboard-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
@@ -829,6 +965,16 @@
 
   <div id="intro-overlay" aria-hidden="true">
     <div id="intro-modal" class="intro-modal"></div>
+  </div>
+
+  <div id="video-modal-backdrop" class="video-backdrop" aria-hidden="true">
+    <div class="video-modal">
+      <div class="video-head">
+        <h3 class="video-title">Video explicativo proyecto</h3>
+        <button class="video-close" onclick="closeVideoModal()">×</button>
+      </div>
+      <div id="video-modal-body" class="video-body"></div>
+    </div>
   </div>
 
   <!-- Modal adjuntos -->
@@ -1222,6 +1368,10 @@
     let realtimeSub = null; let pollId = null;
     let projectFechaLimiteMap = new Map();
     let introState = { step: 0, countdown: 5, timer: null, quote: '' };
+    let projectVideoMap = new Map();
+    let currentVideoCotId = null;
+    let currentVideoUrl = '';
+    let currentVideoEmbed = null;
     const LIVE_POLL_MS = 4000;
 
     // Board
@@ -1425,7 +1575,7 @@
         modal.innerHTML = `
           <div class="intro-step-label">Paso 1 de 4</div>
           <h3 class="intro-title">¡Feliz día! Soy Alinearcito y hoy te quiero recordar que…</h3>
-          <p class="intro-subtitle"></p>
+          <p class="intro-subtitle">Antes de entrar al tablero, tómate unos segundos para comenzar con foco y criterio.</p>
           <div class="intro-welcome">
             <div class="intro-gif-wrap">
               <img class="intro-gif" src="../../assets/Alinearcito.gif" alt="Alinearcito">
@@ -1445,8 +1595,8 @@
       if(step === 1){
         modal.innerHTML = `
           <div class="intro-step-label">Paso 2 de 4</div>
-          <h3 class="intro-title">Antes de comenzar te recuerdo que hoy tienes:</h3>
-          <p class="intro-subtitle">Tómate unos segundos para comenzar con foco y prioridades.</p>
+          <h3 class="intro-title">Hola, antes de comenzar te recuerdo que hoy tienes:</h3>
+          <p class="intro-subtitle">Resumen de tareas pendientes por responsable, calculado con los mismos datos actuales del dashboard.</p>
           <div class="intro-grid">
             <div class="intro-stat">
               <div class="intro-stat-label">Alejandro</div>
@@ -1482,7 +1632,7 @@
         modal.innerHTML = `
           <div class="intro-step-label">Paso 3 de 4</div>
           <h3 class="intro-title">Próximos 10 proyectos a instalar</h3>
-          <p class="intro-subtitle">Respira...</p>
+          <p class="intro-subtitle">Vista priorizada usando exactamente el mismo ranking temporal que ya alimenta este bloque del dashboard.</p>
           <div class="intro-list">
             ${
               items.length
@@ -1510,7 +1660,7 @@
       modal.innerHTML = `
         <div class="intro-step-label">Paso 4 de 4</div>
         <h3 class="intro-title">Top 8 de actividades con más pendientes</h3>
-        <p class="intro-subtitle">Lo revisamos?.</p>
+        <p class="intro-subtitle">Estas actividades representan la mayor carga acumulada actual del flujo y usan el mismo dataset del dashboard principal.</p>
         <div class="intro-list">
           ${
             topItems.length
@@ -1531,6 +1681,134 @@
         </div>
       `;
       startIntroCountdown('Ir al dashboard');
+    }
+
+    function convertirAEmbed(url) {
+      if (!url) return null;
+      const regExp = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/;
+      const match = String(url).trim().match(regExp);
+      return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+    }
+
+    async function loadProjectVideos(){
+      const sb = await waitForSupabase();
+      const { data, error } = await sb.from('proyecto_video_explicativo').select('cotizacion_id, youtube_url');
+      if(error){
+        console.warn('loadProjectVideos', error);
+        return;
+      }
+      projectVideoMap.clear();
+      (data || []).forEach(row=>{
+        if(row?.cotizacion_id){
+          projectVideoMap.set(row.cotizacion_id, row.youtube_url || '');
+        }
+      });
+    }
+
+    async function saveProjectVideo(cotizacionId, youtubeUrl){
+      const sb = await waitForSupabase();
+      const { error } = await sb.from('proyecto_video_explicativo').upsert(
+        { cotizacion_id: cotizacionId, youtube_url: youtubeUrl },
+        { onConflict: 'cotizacion_id' }
+      );
+      if(error) throw error;
+      projectVideoMap.set(cotizacionId, youtubeUrl);
+    }
+
+    function openVideoModal(cotizacionId){
+      currentVideoCotId = cotizacionId;
+      currentVideoUrl = projectVideoMap.get(cotizacionId) || '';
+      currentVideoEmbed = convertirAEmbed(currentVideoUrl);
+      const modal=document.getElementById('video-modal-backdrop');
+      modal.style.display='flex';
+      modal.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+      renderVideoModal(false);
+    }
+
+    function closeVideoModal(){
+      const modal=document.getElementById('video-modal-backdrop');
+      modal.style.display='none';
+      modal.setAttribute('aria-hidden','true');
+      document.body.style.overflow='';
+      currentVideoCotId = null;
+      currentVideoUrl = '';
+      currentVideoEmbed = null;
+      const body = document.getElementById('video-modal-body');
+      if(body) body.innerHTML = '';
+    }
+
+    function renderVideoModal(playMode=false, editing=false){
+      const body = document.getElementById('video-modal-body');
+      if(!body) return;
+
+      if(!currentVideoUrl || editing){
+        body.innerHTML = `
+          <div class="video-status">${currentVideoUrl && editing ? 'Actualiza el link de YouTube del proyecto.' : 'Aún no hay video explicativo cargado para este proyecto.'}</div>
+          <div class="video-form">
+            <input id="video-youtube-input" class="video-input" type="text" placeholder="Pega aquí el link de YouTube" value="${attr(currentVideoUrl || '')}">
+            <div class="video-actions">
+              <button class="video-btn video-btn-primary" onclick="handleSaveProjectVideo()">Guardar</button>
+              <button class="video-btn" onclick="closeVideoModal()">Cerrar</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if(playMode && currentVideoEmbed){
+        body.innerHTML = `
+          <div class="video-preview">
+            <div class="video-status">Video explicativo cargado para este proyecto.</div>
+            <div class="video-iframe-wrap">
+              <iframe src="${attr(currentVideoEmbed)}" title="Video explicativo proyecto" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="video-actions">
+              <button class="video-btn" onclick="renderVideoModal(false, true)">Cambiar link</button>
+              <button class="video-btn" onclick="closeVideoModal()">Cerrar</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      body.innerHTML = `
+        <div class="video-preview">
+          <div class="video-status">Ya existe un video explicativo cargado para este proyecto.</div>
+          <div class="video-play-wrap" onclick="renderVideoModal(true, false)">
+            <button class="video-play-btn" type="button">▶</button>
+          </div>
+          <div class="video-actions">
+            <button class="video-btn video-btn-primary" onclick="renderVideoModal(true, false)">Reproducir</button>
+            <button class="video-btn" onclick="renderVideoModal(false, true)">Cambiar link</button>
+            <button class="video-btn" onclick="closeVideoModal()">Cerrar</button>
+          </div>
+        </div>
+      `;
+    }
+
+    async function handleSaveProjectVideo(){
+      const input = document.getElementById('video-youtube-input');
+      const url = input?.value?.trim() || '';
+      const embed = convertirAEmbed(url);
+      if(!embed){
+        toast('Link de YouTube inválido');
+        return;
+      }
+      if(!currentVideoCotId){
+        toast('Proyecto no disponible');
+        return;
+      }
+      try{
+        await saveProjectVideo(currentVideoCotId, url);
+        currentVideoUrl = url;
+        currentVideoEmbed = embed;
+        renderVideoModal(false, false);
+        toast('Video guardado');
+      }catch(e){
+        console.error(e);
+        toast('No se pudo guardar el video');
+      }
     }
 
     function computeKpis(){
@@ -1821,6 +2099,7 @@
       try{
         await cargarDatos();
         await cargarNotasEtapas();
+        await loadProjectVideos();
         await startRealtimeSync();
         applyFiltersAndRender(true);
         wireFileInput();
@@ -2109,6 +2388,7 @@
       captureOpenPartidas();
       const prog=computeProgress(proj);
       const instalacionText = getProjectInstalacionText(proj);
+      const hasVideo = !!projectVideoMap.get(proj.cotizacionId);
       wrap.innerHTML = `
         <div class="detail-header">
           <h3>${esc(proj.display)}</h3>
@@ -2128,6 +2408,7 @@
           <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
           <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
           <button class="btn btn-soft-green" onclick="verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
+          <button class="btn btn-soft-green" onclick="openVideoModal('${attr(proj.cotizacionId||'')}')">Video explicativo proyecto${hasVideo ? ' ▶' : ''}</button>
           <button class="btn btn-soft-green" style="background:#f0f7ff;border-color:#cfe2ff;" onclick="openBoardModal()">Notas y obs. presentación</button>
         </div>
 
