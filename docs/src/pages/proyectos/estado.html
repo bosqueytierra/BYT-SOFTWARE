@@ -1608,9 +1608,9 @@
       'Conformidad del Modelo': { peso:5, dependsOn: ['Explicación y revisión técnica del proyecto'] },
       'Optimizado y estimación de tableros y tapacantos': { peso:4, dependsOn: ['Conformidad del Modelo'] },
       'Ingreso de compra de quincallería y otros': { peso:3, dependsOn: ['Conformidad del Modelo'] },
-      'Planos de armado': { peso:4, dependsOn: ['Optimizado y estimación de tableros y tapacantos'] },
-      'Compras de Melaminas y tapacantos': { peso:3, dependsOn: ['Ingreso de compra de quincallería y otros'] },
-      'Cortes en taller': { peso:5, dependsOn: ['Planos de armado', 'Compras de Melaminas y tapacantos'] },
+      'Planos de armado': { peso:4, dependsOn: ['Conformidad del Modelo'] },
+      'Compras de Melaminas y tapacantos': { peso:3, dependsOn: ['Conformidad del Modelo'] },
+      'Cortes en taller': { peso:5, dependsOn: ['Compras de Melaminas y tapacantos', 'Planos de armado'] },
       'Listo para instalar': { peso:2, dependsOn: ['Cortes en taller'] }
     };
 
@@ -1693,7 +1693,7 @@
       "Cada decisión impacta más de lo que parece.",
       "El control permite avanzar con seguridad.",
       "El proceso es lo que transforma el esfuerzo en resultado.",
-      "El est��ndar alto evita discusiones posteriores.",
+      "El estándar alto evita discusiones posteriores.",
       "El orden elimina incertidumbre.",
       "El trabajo bien estructurado se ejecuta mejor.",
       "La preparación define el resultado final.",
@@ -1889,7 +1889,7 @@
     const esc = (s)=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]||m));
     const attr = (s)=>esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     function showLoader(flag){document.getElementById('loader').style.display=flag?'flex':'none';}
-    function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',1800);}
+    function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2200);}
 
     function normalizeStageName(stage){
       const key = String(stage ?? '').trim();
@@ -1915,11 +1915,15 @@
       return stageMap?.[normalizedStage] || 'pendiente';
     }
 
+    function getStageDependencies(stageName){
+      const cfg = ETAPAS_CONFIG[stageName] || {};
+      const deps = cfg.dependeDe || cfg.dependsOn || [];
+      return Array.isArray(deps) ? deps : [];
+    }
+
     function getMissingDependencies(partidaId, stageName){
-      const config = ETAPAS_CONFIG[stageName] || {};
-      const dependsOn = config.dependsOn || [];
       const stMap = stageStore.get(partidaId) || {};
-      return dependsOn.filter(depStage => getStageValue(stMap, depStage) !== 'listo');
+      return getStageDependencies(stageName).filter(dep => getStageValue(stMap, dep) !== 'listo');
     }
 
     function getPartidaPendingCount(partidaId){
@@ -2654,7 +2658,7 @@
               stageName: stage.name,
               peso: ETAPAS_CONFIG[stage.name]?.peso || 1,
               diasRestantes: getProjectDiasRestantes(project),
-              dependsOn: ETAPAS_CONFIG[stage.name]?.dependsOn || []
+              dependsOn: getStageDependencies(stage.name)
             });
           });
         });
@@ -3396,7 +3400,6 @@
                     const nota = notes[normalizedStage] ?? globalStageNotes[normalizedStage] ?? '';
                     const noteId = `note-${pt.id}-${normalizedStage}`;
                     const doneClass = value==='listo' ? 'done' : (value==='en_progreso' ? 'in-progress' : '');
-                    const missingDeps = getMissingDependencies(pt.id, normalizedStage);
                     return `
                     <div class="stage-item ${doneClass}">
                         <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
@@ -3443,11 +3446,10 @@
       const previousValue = current[normalizedStage] || 'pendiente';
 
       if(value === 'listo'){
-        const missingDeps = getMissingDependencies(partidaId, normalizedStage);
-        if(missingDeps.length){
+        const missingDependencies = getMissingDependencies(partidaId, normalizedStage);
+        if(missingDependencies.length){
           if(selectEl) selectEl.value = previousValue;
-          const faltantesTexto = missingDeps.map(dep => `‘${dep}’`).join(', ');
-          toast(`No puedes marcar esta etapa como Listo porque depende de ${faltantesTexto}, y esa etapa aún no está lista.`);
+          toast(`No puedes marcar esta tarea como 'Listo' porque depende de: ${missingDependencies.join(', ')}`);
           return;
         }
       }
