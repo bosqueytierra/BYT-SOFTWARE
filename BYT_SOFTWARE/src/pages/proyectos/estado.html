@@ -528,7 +528,8 @@
       box-shadow:none;
     }
 
-    .video-backdrop{
+    .video-backdrop,
+    .artefactos-backdrop{
       position:fixed;
       inset:0;
       background:rgba(20,25,35,0.48);
@@ -664,6 +665,218 @@
       border:none;
     }
 
+    .artefactos-modal{
+      width:min(1100px, 96vw);
+      max-height:92vh;
+      overflow:auto;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:20px;
+      box-shadow:0 24px 60px rgba(15,23,42,0.24);
+    }
+    .artefactos-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--border);
+    }
+    .artefactos-title{
+      margin:0;
+      font-size:18px;
+      font-weight:800;
+      color:var(--text);
+    }
+    .artefactos-close{
+      border:none;
+      background:transparent;
+      font-size:24px;
+      color:#6b7280;
+      cursor:pointer;
+      line-height:1;
+    }
+    .artefactos-body{
+      padding:18px;
+      display:grid;
+      grid-template-columns:340px 1fr;
+      gap:18px;
+    }
+    .artefactos-form-card{
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:#fbfcfe;
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .artefactos-form-card h4{
+      margin:0 0 4px;
+      font-size:15px;
+      font-weight:800;
+      color:var(--text);
+    }
+    .artefactos-field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .artefactos-field label{
+      margin:0;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:800;
+    }
+    .artefactos-input,
+    .artefactos-textarea{
+      width:100%;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:#fff;
+      font-family:inherit;
+      font-size:14px;
+      color:#111827;
+    }
+    .artefactos-textarea{
+      min-height:100px;
+      resize:vertical;
+    }
+    .artefactos-upload{
+      border:1px dashed #cfd6e3;
+      border-radius:14px;
+      background:#fff;
+      padding:14px;
+      text-align:center;
+      font-size:13px;
+      color:var(--muted);
+      font-weight:700;
+      cursor:pointer;
+      position:relative;
+    }
+    .artefactos-upload input{
+      display:none;
+    }
+    .artefactos-upload.is-dragover{
+      border-color:#94a3b8;
+      background:#f8fafc;
+    }
+    .artefactos-preview{
+      width:100%;
+      height:180px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      overflow:hidden;
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .artefactos-preview img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .artefactos-form-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:4px;
+    }
+    .artefactos-btn{
+      border:1px solid var(--border);
+      background:#f6f8fb;
+      color:#1f2430;
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+    }
+    .artefactos-btn:hover{
+      background:#eef2f7;
+      border-color:#cfd6e3;
+    }
+    .artefactos-btn-primary{
+      background:#111827;
+      color:#fff;
+      border-color:#111827;
+    }
+    .artefactos-btn-primary:hover{
+      background:#111827;
+      border-color:#111827;
+      filter:brightness(1.05);
+    }
+    .artefactos-btn-danger{
+      border-color:#fda4af;
+      color:#b91c1c;
+      background:#fff;
+    }
+    .artefactos-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:12px;
+      align-content:start;
+    }
+    .artefactos-empty{
+      font-size:13px;
+      color:var(--muted);
+      font-weight:700;
+      padding:6px 2px;
+    }
+    .artefacto-card{
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:#fff;
+      overflow:hidden;
+      box-shadow:0 8px 20px rgba(0,0,0,0.06);
+      display:flex;
+      flex-direction:column;
+    }
+    .artefacto-image{
+      width:100%;
+      height:180px;
+      background:#f8fafc;
+      border-bottom:1px solid var(--border);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .artefacto-image img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .artefacto-body{
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .artefacto-title{
+      margin:0;
+      font-size:15px;
+      font-weight:800;
+      color:var(--text);
+      line-height:1.35;
+    }
+    .artefacto-desc{
+      font-size:13px;
+      color:#5f6470;
+      line-height:1.45;
+      white-space:pre-wrap;
+    }
+    .artefacto-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:auto;
+    }
+
     .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
     @media(max-width:1280px){
       .dashboard-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
@@ -671,6 +884,7 @@
     @media(max-width:1100px){
       .layout{grid-template-columns:1fr;}
       .dashboard-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+      .artefactos-body{grid-template-columns:1fr;}
     }
     @media(max-width:760px){
       .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
@@ -974,6 +1188,48 @@
         <button class="video-close" onclick="closeVideoModal()">×</button>
       </div>
       <div id="video-modal-body" class="video-body"></div>
+    </div>
+  </div>
+
+  <div id="artefactos-modal-backdrop" class="artefactos-backdrop" aria-hidden="true">
+    <div class="artefactos-modal">
+      <div class="artefactos-head">
+        <h3 class="artefactos-title">Artefactos y electrodomésticos</h3>
+        <button class="artefactos-close" onclick="closeArtefactosModal()">×</button>
+      </div>
+      <div class="artefactos-body">
+        <div class="artefactos-form-card">
+          <h4 id="artefactos-form-title">Nuevo ítem</h4>
+          <div class="artefactos-field">
+            <label>Título</label>
+            <input id="artefacto-titulo" class="artefactos-input" type="text" placeholder="Ej: Horno empotrado, foco, pata especial...">
+          </div>
+          <div class="artefactos-field">
+            <label>Descripción / nota</label>
+            <textarea id="artefacto-descripcion" class="artefactos-textarea" placeholder="Detalles, medidas, observaciones o referencia visual..."></textarea>
+          </div>
+          <div class="artefactos-field">
+            <label>Link</label>
+            <input id="artefacto-link" class="artefactos-input" type="text" placeholder="https://...">
+          </div>
+          <div class="artefactos-field">
+            <label>Imagen</label>
+            <label id="artefacto-upload-zone" class="artefactos-upload">
+              Selecciona, arrastra o pega una imagen aquí
+              <input id="artefacto-image-input" type="file" accept="image/*">
+            </label>
+            <div id="artefacto-preview" class="artefactos-preview">Sin imagen</div>
+          </div>
+          <div class="artefactos-form-actions">
+            <button class="artefactos-btn artefactos-btn-primary" onclick="handleSaveArtefacto()">Guardar</button>
+            <button class="artefactos-btn" onclick="resetArtefactoForm()">Limpiar</button>
+          </div>
+        </div>
+
+        <div>
+          <div id="artefactos-grid" class="artefactos-grid"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1372,6 +1628,11 @@
     let currentVideoCotId = null;
     let currentVideoUrl = '';
     let currentVideoEmbed = null;
+    let artefactosByProject = new Map();
+    let currentArtefactosCotId = null;
+    let currentArtefactoEditId = null;
+    let currentArtefactoImageFile = null;
+    let currentArtefactoImageUrl = '';
     const LIVE_POLL_MS = 4000;
 
     // Board
@@ -1808,6 +2069,277 @@
       }catch(e){
         console.error(e);
         toast('No se pudo guardar el video');
+      }
+    }
+
+    async function listProjectArtefactos(cotizacionId){
+      const sb = await waitForSupabase();
+      const { data, error } = await sb
+        .from('proyecto_artefactos')
+        .select('id, cotizacion_id, titulo, descripcion, link_url, image_url, orden, created_at, updated_at')
+        .eq('cotizacion_id', cotizacionId)
+        .order('orden', { ascending: true })
+        .order('created_at', { ascending: true });
+
+      if(error) throw error;
+      artefactosByProject.set(cotizacionId, data || []);
+      return data || [];
+    }
+
+    async function createArtefacto(payload){
+      const sb = await waitForSupabase();
+      const { error } = await sb.from('proyecto_artefactos').insert(payload);
+      if(error) throw error;
+    }
+
+    async function updateArtefacto(id, payload){
+      const sb = await waitForSupabase();
+      const { error } = await sb.from('proyecto_artefactos').update(payload).eq('id', id);
+      if(error) throw error;
+    }
+
+    async function deleteArtefacto(id){
+      const sb = await waitForSupabase();
+      const { error } = await sb.from('proyecto_artefactos').delete().eq('id', id);
+      if(error) throw error;
+    }
+
+    async function uploadArtefactoImage(file, cotizacionId){
+      const sb = await waitForSupabase();
+      const bucket = ADJ_BUCKETS.cotizacion;
+      const safeName = `${Date.now()}-${String(file.name || 'imagen').replace(/\s+/g,'_')}`;
+      const path = `${cotizacionId}/artefactos/${safeName}`;
+      const { error:upErr } = await sb.storage.from(bucket).upload(path, file, { cacheControl:'3600', upsert:false });
+      if(upErr) throw upErr;
+      const { data:signed, error:signedErr } = await sb.storage.from(bucket).createSignedUrl(path, 3600 * 24 * 30);
+      if(signedErr) throw signedErr;
+      return signed?.signedUrl || null;
+    }
+
+    function resetArtefactoForm(){
+      currentArtefactoEditId = null;
+      currentArtefactoImageFile = null;
+      currentArtefactoImageUrl = '';
+      const title = document.getElementById('artefactos-form-title');
+      const titulo = document.getElementById('artefacto-titulo');
+      const descripcion = document.getElementById('artefacto-descripcion');
+      const link = document.getElementById('artefacto-link');
+      if(title) title.textContent = 'Nuevo ítem';
+      if(titulo) titulo.value = '';
+      if(descripcion) descripcion.value = '';
+      if(link) link.value = '';
+      renderArtefactoPreview('');
+    }
+
+    function renderArtefactoPreview(url){
+      const preview = document.getElementById('artefacto-preview');
+      if(!preview) return;
+      if(url){
+        preview.innerHTML = `<img src="${attr(url)}" alt="Preview">`;
+      }else{
+        preview.innerHTML = 'Sin imagen';
+      }
+    }
+
+    function fillArtefactoForm(item){
+      currentArtefactoEditId = item.id;
+      currentArtefactoImageFile = null;
+      currentArtefactoImageUrl = item.image_url || '';
+      const title = document.getElementById('artefactos-form-title');
+      const titulo = document.getElementById('artefacto-titulo');
+      const descripcion = document.getElementById('artefacto-descripcion');
+      const link = document.getElementById('artefacto-link');
+      if(title) title.textContent = 'Editar ítem';
+      if(titulo) titulo.value = item.titulo || '';
+      if(descripcion) descripcion.value = item.descripcion || '';
+      if(link) link.value = item.link_url || '';
+      renderArtefactoPreview(item.image_url || '');
+    }
+
+    function wireArtefactoUploadEvents(){
+      const input = document.getElementById('artefacto-image-input');
+      const zone = document.getElementById('artefacto-upload-zone');
+      if(!input || !zone) return;
+
+      const handleFiles = (files)=>{
+        const file = Array.from(files || [])[0];
+        if(!file) return;
+        if(!file.type.startsWith('image/')){
+          toast('Selecciona una imagen válida');
+          return;
+        }
+        currentArtefactoImageFile = file;
+        currentArtefactoImageUrl = '';
+        renderArtefactoPreview(URL.createObjectURL(file));
+      };
+
+      input.onchange = (e)=>handleFiles(e.target.files);
+
+      ['dragenter','dragover'].forEach(evt=>{
+        zone.addEventListener(evt, (e)=>{
+          e.preventDefault();
+          zone.classList.add('is-dragover');
+        });
+      });
+      ['dragleave','drop'].forEach(evt=>{
+        zone.addEventListener(evt, (e)=>{
+          e.preventDefault();
+          zone.classList.remove('is-dragover');
+        });
+      });
+      zone.addEventListener('drop', (e)=>{
+        handleFiles(e.dataTransfer?.files);
+      });
+
+      document.addEventListener('paste', handlePasteArtefactoImage);
+    }
+
+    function handlePasteArtefactoImage(e){
+      const modal = document.getElementById('artefactos-modal-backdrop');
+      if(!modal || modal.getAttribute('aria-hidden') === 'true') return;
+      const items = (e.clipboardData || e.originalEvent?.clipboardData || {}).items || [];
+      for(const item of items){
+        if(item.type && item.type.indexOf('image') !== -1){
+          const file = item.getAsFile();
+          if(file){
+            currentArtefactoImageFile = file;
+            currentArtefactoImageUrl = '';
+            renderArtefactoPreview(URL.createObjectURL(file));
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+    }
+
+    function renderArtefactosGrid(){
+      const grid = document.getElementById('artefactos-grid');
+      if(!grid) return;
+      const items = artefactosByProject.get(currentArtefactosCotId) || [];
+      if(!items.length){
+        grid.innerHTML = `<div class="artefactos-empty">No hay artefactos o referencias cargadas para este proyecto.</div>`;
+        return;
+      }
+
+      grid.innerHTML = items.map(item=>`
+        <div class="artefacto-card">
+          <div class="artefacto-image">
+            ${item.image_url ? `<img src="${attr(item.image_url)}" alt="${attr(item.titulo || 'Artefacto')}">` : `<span style="font-size:13px;color:#7a8191;font-weight:700;">Sin imagen</span>`}
+          </div>
+          <div class="artefacto-body">
+            <h4 class="artefacto-title">${esc(item.titulo || 'Sin título')}</h4>
+            <div class="artefacto-desc">${esc(item.descripcion || 'Sin descripción')}</div>
+            <div class="artefacto-actions">
+              ${item.link_url ? `<a class="artefactos-btn" href="${attr(item.link_url)}" target="_blank" rel="noopener">Abrir link</a>` : ''}
+              <button class="artefactos-btn" onclick="editArtefacto('${attr(item.id)}')">Editar</button>
+              <button class="artefactos-btn artefactos-btn-danger" onclick="removeArtefacto('${attr(item.id)}')">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function openArtefactosModal(cotizacionId){
+      currentArtefactosCotId = cotizacionId;
+      const modal = document.getElementById('artefactos-modal-backdrop');
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden','false');
+      document.body.style.overflow='hidden';
+      resetArtefactoForm();
+      wireArtefactoUploadEvents();
+      try{
+        await listProjectArtefactos(cotizacionId);
+        renderArtefactosGrid();
+      }catch(e){
+        console.error(e);
+        toast('No se pudieron cargar los artefactos');
+      }
+    }
+
+    function closeArtefactosModal(){
+      const modal = document.getElementById('artefactos-modal-backdrop');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden','true');
+      document.body.style.overflow='';
+      currentArtefactosCotId = null;
+      resetArtefactoForm();
+    }
+
+    async function handleSaveArtefacto(){
+      if(!currentArtefactosCotId){
+        toast('Proyecto no disponible');
+        return;
+      }
+
+      const titulo = document.getElementById('artefacto-titulo')?.value?.trim() || '';
+      const descripcion = document.getElementById('artefacto-descripcion')?.value?.trim() || '';
+      const link_url = document.getElementById('artefacto-link')?.value?.trim() || '';
+
+      if(!titulo){
+        toast('Ingresa un título');
+        return;
+      }
+
+      try{
+        showLoader(true);
+        let image_url = currentArtefactoImageUrl || '';
+        if(currentArtefactoImageFile){
+          image_url = await uploadArtefactoImage(currentArtefactoImageFile, currentArtefactosCotId);
+        }
+
+        const currentList = artefactosByProject.get(currentArtefactosCotId) || [];
+        if(currentArtefactoEditId){
+          const existing = currentList.find(x => x.id === currentArtefactoEditId);
+          await updateArtefacto(currentArtefactoEditId, {
+            titulo,
+            descripcion,
+            link_url,
+            image_url,
+            orden: existing?.orden ?? 0
+          });
+        }else{
+          const nextOrden = currentList.length ? Math.max(...currentList.map(x => Number(x.orden || 0))) + 1 : 1;
+          await createArtefacto({
+            cotizacion_id: currentArtefactosCotId,
+            titulo,
+            descripcion,
+            link_url,
+            image_url,
+            orden: nextOrden
+          });
+        }
+
+        await listProjectArtefactos(currentArtefactosCotId);
+        renderArtefactosGrid();
+        resetArtefactoForm();
+        toast('Artefacto guardado');
+      }catch(e){
+        console.error(e);
+        toast('No se pudo guardar el artefacto');
+      }finally{
+        showLoader(false);
+      }
+    }
+
+    function editArtefacto(id){
+      const items = artefactosByProject.get(currentArtefactosCotId) || [];
+      const item = items.find(x => x.id === id);
+      if(!item) return;
+      fillArtefactoForm(item);
+    }
+
+    async function removeArtefacto(id){
+      const ok = confirm('¿Eliminar este ítem?');
+      if(!ok) return;
+      try{
+        await deleteArtefacto(id);
+        await listProjectArtefactos(currentArtefactosCotId);
+        renderArtefactosGrid();
+        if(currentArtefactoEditId === id) resetArtefactoForm();
+        toast('Artefacto eliminado');
+      }catch(e){
+        console.error(e);
+        toast('No se pudo eliminar el artefacto');
       }
     }
 
@@ -2409,6 +2941,7 @@
           <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
           <button class="btn btn-soft-green" onclick="verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
           <button class="btn btn-soft-green" onclick="openVideoModal('${attr(proj.cotizacionId||'')}')">Video explicativo proyecto${hasVideo ? ' ▶' : ''}</button>
+          <button class="btn btn-soft-green" onclick="openArtefactosModal('${attr(proj.cotizacionId||'')}')">Artefactos y electrodomésticos</button>
           <button class="btn btn-soft-green" style="background:#f0f7ff;border-color:#cfe2ff;" onclick="openBoardModal()">Notas y obs. presentación</button>
         </div>
 
