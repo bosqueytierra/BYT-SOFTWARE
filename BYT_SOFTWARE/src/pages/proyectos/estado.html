@@ -1915,6 +1915,13 @@
       return stageMap?.[normalizedStage] || 'pendiente';
     }
 
+    function getMissingDependencies(partidaId, stageName){
+      const config = ETAPAS_CONFIG[stageName] || {};
+      const dependsOn = config.dependsOn || [];
+      const stMap = stageStore.get(partidaId) || {};
+      return dependsOn.filter(depStage => getStageValue(stMap, depStage) !== 'listo');
+    }
+
     function getPartidaPendingCount(partidaId){
       const stMap = stageStore.get(partidaId) || {};
       let pending = 0;
@@ -3389,12 +3396,13 @@
                     const nota = notes[normalizedStage] ?? globalStageNotes[normalizedStage] ?? '';
                     const noteId = `note-${pt.id}-${normalizedStage}`;
                     const doneClass = value==='listo' ? 'done' : (value==='en_progreso' ? 'in-progress' : '');
+                    const missingDeps = getMissingDependencies(pt.id, normalizedStage);
                     return `
                     <div class="stage-item ${doneClass}">
                         <button class="note-toggle" onclick="toggleNote('${attr(noteId)}')" title="Agregar nota">▾</button>
                         <span class="stage-name">${esc(normalizedStage)}</span>
                         <span class="stage-owner"><span class="owner-badge">Responsable: ${esc(stage.owner)}</span></span>
-                        <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(normalizedStage)}', this.value, true)">
+                        <select class="stage-select" onchange="setStage('${attr(pt.id)}','${attr(normalizedStage)}', this.value, true, this)">
                           <option value="pendiente" ${value==='pendiente'?'selected':''}>Pendiente</option>
                           <option value="en_progreso" ${value==='en_progreso'?'selected':''}>En progreso</option>
                           <option value="listo" ${value==='listo'?'selected':''}>Listo</option>
@@ -3429,10 +3437,22 @@
       box.classList.toggle('show');
     }
 
-    function setStage(partidaId, stage, value, keepOpen=false){
+    function setStage(partidaId, stage, value, keepOpen=false, selectEl=null){
       const normalizedStage = normalizeStageName(stage);
-      if(keepOpen) openPartidas.add(String(partidaId));
       const current = normalizeStageMap(stageStore.get(partidaId) || {});
+      const previousValue = current[normalizedStage] || 'pendiente';
+
+      if(value === 'listo'){
+        const missingDeps = getMissingDependencies(partidaId, normalizedStage);
+        if(missingDeps.length){
+          if(selectEl) selectEl.value = previousValue;
+          const faltantesTexto = missingDeps.map(dep => `‘${dep}’`).join(', ');
+          toast(`No puedes marcar esta etapa como Listo porque depende de ${faltantesTexto}, y esa etapa aún no está lista.`);
+          return;
+        }
+      }
+
+      if(keepOpen) openPartidas.add(String(partidaId));
       current[normalizedStage] = value;
       stageStore.set(partidaId, current);
       saveStageStore();                    // offline
