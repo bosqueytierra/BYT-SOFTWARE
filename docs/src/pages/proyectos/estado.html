@@ -2198,6 +2198,13 @@
       projectVideoMap.set(cotizacionId, youtubeUrl);
     }
 
+    async function deleteProjectVideo(cotizacionId){
+      const sb = await waitForSupabase();
+      const { error } = await sb.from('proyecto_video_explicativo').delete().eq('cotizacion_id', cotizacionId);
+      if(error) throw error;
+      projectVideoMap.delete(cotizacionId);
+    }
+
     function openVideoModal(cotizacionId){
       currentVideoCotId = cotizacionId;
       currentVideoUrl = projectVideoMap.get(cotizacionId) || '';
@@ -2248,6 +2255,7 @@
             </div>
             <div class="video-actions">
               <button class="video-btn" onclick="renderVideoModal(false, true)">Cambiar link</button>
+              <button class="video-btn" onclick="handleDeleteProjectVideo()">Eliminar video</button>
               <button class="video-btn" onclick="closeVideoModal()">Cerrar</button>
             </div>
           </div>
@@ -2264,6 +2272,7 @@
           <div class="video-actions">
             <button class="video-btn video-btn-primary" onclick="renderVideoModal(true, false)">Reproducir</button>
             <button class="video-btn" onclick="renderVideoModal(false, true)">Cambiar link</button>
+            <button class="video-btn" onclick="handleDeleteProjectVideo()">Eliminar video</button>
             <button class="video-btn" onclick="closeVideoModal()">Cerrar</button>
           </div>
         </div>
@@ -2291,6 +2300,26 @@
       }catch(e){
         console.error(e);
         toast('No se pudo guardar el video');
+      }
+    }
+
+    async function handleDeleteProjectVideo(){
+      if(!currentVideoCotId){
+        toast('Proyecto no disponible');
+        return;
+      }
+      const ok = confirm('¿Seguro que quieres eliminar el video explicativo de este proyecto?');
+      if(!ok) return;
+
+      try{
+        await deleteProjectVideo(currentVideoCotId);
+        currentVideoUrl = '';
+        currentVideoEmbed = null;
+        renderVideoModal(false, false);
+        toast('Video eliminado');
+      }catch(e){
+        console.error(e);
+        toast('No se pudo eliminar el video');
       }
     }
 
@@ -2788,7 +2817,7 @@
           <div class="alinearcito-priority-head">
             <h4>Proyecto más urgente</h4>
             <div class="alinearcito-priority-nav">
-              <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(-1)">‹</button>
+              <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(-1)">��</button>
               <span class="alinearcito-priority-index">${Math.min(alinearcitoPriorityIndex + 1, msg.prioritiesCount)}/${msg.prioritiesCount}</span>
               <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(1)">›</button>
             </div>
