@@ -2783,9 +2783,29 @@
         }
       }
 
-      const weightText = totalTasks
-        ? `Tu carga real hoy suma ${totalWeight} puntos de peso. No todas las tareas pendientes tienen el mismo impacto operativo.`
-        : `Tu carga real hoy es baja. Aprovecha para cerrar pendientes pequeños o revisar calidad antes de que escalen.`;
+      const diasRestantesBase = urgent?.diasRestantes ?? ownerEntries
+        .map(entry => entry.diasRestantes)
+        .filter(v => v !== null && v !== undefined)
+        .sort((a,b)=>a-b)[0] ?? 1;
+      const diasRestantes = diasRestantesBase <= 0 ? 1 : diasRestantesBase;
+      const carga_total = totalWeight;
+      const cantidad_tareas = totalTasks;
+      const presion_base = carga_total / diasRestantes;
+      const factor_cantidad = cantidad_tareas / 5;
+      const presion_real = presion_base * (1 + factor_cantidad * 0.2);
+
+      let pressureText = 'Tu carga está alineada con el tiempo disponible. Puedes avanzar con normalidad.';
+      if(presion_real <= 1.5){
+        pressureText = 'Tu carga está alineada con el tiempo disponible. Puedes avanzar con normalidad.';
+      }else if(presion_real <= 3){
+        pressureText = 'Tu carga empieza a tensionarse con el tiempo. Prioriza bien las próximas acciones.';
+      }else if(presion_real <= 5){
+        pressureText = 'Tu carga es alta para el tiempo disponible. Si no priorizas, puedes atrasarte.';
+      }else{
+        pressureText = 'Tu carga supera lo razonable para el tiempo restante. Debes enfocarte solo en lo crítico.';
+      }
+
+      const weightText = `Hoy tienes ${carga_total} puntos de carga distribuidos en ${cantidad_tareas} tareas.\n${pressureText}`;
 
       const actionText = recommended
         ? `Hoy deberías partir por ${recommended.stageName} en ${recommended.project.display}. Esa acción es la que más orden aporta ahora.`
@@ -2830,7 +2850,7 @@
         </div>
         <div class="alinearcito-block">
           <h4>Carga real</h4>
-          <p>${esc(msg.weight)}</p>
+          <p>${esc(msg.weight).replace(/\n/g, '<br>')}</p>
         </div>
         <div class="alinearcito-block">
           <div class="alinearcito-priority-head">
