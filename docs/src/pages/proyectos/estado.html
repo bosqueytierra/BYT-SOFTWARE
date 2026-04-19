@@ -2817,7 +2817,7 @@
           <div class="alinearcito-priority-head">
             <h4>Proyecto más urgente</h4>
             <div class="alinearcito-priority-nav">
-              <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(-1)">��</button>
+              <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(-1)">‹</button>
               <span class="alinearcito-priority-index">${Math.min(alinearcitoPriorityIndex + 1, msg.prioritiesCount)}/${msg.prioritiesCount}</span>
               <button class="alinearcito-priority-btn" onclick="moveAlinearcitoPriority(1)">›</button>
             </div>
@@ -3065,7 +3065,7 @@
       renderLista();
       renderDetalle();
       if(document.getElementById('alinearcito-modal-backdrop')?.getAttribute('aria-hidden') === 'false'){
-        selectAlinearcitoOwner(currentAlinearcitoOwner || 'Luis');
+        renderAlinearcitoMessages(currentAlinearcitoOwner || 'Luis');
       }
     }
 
