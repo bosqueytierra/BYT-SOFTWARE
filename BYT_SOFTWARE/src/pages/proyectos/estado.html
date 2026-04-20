@@ -1040,6 +1040,38 @@
       min-width:38px;
       text-align:center;
     }
+    .alinearcito-status-badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:92px;
+      padding:5px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:900;
+      white-space:nowrap;
+      border:1px solid transparent;
+    }
+    .alinearcito-status-verde{
+      background:#eaf6ef;
+      color:#1f6c3b;
+      border-color:#c6ead1;
+    }
+    .alinearcito-status-amarillo{
+      background:#fff4df;
+      color:#b47a1b;
+      border-color:#f5d9a4;
+    }
+    .alinearcito-status-rojo{
+      background:#fee2e2;
+      color:#b91c1c;
+      border-color:#fecaca;
+    }
+    .alinearcito-status-critico{
+      background:#f3e8ff;
+      color:#7c2d12;
+      border-color:#d8b4fe;
+    }
 
     .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
     @media(max-width:1280px){
@@ -2794,18 +2826,37 @@
       const factor_cantidad = cantidad_tareas / 5;
       const presion_real = presion_base * (1 + factor_cantidad * 0.2);
 
-      let pressureText = 'Tu carga está alineada con el tiempo disponible. Puedes avanzar con normalidad.';
+      const rangoRecomendadoPorResponsable = {
+        Luis: 14,
+        Alejandro: 18,
+        Jorge: 16,
+        Taller: 20
+      };
+      const rango_recomendado = rangoRecomendadoPorResponsable[owner] || 16;
+
+      let pressureText = 'Estado: Estable. Tu carga está alineada con el tiempo disponible.';
+      let pressureLabel = 'VERDE';
+      let pressureClass = 'alinearcito-status-verde';
+
       if(presion_real <= 1.5){
-        pressureText = 'Tu carga está alineada con el tiempo disponible. Puedes avanzar con normalidad.';
+        pressureText = 'Estado: Estable. Tu carga está alineada con el tiempo disponible.';
+        pressureLabel = 'VERDE';
+        pressureClass = 'alinearcito-status-verde';
       }else if(presion_real <= 3){
-        pressureText = 'Tu carga empieza a tensionarse con el tiempo. Prioriza bien las próximas acciones.';
+        pressureText = 'Estado: Atención. Tu carga empieza a tensionarse con el tiempo.';
+        pressureLabel = 'AMARILLO';
+        pressureClass = 'alinearcito-status-amarillo';
       }else if(presion_real <= 5){
-        pressureText = 'Tu carga es alta para el tiempo disponible. Si no priorizas, puedes atrasarte.';
+        pressureText = 'Estado: Alta presión. Si no priorizas bien, puedes atrasarte.';
+        pressureLabel = 'ROJO';
+        pressureClass = 'alinearcito-status-rojo';
       }else{
-        pressureText = 'Tu carga supera lo razonable para el tiempo restante. Debes enfocarte solo en lo crítico.';
+        pressureText = 'Estado: Sobrecarga. Debes enfocarte solo en lo crítico.';
+        pressureLabel = 'CRÍTICO';
+        pressureClass = 'alinearcito-status-critico';
       }
 
-      const weightText = `Hoy tienes ${carga_total} puntos de carga distribuidos en ${cantidad_tareas} tareas.\n${pressureText}`;
+      const weightText = `Hoy tienes ${carga_total} puntos de carga distribuidos en ${cantidad_tareas} tareas.\nTu rango recomendado hoy es hasta ${rango_recomendado} puntos.\n${pressureText}`;
 
       const actionText = recommended
         ? `Hoy deberías partir por ${recommended.stageName} en ${recommended.project.display}. Esa acción es la que más orden aporta ahora.`
@@ -2816,6 +2867,8 @@
         urgent: urgentText,
         block: blockText,
         weight: weightText,
+        weightStatusLabel: pressureLabel,
+        weightStatusClass: pressureClass,
         action: actionText,
         prioritiesCount: priorities.length || 1
       };
@@ -2849,7 +2902,10 @@
           <p>${esc(msg.block)}</p>
         </div>
         <div class="alinearcito-block">
-          <h4>Carga real</h4>
+          <div class="alinearcito-priority-head">
+            <h4>Carga real</h4>
+            <span class="alinearcito-status-badge ${msg.weightStatusClass}">${esc(msg.weightStatusLabel)}</span>
+          </div>
           <p>${esc(msg.weight).replace(/\n/g, '<br>')}</p>
         </div>
         <div class="alinearcito-block">
