@@ -1641,7 +1641,7 @@
       'Optimizado y estimación de tableros y tapacantos': { peso:4, dependsOn: ['Conformidad del Modelo'] },
       'Ingreso de compra de quincallería y otros': { peso:3, dependsOn: ['Conformidad del Modelo'] },
       'Planos de armado': { peso:4, dependsOn: ['Conformidad del Modelo'] },
-      'Compras de Melaminas y tapacantos': { peso:3, dependsOn: ['Conformidad del Modelo'] },
+      'Compras de Melaminas y tapacantos': { peso:3, dependsOn: ['Optimizado y estimación de tableros y tapacantos'] },
       'Cortes en taller': { peso:5, dependsOn: ['Compras de Melaminas y tapacantos', 'Planos de armado'] },
       'Listo para instalar': { peso:2, dependsOn: ['Cortes en taller'] }
     };
@@ -2763,25 +2763,31 @@
           return (a.project.display || '').localeCompare(b.project.display || '');
         });
 
-      const targetProject = projectCandidates[0]?.project || null;
-      if(!targetProject) return null;
+      for(const candidate of projectCandidates){
+        const targetProject = candidate.project;
 
-      for(const pt of targetProject.partidas){
-        const stMap = stageStore.get(pt.id) || {};
-        for(let i=0;i<STAGES.length;i++){
-          const stage = STAGES[i];
-          const status = getStageValue(stMap, stage.name);
-          if(status === 'pendiente'){
-            return {
-              project: targetProject,
-              partida: pt,
-              stageName: stage.name,
-              owner: stage.owner,
-              nextStage: STAGES[i + 1]?.name || null
-            };
+        for(const pt of targetProject.partidas){
+          const stMap = stageStore.get(pt.id) || {};
+
+          for(let i=0;i<STAGES.length;i++){
+            const stage = STAGES[i];
+            const status = getStageValue(stMap, stage.name);
+            const deps = getStageDependencies(stage.name);
+            const depsReady = deps.every(dep => getStageValue(stMap, dep) === 'listo');
+
+            if(status === 'pendiente' && depsReady){
+              return {
+                project: targetProject,
+                partida: pt,
+                stageName: stage.name,
+                owner: stage.owner,
+                nextStage: STAGES[i + 1]?.name || null
+              };
+            }
           }
         }
       }
+
       return null;
     }
 
@@ -2851,7 +2857,7 @@
         pressureLabel = 'ROJO';
         pressureClass = 'alinearcito-status-rojo';
       }else{
-        pressureText = 'Estado: Sobrecarga. Debes enfocarte primero en lo crítico.';
+        pressureText = 'Estado: Sobrecarga. Debes enfocarte solo en lo crítico.';
         pressureLabel = 'CRÍTICO';
         pressureClass = 'alinearcito-status-critico';
       }
