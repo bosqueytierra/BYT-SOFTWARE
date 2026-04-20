@@ -1626,8 +1626,8 @@
       'Ingreso de compra de quincallería y otros':'Ingreso de compra de quincallería y otros'
     };
 
-    const ADJ_BUCKETS = { skp:'skp', diagrama:'diagramas_corte', planos:'planos_armado', cotizacion:'cotizaciones' };
-    const ADJ_LABELS = { skp:'SKP', diagrama:'Diagrama de corte', planos:'Planos de Armado', cotizacion:'Adjuntos Cotización' };
+    const ADJ_BUCKETS = { skp:'skp', diagrama:'diagramas_corte', planos:'planos_armado', cotizacion:'cotizaciones', revision:'documentos_revision' };
+    const ADJ_LABELS = { skp:'SKP', diagrama:'Diagrama de corte', planos:'Planos de Armado', cotizacion:'Adjuntos Cotización', revision:'Documentos de revisión' };
     const INTRO_STORAGE_KEY = 'byt_estado_intro_seen_date';
     const STAGE_NAME_SET = new Set(STAGES.map(s => s.name));
 
@@ -3481,6 +3481,7 @@
           <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','skp')">SKP Final</button>
           <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
           <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','revision')">Documentos de revisión</button>
           <button class="btn btn-soft-green" onclick="verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
           <button class="btn btn-soft-green" onclick="openVideoModal('${attr(proj.cotizacionId||'')}')">Video explicativo proyecto${hasVideo ? ' ▶' : ''}</button>
           <button class="btn btn-soft-green" onclick="openArtefactosModal('${attr(proj.cotizacionId||'')}')">Artefactos y electrodomésticos</button>
