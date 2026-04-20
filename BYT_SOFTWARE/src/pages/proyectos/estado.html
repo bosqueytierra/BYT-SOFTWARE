@@ -30,6 +30,8 @@
       --postventa-chip-bg:#fee2e2;
       --postventa-chip-text:#b91c1c;
       --postventa-chip-border:#fecaca;
+      --postventa-warning:#7f1d1d;
+      --postventa-soft:#fff7f7;
     }
     *{box-sizing:border-box;}
     body{
@@ -73,7 +75,7 @@
     }
     .dashboard-grid{
       display:grid;
-      grid-template-columns:repeat(7,minmax(0,1fr));
+      grid-template-columns:repeat(9,minmax(0,1fr));
       gap:12px;
       margin-bottom:12px;
     }
@@ -189,14 +191,14 @@
       grid-template-columns:minmax(0,1fr);
       gap:12px;
     }
-    .top8-card, .upcoming-card{
+    .top8-card, .upcoming-card, .postventa-card{
       background:var(--kpi-bg);
       border:1px solid var(--kpi-border);
       border-radius:16px;
       padding:14px;
       box-shadow:0 6px 18px rgba(0,0,0,0.05);
     }
-    .top8-title-wrap, .upcoming-title-wrap{
+    .top8-title-wrap, .upcoming-title-wrap, .postventa-title-wrap{
       display:inline-flex;
       align-items:center;
       background:#eef2f7;
@@ -205,13 +207,13 @@
       padding:6px 10px;
       margin-bottom:6px;
     }
-    .top8-title, .upcoming-title{
+    .top8-title, .upcoming-title, .postventa-title{
       margin:0;
       font-size:15px;
       font-weight:800;
       color:var(--text);
     }
-    .top8-subtitle, .upcoming-subtitle{
+    .top8-subtitle, .upcoming-subtitle, .postventa-subtitle{
       margin:0 0 12px;
       font-size:12px;
       color:var(--muted);
@@ -271,24 +273,24 @@
       font-weight:900;
       white-space:nowrap;
     }
-    .top8-empty, .upcoming-empty{
+    .top8-empty, .upcoming-empty, .postventa-empty{
       font-size:12px;
       color:var(--muted);
       font-weight:700;
     }
-    .upcoming-list{
+    .upcoming-list, .postventa-list{
       display:grid;
       grid-template-columns:repeat(2,minmax(0,1fr));
       gap:24px;
       align-items:start;
     }
-    .upcoming-column{
+    .upcoming-column, .postventa-column{
       display:flex;
       flex-direction:column;
       gap:0;
       min-width:0;
     }
-    .upcoming-item{
+    .upcoming-item, .postventa-item{
       display:grid;
       grid-template-columns:minmax(0,1fr) auto;
       gap:12px;
@@ -300,11 +302,12 @@
       margin-bottom:8px;
       box-shadow:none;
       cursor:pointer;
+      background:#fff;
     }
-    .upcoming-main{
+    .upcoming-main, .postventa-main{
       min-width:0;
     }
-    .upcoming-project{
+    .upcoming-project, .postventa-project{
       font-size:13px;
       font-weight:800;
       color:var(--text);
@@ -313,7 +316,7 @@
       overflow:hidden;
       text-overflow:ellipsis;
     }
-    .upcoming-meta{
+    .upcoming-meta, .postventa-meta{
       margin-top:3px;
       font-size:12px;
       color:var(--muted);
@@ -324,7 +327,11 @@
       color:#7f1d1d;
       font-weight:800;
     }
-    .upcoming-progress{
+    .postventa-time{
+      color:var(--postventa-warning);
+      font-weight:800;
+    }
+    .upcoming-progress, .postventa-progress{
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -598,6 +605,7 @@
     }
     .video-input,
     .postventa-input,
+    .postventa-select,
     .postventa-textarea{
       width:100%;
       padding:12px 14px;
@@ -645,6 +653,15 @@
       filter:brightness(1.05);
       background:#111827;
       border-color:#111827;
+    }
+    .postventa-btn-danger{
+      border-color:#fda4af;
+      color:#b91c1c;
+      background:#fff;
+    }
+    .postventa-btn-danger:hover{
+      background:#fff1f2;
+      border-color:#f87171;
     }
     .video-preview{
       display:flex;
@@ -1203,7 +1220,7 @@
 
     .layout{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start;}
     @media(max-width:1280px){
-      .dashboard-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+      .dashboard-grid{grid-template-columns:repeat(5,minmax(0,1fr));}
     }
     @media(max-width:1100px){
       .layout{grid-template-columns:1fr;}
@@ -1215,8 +1232,11 @@
       .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
       .top8-list{grid-template-columns:1fr;}
       .upcoming-list{grid-template-columns:1fr;}
+      .postventa-list{grid-template-columns:1fr;}
       .upcoming-item{grid-template-columns:1fr;}
+      .postventa-item{grid-template-columns:1fr;}
       .upcoming-progress{justify-self:start;}
+      .postventa-progress{justify-self:start;}
       .intro-grid{grid-template-columns:1fr;}
       .intro-list-item{grid-template-columns:1fr;}
       .intro-item-badge{justify-self:start;}
@@ -1255,6 +1275,18 @@
     .bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#ef4444,#22c55e);}
     .bar-text{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
     .proj-deadline{font-size:12px;color:var(--muted);font-weight:700;margin-top:4px;}
+    .proj-postventa-line{
+      margin-top:4px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+      flex-wrap:wrap;
+    }
+    .proj-postventa-text{
+      font-size:12px;
+      font-weight:800;
+      color:var(--postventa-warning);
+    }
 
     /* Detalle derecha */
     .detail-card{padding:16px;max-height:calc(100vh - 220px);overflow-y:auto;}
@@ -2137,6 +2169,93 @@
       });
     }
 
+    function getTodayDateString(){
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function getDateDiffFromToday(dateStr){
+      if(!dateStr) return null;
+      const today = new Date(`${getTodayDateString()}T00:00:00`);
+      const target = new Date(`${dateStr}T00:00:00`);
+      if(Number.isNaN(target.getTime())) return null;
+      return Math.ceil((target.getTime() - today.getTime()) / 86400000);
+    }
+
+    function getPostventaUrgencyMeta(postventa){
+      if(!postventa?.fecha_entrega_postventa){
+        return {
+          diffDays: null,
+          text: 'Sin fecha de entrega postventa',
+          urgencyRank: 4,
+          isUrgent: false
+        };
+      }
+      const diffDays = getDateDiffFromToday(postventa.fecha_entrega_postventa);
+      if(diffDays === null){
+        return {
+          diffDays: null,
+          text: 'Sin fecha de entrega postventa',
+          urgencyRank: 4,
+          isUrgent: false
+        };
+      }
+      if(diffDays < 0){
+        return {
+          diffDays,
+          text: `Postventa vencida hace ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'día' : 'días'}`,
+          urgencyRank: 1,
+          isUrgent: true
+        };
+      }
+      if(diffDays === 0){
+        return {
+          diffDays,
+          text: 'Postventa hoy',
+          urgencyRank: 2,
+          isUrgent: true
+        };
+      }
+      if(diffDays <= 7){
+        return {
+          diffDays,
+          text: `Postventa en ${diffDays} ${diffDays === 1 ? 'día' : 'días'}`,
+          urgencyRank: 3,
+          isUrgent: true
+        };
+      }
+      return {
+        diffDays,
+        text: `Postventa en ${diffDays} ${diffDays === 1 ? 'día' : 'días'}`,
+        urgencyRank: 4,
+        isUrgent: false
+      };
+    }
+
+    function getActivePostventaProjectItems(){
+      return proyectos
+        .map(project=>{
+          const postventa = postventaByProject.get(project.cotizacionId);
+          if(!postventa || !postventa.activa) return null;
+          return {
+            project,
+            postventa,
+            urgency: getPostventaUrgencyMeta(postventa)
+          };
+        })
+        .filter(Boolean)
+        .sort((a,b)=>{
+          if(a.urgency.urgencyRank !== b.urgency.urgencyRank) return a.urgency.urgencyRank - b.urgency.urgencyRank;
+          const aDiff = a.urgency.diffDays ?? 9999;
+          const bDiff = b.urgency.diffDays ?? 9999;
+          if(aDiff !== bDiff) return aDiff - bDiff;
+          return (a.project.display || '').localeCompare(b.project.display || '');
+        });
+    }
+
     function formatInstalacionText(fechaLimite){
       if(!fechaLimite) return '';
       const today = new Date();
@@ -2448,7 +2567,11 @@
 
       if(error) throw error;
       if(data?.cotizacion_id){
-        postventaByProject.set(data.cotizacion_id, data);
+        if(data.activa){
+          postventaByProject.set(data.cotizacion_id, data);
+        }else{
+          postventaByProject.delete(data.cotizacion_id);
+        }
       }
       return data;
     }
@@ -2558,6 +2681,18 @@
       body.innerHTML = `
         <div class="postventa-status">Postventa activa para este proyecto.</div>
         <div class="postventa-grid">
+          <div class="postventa-field">
+            <label>Estado</label>
+            <select id="postventa-estado" class="postventa-select">
+              <option value="abierta" ${currentPostventa.estado === 'abierta' ? 'selected' : ''}>Abierta</option>
+              <option value="en_proceso" ${currentPostventa.estado === 'en_proceso' ? 'selected' : ''}>En proceso</option>
+              <option value="resuelta" ${currentPostventa.estado === 'resuelta' ? 'selected' : ''}>Resuelta</option>
+            </select>
+          </div>
+          <div class="postventa-field">
+            <label>Fecha reporte</label>
+            <input class="postventa-input" type="text" value="${attr(currentPostventa.fecha_reporte ? new Date(currentPostventa.fecha_reporte).toLocaleString('es-CL') : '')}" disabled>
+          </div>
           <div class="postventa-field postventa-field-full">
             <label>Nota cliente</label>
             <textarea id="postventa-nota-cliente" class="postventa-textarea" placeholder="Describe lo reportado por el cliente...">${esc(currentPostventa.nota_cliente || '')}</textarea>
@@ -2567,16 +2702,13 @@
             <textarea id="postventa-nota-solucion" class="postventa-textarea" placeholder="Describe la solución o acción tomada...">${esc(currentPostventa.nota_solucion || '')}</textarea>
           </div>
           <div class="postventa-field">
-            <label>Fecha reporte</label>
-            <input class="postventa-input" type="text" value="${attr(currentPostventa.fecha_reporte ? new Date(currentPostventa.fecha_reporte).toLocaleString('es-CL') : '')}" disabled>
-          </div>
-          <div class="postventa-field">
             <label>Fecha entrega postventa</label>
             <input id="postventa-fecha-entrega" class="postventa-input" type="date" value="${attr(currentPostventa.fecha_entrega_postventa || '')}">
           </div>
         </div>
         <div class="postventa-actions">
           <button class="postventa-btn postventa-btn-primary" onclick="handleSavePostventa()">Guardar cambios</button>
+          <button class="postventa-btn postventa-btn-danger" onclick="handleResolvePostventa()">Marcar como resuelta</button>
           <button class="postventa-btn" onclick="closePostventaModal()">Cerrar</button>
         </div>
         <div class="postventa-files">
@@ -2653,7 +2785,7 @@
         currentPostventa = await createActivePostventa(currentPostventaCotId);
         await refreshPostventaFiles();
         renderPostventaModal();
-        renderDetalle();
+        rerenderMainUI();
         toast('Postventa abierta');
       }catch(e){
         console.error(e);
@@ -2672,20 +2804,48 @@
       const nota_cliente = document.getElementById('postventa-nota-cliente')?.value?.trim() || '';
       const nota_solucion = document.getElementById('postventa-nota-solucion')?.value?.trim() || '';
       const fecha_entrega_postventa = document.getElementById('postventa-fecha-entrega')?.value || null;
+      const estado = document.getElementById('postventa-estado')?.value || 'abierta';
 
       try{
         showLoader(true);
         currentPostventa = await updatePostventa(currentPostventa.id, {
           nota_cliente,
           nota_solucion,
-          fecha_entrega_postventa
+          fecha_entrega_postventa,
+          estado
         });
         renderPostventaModal();
-        renderDetalle();
+        rerenderMainUI();
         toast('Postventa guardada');
       }catch(e){
         console.error(e);
         toast('No se pudo guardar la postventa');
+      }finally{
+        showLoader(false);
+      }
+    }
+
+    async function handleResolvePostventa(){
+      if(!currentPostventa?.id){
+        toast('No hay postventa activa');
+        return;
+      }
+      const ok = confirm('¿Marcar esta postventa como resuelta?');
+      if(!ok) return;
+
+      try{
+        showLoader(true);
+        await updatePostventa(currentPostventa.id, {
+          estado: 'resuelta',
+          activa: false,
+          updated_at: new Date().toISOString()
+        });
+        closePostventaModal();
+        rerenderMainUI();
+        toast('Postventa resuelta');
+      }catch(e){
+        console.error(e);
+        toast('No se pudo cerrar la postventa');
       }finally{
         showLoader(false);
       }
@@ -3205,8 +3365,28 @@
         })
         .slice(0, 10);
 
+      const activePostventas = getActivePostventaProjectItems();
+      const postventasUrgentes = activePostventas.filter(item => item.urgency.isUrgent);
+      const upcomingPostventas = activePostventas.slice(0, 10).map(item=>({
+        key: item.project.key,
+        display: item.project.display || 'Proyecto sin nombre',
+        urgencyText: item.urgency.text,
+        diffDays: item.urgency.diffDays
+      }));
+
       const promedioAvance = totalStages ? Math.round((totalListo/totalStages)*100) : 0;
-      return { byOwner, byOwnerBreakdown: breakdownOrdered, topPendingStages, upcomingInstallProjects, totalPendientes, proyectosActivos, promedioAvance };
+      return {
+        byOwner,
+        byOwnerBreakdown: breakdownOrdered,
+        topPendingStages,
+        upcomingInstallProjects,
+        totalPendientes,
+        proyectosActivos,
+        promedioAvance,
+        postventasActivas: activePostventas.length,
+        postventasUrgentes: postventasUrgentes.length,
+        upcomingPostventas
+      };
     }
 
     function getOwnerPendingEntries(owner){
@@ -3310,7 +3490,7 @@
       const recommended = priorities[alinearcitoPriorityIndex] || priorities[0] || null;
 
       const summaryText = totalTasks
-        ? `Hoy tienes ${totalTasks} tareas pendientes. Más importante que la cantidad es cómo est��n distribuidas.`
+        ? `Hoy tienes ${totalTasks} tareas pendientes. Más importante que la cantidad es cómo están distribuidas.`
         : `Hoy no tienes tareas pendientes asignadas. Mantén el foco en acompañar el flujo del equipo.`;
 
       const urgentText = urgent
@@ -3592,6 +3772,47 @@
         `;
       }
 
+      function renderUpcomingPostventas(){
+        const items = kpis.upcomingPostventas || [];
+        const leftColumn = items.slice(0, 5);
+        const rightColumn = items.slice(5, 10);
+
+        function renderItem(item){
+          return `
+            <div class="postventa-item" onclick="goToProjectFromUpcoming('${attr(item.key)}')">
+              <div class="postventa-main">
+                <div class="postventa-project">${esc(item.display)}</div>
+                <div class="postventa-meta"><span class="postventa-time">${esc(item.urgencyText)}</span></div>
+              </div>
+              <div class="postventa-progress">PV</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="postventa-card">
+            <div class="postventa-title-wrap">
+              <h4 class="postventa-title">Próximas postventas</h4>
+            </div>
+            <p class="postventa-subtitle">Ordenadas por urgencia según fecha de entrega postventa.</p>
+            ${
+              items.length
+                ? `
+                  <div class="postventa-list">
+                    <div class="postventa-column">
+                      ${leftColumn.map(renderItem).join('')}
+                    </div>
+                    <div class="postventa-column">
+                      ${rightColumn.map(renderItem).join('')}
+                    </div>
+                  </div>
+                `
+                : `<div class="postventa-empty">Sin postventas activas por mostrar</div>`
+            }
+          </div>
+        `;
+      }
+
       wrap.innerHTML = `
         <div class="dashboard-head">
           <div>
@@ -3639,9 +3860,20 @@
             <div class="kpi-value">${kpis.promedioAvance}%</div>
             <div class="kpi-foot">según etapas en listo</div>
           </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Postventas activas</div>
+            <div class="kpi-value">${kpis.postventasActivas}</div>
+            <div class="kpi-foot">postventas con activa = true</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Postventas urgentes</div>
+            <div class="kpi-value">${kpis.postventasUrgentes}</div>
+            <div class="kpi-foot">vencidas, hoy o dentro de 7 días</div>
+          </div>
         </div>
         <div class="dashboard-extra">
           ${renderUpcomingProjects()}
+          ${renderUpcomingPostventas()}
           ${renderTop8()}
         </div>
       `;
@@ -3896,6 +4128,17 @@
         const pa = getProjectPendingPartidas(a) > 0 ? 0 : 1;
         const pb = getProjectPendingPartidas(b) > 0 ? 0 : 1;
         if(pa!==pb) return pa-pb;
+
+        const postventaA = postventaByProject.get(a.cotizacionId);
+        const postventaB = postventaByProject.get(b.cotizacionId);
+        const hasPostventaA = postventaA?.activa ? 0 : 1;
+        const hasPostventaB = postventaB?.activa ? 0 : 1;
+        if(hasPostventaA !== hasPostventaB) return hasPostventaA - hasPostventaB;
+
+        const diffA = postventaA?.fecha_entrega_postventa ? (getPostventaUrgencyMeta(postventaA).diffDays ?? 9999) : 9999;
+        const diffB = postventaB?.fecha_entrega_postventa ? (getPostventaUrgencyMeta(postventaB).diffDays ?? 9999) : 9999;
+        if(diffA !== diffB) return diffA - diffB;
+
         return (a.display||'').localeCompare(b.display||'');
       });
 
@@ -3929,6 +4172,8 @@
         const prog=computeProgress(p);
         const pendientes = getProjectPendingPartidas(p);
         const instalacionText = getProjectInstalacionText(p);
+        const postventa = postventaByProject.get(p.cotizacionId);
+        const postventaUrgency = postventa?.activa ? getPostventaUrgencyMeta(postventa) : null;
         return `
           <div class="proj-item ${p.key===selectedKey?'active':''}" onclick="selectProject('${attr(p.key)}')">
             <div style="display:flex;align-items:flex-start;gap:8px;">
@@ -3939,6 +4184,12 @@
                   <span>Partidas pendientes: ${pendientes}</span>
                 </div>
                 ${instalacionText ? `<div class="proj-deadline">${esc(instalacionText)}</div>` : ''}
+                ${postventa?.activa ? `
+                  <div class="proj-postventa-line">
+                    <span class="postventa-chip">POSTVENTA</span>
+                    ${postventaUrgency?.diffDays !== null ? `<span class="proj-postventa-text">${esc(postventaUrgency.text)}</span>` : ''}
+                  </div>
+                ` : ''}
                 <div class="proj-progress">
                   <div class="bar"><div class="bar-fill" style="width:${prog.percent}%;"></div></div>
                   <div class="bar-text">${prog.percent}% completado</div>
