@@ -6,121 +6,551 @@
   <title>Compras - BYT SOFTWARE</title>
   <link rel="stylesheet" href="../../styles/global.css">
   <style>
-    :root { --bg:#f6f7f8; --card:#fff; --border:#d4d8dd; --text:#2d2d2d; --muted:#6c7a86; --primary:#2e5e4e; --shadow:0 6px 16px rgba(0,0,0,0.06); }
-    html, body { width:100%; min-height:100vh; display:block; }
-    body { margin:0; font-family:"Inter","SF Pro Display","Roboto",system-ui,sans-serif; background:var(--bg); color:var(--text); }
-    .page { width:100%; max-width:1800px; margin:16px auto 48px; padding:0 16px; display:block; }
-    .header-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px; box-shadow:var(--shadow); display:flex; justify-content:space-between; gap:14px; align-items:center; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px; box-shadow:var(--shadow); width:100%; }
-    .block-list { display:flex !important; flex-direction:column; gap:14px; width:100%; }
-    .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
-    .meta { color:var(--muted); font-size:13px; font-weight:600; }
-    .chips { display:flex; gap:8px; flex-wrap:wrap; }
-    .chip { background:#eef2f5; color:#2d2d2d; border-radius:10px; padding:4px 10px; border:1px solid var(--border); font-size:13px; }
-    .btn { border:1px solid var(--border); background:#fff; color:#1f2430; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:600; font-size:13px; display:inline-flex; align-items:center; gap:6px; }
-    .btn:hover { background:#eef2f5; }
-    .btn-primary { background:var(--primary); color:#fff; border-color:var(--primary); }
-    .btn-primary:hover { background:#264d40; }
-    .btn-ghost { background:#f4f5f6; color:#1f2430; border-color:#d4d8dd; }
-    .empty { text-align:center; color:#6c7a86; padding:24px 12px; border:1px dashed var(--border); border-radius:12px; background:#fff; }
-
-    body.overlay-open { overflow:hidden; }
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 10px; }
-    .overlay.active { display: flex; }
-    .overlay-content { background: #f8f9fb; border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.30); width: 98vw; max-width: 2200px; height: 92vh; padding: 10px; overflow: hidden; display: flex; flex-direction:column; gap:8px; }
-    .overlay-header { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
-    .overlay-title { font-weight: 700; font-size: 15px; }
-    .lines-wrapper { width:100%; overflow:auto; background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px; }
-    .table-wrapper { width:100%; overflow:auto; }
-    table.lc-table { border-collapse: collapse; width: 100%; min-width: 1500px; }
-    table.lc-table thead th { position: sticky; top: 0; background:#e1e5ec; border:1px solid #d7dbe0; padding:6px 6px; font-size:12.5px; font-weight:700; }
-    table.lc-table tbody td { border:1px solid #d7dbe0; background:#fff; padding:0; min-height:28px; }
-    table.lc-table tbody tr:nth-child(odd) td { background:#f7f8fa; }
-    table.lc-table select, table.lc-table input[type=number], table.lc-table input[type=text] { width:100%; height:28px; font-size:13px; padding:2px 6px; box-sizing:border-box; border:none; background:transparent; }
-    table.lc-table input[type=number] { appearance:none; -moz-appearance:textfield; }
-    table.lc-table input::-webkit-outer-spin-button, table.lc-table input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .readonly-cell { background:#f3f4f6; }
-
-    .action-cell { display:flex; gap:6px; justify-content:center; align-items:center; }
-    .icon-btn {
-      width:32px; height:32px; border:1px solid #d4d8dd; border-radius:8px;
-      background:#f8f9fb; display:flex; align-items:center; justify-content:center;
-      cursor:pointer; padding:0; transition:background .12s ease, border-color .12s ease, color .12s ease;
-      color:#cfd5e3;
+    /* ── Design tokens ──────────────────────────────────────── */
+    :root {
+      --bg: #f4f5f7;
+      --card: #ffffff;
+      --border: #e3e6ea;
+      --border-light: #eceef2;
+      --text: #1a1d23;
+      --muted: #6b7585;
+      --primary: #2e5e4e;
+      --primary-hover: #234a3d;
+      --primary-light: #e8f2ee;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+      --shadow-lg: 0 16px 48px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.06);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
     }
-    .icon-btn:hover { background:#eef2f7; border-color:#c6cbd3; color:#e6ebf2; }
-    .icon-btn svg { width:17px; height:17px; stroke: currentColor; fill: none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 
-    .estado-comprado { background:#d9ecc1 !important; color:#1f2a37 !important; }
-    .estado-stock     { background:#35714e !important; color:#ffffff !important; }
-    .estado-porcomprar{ background:#a22116 !important; color:#ffffff !important; }
+    /* ── Base ───────────────────────────────────────────────── */
+    html, body { width: 100%; min-height: 100vh; display: block; }
+    body {
+      margin: 0;
+      font-family: "Inter", "SF Pro Display", "Roboto", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    .page {
+      width: 100%;
+      max-width: 1800px;
+      margin: 20px auto 56px;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-    .section-title { margin:12px 0 8px; font-weight:800; color:#1f2430; display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
-    .section-body { transition:max-height .2s ease; overflow:hidden; }
-    .badge-pill { padding:4px 10px; border-radius:999px; font-weight:700; font-size:12px; border:1px solid #d4d8dd; background:#f4f5f6; }
-    .panel { padding:10px; border-radius:10px; border:1px solid #e6e7eb; box-shadow: inset 0 1px 0 rgba(255,255,255,0.6); }
-    .panel-por { background:rgba(0,0,0,0.03); }
-    .panel-ent { background:rgba(0,0,0,0.06); }
-    .arrow { transition:transform .15s ease; font-size:14px; color:#444; }
-    .arrow.up { transform:rotate(180deg); }
+    /* ── Header card ────────────────────────────────────────── */
+    .header-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 28px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+    }
+    .header-card h1 {
+      margin: 0 0 4px;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+      color: var(--text);
+    }
+    .header-card .header-sub {
+      color: var(--muted);
+      font-size: 13.5px;
+      font-weight: 500;
+      margin: 0;
+    }
 
-    .prod-cell{display:flex;align-items:center;gap:6px;padding:2px 4px;}
-    .prod-select{flex:1;}
-    .btn-search{width:30px;height:28px;border:1px solid #d4d8dd;border-radius:6px;background:#f7f9fb;cursor:pointer;}
-    .prod-pill{display:flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #d4d8dd;border-radius:10px;background:#eef2f5;font-size:12.5px;}
-    .prod-pill strong{font-weight:700;}
-    .btn-clear-prod{border:none;background:transparent;color:#a11;cursor:pointer;font-weight:700;}
-    .hidden{display:none !important;}
+    /* ── Section panels ─────────────────────────────────────── */
+    .panel {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .panel-por { background: #ffffff; }
+    .panel-ent { background: #fafbfc; }
 
-    .catalog-layout{display:flex;gap:10px;height:100%;}
-    .catalog-filters{width:240px;flex-shrink:0;background:#fff;border:1px solid #d4d8dd;border-radius:10px;padding:10px;overflow:auto;}
-    .catalog-results{flex:1;display:flex;flex-direction:column;gap:8px;}
-    .filter-group{margin-bottom:12px;}
-    .filter-group label{font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:6px;}
-    .filter-group input, .filter-group select{width:100%;height:30px;padding:4px 6px;font-size:13px;box-sizing:border-box;}
-    .range-row{display:flex;gap:6px;}
-    .range-row input{flex:1;}
-    .selected-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
-    .chip-mini{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:12px;border:1px solid #d4d8dd;background:#f7f9fb;font-size:12px;}
-    .chip-mini button{border:none;background:transparent;cursor:pointer;font-weight:800;color:#a11;}
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid var(--border-light);
+      background: inherit;
+      transition: background 0.12s ease;
+    }
+    .section-title:hover { background: #f7f8fa; }
+    .section-title-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.1px;
+    }
+    .section-body { transition: max-height .25s ease; overflow: hidden; }
+    .section-body-inner { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
 
-    .item-grid{display:grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap:10px; padding:8px;}
-    .item-card{background:#fff; border:1px solid #d4d8dd; border-radius:10px; overflow:hidden; display:flex; gap:10px; padding:10px; align-items:center;}
-    .item-thumb{width:56px;height:56px; object-fit:cover; border-radius:10px; border:1px solid #e5e7eb;}
-    .item-body h4{margin:0 0 4px; font-size:14px;}
-    .muted{color:#6c7a86; font-size:12px;}
+    .badge-pill {
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 12px;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid rgba(46,94,78,0.2);
+      min-width: 22px;
+      text-align: center;
+    }
+    .arrow {
+      transition: transform 0.18s ease;
+      font-size: 13px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .arrow.up { transform: rotate(180deg); }
+
+    /* ── Project cards ──────────────────────────────────────── */
+    .block-list { display: flex !important; flex-direction: column; gap: 12px; width: 100%; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+      width: 100%;
+      box-sizing: border-box;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: #d0d5dd;
+    }
+
+    .block-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .block-header h3 {
+      margin: 0 0 5px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+    .meta { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 0; }
+    .chip {
+      background: #f3f5f8;
+      color: #3d4655;
+      border-radius: 8px;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .card-footer { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-light); }
+    .card-stat-label { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px; }
+    .card-stat-value { font-size: 20px; font-weight: 800; color: var(--text); line-height: 1; }
+
+    .block-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+
+    /* ── Buttons ────────────────────────────────────────────── */
+    .btn {
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: #f5f6f8;
+      border-color: #c8cdd5;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 1px 3px rgba(46,94,78,0.25);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+      box-shadow: 0 2px 6px rgba(46,94,78,0.3);
+    }
+    .btn-ghost {
+      background: #f4f5f7;
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover { background: #ebecef; }
+
+    /* ── Empty state ────────────────────────────────────────── */
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 32px 16px;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius-md);
+      background: #fafbfc;
+      font-size: 14px;
+    }
+
+    /* ── Overlays / Modals ──────────────────────────────────── */
+    body.overlay-open { overflow: hidden; }
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 12, 20, 0.55);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 12px;
+    }
+    .overlay.active { display: flex; }
+    .overlay-content {
+      background: #f7f8fa;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 98vw;
+      max-width: 2200px;
+      height: 92vh;
+      padding: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--border);
+    }
+    .overlay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 14px 18px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .overlay-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+      letter-spacing: -0.1px;
+    }
+    .overlay-filters {
+      padding: 12px 18px;
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .lines-wrapper {
+      flex: 1;
+      overflow: auto;
+      background: #ffffff;
+      padding: 0;
+    }
+
+    /* ── LC Table ───────────────────────────────────────────── */
+    .table-wrapper { width: 100%; overflow: auto; }
+    table.lc-table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1500px;
+    }
+    table.lc-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #f0f2f5;
+      border-bottom: 2px solid var(--border);
+      border-right: 1px solid var(--border);
+      padding: 9px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4a5468;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    table.lc-table thead th:last-child { border-right: none; }
+    table.lc-table tbody tr { transition: background 0.08s ease; }
+    table.lc-table tbody td {
+      border-bottom: 1px solid var(--border-light);
+      border-right: 1px solid var(--border-light);
+      background: #ffffff;
+      padding: 0;
+      min-height: 32px;
+    }
+    table.lc-table tbody td:last-child { border-right: none; }
+    table.lc-table tbody tr:nth-child(even) td { background: #fafbfc; }
+    table.lc-table tbody tr:hover td { background: #f0f4ff !important; }
+
+    table.lc-table select,
+    table.lc-table input[type=number],
+    table.lc-table input[type=text] {
+      width: 100%;
+      height: 32px;
+      font-size: 13px;
+      padding: 3px 8px;
+      box-sizing: border-box;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+    }
+    table.lc-table select:focus,
+    table.lc-table input:focus {
+      background: #fffbf0;
+      box-shadow: inset 0 0 0 2px rgba(46,94,78,0.25);
+    }
+    table.lc-table input[type=number] { appearance: none; -moz-appearance: textfield; }
+    table.lc-table input::-webkit-outer-spin-button,
+    table.lc-table input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    .readonly-cell { background: #f5f6f8 !important; }
+    .readonly-cell input { color: var(--muted); }
+
+    /* ── Table action buttons ───────────────────────────────── */
+    .action-cell { display: flex; gap: 5px; justify-content: center; align-items: center; padding: 2px 6px; }
+    .icon-btn {
+      width: 30px; height: 30px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #f8f9fb;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; padding: 0;
+      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+      color: #8a94a6;
+    }
+    .icon-btn:hover { background: #eef0f4; border-color: #bcc2cc; color: #5a6478; }
+    .icon-btn.danger:hover { background: #fff0f0; border-color: #f5c0c0; color: #c0392b; }
+    .icon-btn.primary:hover { background: var(--primary-light); border-color: rgba(46,94,78,0.3); color: var(--primary); }
+    .icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Estado pago ────────────────────────────────────────── */
+    .estado-comprado { background: #dcf5e4 !important; color: #1a5c34 !important; font-weight: 600; }
+    .estado-stock     { background: #2e5e4e !important; color: #ffffff !important; font-weight: 600; }
+    .estado-porcomprar{ background: #8b1a1a !important; color: #ffffff !important; font-weight: 600; }
+
+    /* ── Product cell ───────────────────────────────────────── */
+    .prod-cell { display: flex; align-items: center; gap: 5px; padding: 2px 5px; }
+    .prod-select { flex: 1; }
+    .btn-search {
+      width: 28px; height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #f5f6f8;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      transition: background 0.1s ease;
+    }
+    .btn-search:hover { background: #e8ecf0; }
+    .prod-pill {
+      display: flex; align-items: center; gap: 6px;
+      padding: 4px 9px;
+      border: 1px solid rgba(46,94,78,0.25);
+      border-radius: 8px;
+      background: var(--primary-light);
+      font-size: 12px;
+    }
+    .prod-pill strong { font-weight: 700; color: var(--primary); }
+    .btn-clear-prod { border: none; background: transparent; color: #c0392b; cursor: pointer; font-weight: 700; font-size: 13px; padding: 0 2px; }
+    .hidden { display: none !important; }
+
+    /* ── Filters area ───────────────────────────────────────── */
+    .filters-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filter-col {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 180px;
+    }
+    .filter-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #6b7585;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .filter-col select,
+    .filter-col input {
+      height: 32px;
+      padding: 4px 10px;
+      font-size: 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #ffffff;
+      color: var(--text);
+      font-family: inherit;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .filter-col select:focus,
+    .filter-col input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
+    }
+    .filters-actions {
+      margin-left: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+    }
+    .filters-actions-btns {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .selected-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+    .chip-mini {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #eef1f5;
+      font-size: 12px;
+      color: #3d4655;
+      font-weight: 600;
+    }
+    .chip-mini button { border: none; background: transparent; cursor: pointer; font-weight: 800; color: #c0392b; padding: 0; line-height: 1; }
+
+    /* ── Catalog / Product search ───────────────────────────── */
+    .catalog-layout { display: flex; gap: 12px; height: 100%; }
+    .catalog-filters {
+      width: 230px;
+      flex-shrink: 0;
+      background: #f7f8fa;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      overflow: auto;
+    }
+    .catalog-results { flex: 1; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+    .filter-group { margin-bottom: 16px; }
+    .filter-group label { font-size: 11.5px; font-weight: 700; color: #6b7585; text-transform: uppercase; letter-spacing: 0.4px; display: block; margin-bottom: 6px; }
+    .filter-group input,
+    .filter-group select {
+      width: 100%; height: 32px; padding: 4px 8px; font-size: 13px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: #fff; color: var(--text); font-family: inherit;
+      box-sizing: border-box; transition: border-color 0.12s;
+    }
+    .filter-group input:focus,
+    .filter-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(46,94,78,0.12); }
+    .range-row { display: flex; gap: 6px; }
+    .range-row input { flex: 1; }
+
+    .prod-result-card {
+      display: flex; gap: 12px; align-items: flex-start;
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      padding: 12px 14px; background: #fff;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .prod-result-card:hover { box-shadow: var(--shadow-md); border-color: #c8cdd5; }
+    .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; padding: 12px; }
+    .item-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      display: flex;
+      gap: 12px;
+      padding: 14px;
+      align-items: center;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .item-card:hover { box-shadow: var(--shadow-md); border-color: #c8cdd5; }
+    .item-thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 1px solid var(--border-light); flex-shrink: 0; }
+    .item-body h4 { margin: 0 0 4px; font-size: 14px; font-weight: 700; color: var(--text); }
+    .muted { color: var(--muted); font-size: 12px; }
+    .item-body .item-total { font-size: 15px; font-weight: 800; color: var(--primary); margin-top: 4px; }
+
+    /* ── Print overlay ──────────────────────────────────────── */
+    .print-overlay-content {
+      max-width: 420px;
+      height: auto !important;
+      min-height: auto !important;
+      padding: 0 !important;
+      border-radius: var(--radius-lg) !important;
+    }
+    .print-overlay-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 10px; }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="header-card">
       <div>
-        <h1 style="margin:0;">Compras</h1>
-        <p class="meta" style="margin:4px 0 0;">Bloques de compras generados al aprobar cotizaciones</p>
+        <h1>Compras</h1>
+        <p class="header-sub">Bloques de compras generados al aprobar cotizaciones</p>
       </div>
     </div>
 
     <div class="panel panel-por">
       <div class="section-title" id="togglePorEntregar">
         <span class="arrow" id="arrowPor">▼</span>
-        <span style="font-size:16px; font-weight:800;">Proyectos por entregar</span>
+        <span class="section-title-text">Proyectos por entregar</span>
         <span class="badge-pill" id="countPorEntregar">0</span>
       </div>
       <div class="section-body" id="bodyPorEntregar">
-        <div id="blocksContainer" class="block-list"></div>
-        <div id="emptyState" class="empty" style="display:none;">No hay proyectos por entregar.</div>
+        <div class="section-body-inner">
+          <div id="blocksContainer" class="block-list"></div>
+          <div id="emptyState" class="empty" style="display:none;">No hay proyectos por entregar.</div>
+        </div>
       </div>
     </div>
 
-    <div class="panel panel-ent" style="margin-top:12px;">
+    <div class="panel panel-ent">
       <div class="section-title" id="toggleEntregados">
         <span class="arrow up" id="arrowEnt">▼</span>
-        <span style="font-size:16px; font-weight:800;">Proyectos entregados</span>
+        <span class="section-title-text">Proyectos entregados</span>
         <span class="badge-pill" id="countEntregados">0</span>
       </div>
       <div class="section-body" id="bodyEntregados" style="max-height:0;">
-        <div id="blocksEntregados" class="block-list"></div>
-        <div id="emptyEntregados" class="empty" style="display:none;">No hay proyectos entregados.</div>
+        <div class="section-body-inner">
+          <div id="blocksEntregados" class="block-list"></div>
+          <div id="emptyEntregados" class="empty" style="display:none;">No hay proyectos entregados.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -130,10 +560,10 @@
       <div class="overlay-header">
         <div class="overlay-title" id="overlayTitle">Ver resumen</div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <button class="btn" id="closeOverlay">Cerrar</button>
+          <button class="btn" id="closeOverlay">✕ Cerrar</button>
         </div>
       </div>
-      <div class="lines-wrapper">
+      <div class="lines-wrapper" style="padding:12px;">
         <div id="overlayGrid"></div>
       </div>
     </div>
@@ -144,78 +574,83 @@
       <div class="overlay-header">
         <div class="overlay-title" id="overlayLCTitle">Lista de compras</div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <button class="btn" id="addRowBtn">Agregar fila</button>
-          <button class="btn" id="closeOverlayLC">Cerrar</button>
+          <button class="btn btn-ghost" id="addRowBtn">
+            <svg viewBox="0 0 24 24" width="15" height="15" style="stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;"><path d="M12 5v14M5 12h14"/></svg>
+            Agregar fila
+          </button>
+          <button class="btn" id="closeOverlayLC">✕ Cerrar</button>
         </div>
       </div>
 
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:0 2px;">
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Filtrar categoría (multi)</label>
-          <select id="tableFilterCat" style="height:30px;">
-            <option value="">Seleccione...</option>
-          </select>
-          <div class="selected-chips" id="tableFilterCatChips"></div>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Filtrar proveedor (multi)</label>
-          <select id="tableFilterProv" style="height:30px;">
-            <option value="">Seleccione...</option>
-          </select>
-          <div class="selected-chips" id="tableFilterProvChips"></div>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Ordenar categoría por</label>
-          <select id="tableOrderCat" style="height:30px;">
-            <option value="">Seleccione...</option>
-            <option value="cat-asc">Categoría A-Z</option>
-            <option value="cat-desc">Categoría Z-A</option>
-            <option value="price-asc">Precio ↑</option>
-            <option value="price-desc">Precio ↓</option>
-          </select>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Ordenar proveedor por</label>
-          <select id="tableOrderProv" style="height:30px;">
-            <option value="">Seleccione...</option>
-            <option value="prov-asc">Proveedor A-Z</option>
-            <option value="prov-desc">Proveedor Z-A</option>
-          </select>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:420px;margin-left:auto;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Imprimir / Exportar</label>
-          <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;">
-            <select id="printFilter" style="height:30px;min-width:170px;">
-              <option value="all">Todo</option>
-              <option value="comprado">Comprado</option>
-              <option value="stock">En stock</option>
-              <option value="porcomprar">Por comprar</option>
+      <div class="overlay-filters">
+        <div class="filters-row">
+          <div class="filter-col" style="min-width:200px;">
+            <label class="filter-label">Categoría (multi)</label>
+            <select id="tableFilterCat">
+              <option value="">Seleccione...</option>
             </select>
+            <div class="selected-chips" id="tableFilterCatChips"></div>
+          </div>
 
-            <button class="btn" id="exportExcelBtn" type="button" title="Exportar a Excel">
-              <svg viewBox="0 0 24 24" width="16" height="16" style="stroke:#1f2430;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;">
-                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
-                <path d="M14 3v5h5"/>
-                <path d="M9 10l4 6"/>
-                <path d="M13 10l-4 6"/>
-              </svg>
-              Exportar a Excel
-            </button>
+          <div class="filter-col" style="min-width:200px;">
+            <label class="filter-label">Proveedor (multi)</label>
+            <select id="tableFilterProv">
+              <option value="">Seleccione...</option>
+            </select>
+            <div class="selected-chips" id="tableFilterProvChips"></div>
+          </div>
 
-            <button class="btn" id="printBtn" type="button" title="Imprimir">
-              <svg viewBox="0 0 24 24" width="16" height="16" style="stroke:#1f2430;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;">
-                <path d="M7 8V4h10v4" />
-                <rect x="6" y="13" width="12" height="7" rx="1" />
-                <path d="M6 10H5a2 2 0 0 0-2 2v3h3" />
-                <path d="M18 10h1a2 2 0 0 1 2 2v3h-3" />
-                <path d="M8 17h8" />
-              </svg>
-              Imprimir
-            </button>
+          <div class="filter-col" style="min-width:180px;">
+            <label class="filter-label">Ordenar categoría</label>
+            <select id="tableOrderCat">
+              <option value="">Seleccione...</option>
+              <option value="cat-asc">Categoría A-Z</option>
+              <option value="cat-desc">Categoría Z-A</option>
+              <option value="price-asc">Precio ↑</option>
+              <option value="price-desc">Precio ↓</option>
+            </select>
+          </div>
+
+          <div class="filter-col" style="min-width:180px;">
+            <label class="filter-label">Ordenar proveedor</label>
+            <select id="tableOrderProv">
+              <option value="">Seleccione...</option>
+              <option value="prov-asc">Proveedor A-Z</option>
+              <option value="prov-desc">Proveedor Z-A</option>
+            </select>
+          </div>
+
+          <div class="filters-actions">
+            <label class="filter-label">Imprimir / Exportar</label>
+            <div class="filters-actions-btns">
+              <select id="printFilter" style="height:32px;min-width:160px;padding:4px 10px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;">
+                <option value="all">Todo</option>
+                <option value="comprado">Comprado</option>
+                <option value="stock">En stock</option>
+                <option value="porcomprar">Por comprar</option>
+              </select>
+
+              <button class="btn" id="exportExcelBtn" type="button" title="Exportar a Excel">
+                <svg viewBox="0 0 24 24" width="15" height="15" style="stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;">
+                  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+                  <path d="M14 3v5h5"/>
+                  <path d="M9 10l4 6"/>
+                  <path d="M13 10l-4 6"/>
+                </svg>
+                Excel
+              </button>
+
+              <button class="btn" id="printBtn" type="button" title="Imprimir">
+                <svg viewBox="0 0 24 24" width="15" height="15" style="stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;">
+                  <path d="M7 8V4h10v4" />
+                  <rect x="6" y="13" width="12" height="7" rx="1" />
+                  <path d="M6 10H5a2 2 0 0 0-2 2v3h3" />
+                  <path d="M18 10h1a2 2 0 0 1 2 2v3h-3" />
+                  <path d="M8 17h8" />
+                </svg>
+                Imprimir
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -227,16 +662,16 @@
   </div>
 
   <div id="overlayProduct" class="overlay">
-    <div class="overlay-content" style="max-width:1200px;height:80vh;">
-      <div class="overlay-header" style="gap:10px;">
+    <div class="overlay-content" style="max-width:1200px;height:82vh;">
+      <div class="overlay-header">
         <div class="overlay-title">Buscar producto catálogo</div>
-        <div style="display:flex;gap:8px;align-items:center;flex:1;">
-          <input id="prodSearchInput" type="text" placeholder="Buscar..." style="flex:1;min-width:200px;padding:6px 8px;">
-          <select id="prodVendorFilter" style="height:30px;">
+        <div style="display:flex;gap:8px;align-items:center;flex:1;flex-wrap:wrap;">
+          <input id="prodSearchInput" type="text" placeholder="Buscar producto..." style="flex:1;min-width:200px;height:32px;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;box-sizing:border-box;">
+          <select id="prodVendorFilter" style="height:32px;padding:4px 10px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;">
             <option value="">Todos los vendors</option>
             <option value="IMPERIAL">IMPERIAL</option>
           </select>
-          <select id="prodOrder" style="height:30px;">
+          <select id="prodOrder" style="height:32px;padding:4px 10px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;">
             <option value="name-asc">Nombre A-Z</option>
             <option value="name-desc">Nombre Z-A</option>
             <option value="price-asc">Precio ↑</option>
@@ -247,7 +682,7 @@
           <button class="btn" id="closeOverlayProduct">✕ Cerrar</button>
         </div>
       </div>
-      <div class="lines-wrapper" style="height:calc(100% - 54px);">
+      <div class="lines-wrapper" style="padding:12px;">
         <div class="catalog-layout">
           <div class="catalog-filters">
             <div class="filter-group">
@@ -263,7 +698,7 @@
             </div>
             <div class="filter-group">
               <label>Resultados</label>
-              <small style="color:#6c7a86;">Búsqueda + vendor + marca + rango + orden.</small>
+              <small style="color:var(--muted);font-size:12px;line-height:1.4;display:block;">Búsqueda + vendor + marca + rango + orden.</small>
             </div>
           </div>
           <div class="catalog-results" id="prodResults"></div>
@@ -273,24 +708,27 @@
   </div>
 
   <div id="overlayPrintOrder" class="overlay">
-    <div class="overlay-content" style="max-width:420px;height:auto;min-height:auto;padding:18px;">
+    <div class="overlay-content print-overlay-content">
       <div class="overlay-header">
         <div class="overlay-title">Opciones de impresión</div>
-        <button class="btn" id="closeOverlayPrintOrder">Cerrar</button>
+        <button class="btn" id="closeOverlayPrintOrder">✕ Cerrar</button>
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:12px;padding:6px 2px 2px;">
+      <div class="print-overlay-body">
         <div class="meta" id="printOrderCurrentFilter">Filtro: Todo</div>
 
         <button class="btn btn-ghost" id="printOrderByCategory" type="button">
+          <svg viewBox="0 0 24 24" width="15" height="15" style="stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
           Imprimir ordenando por categoría
         </button>
 
         <button class="btn btn-ghost" id="printOrderByProvider" type="button">
+          <svg viewBox="0 0 24 24" width="15" height="15" style="stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>
           Imprimir ordenando por proveedor
         </button>
 
-        <button class="btn" id="printOrderWithoutSort" type="button">
+        <button class="btn btn-primary" id="printOrderWithoutSort" type="button">
+          <svg viewBox="0 0 24 24" width="15" height="15" style="stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;"><path d="M7 8V4h10v4"/><rect x="6" y="13" width="12" height="7" rx="1"/><path d="M6 10H5a2 2 0 0 0-2 2v3h3"/><path d="M18 10h1a2 2 0 0 1 2 2v3h-3"/></svg>
           Imprimir sin orden especial
         </button>
       </div>
@@ -791,32 +1229,44 @@
         const pct = avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0;
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
         const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
+        const diasColor = (() => {
+          if (typeof diasRest !== 'number') return 'var(--text)';
+          if (diasRest <= 3) return '#c0392b';
+          if (diasRest <= 7) return '#d4710a';
+          return 'var(--text)';
+        })();
 
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
           html: `
             <div class="card">
               <div class="block-header">
-                <div>
-                  <h3 style="margin:0 0 4px;">${title}</h3>
+                <div style="flex:1;min-width:0;">
+                  <h3>${title}</h3>
                   <div class="meta">Partidas: ${escapeHtml(partesLabel)}</div>
-                  <div class="meta" style="margin-top:6px;">Fecha de entrega límite: ${fechaLim ? escapeHtml(fechaLim) : '—'}</div>
+                  <div class="meta" style="margin-top:3px;">Entrega límite: ${fechaLim ? escapeHtml(fechaLim) : '—'}</div>
                 </div>
-                <div style="display:flex; gap:6px;">
-                  <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
-                  <button class="btn btn-primary" data-block-summary data-block-id="${b.id}" data-block-title="${title}">Ver resumen</button>
+                <div class="block-actions">
+                  <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                    Lista de compras
+                  </button>
+                  <button class="btn btn-primary" data-block-summary data-block-id="${b.id}" data-block-title="${title}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" style="stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>
+                    Ver resumen
+                  </button>
                 </div>
               </div>
-              <div class="chips" style="margin:8px 0;">
-                <span class="chip">Total cobrado: ${fmtCLP(b.total_cobrado)}</span>
+              <div class="chips">
+                <span class="chip">Cobrado: ${fmtCLP(b.total_cobrado)}</span>
                 <span class="chip">Comprado: ${fmtCLP(b.total_comprado)}</span>
                 <span class="chip">Por comprar: ${fmtCLP(b.total_por_comprar)}</span>
-                <span class="chip">Avance: ${pct}%</span>
+                <span class="chip" style="background:var(--primary-light);color:var(--primary);border-color:rgba(46,94,78,0.2);">Avance: ${pct}%</span>
               </div>
-              <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; margin-top:8px;">
+              <div class="card-footer">
                 <div>
-                  <div class="meta" style="font-weight:600;">Días restantes para fecha de entrega</div>
-                  <div style="font-size:16px; font-weight:600;">${diasRest}</div>
+                  <div class="card-stat-label">Días restantes</div>
+                  <div class="card-stat-value" style="color:${diasColor};">${diasRest}</div>
                 </div>
               </div>
             </div>
@@ -1327,7 +1777,7 @@
     }
 
     function renderSummary(lines) {
-      if (!lines.length) { overlayGrid.innerHTML = '<div style="padding:12px; text-align:center; color:#6c7a86;">Sin líneas</div>'; return; }
+      if (!lines.length) { overlayGrid.innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted);">Sin líneas registradas</div>'; return; }
       const byCat = {};
       for (const l of lines) {
         const k = l.categoria || 'Sin categoría';
@@ -1342,7 +1792,7 @@
           <div class="item-body">
             <h4>${escapeHtml(cat)}</h4>
             <div class="muted">Items: ${info.count}</div>
-            <div><strong>${fmtCLP(info.total)}</strong></div>
+            <div class="item-total">${fmtCLP(info.total)}</div>
           </div>
         </div>
       `).join('');
@@ -1393,19 +1843,19 @@
 
     function renderProdResults(rows){
       if(!prodResults) return;
-      if(!rows.length){ prodResults.innerHTML='<div style="padding:12px;color:#6c7a86;">Sin resultados</div>'; return; }
+      if(!rows.length){ prodResults.innerHTML='<div style="padding:24px;color:var(--muted);text-align:center;">Sin resultados</div>'; return; }
       prodResults.innerHTML = rows.map(r=>`
-        <div style="display:flex;gap:8px;align-items:flex-start;border:1px solid #d4d8dd;border-radius:8px;padding:8px;">
-          <div style="flex:1;">
-            <div style="font-weight:700;">${escapeHtml(r.aa_name || '(sin nombre)')}</div>
-            <div class="meta">${escapeHtml(r.vendor||'')}</div>
-            <div class="meta">${escapeHtml(r.aa_url||'')}</div>
-            <div class="meta">Código: ${escapeHtml(r.aa_category_url || '')}</div>
+        <div class="prod-result-card">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px;">${escapeHtml(r.aa_name || '(sin nombre)')}</div>
+            <div class="meta" style="font-size:12px;">${escapeHtml(r.vendor||'')}</div>
+            <div class="meta" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px;">${escapeHtml(r.aa_url||'')}</div>
+            <div class="meta" style="font-size:12px;">Cód: ${escapeHtml(r.aa_category_url || '—')}</div>
           </div>
-          <div style="width:110px; text-align:right; font-weight:800;">${fmtCLP(r.aa_price||0)}</div>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            <a class="btn btn-ghost" href="${escapeHtml(r.aa_url||'#')}" target="_blank">Ver</a>
-            <button class="btn btn-primary" data-action="pick-prod" data-prod='${escapeHtml(JSON.stringify(r))}'>Usar</button>
+          <div style="font-size:16px;font-weight:800;color:var(--primary);white-space:nowrap;">${fmtCLP(r.aa_price||0)}</div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+            <a class="btn btn-ghost" href="${escapeHtml(r.aa_url||'#')}" target="_blank" style="font-size:12px;padding:5px 10px;">Ver</a>
+            <button class="btn btn-primary" data-action="pick-prod" data-prod='${escapeHtml(JSON.stringify(r))}' style="font-size:12px;padding:5px 10px;">Usar</button>
           </div>
         </div>
       `).join('');
