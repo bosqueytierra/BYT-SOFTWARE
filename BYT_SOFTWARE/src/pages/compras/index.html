@@ -385,19 +385,149 @@
     }
     .range-row { display:flex; gap:6px; }
     .range-row input { flex:1; }
-    .selected-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+    .selected-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; min-height:0; }
     .chip-mini {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
+      gap: 6px;
+      padding: 3px 4px 3px 10px;
       border-radius: var(--radius-pill);
       border: 1px solid var(--border);
       background: #f6f8fa;
       font-size: 12px;
       font-weight: 500;
+      color: #1f2430;
+      line-height: 1.2;
+      transition: background .15s ease, border-color .15s ease;
     }
-    .chip-mini button { border:none; background:transparent; cursor:pointer; font-weight:700; color:var(--error); line-height:1; }
+    .chip-mini:hover { background:#eef2f6; border-color:#d0d7de; }
+    .chip-mini button {
+      border:none;
+      background:transparent;
+      cursor:pointer;
+      font-weight:700;
+      color:#6c7a86;
+      line-height:1;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+      font-size:14px;
+      transition: background .15s ease, color .15s ease;
+    }
+    .chip-mini button:hover { background:rgba(207,34,46,0.1); color:var(--error); }
+
+    /* ===== Lista de compras toolbar ===== */
+    .lc-toolbar {
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px 16px;
+      align-items:flex-start;
+      justify-content:space-between;
+      padding: 8px 2px 4px;
+    }
+    .lc-filters {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px 12px;
+      align-items:flex-start;
+      flex:1 1 auto;
+      min-width:0;
+    }
+    .lc-filter-group {
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      width: 220px;
+      min-width: 200px;
+      max-width: 260px;
+      background: #fafbfc;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 10px 10px;
+      box-shadow: 0 1px 0 rgba(27,31,36,0.02);
+    }
+    .lc-filter-group > label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      color: #6c7a86;
+    }
+    .lc-filter-select {
+      height: 34px;
+      width: 100%;
+      padding: 0 30px 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background-color: var(--card);
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236c7a86' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 12px 12px;
+      font-size: 13px;
+      color: #1f2430;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .lc-filter-select:hover { border-color: #c8ced4; }
+    .lc-filter-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .lc-actions {
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex: 0 0 auto;
+      margin-left:auto;
+      align-self: stretch;
+      padding-top: 22px;
+    }
+    .lc-action-icon-btn {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 48px;
+      height: 48px;
+      padding: 0;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--card);
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(27,31,36,0.04);
+      transition: transform .12s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease;
+    }
+    .lc-action-icon-btn:hover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: 0 2px 6px rgba(27,31,36,0.08);
+    }
+    .lc-action-icon-btn:active { transform: translateY(1px); }
+    .lc-action-icon-btn:focus-visible {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .lc-action-icon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      display:block;
+      pointer-events:none;
+    }
+    @media (max-width: 720px) {
+      .lc-toolbar { flex-direction: column; align-items: stretch; }
+      .lc-actions { margin-left: 0; padding-top: 4px; justify-content: flex-end; }
+      .lc-filter-group { width: 100%; max-width: none; }
+    }
 
     .item-grid {
       display: grid;
@@ -711,81 +841,63 @@
       <div class="overlay-header">
         <div class="overlay-title" id="overlayLCTitle">Lista de compras</div>
         <div style="display:flex; gap:8px; align-items:center;">
-          <button class="btn" id="addRowBtn">Agregar fila</button>
           <button class="btn" id="closeOverlayLC">Cerrar</button>
         </div>
       </div>
 
       <div id="lcSummaryChips" class="lc-summary-chips"></div>
 
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:0 2px;">
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Filtrar categoría (multi)</label>
-          <select id="tableFilterCat" style="height:30px;">
-            <option value="">Seleccione...</option>
-          </select>
-          <div class="selected-chips" id="tableFilterCatChips"></div>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Filtrar proveedor (multi)</label>
-          <select id="tableFilterProv" style="height:30px;">
-            <option value="">Seleccione...</option>
-          </select>
-          <div class="selected-chips" id="tableFilterProvChips"></div>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Ordenar categoría por</label>
-          <select id="tableOrderCat" style="height:30px;">
-            <option value="">Seleccione...</option>
-            <option value="cat-asc">Categoría A-Z</option>
-            <option value="cat-desc">Categoría Z-A</option>
-            <option value="price-asc">Precio ↑</option>
-            <option value="price-desc">Precio ↓</option>
-          </select>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Ordenar proveedor por</label>
-          <select id="tableOrderProv" style="height:30px;">
-            <option value="">Seleccione...</option>
-            <option value="prov-asc">Proveedor A-Z</option>
-            <option value="prov-desc">Proveedor Z-A</option>
-          </select>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:4px;min-width:420px;margin-left:auto;">
-          <label style="font-size:12px;font-weight:700;color:#333;">Imprimir / Exportar</label>
-          <div style="display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;">
-            <select id="printFilter" style="height:30px;min-width:170px;">
-              <option value="all">Todo</option>
-              <option value="comprado">Comprado</option>
-              <option value="stock">En stock</option>
-              <option value="porcomprar">Por comprar</option>
+      <div class="lc-toolbar">
+        <div class="lc-filters">
+          <div class="lc-filter-group">
+            <label>Filtrar categoría (multi)</label>
+            <select id="tableFilterCat" class="lc-filter-select">
+              <option value="">Seleccione...</option>
             </select>
-
-            <button class="btn" id="exportExcelBtn" type="button" title="Exportar a Excel">
-              <svg viewBox="0 0 24 24" width="16" height="16" style="stroke:#1f2430;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;">
-                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
-                <path d="M14 3v5h5"/>
-                <path d="M9 10l4 6"/>
-                <path d="M13 10l-4 6"/>
-              </svg>
-              Exportar a Excel
-            </button>
-
-            <button class="btn" id="printBtn" type="button" title="Imprimir">
-              <svg viewBox="0 0 24 24" width="16" height="16" style="stroke:#1f2430;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;">
-                <path d="M7 8V4h10v4" />
-                <rect x="6" y="13" width="12" height="7" rx="1" />
-                <path d="M6 10H5a2 2 0 0 0-2 2v3h3" />
-                <path d="M18 10h1a2 2 0 0 1 2 2v3h-3" />
-                <path d="M8 17h8" />
-              </svg>
-              Imprimir
-            </button>
+            <div class="selected-chips" id="tableFilterCatChips"></div>
           </div>
+
+          <div class="lc-filter-group">
+            <label>Filtrar proveedor (multi)</label>
+            <select id="tableFilterProv" class="lc-filter-select">
+              <option value="">Seleccione...</option>
+            </select>
+            <div class="selected-chips" id="tableFilterProvChips"></div>
+          </div>
+
+          <div class="lc-filter-group">
+            <label>Ordenar categoría por</label>
+            <select id="tableOrderCat" class="lc-filter-select">
+              <option value="">Seleccione...</option>
+              <option value="cat-asc">Categoría A-Z</option>
+              <option value="cat-desc">Categoría Z-A</option>
+              <option value="price-asc">Precio ↑</option>
+              <option value="price-desc">Precio ↓</option>
+            </select>
+          </div>
+
+          <div class="lc-filter-group">
+            <label>Ordenar proveedor por</label>
+            <select id="tableOrderProv" class="lc-filter-select">
+              <option value="">Seleccione...</option>
+              <option value="prov-asc">Proveedor A-Z</option>
+              <option value="prov-desc">Proveedor Z-A</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="lc-actions">
+          <button class="lc-action-icon-btn" id="addRowBtn" type="button" title="Agregar fila" aria-label="Agregar fila">
+            <img src="../../assets/carro.icono.png" alt="" class="lc-action-icon">
+          </button>
+
+          <button class="lc-action-icon-btn" id="exportExcelBtn" type="button" title="Exportar a Excel" aria-label="Exportar a Excel">
+            <img src="../../assets/excel.icono.png" alt="" class="lc-action-icon">
+          </button>
+
+          <button class="lc-action-icon-btn" id="printBtn" type="button" title="Imprimir" aria-label="Imprimir">
+            <img src="../../assets/Imprimir.icono.png" alt="" class="lc-action-icon">
+          </button>
         </div>
       </div>
 
@@ -849,7 +961,17 @@
       </div>
 
       <div style="display:flex;flex-direction:column;gap:12px;padding:6px 2px 2px;">
-        <div class="meta" id="printOrderCurrentFilter">Filtro: Todo</div>
+        <div class="lc-filter-group" style="width:auto;max-width:none;">
+          <label>Filtro para imprimir</label>
+          <select id="printFilter" class="lc-filter-select">
+            <option value="all">Todo</option>
+            <option value="comprado">Comprado</option>
+            <option value="stock">En stock</option>
+            <option value="porcomprar">Por comprar</option>
+          </select>
+        </div>
+
+        <div class="meta" id="printOrderCurrentFilter">Filtro ya seleccionado para imprimir: Todo</div>
 
         <button class="btn btn-ghost" id="printOrderByCategory" type="button">
           Imprimir ordenando por categoría
@@ -1253,6 +1375,8 @@
       if (printBtn) printBtn.onclick = () => openPrintOrderOverlay();
       if (exportExcelBtn) exportExcelBtn.onclick = () => exportCurrentRowsToExcel();
       if (closeOverlayPrintOrder) closeOverlayPrintOrder.onclick = closePrintOrderOverlay;
+
+      if (printFilter) printFilter.addEventListener('change', updatePrintFilterLabel);
 
       if (printOrderByCategory) printOrderByCategory.onclick = () => {
         closePrintOrderOverlay();
@@ -2363,7 +2487,7 @@
       document.body.classList.remove('overlay-open');
     }
 
-    function openPrintOrderOverlay() {
+    function updatePrintFilterLabel() {
       const mode = printFilter?.value || 'all';
       const modeLabel = (mode === 'all') ? 'Todo'
         : (mode === 'comprado') ? 'Comprado'
@@ -2374,7 +2498,10 @@
       if (printOrderCurrentFilter) {
         printOrderCurrentFilter.textContent = `Filtro ya seleccionado para imprimir: ${modeLabel}`;
       }
+    }
 
+    function openPrintOrderOverlay() {
+      updatePrintFilterLabel();
       overlayPrintOrder?.classList.add('active');
       document.body.classList.add('overlay-open');
     }
