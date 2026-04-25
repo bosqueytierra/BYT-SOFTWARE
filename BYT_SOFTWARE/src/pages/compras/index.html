@@ -81,7 +81,7 @@
       transform: translateY(-1px);
     }
 
-    .block-list { display:flex !important; flex-direction:column; gap:16px; width:100%; }
+    .block-list { display:grid !important; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:18px; width:100%; }
     .block-header { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
     .meta { color:var(--muted); font-size:13px; font-weight:500; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; }
@@ -433,6 +433,229 @@
     }
     .item-body h4 { margin:0 0 4px; font-size:14px; font-weight:600; color:var(--text); }
     .muted { color:var(--muted); font-size:12px; }
+
+    /* === Project catalog cards (cover image) === */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 18px;
+      width: 100%;
+    }
+    .project-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+      position: relative;
+    }
+    .project-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+      border-color: #d0d7de;
+    }
+    .project-cover-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: linear-gradient(135deg, #eef1f5 0%, #e1e6ec 100%);
+      overflow: hidden;
+    }
+    .project-cover {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.4s ease;
+    }
+    .project-card:hover .project-cover { transform: scale(1.03); }
+    .project-cover-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      color: #8a96a3;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255,255,255,0.7), transparent 60%),
+        linear-gradient(135deg, #eef1f5 0%, #d8dde4 100%);
+    }
+    .project-cover-placeholder svg {
+      width: 44px;
+      height: 44px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.7;
+    }
+    .project-cover-placeholder span { font-size: 12px; font-weight: 500; letter-spacing: 0.3px; }
+
+    .project-cover-menu-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.6);
+      background: rgba(15,23,42,0.45);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.18s ease, background 0.18s ease, transform 0.18s ease;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      padding: 0;
+      font-size: 18px;
+      line-height: 1;
+      font-weight: 700;
+    }
+    .project-card:hover .project-cover-menu-btn,
+    .project-cover-menu-btn:focus,
+    .project-cover-menu-btn.is-open {
+      opacity: 1;
+    }
+    .project-cover-menu-btn:hover {
+      background: rgba(15,23,42,0.65);
+      transform: scale(1.05);
+    }
+    .project-cover-menu {
+      position: absolute;
+      top: 46px;
+      right: 8px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      min-width: 170px;
+      padding: 6px;
+      z-index: 5;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .project-cover-menu.is-open { display: flex; }
+    .project-cover-menu button {
+      background: transparent;
+      border: none;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text);
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .project-cover-menu button:hover { background: #f3f4f6; }
+    .project-cover-menu button.danger { color: var(--error); }
+    .project-cover-menu button.danger:hover { background: var(--error-bg); }
+
+    .project-card-body {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+    .project-card-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.2px;
+      line-height: 1.3;
+    }
+    .project-card-parts {
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .project-card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+      flex-wrap: wrap;
+    }
+    .project-card-actions .btn { padding: 6px 10px; font-size: 12.5px; }
+
+    .project-card.is-uploading .project-cover-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255,255,255,0.55);
+      backdrop-filter: blur(2px);
+    }
+    .project-card.is-uploading .project-cover-wrap::before {
+      content: 'Subiendo...';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    /* Chips dentro del modal Lista de compras */
+    .lc-summary-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 4px 2px 0;
+    }
+    .lc-summary-chip {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: linear-gradient(135deg, #f6f8fa 0%, #eef1f5 100%);
+      min-width: 120px;
+    }
+    .lc-summary-chip .lc-chip-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .lc-summary-chip .lc-chip-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .lc-summary-chip.is-warning {
+      background: linear-gradient(135deg, #fff8e1 0%, #ffefb3 100%);
+      border-color: #f0d97a;
+    }
+    .lc-summary-chip.is-success {
+      background: linear-gradient(135deg, #dafbe1 0%, #aceebb 100%);
+      border-color: #aceebb;
+    }
+    .lc-summary-chip.is-danger {
+      background: linear-gradient(135deg, #ffebe9 0%, #ffcecb 100%);
+      border-color: #ffcecb;
+    }
   </style>
 </head>
 <body>
@@ -492,6 +715,8 @@
           <button class="btn" id="closeOverlayLC">Cerrar</button>
         </div>
       </div>
+
+      <div id="lcSummaryChips" class="lc-summary-chips"></div>
 
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:0 2px;">
         <div style="display:flex;flex-direction:column;gap:4px;min-width:200px;">
@@ -641,6 +866,8 @@
     </div>
   </div>
 
+  <input type="file" id="projectCoverFileInput" accept="image/*" aria-label="Subir imagen de portada de proyecto" style="display:none;">
+
   <script src="../../js/menuConfig.js"></script>
   <script src="../../js/layout.js"></script>
   <script src="../../lib/supabaseConfig.js"></script>
@@ -670,6 +897,10 @@
     const projectPartsMap = new Map();
     const projectAllDoneMap = new Map();
     const projectFechaLimiteMap = new Map();
+    const projectCoverMap = new Map(); // proyecto_id -> { id, image_path, image_url }
+    const blocksById = new Map();      // block.id -> block
+    let _activeCoverProjectId = null;  // project pending file upload (subir/reemplazar)
+    let _activeCoverMode = null;       // 'create' | 'replace'
 
     const prodState = { rowIdx: null, pageSize: 50 };
     const tableFilters = { cats: new Set(), provs: new Set(), orderCat: '', orderProv: '' };
@@ -677,6 +908,8 @@
     const pendingTotalsTimerByBlock = new Map();
 
     const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="%23e5e7eb"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="12">Sin imagen</text></svg>';
+    const COVER_ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
+    const COVER_MAX_BYTES = 10 * 1024 * 1024;
     const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
     function escapeHtml(str) { if (str === undefined || str === null) return ''; return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]); }
@@ -864,6 +1097,7 @@
         if (!window.supabase && client) window.supabase = client;
         await loadCatalogs();
         await loadSalesMeta();
+        await loadProjectCovers();
         await loadBlocks();
         await loadCategoryImages();
         rebuildFilterOptionsFromCatalogs();
@@ -881,6 +1115,10 @@
       const searchBtn = e.target.closest('[data-action="search-prod"]');
       const pickBtn = e.target.closest('[data-action="pick-prod"]');
       const clearBtn = e.target.closest('[data-action="clear-prod"]');
+      const coverMenuToggle = e.target.closest('[data-action="cover-menu-toggle"]');
+      const coverUpload = e.target.closest('[data-action="cover-upload"]');
+      const coverReplace = e.target.closest('[data-action="cover-replace"]');
+      const coverDelete = e.target.closest('[data-action="cover-delete"]');
 
       if (btnLC) { e.preventDefault(); openLC(btnLC.dataset.blockId, btnLC.dataset.blockTitle || ''); }
       if (btnSummary) { e.preventDefault(); openSummary(btnSummary.dataset.blockId, btnSummary.dataset.blockTitle || ''); }
@@ -889,6 +1127,39 @@
       if (searchBtn) { e.preventDefault(); openProductSearch(Number(searchBtn.dataset.row)); }
       if (pickBtn) { e.preventDefault(); handlePickProduct(pickBtn); }
       if (clearBtn) { e.preventDefault(); clearExternalProduct(Number(clearBtn.dataset.row)); }
+
+      if (coverMenuToggle) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleCoverMenu(coverMenuToggle);
+        return;
+      }
+      if (coverUpload) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAllCoverMenus();
+        triggerCoverUpload(coverUpload.dataset.projectId, 'create');
+        return;
+      }
+      if (coverReplace) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAllCoverMenus();
+        triggerCoverUpload(coverReplace.dataset.projectId, 'replace');
+        return;
+      }
+      if (coverDelete) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAllCoverMenus();
+        deleteProjectCover(coverDelete.dataset.projectId);
+        return;
+      }
+
+      // close any open cover menu when clicking outside
+      if (!e.target.closest('.project-cover-menu') && !e.target.closest('[data-action="cover-menu-toggle"]')) {
+        closeAllCoverMenus();
+      }
     });
 
     function ensureEls() {
@@ -1126,6 +1397,9 @@
       ensureEls();
       if (!blocksContainer || !blocksEntregados || !emptyState || !emptyEntregados) return;
 
+      blocksById.clear();
+      (blocks || []).forEach(b => { if (b && b.id) blocksById.set(b.id, b); });
+
       const cards = blocks.map(b => {
         const parts = projectPartsMap.get(b.proyecto_id) || [];
         const partesLabel = parts.length ? parts.join(' · ') : 'Sin partidas';
@@ -1136,31 +1410,50 @@
         const title = escapeHtml(b.proyecto_nombre || 'Proyecto');
         const diasRest = fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—';
 
+        // Cache calculated values on block for use by openLC chips
+        b._partesLabel = partesLabel;
+        b._fechaLim = fechaLim;
+        b._pct = pct;
+        b._diasRest = diasRest;
+
+        const coverInfo = b.proyecto_id ? projectCoverMap.get(b.proyecto_id) : null;
+        const coverImg = coverInfo && coverInfo.image_url
+          ? `<img class="project-cover" src="${escapeHtml(coverInfo.image_url)}" alt="${title}" loading="lazy">`
+          : `<div class="project-cover-placeholder">
+               <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-7 7"/></svg>
+               <span>Sin imagen de portada</span>
+             </div>`;
+
+        const canManage = !!b.proyecto_id;
+        const hasImage = !!(coverInfo && coverInfo.image_url);
+        const menuBtn = canManage ? `
+          <button type="button"
+                  class="project-cover-menu-btn"
+                  data-action="cover-menu-toggle"
+                  data-project-id="${escapeHtml(b.proyecto_id)}"
+                  title="Opciones de imagen">⋯</button>
+          <div class="project-cover-menu" data-cover-menu="${escapeHtml(b.proyecto_id)}">
+            ${hasImage
+              ? `<button type="button" data-action="cover-replace" data-project-id="${escapeHtml(b.proyecto_id)}">Reemplazar imagen</button>
+                 <button type="button" class="danger" data-action="cover-delete" data-project-id="${escapeHtml(b.proyecto_id)}">Eliminar imagen</button>`
+              : `<button type="button" data-action="cover-upload" data-project-id="${escapeHtml(b.proyecto_id)}">Subir imagen</button>`}
+          </div>
+        ` : '';
+
         return {
           isDone: projectAllDoneMap.get(b.proyecto_id) === true,
           html: `
-            <div class="card">
-              <div class="block-header">
-                <div>
-                  <h3 style="margin:0 0 4px;">${title}</h3>
-                  <div class="meta">Partidas: ${escapeHtml(partesLabel)}</div>
-                  <div class="meta" style="margin-top:6px;">Fecha de entrega límite: ${fechaLim ? escapeHtml(fechaLim) : '—'}</div>
-                </div>
-                <div style="display:flex; gap:6px;">
+            <div class="project-card" data-project-id="${escapeHtml(b.proyecto_id || '')}" data-block-id="${escapeHtml(b.id)}">
+              <div class="project-cover-wrap">
+                ${coverImg}
+                ${menuBtn}
+              </div>
+              <div class="project-card-body">
+                <h3 class="project-card-title">${title}</h3>
+                <div class="project-card-parts">Partidas: ${escapeHtml(partesLabel)}</div>
+                <div class="project-card-actions">
                   <button class="btn btn-ghost" data-block-lc data-block-id="${b.id}" data-block-title="${title}">Lista de compras</button>
                   <button class="btn btn-primary" data-block-summary data-block-id="${b.id}" data-block-title="${title}">Ver resumen</button>
-                </div>
-              </div>
-              <div class="chips" style="margin:8px 0;">
-                <span class="chip">Total cobrado: ${fmtCLP(b.total_cobrado)}</span>
-                <span class="chip">Comprado: ${fmtCLP(b.total_comprado)}</span>
-                <span class="chip">Por comprar: ${fmtCLP(b.total_por_comprar)}</span>
-                <span class="chip">Avance: ${pct}%</span>
-              </div>
-              <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; margin-top:8px;">
-                <div>
-                  <div class="meta" style="font-weight:600;">Días restantes para fecha de entrega</div>
-                  <div style="font-size:16px; font-weight:600;">${diasRest}</div>
                 </div>
               </div>
             </div>
@@ -1703,6 +1996,7 @@
       allRows = [];
 
       if (overlayLCGrid) overlayLCGrid.innerHTML = '';
+      renderLCSummaryChips(blockId);
       if (overlayLC && overlayLCGrid && overlayLCTitle) {
         overlayLCTitle.textContent = 'Lista de compras - ' + (title || blockId);
         overlayLC.classList.add('active'); document.body.classList.add('overlay-open');
@@ -1717,6 +2011,215 @@
         overlayLCGrid.innerHTML = '<div style="padding:12px; color:#c00;">Error cargando líneas</div>';
       }
     }
+
+    function renderLCSummaryChips(blockId) {
+      const host = document.getElementById('lcSummaryChips');
+      if (!host) return;
+      const b = blocksById.get(blockId);
+      if (!b) { host.innerHTML = ''; return; }
+      const fechaLim = b._fechaLim || projectFechaLimiteMap.get(b.proyecto_id) || b.fecha_entrega_limite || '';
+      const avanceBase = (Number(b.total_comprado || 0) + Number(b.total_por_comprar || 0)) || 0;
+      const pct = (b._pct != null) ? b._pct : (avanceBase > 0 ? Math.min(100, Math.round((Number(b.total_comprado || 0) / avanceBase) * 100)) : 0);
+      const diasRest = (b._diasRest != null) ? b._diasRest : (fechaLim ? Math.max(0, Math.ceil((new Date(fechaLim).getTime() - Date.now())/(1000*60*60*24))) : '—');
+      const diasClass = (typeof diasRest === 'number')
+        ? (diasRest <= 3 ? 'is-danger' : (diasRest <= 7 ? 'is-warning' : ''))
+        : '';
+      const pctClass = pct >= 100 ? 'is-success' : (pct > 0 ? 'is-warning' : '');
+
+      host.innerHTML = `
+        <div class="lc-summary-chip">
+          <span class="lc-chip-label">Fecha entrega límite</span>
+          <span class="lc-chip-value">${fechaLim ? escapeHtml(fechaLim) : '—'}</span>
+        </div>
+        <div class="lc-summary-chip">
+          <span class="lc-chip-label">Total cobrado</span>
+          <span class="lc-chip-value">${fmtCLP(b.total_cobrado)}</span>
+        </div>
+        <div class="lc-summary-chip is-success">
+          <span class="lc-chip-label">Comprado</span>
+          <span class="lc-chip-value">${fmtCLP(b.total_comprado)}</span>
+        </div>
+        <div class="lc-summary-chip is-danger">
+          <span class="lc-chip-label">Por comprar</span>
+          <span class="lc-chip-value">${fmtCLP(b.total_por_comprar)}</span>
+        </div>
+        <div class="lc-summary-chip ${pctClass}">
+          <span class="lc-chip-label">Avance</span>
+          <span class="lc-chip-value">${pct}%</span>
+        </div>
+        <div class="lc-summary-chip ${diasClass}">
+          <span class="lc-chip-label">Días restantes</span>
+          <span class="lc-chip-value">${diasRest}</span>
+        </div>
+      `;
+    }
+
+    // ===== Project cover image management =====
+    async function loadProjectCovers() {
+      try {
+        const client = await waitForClient();
+        const { data, error } = await client
+          .from('project_cover_images')
+          .select('id, proyecto_id, image_path, image_url');
+        if (error) { console.warn('loadProjectCovers', error); return; }
+        projectCoverMap.clear();
+        (data || []).forEach(r => {
+          if (r && r.proyecto_id) projectCoverMap.set(r.proyecto_id, r);
+        });
+      } catch (e) {
+        console.warn('loadProjectCovers exception', e);
+      }
+    }
+
+    function closeAllCoverMenus() {
+      document.querySelectorAll('.project-cover-menu.is-open').forEach(m => m.classList.remove('is-open'));
+      document.querySelectorAll('.project-cover-menu-btn.is-open').forEach(b => b.classList.remove('is-open'));
+    }
+
+    function toggleCoverMenu(btn) {
+      if (!btn) return;
+      const projectId = btn.dataset.projectId;
+      const menu = document.querySelector(`.project-cover-menu[data-cover-menu="${CSS.escape(projectId)}"]`);
+      if (!menu) return;
+      const willOpen = !menu.classList.contains('is-open');
+      closeAllCoverMenus();
+      if (willOpen) {
+        menu.classList.add('is-open');
+        btn.classList.add('is-open');
+      }
+    }
+
+    function triggerCoverUpload(projectId, mode) {
+      if (!projectId) return;
+      const input = document.getElementById('projectCoverFileInput');
+      if (!input) return;
+      _activeCoverProjectId = projectId;
+      _activeCoverMode = mode || 'create';
+      input.value = '';
+      input.click();
+    }
+
+    function setCardUploading(projectId, busy) {
+      const card = document.querySelector(`.project-card[data-project-id="${CSS.escape(projectId)}"]`);
+      if (!card) return;
+      card.classList.toggle('is-uploading', !!busy);
+    }
+
+    async function handleCoverFileSelected(file) {
+      const projectId = _activeCoverProjectId;
+      const mode = _activeCoverMode;
+      _activeCoverProjectId = null;
+      _activeCoverMode = null;
+      if (!projectId || !file) return;
+
+      if (!file.type || !file.type.startsWith('image/')) {
+        window.utils?.mostrarNotificacion?.('Selecciona un archivo de imagen', 'error');
+        return;
+      }
+      if (file.size > COVER_MAX_BYTES) {
+        window.utils?.mostrarNotificacion?.('La imagen supera 10 MB', 'error');
+        return;
+      }
+
+      try {
+        setCardUploading(projectId, true);
+        const client = await waitForClient();
+        const rawExt = (file.name.split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const ext = COVER_ALLOWED_EXTS.includes(rawExt) ? rawExt : 'jpg';
+        const rand = Math.random().toString(36).slice(2, 10);
+        const path = `${projectId}/cover-${Date.now()}-${rand}.${ext}`;
+
+        const { error: upErr } = await client.storage
+          .from('project_cover_images')
+          .upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || undefined
+          });
+        if (upErr) throw upErr;
+
+        const { data: pubData } = client.storage
+          .from('project_cover_images')
+          .getPublicUrl(path);
+        const publicUrl = pubData?.publicUrl || '';
+
+        // Try to remove previous storage file if replacing
+        const previous = projectCoverMap.get(projectId);
+
+        const { data: upserted, error: dbErr } = await client
+          .from('project_cover_images')
+          .upsert(
+            { proyecto_id: projectId, image_path: path, image_url: publicUrl, updated_at: new Date().toISOString() },
+            { onConflict: 'proyecto_id' }
+          )
+          .select('id, proyecto_id, image_path, image_url')
+          .single();
+
+        if (dbErr) {
+          // rollback uploaded file
+          try { await client.storage.from('project_cover_images').remove([path]); } catch (_) {}
+          throw dbErr;
+        }
+
+        projectCoverMap.set(projectId, upserted);
+
+        if (previous && previous.image_path && previous.image_path !== path) {
+          try { await client.storage.from('project_cover_images').remove([previous.image_path]); }
+          catch (e) { console.warn('remove previous cover', e); }
+        }
+
+        await loadBlocks();
+        window.utils?.mostrarNotificacion?.(mode === 'replace' ? 'Imagen reemplazada' : 'Imagen subida', 'success');
+      } catch (e) {
+        console.error('handleCoverFileSelected', e);
+        window.utils?.mostrarNotificacion?.('Error al subir imagen', 'error');
+      } finally {
+        setCardUploading(projectId, false);
+      }
+    }
+
+    async function deleteProjectCover(projectId) {
+      if (!projectId) return;
+      if (!window.confirm('¿Eliminar imagen de portada del proyecto?')) return;
+      try {
+        setCardUploading(projectId, true);
+        const client = await waitForClient();
+        const previous = projectCoverMap.get(projectId);
+
+        const { error: dbErr } = await client
+          .from('project_cover_images')
+          .delete()
+          .eq('proyecto_id', projectId);
+        if (dbErr) throw dbErr;
+
+        if (previous && previous.image_path) {
+          try { await client.storage.from('project_cover_images').remove([previous.image_path]); }
+          catch (e) { console.warn('remove cover storage', e); }
+        }
+
+        projectCoverMap.delete(projectId);
+        await loadBlocks();
+        window.utils?.mostrarNotificacion?.('Imagen eliminada', 'success');
+      } catch (e) {
+        console.error('deleteProjectCover', e);
+        window.utils?.mostrarNotificacion?.('Error al eliminar imagen', 'error');
+      } finally {
+        setCardUploading(projectId, false);
+      }
+    }
+
+    document.addEventListener('change', (e) => {
+      const input = e.target.closest('#projectCoverFileInput');
+      if (!input) return;
+      const file = input.files && input.files[0];
+      if (!file) {
+        _activeCoverProjectId = null;
+        _activeCoverMode = null;
+        return;
+      }
+      handleCoverFileSelected(file);
+      input.value = '';
+    });
 
     async function openSummary(blockId, title) {
       ensureEls();
