@@ -1350,7 +1350,7 @@
       .dashboard-card{padding:16px;}
       .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
       .top8-list{grid-template-columns:1fr;}
-      .upcoming-list{grid-template-columns:1fr;}
+      .upcoming-list{grid-template-columns:1fr !important;}
       .postventa-list{grid-template-columns:1fr;}
       .upcoming-item{grid-template-columns:1fr;}
       .postventa-item{grid-template-columns:1fr;}
@@ -1970,14 +1970,18 @@
       color:var(--byt-muted) !important;
     }
 
-    /* Próximas instalaciones: una sola columna de cards modernas */
+    /* Próximas instalaciones: grilla compacta de 2 columnas en desktop */
     .upcoming-list{
       display:grid !important;
-      grid-template-columns:1fr !important;
-      gap:0 !important;
+      grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+      gap:0 14px !important;
+      align-items:start !important;
     }
     .upcoming-column{
-      display:contents !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0 !important;
+      min-width:0 !important;
     }
     .upcoming-item{
       display:grid !important;
@@ -2250,6 +2254,23 @@
       box-shadow:var(--byt-shadow) !important;
       padding:8px !important;
       max-height:calc(100vh - 220px) !important;
+    }
+    .proj-section-header{
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:0.06em;
+      text-transform:uppercase;
+      color:var(--byt-muted);
+      padding:10px 10px 6px;
+      margin-top:4px;
+      border-top:1px solid var(--byt-border-soft);
+    }
+    .proj-section-header:first-child{
+      border-top:none;
+      margin-top:0;
+    }
+    .proj-section-header--completed{
+      color:#16a34a;
     }
     .proj-item{
       border:1px solid transparent !important;
@@ -3238,6 +3259,9 @@
 
     function getProjectInstalacionText(project){
       const fechaLimite = projectFechaLimiteMap.get(project.cotizacionId) || project.fecha_entrega_limite || '';
+      if(project && isProjectComplete(project)){
+        return 'Completado · instalación cerrada';
+      }
       return formatInstalacionText(fechaLimite);
     }
 
@@ -5025,11 +5049,29 @@
     }
 
     function parseCliente(cli){
-      if(!cli) return '';
+      if(cli === null || cli === undefined) return '';
       if(typeof cli==='string'){
-        try{const o=JSON.parse(cli);return o.nombre||o.name||o.cliente||cli;}catch{return cli;}
+        const trimmed = cli.trim();
+        if(!trimmed) return '';
+        // Si parece JSON, intentar extraer un nombre legible. Si no hay nombre, no exponer el JSON crudo.
+        if(trimmed.startsWith('{') || trimmed.startsWith('[')){
+          try{
+            const o = JSON.parse(trimmed);
+            if(o && typeof o === 'object'){
+              const nombre = o.nombre || o.name || o.cliente || '';
+              return typeof nombre === 'string' ? nombre.trim() : '';
+            }
+            return '';
+          }catch{
+            return '';
+          }
+        }
+        return trimmed;
       }
-      if(typeof cli==='object') return cli.nombre||cli.name||cli.cliente||'';
+      if(typeof cli==='object'){
+        const nombre = cli.nombre || cli.name || cli.cliente || '';
+        return typeof nombre === 'string' ? nombre.trim() : '';
+      }
       return String(cli);
     }
 
@@ -5136,15 +5178,20 @@
         const pb = getProjectPendingPartidas(b) > 0 ? 0 : 1;
         if(pa!==pb) return pa-pb;
 
-        const postventaA = postventaByProject.get(a.cotizacionId);
-        const postventaB = postventaByProject.get(b.cotizacionId);
-        const hasPostventaA = postventaA?.activa ? 0 : 1;
-        const hasPostventaB = postventaB?.activa ? 0 : 1;
-        if(hasPostventaA !== hasPostventaB) return hasPostventaA - hasPostventaB;
+        // Pendientes: ordenar por fecha de instalación más próxima → más lejana.
+        if(pa === 0){
+          const dA = getProjectDiasRestantes(a);
+          const dB = getProjectDiasRestantes(b);
+          const da = dA === null ? Number.POSITIVE_INFINITY : dA;
+          const db = dB === null ? Number.POSITIVE_INFINITY : dB;
+          if(da !== db) return da - db;
 
-        const diffA = postventaA?.fecha_entrega_postventa ? (getPostventaUrgencyMeta(postventaA).diffDays ?? 9999) : 9999;
-        const diffB = postventaB?.fecha_entrega_postventa ? (getPostventaUrgencyMeta(postventaB).diffDays ?? 9999) : 9999;
-        if(diffA !== diffB) return diffA - diffB;
+          const postventaA = postventaByProject.get(a.cotizacionId);
+          const postventaB = postventaByProject.get(b.cotizacionId);
+          const hasPostventaA = postventaA?.activa ? 0 : 1;
+          const hasPostventaB = postventaB?.activa ? 0 : 1;
+          if(hasPostventaA !== hasPostventaB) return hasPostventaA - hasPostventaB;
+        }
 
         return (a.display||'').localeCompare(b.display||'');
       });
@@ -5175,19 +5222,30 @@
         list.innerHTML='<div style="padding:22px;text-align:center;color:var(--muted);">No hay proyectos para los filtros aplicados.</div>';
         return;
       }
+      let lastGroup = null; // 'pendiente' | 'completado'
       list.innerHTML = filtered.map(p=>{
         const prog=computeProgress(p);
         const pendientes = getProjectPendingPartidas(p);
+        const isCompleto = pendientes === 0;
+        const group = isCompleto ? 'completado' : 'pendiente';
+        let header = '';
+        if(group !== lastGroup){
+          header = group === 'pendiente'
+            ? '<div class="proj-section-header">Pendientes</div>'
+            : '<div class="proj-section-header proj-section-header--completed">Completados</div>';
+          lastGroup = group;
+        }
         const instalacionText = getProjectInstalacionText(p);
         const postventa = postventaByProject.get(p.cotizacionId);
         const postventaUrgency = postventa?.activa ? getPostventaUrgencyMeta(postventa) : null;
         return `
+          ${header}
           <div class="proj-item ${p.key===selectedKey?'active':''}" onclick="selectProject('${attr(p.key)}')">
             <div style="display:flex;align-items:flex-start;gap:8px;">
               <div style="width:100%;">
                 <p class="proj-title">${esc(p.display)}</p>
                 <div class="proj-meta">
-                  <span>Cliente: ${esc(p.cliente||'N/A')}</span>
+                  <span>Cliente: ${esc(p.cliente && p.cliente.trim() ? p.cliente : 'Cliente sin nombre')}</span>
                   <span>Partidas pendientes: ${pendientes}</span>
                 </div>
                 ${instalacionText ? `<div class="proj-deadline">${esc(instalacionText)}</div>` : ''}
@@ -5236,7 +5294,7 @@
             ${hasActivePostventa ? `<span class="postventa-chip">POSTVENTA ACTIVA</span>` : ''}
           </div>
           <div class="detail-meta">
-            <span>Cliente: ${esc(proj.cliente||'N/A')}</span>
+            <span>Cliente: ${esc(proj.cliente && proj.cliente.trim() ? proj.cliente : 'Cliente sin nombre')}</span>
             ${instalacionText ? `<span>${esc(instalacionText)}</span>` : ''}
             <span>Partidas pendientes: ${getProjectPendingPartidas(proj)}</span>
           </div>
