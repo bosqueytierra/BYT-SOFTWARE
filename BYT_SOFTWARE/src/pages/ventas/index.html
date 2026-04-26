@@ -33,8 +33,6 @@
     .actions{display:flex;gap:6px;flex-wrap:wrap;}
     .btn{border:1px solid var(--border);background:#fff;color:#1f2430;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;}
     .btn-ghost{background:#f0f3f5;color:#1f2430;}
-    .layout-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;align-items:start;}
-    @media (max-width:1100px){.layout-grid{grid-template-columns:1fr;}}
     .empty{padding:14px;color:var(--muted);text-align:center;}
     .state-icon{font-size:20px;display:inline-block;margin-right:6px;}
     .money{font-weight:700;color:#2e5e4e;}
@@ -65,6 +63,87 @@
     .resumen-label{color:var(--muted);font-size:13px;}
     .resumen-value{font-weight:700;}
     .resumen-divider{border:none;border-top:1px solid var(--border);margin:8px 0;}
+
+    /* ---------- ACCORDION (SaaS style) ---------- */
+    .projects-list{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff;}
+    .projects-header,
+    .project-row-grid{
+      display:grid;
+      grid-template-columns: 36px minmax(180px,1.6fr) 1fr 1fr 1fr 1fr 170px;
+      gap:12px;
+      align-items:center;
+      padding:12px 14px;
+    }
+    .projects-header{
+      font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+      background:#fafafa;border-bottom:1px solid var(--border);
+    }
+    .project-block{border-bottom:1px solid var(--border);}
+    .project-block:last-child{border-bottom:none;}
+    .project-row{
+      cursor:pointer;
+      transition:background .2s ease, border-left-color .2s ease;
+      border-left:3px solid transparent;
+      background:#fff;
+    }
+    .project-row:hover{background:#f5f8f7;}
+    .project-row.open{
+      background:#f0f6f3;
+      border-left-color:var(--primary);
+    }
+    .project-row .pcell{font-size:14px;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;}
+    .project-row .pcell.name{font-weight:700;}
+    .project-row input[type="text"]{padding:8px 10px;font-size:13px;}
+
+    .project-details-row{
+      max-height:0;
+      opacity:0;
+      overflow:hidden;
+      transform:translateY(-8px);
+      transition:
+        max-height .35s ease,
+        opacity .25s ease,
+        transform .25s ease;
+      background:#fafafa;
+      border-top:1px solid transparent;
+    }
+    .project-details-row.open{
+      max-height:1600px;
+      opacity:1;
+      transform:translateY(0);
+      border-top-color:var(--border);
+      box-shadow:inset 0 1px 0 rgba(0,0,0,0.02);
+    }
+    .project-details-inner{
+      display:grid;
+      grid-template-columns:2fr 1fr;
+      gap:16px;
+      padding:18px 20px;
+    }
+    .project-details-inner .panel{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px 14px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.04);
+    }
+    .project-details-inner .panel h4{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+    .partidas-table{width:100%;border-collapse:collapse;}
+    .partidas-table th,.partidas-table td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:14px;text-align:left;}
+    .partidas-table tr:last-child td{border-bottom:none;}
+
+    @media (max-width:1100px){
+      .projects-header,.project-row-grid{grid-template-columns:36px minmax(140px,1.4fr) 1fr 1fr 1fr 1fr;}
+      .projects-header .pcell.actions,.project-row .pcell.actions{display:none;}
+    }
+    @media (max-width:900px){
+      .project-details-inner{grid-template-columns:1fr;}
+    }
+    @media (max-width:760px){
+      .projects-header{display:none;}
+      .project-row-grid{grid-template-columns:24px 1fr;gap:8px;}
+      .project-row .pcell:not(.dot):not(.name){display:none;}
+    }
   </style>
 </head>
 <body>
@@ -103,20 +182,8 @@
 
     <div class="card">
       <h3 style="margin:0 0 10px;">Proyectos</h3>
-      <p class="subtext">Selecciona un proyecto para ver sus partidas.</p>
+      <p class="subtext">Haz clic en un proyecto para desplegar sus partidas y resumen.</p>
       <div id="proyectos-wrapper"></div>
-    </div>
-
-    <div class="layout-grid">
-      <div class="card">
-        <h3 class="table-title" id="partidas-title">Partidas del proyecto</h3>
-        <p class="subtext" id="partidas-subtitle">Selecciona un proyecto para ver sus partidas.</p>
-        <div id="partidas-wrapper"></div>
-      </div>
-      <div class="card">
-        <h3 class="table-title" id="resumen-title">Resumen</h3>
-        <div id="resumen-wrapper"></div>
-      </div>
     </div>
   </div>
 
@@ -316,158 +383,218 @@
       if(selectedProyectoKey && !proyectos.find(p=>p.key===selectedProyectoKey)) selectedProyectoKey=null;
     }
 
+    /* ============================================================
+       VIEW MODE (preparado para futuro modo "cards dashboard")
+       ============================================================ */
+    let viewMode = 'table'; // "table" | "cards"
+
     function renderProyectos(){
+      if(viewMode === 'cards') return renderProyectosCards();
+      return renderProyectosTable();
+    }
+
+    function renderProyectosTable(){
       const pw=document.getElementById('proyectos-wrapper');
       if(!proyectos.length){
         pw.innerHTML='<div class="empty"><span class="state-icon">📁</span>No hay proyectos</div>';
         return;
       }
-      const rows=proyectos.map(p=>{
-        const isSel=p.key===selectedProyectoKey;
+      const blocks=proyectos.map(p=>{
+        const isOpen=p.key===selectedProyectoKey;
         const dotClass=p.allGreen?'dot-ok':'dot-bad';
         const totalCobrado=proyectoCobradoMap.has(p.key)?proyectoCobradoMap.get(p.key):p.totalCobrado;
         const fechaInput=(p.fechaEntrega||'').slice(0,10);
+        const keyAttr=escapeHtmlAttr(p.key);
         return `
-          <tr class="project-row ${isSel?'selected':''}" onclick="selectProyecto('${escapeHtmlAttr(p.key)}')">
-            <td style="width:40px;"><span class="dot-status ${dotClass}"></span></td>
-            <td>${escapeHtml(p.displayName)}</td>
-            <td>
-              <input class="fecha-entrega-input"
-                     type="text"
-                     data-proyecto-key="${escapeHtmlAttr(p.key)}"
-                     value="${escapeHtmlAttr(fechaInput)}"
-                     onclick="event.stopPropagation();"
-                     onmousedown="event.stopPropagation();">
-            </td>
-            <td>${escapeHtml(p.cliente||'')}</td>
-            <td>${escapeHtml(fmt(p.totalCotizado))}</td>
-            <td>
-              <input type="text" inputmode="decimal"
-                     value="${escapeHtml(fmt(totalCobrado))}"
-                     onclick="event.stopPropagation();"
-                     onmousedown="event.stopPropagation();"
-                     onfocus="event.stopPropagation(); this.value = parseMoney(this.value); this.select();"
-                     onblur="handleCobradoBlur('${escapeHtmlAttr(p.key)}', this.value)">
-            </td>
-            <td>
-              <div class="actions">
-                <button class="btn btn-ghost" onclick="event.stopPropagation(); verCotizacion('${escapeHtmlAttr(p.cotizacionId||'')}')">Ver cotización</button>
+          <div class="project-block" data-key="${keyAttr}">
+            <div class="project-row project-row-grid ${isOpen?'open':''}"
+                 data-key="${keyAttr}"
+                 onclick="toggleProyecto('${keyAttr}')">
+              <div class="pcell dot"><span class="dot-status ${dotClass}"></span></div>
+              <div class="pcell name">${escapeHtml(p.displayName)}</div>
+              <div class="pcell fecha">
+                <input class="fecha-entrega-input"
+                       type="text"
+                       data-proyecto-key="${keyAttr}"
+                       value="${escapeHtmlAttr(fechaInput)}"
+                       onclick="event.stopPropagation();"
+                       onmousedown="event.stopPropagation();">
               </div>
-            </td>
-          </tr>
+              <div class="pcell cliente">${escapeHtml(p.cliente||'')}</div>
+              <div class="pcell cotizado">${escapeHtml(fmt(p.totalCotizado))}</div>
+              <div class="pcell cobrado">
+                <input type="text" inputmode="decimal"
+                       value="${escapeHtml(fmt(totalCobrado))}"
+                       onclick="event.stopPropagation();"
+                       onmousedown="event.stopPropagation();"
+                       onfocus="event.stopPropagation(); this.value = parseMoney(this.value); this.select();"
+                       onblur="handleCobradoBlur('${keyAttr}', this.value)">
+              </div>
+              <div class="pcell actions">
+                <div class="actions">
+                  <button class="btn btn-ghost" onclick="event.stopPropagation(); verCotizacion('${escapeHtmlAttr(p.cotizacionId||'')}')">Ver cotización</button>
+                </div>
+              </div>
+            </div>
+            <div class="project-details-row" data-details-key="${keyAttr}">
+              <div class="project-details-inner">
+                <div class="panel partidas-panel" data-partidas-key="${keyAttr}">
+                  ${renderPartidasHTML(p)}
+                </div>
+                <div class="panel resumen-panel" data-resumen-key="${keyAttr}">
+                  ${renderResumenHTML(p)}
+                </div>
+              </div>
+            </div>
+          </div>
         `;
       }).join('');
 
       pw.innerHTML=`
-        <div style="overflow-x:auto;">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:40px;">&nbsp;</th>
-                <th>Nombre proyecto</th>
-                <th>Fecha de entrega límite</th>
-                <th>Cliente</th>
-                <th>Precio cotizado</th>
-                <th>Precio cobrado (manual)</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
+        <div class="projects-list">
+          <div class="projects-header">
+            <div class="pcell">&nbsp;</div>
+            <div class="pcell">Proyecto</div>
+            <div class="pcell">Fecha entrega</div>
+            <div class="pcell">Cliente</div>
+            <div class="pcell">Cotizado</div>
+            <div class="pcell">Cobrado</div>
+            <div class="pcell actions">Acciones</div>
+          </div>
+          ${blocks}
         </div>
       `;
 
       initFechaPickers();
+      applyStateStyles();
+
+      // Animación de entrada con requestAnimationFrame
+      if(selectedProyectoKey){
+        const det=pw.querySelector(`.project-details-row[data-details-key="${cssEscape(selectedProyectoKey)}"]`);
+        if(det){
+          requestAnimationFrame(()=>{ openDetailsRow(det); });
+        }
+      }
     }
 
+    // Placeholder para futura vista en cards
+    function renderProyectosCards(){
+      const pw=document.getElementById('proyectos-wrapper');
+      pw.innerHTML='<div class="empty"><span class="state-icon">🪄</span>Modo "cards" pendiente de implementar.</div>';
+    }
+
+    function openDetailsRow(det){
+      // Doble rAF: el primero deja al navegador aplicar el estado inicial (max-height:0),
+      // el segundo dispara la transición hacia el estado abierto en el siguiente frame.
+      requestAnimationFrame(()=>{
+        // Trick para altura fluida: fijar max-height al scrollHeight real del contenido.
+        det.style.maxHeight = det.scrollHeight + 'px';
+        requestAnimationFrame(()=>{ det.classList.add('open'); });
+      });
+    }
+
+    function cssEscape(str){
+      if(window.CSS && CSS.escape) return CSS.escape(String(str));
+      // Escapa los caracteres con significado en selectores CSS (W3C CSS.escape polyfill simplificado).
+      return String(str).replace(/(["\\\[\]\(\)\.\#\:\>\+\~\*\^\$\|\?\!\=\,\;\{\}\@\&\%\/\s])/g,'\\$1');
+    }
+
+    function toggleProyecto(key){
+      const same = selectedProyectoKey === key;
+      // Cerrar el actualmente abierto
+      document.querySelectorAll('.project-details-row.open').forEach(el=>{
+        el.classList.remove('open');
+        el.style.maxHeight = ''; // limpia el inline style para que CSS (max-height:0) lo cierre
+      });
+      document.querySelectorAll('.project-row.open').forEach(el=>el.classList.remove('open'));
+
+      if(same){
+        selectedProyectoKey = null;
+        return;
+      }
+      selectedProyectoKey = key;
+      const row = document.querySelector(`.project-row[data-key="${cssEscape(key)}"]`);
+      const det = document.querySelector(`.project-details-row[data-details-key="${cssEscape(key)}"]`);
+      if(row) row.classList.add('open');
+      if(det){
+        // Refrescar contenido por si hubo cambios externos
+        const proyecto = proyectos.find(p=>p.key===key);
+        if(proyecto){
+          const partPanel = det.querySelector('.partidas-panel');
+          const resPanel  = det.querySelector('.resumen-panel');
+          if(partPanel) partPanel.innerHTML = renderPartidasHTML(proyecto);
+          if(resPanel)  resPanel.innerHTML  = renderResumenHTML(proyecto);
+          applyStateStyles();
+        }
+        openDetailsRow(det);
+      }
+    }
+
+    // Mantenido por compatibilidad: actualizar sólo el panel de partidas del proyecto abierto
     function renderPartidas(){
-      const pw=document.getElementById('partidas-wrapper');
-      const title=document.getElementById('partidas-title');
-      const subtitle=document.getElementById('partidas-subtitle');
+      if(!selectedProyectoKey) return;
+      const proyecto = proyectos.find(p=>p.key===selectedProyectoKey);
+      if(!proyecto) return;
+      const panel = document.querySelector(`.partidas-panel[data-partidas-key="${cssEscape(selectedProyectoKey)}"]`);
+      if(!panel) return;
+      panel.innerHTML = renderPartidasHTML(proyecto);
+      applyStateStyles();
+    }
 
-      if(!selectedProyectoKey){
-        title.textContent='Partidas del proyecto';
-        subtitle.textContent='Selecciona un proyecto para ver sus partidas.';
-        pw.innerHTML='<div class="empty"><span class="state-icon">ℹ️</span>Selecciona un proyecto para ver sus partidas.</div>';
-        return;
+    // Mantenido por compatibilidad: actualizar sólo el panel de resumen del proyecto abierto
+    function renderResumen(){
+      if(!selectedProyectoKey) return;
+      const proyecto = proyectos.find(p=>p.key===selectedProyectoKey);
+      if(!proyecto) return;
+      const panel = document.querySelector(`.resumen-panel[data-resumen-key="${cssEscape(selectedProyectoKey)}"]`);
+      if(!panel) return;
+      panel.innerHTML = renderResumenHTML(proyecto);
+    }
+
+    /* ============================================================
+       Generadores HTML reutilizables (sin tocar lógica protegida)
+       ============================================================ */
+    function renderPartidasHTML(proyecto){
+      if(!proyecto || !proyecto.items?.length){
+        return `<h4>Partidas</h4><div class="empty"><span class="state-icon">📁</span>Este proyecto no tiene partidas.</div>`;
       }
-
-      const proyecto=proyectos.find(p=>p.key===selectedProyectoKey);
-      if(!proyecto){
-        title.textContent='Partidas del proyecto';
-        subtitle.textContent='Selecciona un proyecto para ver sus partidas.';
-        pw.innerHTML='<div class="empty"><span class="state-icon">ℹ️</span>Selecciona un proyecto para ver sus partidas.</div>';
-        return;
-      }
-
-      title.textContent=`Partidas del proyecto: ${proyecto.displayName}`;
-      subtitle.textContent=`${proyecto.items.length} partida(s)`;
-
-      if(!proyecto.items.length){
-        pw.innerHTML='<div class="empty"><span class="state-icon">📁</span>Este proyecto no tiene partidas.</div>';
-        return;
-      }
-
       const rows=proyecto.items.map(item=>{
         const partidaId=item.id||item.partida_id||item.partida_nombre||item.partida;
-        const nota=notesStore.get(partidaId)||'';
         const stNorm=normalizeEstado(item);
         return `
           <tr>
             <td style="width:170px;">
-              <select class="state-select ${stateClass(stNorm)}" onmousedown="event.stopPropagation();" onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
+              <select class="state-select ${stateClass(stNorm)}"
+                      onclick="event.stopPropagation();"
+                      onmousedown="event.stopPropagation();"
+                      onchange="handleEstadoPartidaChange(event, '${escapeHtmlAttr(partidaId)}')">
                 ${ESTADOS.map(st=>`<option value="${st}" ${stNorm===st?'selected':''}>${labelEstado(st)}</option>`).join('')}
               </select>
             </td>
             <td>${escapeHtml(item.partida_nombre||item.partida||'Partida')}</td>
-            <td><input type="date" value="${item.fecha_venta_partida||''}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','fecha_venta_partida', this.value)"></td>
-            <td><input type="date" value="${item.fecha_instalacion||''}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','fecha_instalacion', this.value)"></td>
-            <td><input type="number" min="0" step="1000" value="${Number(item.precio_individual_estimado||0)}" onchange="handlePartidaInput('${escapeHtmlAttr(partidaId)}','precio_individual_estimado', this.value)"></td>
-            <td>
-              <button class="btn btn-ghost" onclick="openNotesModal('${escapeHtmlAttr(partidaId)}','${escapeHtmlAttr(selectedProyectoKey)}','${escapeHtmlAttr(proyecto.displayName)}')">Notas</button>
-              ${nota ? `<span class="note-indicator">📝</span>`:''}
-            </td>
           </tr>
         `;
       }).join('');
-
-      pw.innerHTML=`
+      return `
+        <h4>Partidas · ${escapeHtml(proyecto.displayName)} (${proyecto.items.length})</h4>
         <div style="overflow-x:auto;">
-          <table>
+          <table class="partidas-table">
             <thead>
               <tr>
                 <th>Status</th>
                 <th>Nombre partida</th>
-                <th>Fecha de venta</th>
-                <th>Fecha de instalación</th>
-                <th>Precio individual estimado</th>
-                <th>Notas y obs de la presentación del proyecto</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
       `;
-      applyStateStyles();
     }
 
-    function renderResumen(){
-      const rw=document.getElementById('resumen-wrapper');
-      const title=document.getElementById('resumen-title');
-
-      if(!selectedProyectoKey){
-        title.textContent='Resumen';
-        rw.innerHTML='<div class="empty"><span class="state-icon">ℹ️</span>Selecciona un proyecto para ver el resumen.</div>';
-        return;
-      }
-      const proyecto=proyectos.find(p=>p.key===selectedProyectoKey);
+    function renderResumenHTML(proyecto){
       if(!proyecto){
-        title.textContent='Resumen';
-        rw.innerHTML='<div class="empty"><span class="state-icon">ℹ️</span>Selecciona un proyecto para ver el resumen.</div>';
-        return;
+        return `<h4>Resumen</h4><div class="empty"><span class="state-icon">ℹ️</span>Sin datos.</div>`;
       }
-      title.textContent=`Resumen del proyecto: ${proyecto.displayName}`;
-
       const totalCotizado=proyecto.totalCotizado||0;
       const totalCobrado=proyectoCobradoMap.has(proyecto.key)
         ? proyectoCobradoMap.get(proyecto.key)
@@ -500,13 +627,15 @@
       const selectMotivos=diferencia===0
         ? `<div class="resumen-label" style="margin-top:4px;">Sin diferencia</div>`
         : `
-          <select onchange="handleMotivoChange('${escapeHtmlAttr(proyecto.key)}', this.value)">
+          <select onclick="event.stopPropagation();" onmousedown="event.stopPropagation();"
+                  onchange="handleMotivoChange('${escapeHtmlAttr(proyecto.key)}', this.value)">
             <option value="">Selecciona motivo</option>
             ${optionsHtml}
           </select>
         `;
 
-      rw.innerHTML=`
+      return `
+        <h4>Resumen · ${escapeHtml(proyecto.displayName)}</h4>
         <div style="display:flex; flex-direction:column; gap:10px; font-size:14px;">
           <div class="resumen-row">
             <span class="resumen-label">Precio cotizado</span>
@@ -551,7 +680,7 @@
       });
     }
 
-    function selectProyecto(key){ selectedProyectoKey=key; renderProyectos(); renderPartidas(); renderResumen(); }
+    function selectProyecto(key){ toggleProyecto(key); }
 
     function labelEstado(st){ switch(st){
       case 'aprobada': return 'Aprobada';
