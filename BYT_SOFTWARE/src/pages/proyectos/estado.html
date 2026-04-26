@@ -2457,43 +2457,612 @@
       .ops-summary-grid{ grid-template-columns:1fr; }
       .team-pulse-grid{ grid-template-columns:1fr; }
     }
+
+    /* ============================================================
+       NUEVO LAYOUT: SIDEBAR IZQUIERDA + WORKSPACE DERECHO
+       Tipo software moderno (Linear / Notion / SaaS).
+       Sólo CSS + reestructuración HTML. Sin tocar JS, IDs ni eventos.
+       ============================================================ */
+    :root{
+      --estado-bg:#f6f7f9;
+      --estado-surface:#ffffff;
+      --estado-border:#e6e8ec;
+      --estado-border-soft:#eef0f3;
+      --estado-shadow:0 1px 2px rgba(15,23,42,0.04);
+      --estado-shadow-pop:0 6px 18px rgba(15,23,42,0.06);
+      --estado-active:#eaf3ee;
+      --estado-active-border:#cfe3d7;
+      --estado-active-text:#1f5036;
+      --estado-text:#0f172a;
+      --estado-muted:#64748b;
+      --estado-sidebar-w:300px;
+      --estado-topbar-h:54px;
+    }
+
+    /* Página completa ocupa el slot del shell global, sin max-width */
+    body{ background:var(--estado-bg) !important; }
+    .page{
+      max-width:none !important;
+      width:100% !important;
+      margin:0 !important;
+      padding:0 !important;
+      height:100vh !important;
+      overflow:hidden !important;
+    }
+    /* Cabecera vieja desactivada (los controles ahora viven en el shell) */
+    .page > .header{ display:none !important; }
+    /* El kpi-dashboard ya no es un bloque suelto encima del layout */
+    .page > #kpi-dashboard{ display:none !important; }
+    /* El layout viejo de 2 columnas se desactiva (lo reemplaza .estado-shell) */
+    .page > .layout{ display:none !important; }
+
+    /* Shell principal de la pantalla */
+    .estado-shell{
+      display:grid;
+      grid-template-columns: var(--estado-sidebar-w) 1fr;
+      height:100vh;
+      width:100%;
+      background:var(--estado-bg);
+      color:var(--estado-text);
+      overflow:hidden;
+    }
+
+    /* ---------------- SIDEBAR ---------------- */
+    .estado-sidebar{
+      display:flex;
+      flex-direction:column;
+      background:var(--estado-surface);
+      border-right:1px solid var(--estado-border);
+      min-width:0;
+      overflow:hidden;
+    }
+    .estado-sidebar-head{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:12px 14px;
+      border-bottom:1px solid var(--estado-border-soft);
+      flex:0 0 auto;
+    }
+    .estado-sidebar-head .estado-back{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:32px; height:32px;
+      border-radius:8px;
+      border:1px solid var(--estado-border);
+      background:#f3f4f6;
+      color:var(--estado-text);
+      font-weight:700;
+      cursor:pointer;
+      flex:0 0 auto;
+      transition:background .12s ease, border-color .12s ease;
+    }
+    .estado-sidebar-head .estado-back:hover{ background:#e5e7eb; }
+    .estado-sidebar-head .estado-side-title{
+      margin:0;
+      font-size:14px;
+      font-weight:700;
+      letter-spacing:-0.01em;
+      color:var(--estado-text);
+      flex:1 1 auto;
+      min-width:0;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .estado-sidebar-filters{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      padding:10px 14px 12px;
+      border-bottom:1px solid var(--estado-border-soft);
+      flex:0 0 auto;
+      background:var(--estado-surface);
+    }
+    .estado-search{
+      position:relative;
+      display:flex;
+      align-items:center;
+    }
+    .estado-search::before{
+      content:"⌕";
+      position:absolute;
+      left:10px;
+      top:50%;
+      transform:translateY(-50%);
+      color:var(--estado-muted);
+      font-size:14px;
+      pointer-events:none;
+    }
+    .estado-sidebar-filters input[type="text"],
+    .estado-sidebar-filters select{
+      width:100%;
+      box-sizing:border-box;
+      padding:8px 10px;
+      border:1px solid var(--estado-border);
+      border-radius:10px;
+      background:#fafbfc;
+      font-size:13px;
+      color:var(--estado-text);
+      outline:none;
+      transition:border-color .12s ease, background .12s ease, box-shadow .12s ease;
+    }
+    .estado-sidebar-filters input[type="text"]{ padding-left:30px; }
+    .estado-sidebar-filters input[type="text"]:focus,
+    .estado-sidebar-filters select:focus{
+      border-color:#cfe3d7;
+      background:#fff;
+      box-shadow:0 0 0 3px rgba(47,111,79,0.08);
+    }
+    .estado-sidebar-filters select{ cursor:pointer; }
+
+    .estado-sidebar-list{
+      flex:1 1 auto;
+      min-height:0;
+      overflow-y:auto;
+      padding:8px;
+      background:var(--estado-surface);
+    }
+    /* Reset visual del contenedor interno (#proyectos-list ya no es card aparte) */
+    .estado-sidebar-list #proyectos-list{
+      background:transparent !important;
+      border:none !important;
+      box-shadow:none !important;
+      border-radius:0 !important;
+      padding:0 !important;
+      margin:0 !important;
+    }
+    /* Items de proyecto: compactos y modernos */
+    .estado-sidebar-list .proj-item{
+      display:block;
+      padding:10px 12px !important;
+      margin:0 0 4px !important;
+      border-radius:10px !important;
+      border:1px solid transparent !important;
+      background:transparent !important;
+      cursor:pointer !important;
+      transition:background .12s ease, border-color .12s ease;
+    }
+    .estado-sidebar-list .proj-item:hover{
+      background:#f3f5f8 !important;
+    }
+    .estado-sidebar-list .proj-item.active{
+      background:var(--estado-active) !important;
+      border-color:var(--estado-active-border) !important;
+    }
+    .estado-sidebar-list .proj-title{
+      margin:0 0 4px !important;
+      font-size:13px !important;
+      font-weight:700 !important;
+      color:var(--estado-text) !important;
+      letter-spacing:-0.01em;
+    }
+    .estado-sidebar-list .proj-item.active .proj-title{
+      color:var(--estado-active-text) !important;
+    }
+    .estado-sidebar-list .proj-meta{
+      display:flex !important;
+      flex-direction:column !important;
+      gap:2px !important;
+      font-size:11.5px !important;
+      color:var(--estado-muted) !important;
+      margin:0 !important;
+    }
+    .estado-sidebar-list .proj-deadline{
+      margin-top:4px !important;
+      font-size:11px !important;
+    }
+    .estado-sidebar-list .proj-progress{ margin-top:6px !important; }
+    .estado-sidebar-list .proj-progress .bar{ height:4px !important; }
+    .estado-sidebar-list .proj-progress .bar-text{
+      font-size:10.5px !important;
+      margin-top:3px !important;
+      color:var(--estado-muted) !important;
+    }
+    .estado-sidebar-list .proj-postventa-line{ margin-top:4px !important; gap:4px !important; }
+
+    /* ---------------- WORKSPACE (panel derecho) ---------------- */
+    .estado-workspace{
+      display:flex;
+      flex-direction:column;
+      min-width:0;
+      min-height:0;
+      overflow:hidden;
+      background:var(--estado-bg);
+    }
+    .estado-topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      height:var(--estado-topbar-h);
+      padding:0 18px;
+      background:var(--estado-surface);
+      border-bottom:1px solid var(--estado-border);
+      flex:0 0 auto;
+    }
+    .estado-topbar-title{
+      margin:0;
+      font-size:14px;
+      font-weight:700;
+      letter-spacing:-0.01em;
+      color:var(--estado-text);
+    }
+    .estado-topbar .alinearcito-fab{
+      position:static !important;
+      right:auto !important;
+      bottom:auto !important;
+      box-shadow:none !important;
+      background:linear-gradient(135deg, #2f6f4f 0%, #245840 100%) !important;
+      color:#fff !important;
+      border:none !important;
+      border-radius:999px !important;
+      padding:8px 14px !important;
+      font-size:12.5px !important;
+      font-weight:700 !important;
+      transform:none !important;
+      cursor:pointer;
+    }
+    .estado-topbar .alinearcito-fab:hover{
+      filter:brightness(1.06);
+      transform:translateY(-1px) !important;
+      box-shadow:0 6px 16px rgba(47, 111, 79, 0.22) !important;
+    }
+
+    /* Zona desplazable que contiene zona operativa + detalle */
+    .estado-workspace-body{
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      padding:14px 16px 0;
+      gap:14px;
+    }
+
+    /* ---------------- ZONA OPERATIVA (compacta) ---------------- */
+    /* El #kpi-dashboard ahora es una franja compacta arriba del detalle */
+    .estado-ops{
+      flex:0 0 auto;
+      display:block !important;
+      background:transparent !important;
+      border:none !important;
+      box-shadow:none !important;
+      padding:0 !important;
+      margin:0 !important;
+      max-height:42vh;
+      overflow-y:auto;
+      overflow-x:hidden;
+      padding-right:4px;
+    }
+    /* Re-grid: aplanamos ops-hero y dashboard-extra para reordenar todo */
+    .estado-ops .ops-hero,
+    .estado-ops .dashboard-extra{
+      display:contents !important;
+    }
+    .estado-ops{
+      display:grid !important;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) !important;
+      grid-auto-rows:min-content;
+      gap:10px !important;
+      align-items:stretch;
+    }
+    /* Fila 1: Prioridad de hoy | Cuellos de botella */
+    .estado-ops .priority-card{
+      grid-column:1; grid-row:1;
+      min-height:0 !important;
+      padding:12px 14px !important;
+      border-radius:12px !important;
+      gap:8px !important;
+      box-shadow:var(--estado-shadow) !important;
+      border:1px solid var(--estado-border) !important;
+    }
+    .estado-ops .priority-card::before{ width:4px !important; }
+    .estado-ops .priority-eyebrow{ font-size:10px !important; }
+    .estado-ops .priority-title{
+      font-size:16px !important;
+      line-height:1.25 !important;
+      margin:0 !important;
+    }
+    .estado-ops .priority-meta-row{ gap:14px !important; margin:2px 0 !important; }
+    .estado-ops .priority-meta-label{ font-size:10px !important; }
+    .estado-ops .priority-meta-value{ font-size:12.5px !important; }
+    .estado-ops .priority-progress-row{ gap:8px !important; }
+    .estado-ops .priority-progress-bar{ height:4px !important; }
+    .estado-ops .priority-progress-text{ font-size:11px !important; }
+    .estado-ops .priority-cta{
+      align-self:flex-start;
+      padding:6px 10px !important;
+      font-size:11.5px !important;
+    }
+    .estado-ops .priority-empty{ font-size:12px !important; }
+
+    .estado-ops .top8-card{
+      grid-column:2; grid-row:1;
+      padding:12px 14px !important;
+      border-radius:12px !important;
+      box-shadow:var(--estado-shadow) !important;
+      border:1px solid var(--estado-border) !important;
+      max-height:none;
+    }
+    .estado-ops .top8-title{ font-size:13px !important; }
+    .estado-ops .top8-subtitle{ font-size:11px !important; margin:2px 0 8px !important; }
+    .estado-ops .top8-list{
+      display:grid !important;
+      grid-template-columns:1fr 1fr !important;
+      gap:4px 12px !important;
+    }
+    .estado-ops .top8-column{ display:flex !important; flex-direction:column !important; gap:4px !important; }
+    .estado-ops .top8-item{
+      display:grid !important;
+      grid-template-columns:auto 1fr auto !important;
+      gap:8px !important;
+      padding:4px 6px !important;
+      font-size:11.5px !important;
+      border-radius:8px !important;
+    }
+    .estado-ops .top8-rank{ font-size:11px !important; }
+    .estado-ops .top8-stage{ font-size:11.5px !important; }
+    .estado-ops .top8-count{ font-size:11.5px !important; }
+
+    /* Fila 2: Próximas instalaciones (full ancho, lista compacta horizontal) */
+    .estado-ops .upcoming-card{
+      grid-column:1 / -1; grid-row:2;
+      padding:12px 14px !important;
+      border-radius:12px !important;
+      box-shadow:var(--estado-shadow) !important;
+      border:1px solid var(--estado-border) !important;
+    }
+    .estado-ops .upcoming-title{ font-size:13px !important; }
+    .estado-ops .upcoming-subtitle{ font-size:11px !important; margin:2px 0 8px !important; }
+    .estado-ops .upcoming-list{
+      display:grid !important;
+      grid-template-columns:repeat(2, minmax(0,1fr)) !important;
+      gap:4px 12px !important;
+    }
+    .estado-ops .upcoming-column{ display:flex !important; flex-direction:column !important; gap:4px !important; }
+    .estado-ops .upcoming-item{
+      padding:8px 10px !important;
+      margin:0 !important;
+      border-radius:8px !important;
+      font-size:11.5px !important;
+    }
+    .estado-ops .upcoming-project{ font-size:12px !important; }
+    .estado-ops .upcoming-meta{ font-size:11px !important; }
+    .estado-ops .upcoming-progress{ font-size:11px !important; }
+
+    /* Fila 3: Postventas (full ancho, opcional pero visible) */
+    .estado-ops .postventa-card{
+      grid-column:1 / -1; grid-row:3;
+      padding:12px 14px !important;
+      border-radius:12px !important;
+      box-shadow:var(--estado-shadow) !important;
+      border:1px solid var(--estado-border) !important;
+    }
+    .estado-ops .postventa-title{ font-size:13px !important; }
+    .estado-ops .postventa-subtitle{ font-size:11px !important; margin:2px 0 8px !important; }
+    .estado-ops .postventa-list{
+      display:grid !important;
+      grid-template-columns:repeat(2, minmax(0,1fr)) !important;
+      gap:4px 12px !important;
+    }
+    .estado-ops .postventa-column{ display:flex !important; flex-direction:column !important; gap:4px !important; }
+    .estado-ops .postventa-item{
+      padding:8px 10px !important;
+      margin:0 !important;
+      border-radius:8px !important;
+      font-size:11.5px !important;
+    }
+    .estado-ops .postventa-project{ font-size:12px !important; }
+    .estado-ops .postventa-meta{ font-size:11px !important; }
+    .estado-ops .postventa-progress{ font-size:11px !important; }
+
+    /* Resumen operativo + team-pulse: comprimidos al final, no dominan */
+    .estado-ops .ops-summary{
+      grid-column:1 / -1; grid-row:4;
+      padding:10px 12px !important;
+      border-radius:12px !important;
+      box-shadow:var(--estado-shadow) !important;
+      border:1px solid var(--estado-border) !important;
+      background:var(--estado-surface) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:8px !important;
+    }
+    .estado-ops .ops-summary-title{ font-size:12px !important; margin:0 !important; }
+    .estado-ops .ops-summary-grid{
+      display:grid !important;
+      grid-template-columns:repeat(4, minmax(0,1fr)) !important;
+      gap:8px !important;
+    }
+    .estado-ops .ops-kpi{
+      padding:8px 10px !important;
+      border-radius:10px !important;
+      gap:2px !important;
+    }
+    .estado-ops .ops-kpi-label{ font-size:10.5px !important; }
+    .estado-ops .ops-kpi-value{ font-size:18px !important; }
+    .estado-ops .ops-kpi-foot{ font-size:10px !important; }
+
+    .estado-ops .team-pulse{
+      grid-column:1 / -1; grid-row:5;
+      padding:10px 12px !important;
+      border-radius:12px !important;
+      box-shadow:var(--estado-shadow) !important;
+      border:1px solid var(--estado-border) !important;
+      background:var(--estado-surface) !important;
+      margin:0 !important;
+    }
+    .estado-ops .team-pulse-title{ font-size:12px !important; }
+    .estado-ops .team-pulse-grid{
+      display:grid !important;
+      grid-template-columns:repeat(5, minmax(0,1fr)) !important;
+      gap:8px !important;
+      margin-top:6px !important;
+    }
+    .estado-ops .team-pulse-item.kpi-card{
+      padding:8px 10px !important;
+      border-radius:10px !important;
+    }
+    .estado-ops .team-pulse-item .kpi-label{ font-size:10.5px !important; }
+    .estado-ops .team-pulse-item .kpi-value{ font-size:18px !important; }
+    .estado-ops .team-pulse-item .kpi-foot{ font-size:10px !important; }
+
+    /* ---------------- DETALLE DEL PROYECTO ---------------- */
+    /* Ocupa el resto del workspace, con scroll interno y header sticky */
+    .estado-detail{
+      flex:1 1 auto;
+      min-height:0;
+      overflow-y:auto;
+      background:var(--estado-surface) !important;
+      border:1px solid var(--estado-border) !important;
+      border-radius:14px 14px 0 0 !important;
+      box-shadow:var(--estado-shadow) !important;
+      padding:0 !important;
+      margin-bottom:0 !important;
+      position:relative;
+    }
+    /* Header sticky del proyecto (siempre visible) */
+    .estado-detail .detail-header{
+      position:sticky;
+      top:0;
+      z-index:5;
+      background:var(--estado-surface);
+      padding:14px 18px 10px !important;
+      margin:0 !important;
+      border-bottom:1px solid var(--estado-border-soft);
+      box-shadow:0 1px 0 rgba(15,23,42,0.02);
+    }
+    .estado-detail .detail-header h3{
+      font-size:17px !important;
+      margin:0 !important;
+      letter-spacing:-0.01em;
+    }
+    .estado-detail .detail-meta{ font-size:12.5px !important; gap:10px !important; }
+    .estado-detail .progress-wrap{ margin:8px 0 0 !important; }
+    .estado-detail .progress-wrap .bar{ height:5px !important; }
+    /* Botones de acción: también sticky, justo debajo del header */
+    .estado-detail .actions{
+      position:sticky;
+      top:88px; /* aprox alto de detail-header (título + meta + progreso + paddings) */
+      z-index:4;
+      background:var(--estado-surface);
+      padding:8px 18px !important;
+      margin:0 !important;
+      border-bottom:1px solid var(--estado-border-soft);
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }
+    .estado-detail .actions .btn{
+      padding:6px 10px !important;
+      font-size:12px !important;
+      border-radius:8px !important;
+    }
+    /* Spacer que mete el partidas-container con padding correcto */
+    .estado-detail > div[style*="height:12px"]{ display:none !important; }
+    .estado-detail .partidas-container{
+      padding:14px 18px 22px !important;
+    }
+
+    /* ---------------- RESPONSIVE ---------------- */
+    @media (max-width: 1100px){
+      .estado-ops{
+        grid-template-columns:1fr !important;
+      }
+      .estado-ops .priority-card,
+      .estado-ops .top8-card,
+      .estado-ops .upcoming-card,
+      .estado-ops .postventa-card,
+      .estado-ops .ops-summary,
+      .estado-ops .team-pulse{
+        grid-column:1 !important;
+      }
+      .estado-ops .priority-card{ grid-row:auto !important; }
+      .estado-ops .top8-card{ grid-row:auto !important; }
+      .estado-ops .upcoming-card{ grid-row:auto !important; }
+      .estado-ops .postventa-card{ grid-row:auto !important; }
+      .estado-ops .ops-summary{ grid-row:auto !important; }
+      .estado-ops .team-pulse{ grid-row:auto !important; }
+      .estado-ops .upcoming-list,
+      .estado-ops .postventa-list,
+      .estado-ops .top8-list{ grid-template-columns:1fr !important; }
+      .estado-ops .ops-summary-grid{ grid-template-columns:repeat(2, minmax(0,1fr)) !important; }
+      .estado-ops .team-pulse-grid{ grid-template-columns:repeat(2, minmax(0,1fr)) !important; }
+    }
+    @media (max-width: 820px){
+      .estado-shell{ grid-template-columns:1fr !important; height:auto !important; }
+      .estado-sidebar{
+        border-right:none;
+        border-bottom:1px solid var(--estado-border);
+        max-height:50vh;
+      }
+      .estado-workspace{ height:auto; }
+      .estado-workspace-body{ overflow:visible; }
+      .estado-ops{ max-height:none; }
+      .estado-detail{ overflow:visible; }
+      .estado-detail .detail-header,
+      .estado-detail .actions{ position:static !important; top:auto !important; }
+      .page{ height:auto !important; overflow:auto !important; }
+    }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="header">
-      <button class="btn btn-ghost" onclick="window.history.back()">← Atrás</button>
-      <h2>Estado de proyectos</h2>
-      <button class="alinearcito-fab" onclick="openAlinearcitoPanel()">🤖 Alinearcito</button>
-    </div>
+    <!-- ============================================================
+         NUEVO LAYOUT: SIDEBAR (filtros + lista) + WORKSPACE (header
+         sticky + zona operativa + detalle del proyecto)
+         IMPORTANTE: se conservan TODOS los IDs/handlers que usa el JS:
+         #filtro-texto, #filtro-estado, #proyectos-list, #kpi-dashboard,
+         #detalle-wrapper, btn Atrás y botón Alinearcito.
+         ============================================================ -->
+    <div class="estado-shell">
 
-    <div id="kpi-dashboard" class="dashboard-card card"></div>
-
-    <div class="layout">
-      <!-- Columna izquierda: filtros + lista -->
-      <div>
-        <div class="filters-card">
-          <div class="filters-grid">
-            <div>
-              <label>Buscar proyecto o cliente</label>
-              <input id="filtro-texto" type="text" placeholder="Proyecto, cliente..." oninput="applyFiltersAndRender()">
-            </div>
-            <div>
-              <label>Estado global</label>
-              <select id="filtro-estado" onchange="applyFiltersAndRender()">
-                <option value="todos" selected>Todos</option>
-                <option value="abierto">Con partidas pendientes</option>
-                <option value="completo">Todas completadas</option>
-              </select>
-            </div>
-          </div>
+      <!-- ===== Sidebar izquierda ===== -->
+      <aside class="estado-sidebar">
+        <div class="estado-sidebar-head">
+          <button class="estado-back" onclick="window.history.back()" aria-label="Atrás" title="Atrás">←</button>
+          <h2 class="estado-side-title">Estado de proyectos</h2>
         </div>
 
-        <div id="proyectos-list" class="list-card card"></div>
-      </div>
+        <div class="estado-sidebar-filters">
+          <div class="estado-search">
+            <input id="filtro-texto" type="text" placeholder="Buscar proyecto o cliente…" oninput="applyFiltersAndRender()">
+          </div>
+          <select id="filtro-estado" onchange="applyFiltersAndRender()">
+            <option value="todos" selected>Todos los estados</option>
+            <option value="abierto">Con partidas pendientes</option>
+            <option value="completo">Todas completadas</option>
+          </select>
+        </div>
 
-      <!-- Columna derecha: detalle -->
-      <div id="detalle-wrapper" class="detail-card card"></div>
+        <div class="estado-sidebar-list">
+          <div id="proyectos-list" class="list-card card"></div>
+        </div>
+      </aside>
+
+      <!-- ===== Workspace (panel derecho) ===== -->
+      <section class="estado-workspace">
+
+        <!-- Topbar del workspace: contiene botón Alinearcito (siempre accesible) -->
+        <div class="estado-topbar">
+          <h3 class="estado-topbar-title">Workspace</h3>
+          <button class="alinearcito-fab" onclick="openAlinearcitoPanel()">🤖 Alinearcito</button>
+        </div>
+
+        <!-- Cuerpo del workspace: zona operativa (compacta) + detalle (grande) -->
+        <div class="estado-workspace-body">
+          <!-- Zona operativa (kpi-dashboard reutilizado, re-estilado a strip compacta) -->
+          <div id="kpi-dashboard" class="dashboard-card card estado-ops"></div>
+
+          <!-- Detalle del proyecto: header sticky + acciones + partidas -->
+          <div id="detalle-wrapper" class="detail-card card estado-detail"></div>
+        </div>
+
+      </section>
+
     </div>
   </div>
 
