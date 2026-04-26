@@ -495,10 +495,29 @@
     }
 
     // --- catálogo ---
+    function withImageCacheBust(url, version) {
+      if (!url) return '';
+      const sep = url.includes('?') ? '&' : '?';
+      return `${url}${sep}v=${encodeURIComponent(version || Date.now())}`;
+    }
+
+    function getCatImageEntry(cat) {
+      const entry = catImagesMap[cat];
+      if (!entry) return { url: '', version: '' };
+      if (typeof entry === 'string') return { url: entry, version: '' };
+      return { url: entry.url || '', version: entry.updated_at || '' };
+    }
+
     async function fetchCatalog() {
       const { data, error } = await catApi.listCategoriesWithImages();
       if (error) { console.warn('listCategoriesWithImages error', error); return []; }
-      catImagesMap = (data || []).reduce((acc, c) => { acc[c.name] = c.image_url; return acc; }, {});
+      catImagesMap = (data || []).reduce((acc, c) => {
+        acc[c.name] = {
+          url: c.image_url || '',
+          updated_at: c.updated_at || c.created_at || ''
+        };
+        return acc;
+      }, {});
       return (data || []).map(c => c.name);
     }
 
@@ -589,17 +608,19 @@
 
     // --- UI render ---
     function renderThumb(cat) {
-      const img = catImagesMap[cat];
-      if (img) {
-        return `<img src="${escapeHtml(img)}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;">`;
+      const { url, version } = getCatImageEntry(cat);
+      if (url) {
+        const src = withImageCacheBust(url, version);
+        return `<img src="${escapeHtml(src)}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;">`;
       }
       return `<div style="width:48px;height:48px;border:1px dashed #d1d5db;border-radius:8px;display:grid;place-items:center;color:#9ca3af;font-size:12px;">No img</div>`;
     }
 
     function renderCardThumb(cat) {
-      const img = catImagesMap[cat];
-      if (img) {
-        return `<div class="cat-thumb"><img src="${escapeHtml(img)}" alt="${escapeHtml(cat)}"></div>`;
+      const { url, version } = getCatImageEntry(cat);
+      if (url) {
+        const src = withImageCacheBust(url, version);
+        return `<div class="cat-thumb"><img src="${escapeHtml(src)}" alt="${escapeHtml(cat)}"></div>`;
       }
       const initials = (cat || '?').trim().split(/\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase() || '?';
       return `<div class="cat-thumb" aria-hidden="true">${escapeHtml(initials)}</div>`;
@@ -1268,7 +1289,13 @@
           catApi.listCategoriesWithImages()
         ]);
         if (catRes?.data) {
-          catImagesMap = (catRes.data || []).reduce((a,c)=>{ a[c.name]=c.image_url; return a; },{});
+          catImagesMap = (catRes.data || []).reduce((a,c)=>{
+            a[c.name] = {
+              url: c.image_url || '',
+              updated_at: c.updated_at || c.created_at || ''
+            };
+            return a;
+          },{});
           catalogNames = (catRes.data || []).map(c=>c.name);
         }
         if (!matRes?.error) {
@@ -1305,10 +1332,15 @@
       input.type = 'file'; input.accept = 'image/*';
       input.onchange = async () => {
         const file = input.files?.[0];
-        if (!file) return;
+        if (!file) { try { input.value = ''; } catch(e){} return; }
         const res = await catApi.upsertCategoryImage({ name: catName, file });
+        // Permitir volver a subir el mismo archivo después
+        try { input.value = ''; } catch(e){}
         if (res.error) { console.error(res.error); toast('Error subiendo imagen','error'); return; }
         toast('Imagen guardada','success');
+        // Limpiar la entrada local para que no se renderice la URL anterior cacheada
+        // antes de que llegue la nueva desde el backend.
+        delete catImagesMap[catName];
         await refreshFromRemote?.();
         await initDataLayer();
         openCategoryName = catName;
@@ -1323,6 +1355,8 @@
       const res = await catApi.removeCategoryImage(catName);
       if (res.error) { console.error(res.error); toast('Error al quitar imagen','error'); return; }
       toast('Imagen quitada','success');
+      // Borrar inmediatamente la entrada local para mostrar placeholder al instante.
+      delete catImagesMap[catName];
       await refreshFromRemote?.();
       await initDataLayer();
       openCategoryName = catName;
