@@ -2923,6 +2923,9 @@
       padding:0 !important;
       margin-bottom:0 !important;
       position:relative;
+      /* Altura fija reservada para el header del proyecto, así .actions
+         puede usar el mismo offset sticky sin solaparse. */
+      --estado-detail-header-h: 92px;
     }
     /* Header sticky del proyecto (siempre visible) */
     .estado-detail .detail-header{
@@ -2934,6 +2937,8 @@
       margin:0 !important;
       border-bottom:1px solid var(--estado-border-soft);
       box-shadow:0 1px 0 rgba(15,23,42,0.02);
+      min-height:var(--estado-detail-header-h);
+      box-sizing:border-box;
     }
     .estado-detail .detail-header h3{
       font-size:17px !important;
@@ -2943,10 +2948,12 @@
     .estado-detail .detail-meta{ font-size:12.5px !important; gap:10px !important; }
     .estado-detail .progress-wrap{ margin:8px 0 0 !important; }
     .estado-detail .progress-wrap .bar{ height:5px !important; }
-    /* Botones de acción: también sticky, justo debajo del header */
+    /* Botones de acción: también sticky, justo debajo del header.
+       Usan la misma variable que el min-height del header para garantizar
+       que no se solapen aunque el contenido del header cambie. */
     .estado-detail .actions{
       position:sticky;
-      top:88px; /* aprox alto de detail-header (título + meta + progreso + paddings) */
+      top:var(--estado-detail-header-h);
       z-index:4;
       background:var(--estado-surface);
       padding:8px 18px !important;
