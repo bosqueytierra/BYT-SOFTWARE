@@ -5,7 +5,7 @@ const BUCKET = 'category-images';
 export async function listCategoriesWithImages() {
   const { data, error } = await supabase
     .from('material_categories')
-    .select('name,image_url,created_at')
+    .select('name,image_url')
     .order('name');
   return { data, error };
 }
