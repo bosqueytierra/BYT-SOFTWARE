@@ -588,8 +588,14 @@
     }
 
     // --- UI render ---
+    function withImageCacheBust(url) {
+      if (!url) return '';
+      const sep = url.includes('?') ? '&' : '?';
+      return `${url}${sep}v=${Date.now()}`;
+    }
+
     function renderThumb(cat) {
-      const img = catImagesMap[cat];
+      const img = withImageCacheBust(catImagesMap[cat]);
       if (img) {
         return `<img src="${escapeHtml(img)}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;">`;
       }
@@ -597,7 +603,7 @@
     }
 
     function renderCardThumb(cat) {
-      const img = catImagesMap[cat];
+      const img = withImageCacheBust(catImagesMap[cat]);
       if (img) {
         return `<div class="cat-thumb"><img src="${escapeHtml(img)}" alt="${escapeHtml(cat)}"></div>`;
       }
@@ -1305,10 +1311,12 @@
       input.type = 'file'; input.accept = 'image/*';
       input.onchange = async () => {
         const file = input.files?.[0];
-        if (!file) return;
+        if (!file) { try { input.value = ''; } catch(e){} return; }
         const res = await catApi.upsertCategoryImage({ name: catName, file });
+        try { input.value = ''; } catch(e){}
         if (res.error) { console.error(res.error); toast('Error subiendo imagen','error'); return; }
         toast('Imagen guardada','success');
+        try { delete catImagesMap[catName]; } catch(e){}
         await refreshFromRemote?.();
         await initDataLayer();
         openCategoryName = catName;
@@ -1323,6 +1331,7 @@
       const res = await catApi.removeCategoryImage(catName);
       if (res.error) { console.error(res.error); toast('Error al quitar imagen','error'); return; }
       toast('Imagen quitada','success');
+      try { delete catImagesMap[catName]; } catch(e){}
       await refreshFromRemote?.();
       await initDataLayer();
       openCategoryName = catName;
