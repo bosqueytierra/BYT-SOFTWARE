@@ -1635,6 +1635,828 @@
     }
     .toolbar-spacer{flex:1;}
     .icon-btn{display:inline-flex;align-items:center;gap:6px;}
+
+    /* =========================================================
+       REDISEÑO 2026 — capa de override agresiva
+       Convierte la pantalla en un panel operativo moderno.
+       Solo CSS + reorganización visual; la lógica JS permanece.
+       ========================================================= */
+    :root{
+      --byt-bg:#f6f7f9;
+      --byt-surface:#ffffff;
+      --byt-text:#111827;
+      --byt-muted:#6b7280;
+      --byt-border:#e5e7eb;
+      --byt-border-soft:#eef0f3;
+      --byt-green:#2f6f4f;
+      --byt-green-soft:#eaf6ef;
+      --byt-green-soft-border:#cfe6d8;
+      --byt-red-soft:#fef2f2;
+      --byt-red-soft-border:#fecaca;
+      --byt-red-text:#b91c1c;
+      --byt-amber-soft:#fff7ed;
+      --byt-amber-text:#b45309;
+      --byt-shadow:0 8px 24px rgba(15, 23, 42, 0.06);
+      --byt-shadow-soft:0 2px 6px rgba(15, 23, 42, 0.04);
+      --byt-radius-lg:22px;
+      --byt-radius-md:18px;
+      --byt-radius-sm:14px;
+    }
+    body{
+      background:var(--byt-bg) !important;
+      color:var(--byt-text) !important;
+    }
+    .page{
+      max-width:1440px !important;
+      width:94% !important;
+      margin:22px auto 64px !important;
+    }
+
+    /* ---------- HEADER ---------- */
+    .header{
+      display:flex !important;
+      align-items:center !important;
+      justify-content:space-between !important;
+      gap:14px !important;
+      padding:12px 16px 12px 14px !important;
+      background:var(--byt-surface) !important;
+      border:1px solid var(--byt-border) !important;
+      border-radius:18px !important;
+      box-shadow:var(--byt-shadow) !important;
+      margin-bottom:18px !important;
+      position:sticky;
+      top:10px;
+      z-index:50;
+    }
+    .header h2{
+      font-size:18px !important;
+      font-weight:800 !important;
+      letter-spacing:-0.02em !important;
+      color:var(--byt-text) !important;
+      flex:1;
+      text-align:left;
+    }
+    .header .btn-ghost{
+      padding:8px 12px !important;
+      border-radius:12px !important;
+      background:#f3f4f6 !important;
+      color:var(--byt-text) !important;
+      font-weight:700 !important;
+      font-size:13px !important;
+    }
+    .header .btn-ghost:hover{
+      background:#e5e7eb !important;
+      color:var(--byt-text) !important;
+    }
+    /* Alinearcito integrado en el header (no más FAB suelto) */
+    .header .alinearcito-fab{
+      position:static !important;
+      right:auto !important;
+      bottom:auto !important;
+      box-shadow:none !important;
+      background:linear-gradient(135deg, var(--byt-green) 0%, #245840 100%) !important;
+      color:#fff !important;
+      border-radius:999px !important;
+      padding:9px 16px !important;
+      font-size:13px !important;
+      font-weight:700 !important;
+      transform:none !important;
+      transition:filter .15s ease, transform .12s ease !important;
+    }
+    .header .alinearcito-fab:hover{
+      filter:brightness(1.06) !important;
+      transform:translateY(-1px) !important;
+      box-shadow:0 6px 16px rgba(47, 111, 79, 0.22) !important;
+    }
+
+    /* ---------- DASHBOARD CARD WRAPPER ---------- */
+    #kpi-dashboard.dashboard-card{
+      padding:0 !important;
+      background:transparent !important;
+      border:none !important;
+      box-shadow:none !important;
+      margin-bottom:18px !important;
+    }
+    .dashboard-head{display:none !important;}
+
+    /* ---------- OPS HERO (nuevo control center) ---------- */
+    .ops-hero{
+      display:grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+      gap:18px;
+      margin-bottom:18px;
+    }
+    .priority-card{
+      position:relative;
+      background:linear-gradient(135deg, #ffffff 0%, #fbfdfb 100%);
+      border:1px solid var(--byt-border);
+      border-radius:var(--byt-radius-lg);
+      padding:24px 26px;
+      box-shadow:var(--byt-shadow);
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      min-height:200px;
+      overflow:hidden;
+      cursor:pointer;
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .priority-card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 14px 32px rgba(15,23,42,0.08);
+    }
+    .priority-card::before{
+      content:"";
+      position:absolute;
+      left:0; top:0; bottom:0;
+      width:6px;
+      background:linear-gradient(180deg, var(--byt-green), #1f5036);
+    }
+    .priority-eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--byt-green);
+    }
+    .priority-eyebrow::before{
+      content:"";
+      width:8px;height:8px;border-radius:50%;
+      background:var(--byt-green);
+      box-shadow:0 0 0 4px var(--byt-green-soft);
+    }
+    .priority-title{
+      margin:0;
+      font-size:26px;
+      font-weight:800;
+      letter-spacing:-0.02em;
+      color:var(--byt-text);
+      line-height:1.15;
+    }
+    .priority-meta-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:18px 28px;
+      margin-top:2px;
+    }
+    .priority-meta-block{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+      min-width:0;
+    }
+    .priority-meta-label{
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      color:var(--byt-muted);
+    }
+    .priority-meta-value{
+      font-size:15px;
+      font-weight:700;
+      color:var(--byt-text);
+    }
+    .priority-meta-value.urgent{color:var(--byt-red-text);}
+    .priority-progress-row{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-top:auto;
+    }
+    .priority-progress-bar{
+      flex:1;
+      height:8px;
+      border-radius:999px;
+      background:#eef0f3;
+      overflow:hidden;
+    }
+    .priority-progress-fill{
+      height:100%;
+      border-radius:999px;
+      background:linear-gradient(90deg, var(--byt-green), #4a9b6f);
+    }
+    .priority-progress-text{
+      font-size:12px;
+      font-weight:700;
+      color:var(--byt-muted);
+      white-space:nowrap;
+    }
+    .priority-cta{
+      align-self:flex-start;
+      background:var(--byt-green);
+      color:#fff;
+      border:none;
+      border-radius:12px;
+      padding:10px 18px;
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+      transition:filter .12s ease;
+    }
+    .priority-cta:hover{filter:brightness(1.06);}
+    .priority-empty{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      align-items:flex-start;
+      color:var(--byt-muted);
+      font-weight:600;
+    }
+
+    /* Resumen operativo (KPIs principales compactos) */
+    .ops-summary{
+      background:var(--byt-surface);
+      border:1px solid var(--byt-border);
+      border-radius:var(--byt-radius-lg);
+      padding:18px 18px 14px;
+      box-shadow:var(--byt-shadow);
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    .ops-summary-title{
+      margin:0;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--byt-muted);
+    }
+    .ops-summary-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:10px;
+    }
+    .ops-kpi{
+      background:#fafbfc;
+      border:1px solid var(--byt-border-soft);
+      border-radius:14px;
+      padding:12px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      transition:background .12s ease, border-color .12s ease;
+    }
+    .ops-kpi:hover{background:#fff; border-color:var(--byt-border);}
+    .ops-kpi-label{
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:var(--byt-muted);
+    }
+    .ops-kpi-value{
+      font-size:24px;
+      font-weight:800;
+      letter-spacing:-0.02em;
+      color:var(--byt-text);
+      line-height:1.1;
+    }
+    .ops-kpi-foot{
+      font-size:11px;
+      color:var(--byt-muted);
+      font-weight:500;
+    }
+    .ops-kpi.accent-green .ops-kpi-value{color:var(--byt-green);}
+    .ops-kpi.accent-red{
+      background:var(--byt-red-soft);
+      border-color:var(--byt-red-soft-border);
+    }
+    .ops-kpi.accent-red .ops-kpi-value{color:var(--byt-red-text);}
+    .ops-kpi.accent-red .ops-kpi-label{color:var(--byt-red-text); opacity:.8;}
+
+    /* ---------- SECCIONES MODERNAS ---------- */
+    .dashboard-extra{
+      display:grid !important;
+      grid-template-columns:minmax(0, 1.55fr) minmax(0, 1fr) !important;
+      gap:18px !important;
+      align-items:start;
+    }
+    .dashboard-extra > .upcoming-card{ grid-column:1; grid-row:1; }
+    .dashboard-extra > .top8-card{ grid-column:2; grid-row:1; }
+    .dashboard-extra > .postventa-card{ grid-column:1 / -1; grid-row:2; }
+
+    .upcoming-card, .top8-card, .postventa-card{
+      background:var(--byt-surface) !important;
+      border:1px solid var(--byt-border) !important;
+      border-radius:var(--byt-radius-md) !important;
+      padding:20px 22px !important;
+      box-shadow:var(--byt-shadow) !important;
+    }
+    .upcoming-title, .top8-title, .postventa-title{
+      font-size:15px !important;
+      font-weight:800 !important;
+      letter-spacing:-0.01em !important;
+      color:var(--byt-text) !important;
+    }
+    .upcoming-title-wrap::before{
+      width:5px !important;
+      height:18px !important;
+      background:var(--byt-red-text) !important;
+    }
+    .top8-title-wrap::before{
+      background:var(--byt-amber-text) !important;
+    }
+    .postventa-title-wrap::before{
+      background:var(--byt-green) !important;
+    }
+    .upcoming-subtitle, .top8-subtitle, .postventa-subtitle{
+      margin:2px 0 14px !important;
+      font-size:12px !important;
+      color:var(--byt-muted) !important;
+    }
+
+    /* Próximas instalaciones: una sola columna de cards modernas */
+    .upcoming-list{
+      display:grid !important;
+      grid-template-columns:1fr !important;
+      gap:0 !important;
+    }
+    .upcoming-column{
+      display:contents !important;
+    }
+    .upcoming-item{
+      display:grid !important;
+      grid-template-columns: 4px minmax(0,1fr) auto !important;
+      gap:0 14px !important;
+      align-items:center !important;
+      padding:12px 12px 12px 14px !important;
+      border:1px solid var(--byt-border-soft) !important;
+      border-bottom:1px solid var(--byt-border-soft) !important;
+      border-radius:12px !important;
+      margin-bottom:8px !important;
+      background:#ffffff !important;
+      box-shadow:none !important;
+      cursor:pointer !important;
+      position:relative !important;
+      transition:border-color .12s ease, transform .12s ease, box-shadow .12s ease !important;
+    }
+    .upcoming-item::before{
+      content:"";
+      display:block;
+      width:4px;
+      height:30px;
+      border-radius:4px;
+      background:#e5e7eb;
+    }
+    .upcoming-item:hover{
+      border-color:#d1d5db !important;
+      transform:translateX(2px);
+      box-shadow:var(--byt-shadow-soft) !important;
+      background:#fff !important;
+    }
+    .upcoming-column:first-child .upcoming-item:first-child{
+      background:var(--byt-red-soft) !important;
+      border-color:var(--byt-red-soft-border) !important;
+    }
+    .upcoming-column:first-child .upcoming-item:first-child::before{
+      position:static !important;
+      transform:none !important;
+      width:4px !important;
+      height:36px !important;
+      background:var(--byt-red-text) !important;
+      left:auto !important;
+      top:auto !important;
+    }
+    .upcoming-column:nth-child(2) .upcoming-item:first-child::before{
+      background:var(--byt-amber-text);
+    }
+    .upcoming-project{
+      font-size:14px !important;
+      font-weight:700 !important;
+      color:var(--byt-text) !important;
+    }
+    .upcoming-meta{
+      margin-top:3px !important;
+      font-size:12px !important;
+      color:var(--byt-muted) !important;
+    }
+    .upcoming-progress{
+      background:#f3f4f6 !important;
+      color:#374151 !important;
+      font-weight:800 !important;
+      border-radius:8px !important;
+      padding:5px 11px !important;
+    }
+
+    /* Cuellos de botella: ranking limpio */
+    .top8-list{
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0 !important;
+    }
+    .top8-column{
+      display:contents !important;
+    }
+    .top8-item{
+      display:grid !important;
+      grid-template-columns:26px minmax(0,1fr) auto !important;
+      align-items:center !important;
+      gap:12px !important;
+      padding:11px 4px !important;
+      border-bottom:1px solid var(--byt-border-soft) !important;
+    }
+    .top8-column:last-child .top8-item:last-child{ border-bottom:none !important; }
+    .top8-rank{
+      width:24px;height:24px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:8px;
+      background:#f3f4f6;
+      color:#374151;
+      font-size:11px !important;
+      font-weight:800 !important;
+      text-align:center !important;
+    }
+    .top8-item:first-child .top8-rank{
+      background:var(--byt-amber-soft);
+      color:var(--byt-amber-text);
+    }
+    .top8-stage{
+      font-size:13px !important;
+      font-weight:600 !important;
+      color:var(--byt-text) !important;
+    }
+    .top8-count{
+      background:var(--byt-amber-soft) !important;
+      color:var(--byt-amber-text) !important;
+      border-radius:999px !important;
+      padding:3px 11px !important;
+      font-weight:800 !important;
+      font-size:12px !important;
+      min-width:34px !important;
+    }
+
+    /* Postventas compacto */
+    .postventa-list{
+      display:grid !important;
+      grid-template-columns:repeat(2, minmax(0,1fr)) !important;
+      gap:6px 18px !important;
+    }
+    .postventa-column{
+      display:flex !important;
+      flex-direction:column !important;
+    }
+    .postventa-item{
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) auto !important;
+      gap:10px !important;
+      padding:10px 12px !important;
+      border:1px solid var(--byt-border-soft) !important;
+      border-radius:10px !important;
+      margin-bottom:6px !important;
+      background:#fff !important;
+      cursor:pointer !important;
+      transition:border-color .12s ease, background .12s ease !important;
+    }
+    .postventa-item:hover{
+      border-color:var(--byt-red-soft-border) !important;
+      background:var(--byt-red-soft) !important;
+    }
+    .postventa-project{
+      font-size:13px !important;
+      font-weight:700 !important;
+      color:var(--byt-text) !important;
+    }
+    .postventa-meta{
+      font-size:11.5px !important;
+      color:var(--byt-muted) !important;
+    }
+    .postventa-progress{
+      background:var(--byt-red-soft) !important;
+      color:var(--byt-red-text) !important;
+      border-radius:999px !important;
+      padding:3px 10px !important;
+      font-weight:800 !important;
+      font-size:11px !important;
+    }
+    .postventa-empty, .upcoming-empty, .top8-empty{
+      padding:14px !important;
+      background:#fafbfc !important;
+      border:1px dashed var(--byt-border) !important;
+      border-radius:12px !important;
+      text-align:center !important;
+      color:var(--byt-muted) !important;
+      font-weight:600 !important;
+    }
+
+    /* Team pulse: KPIs por owner como mini-fila secundaria */
+    .team-pulse{
+      background:var(--byt-surface);
+      border:1px solid var(--byt-border);
+      border-radius:var(--byt-radius-md);
+      padding:14px 18px;
+      box-shadow:var(--byt-shadow);
+      margin-top:16px;
+      display:flex;
+      align-items:center;
+      gap:18px;
+      flex-wrap:wrap;
+    }
+    .team-pulse-title{
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--byt-muted);
+      margin:0 8px 0 0;
+    }
+    .team-pulse-grid{
+      display:grid;
+      grid-template-columns:repeat(5, minmax(0,1fr));
+      gap:10px;
+      flex:1;
+      min-width:280px;
+    }
+    .team-pulse-item{
+      position:relative;
+      background:#fafbfc;
+      border:1px solid var(--byt-border-soft);
+      border-radius:12px;
+      padding:10px 12px;
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+      transition:background .12s ease;
+    }
+    .team-pulse-item:hover{background:#fff;}
+    .team-pulse-item .kpi-label{
+      font-size:11px;
+      font-weight:700;
+      color:var(--byt-muted);
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      margin:0;
+    }
+    .team-pulse-item .kpi-value{
+      font-size:20px !important;
+      font-weight:800 !important;
+      color:var(--byt-text) !important;
+      margin:0 !important;
+      line-height:1 !important;
+    }
+    .team-pulse-item .kpi-foot{display:none;}
+    .team-pulse-item .kpi-hover{
+      top:calc(100% + 6px);
+      width:300px;
+    }
+
+    /* Anular el grid de 9 KPIs anterior cuando esté dentro del team-pulse */
+    .team-pulse .dashboard-grid{display:none;}
+
+    /* ---------- WORKSPACE (sidebar + detail) ---------- */
+    .layout{
+      display:grid !important;
+      grid-template-columns: 360px minmax(0, 1fr) !important;
+      gap:18px !important;
+      align-items:start !important;
+    }
+    .layout > div:first-child{
+      position:sticky;
+      top:88px;
+      align-self:start;
+    }
+
+    /* Filtros compactos */
+    .filters-card{
+      padding:12px 14px !important;
+      margin-bottom:12px !important;
+      border-radius:16px !important;
+      background:var(--byt-surface) !important;
+      border:1px solid var(--byt-border) !important;
+      box-shadow:var(--byt-shadow) !important;
+    }
+    .filters-card label{
+      font-size:10px !important;
+      letter-spacing:.08em !important;
+      margin-bottom:4px !important;
+    }
+    .filters-card input, .filters-card select{
+      padding:8px 10px !important;
+      font-size:13px !important;
+      border-radius:10px !important;
+      background:#fafbfc !important;
+    }
+
+    /* Sidebar de proyectos */
+    .list-card{
+      background:var(--byt-surface) !important;
+      border:1px solid var(--byt-border) !important;
+      border-radius:16px !important;
+      box-shadow:var(--byt-shadow) !important;
+      padding:8px !important;
+      max-height:calc(100vh - 220px) !important;
+    }
+    .proj-item{
+      border:1px solid transparent !important;
+      border-radius:12px !important;
+      padding:12px 14px !important;
+      margin-bottom:4px !important;
+      background:transparent !important;
+      cursor:pointer !important;
+      box-shadow:none !important;
+      position:relative;
+      transition:background .12s ease, border-color .12s ease !important;
+    }
+    .proj-item:hover{
+      background:#f6f7f9 !important;
+      border-color:transparent !important;
+    }
+    .proj-item.active{
+      background:var(--byt-green-soft) !important;
+      border-color:var(--byt-green-soft-border) !important;
+      box-shadow:none !important;
+    }
+    .proj-item.active::before{
+      content:"";
+      position:absolute;
+      left:-1px; top:10px; bottom:10px;
+      width:3px;
+      border-radius:3px;
+      background:var(--byt-green);
+    }
+    .proj-title{
+      font-size:13.5px !important;
+      font-weight:700 !important;
+      color:var(--byt-text) !important;
+    }
+    .proj-meta{
+      font-size:11.5px !important;
+      color:var(--byt-muted) !important;
+    }
+    .proj-progress .bar{
+      background:#eceff3 !important;
+      height:5px !important;
+    }
+    .proj-progress .bar-fill{
+      background:var(--byt-green) !important;
+    }
+    .bar-text{
+      font-size:10.5px !important;
+      color:var(--byt-muted) !important;
+      font-weight:700 !important;
+    }
+    .proj-deadline{
+      font-size:11px !important;
+      color:var(--byt-muted) !important;
+    }
+
+    /* Detail panel */
+    .detail-card{
+      background:var(--byt-surface) !important;
+      border:1px solid var(--byt-border) !important;
+      border-radius:18px !important;
+      box-shadow:var(--byt-shadow) !important;
+      padding:22px 24px !important;
+      max-height:calc(100vh - 130px) !important;
+    }
+    .detail-header h3{
+      font-size:22px !important;
+      font-weight:800 !important;
+      letter-spacing:-0.02em !important;
+    }
+    .detail-meta{
+      gap:18px !important;
+      font-size:12.5px !important;
+      color:var(--byt-muted) !important;
+      margin-top:8px !important;
+    }
+    .detail-header .progress-wrap .bar{
+      background:#eceff3 !important;
+      height:6px !important;
+    }
+    .detail-header .progress-wrap .bar-fill{
+      background:linear-gradient(90deg, var(--byt-green), #4a9b6f) !important;
+    }
+
+    /* Action bar moderna */
+    .actions{
+      gap:6px !important;
+      margin:14px 0 18px !important;
+      padding:10px !important;
+      background:#fafbfc !important;
+      border:1px solid var(--byt-border-soft) !important;
+      border-radius:14px !important;
+      display:flex !important;
+      flex-wrap:wrap !important;
+    }
+    .actions .btn{
+      border-radius:10px !important;
+      padding:7px 12px !important;
+      font-size:12.5px !important;
+      font-weight:700 !important;
+      background:#ffffff !important;
+      border:1px solid var(--byt-border) !important;
+      color:#374151 !important;
+      box-shadow:none !important;
+    }
+    .actions .btn:hover{
+      background:var(--byt-green-soft) !important;
+      border-color:var(--byt-green-soft-border) !important;
+      color:var(--byt-green) !important;
+    }
+    .actions .btn-soft-green{
+      background:#ffffff !important;
+    }
+
+    /* Partidas como acordeones modernos */
+    .partidas-container{ gap:10px !important; }
+    .partida-wrapper{
+      border:1px solid var(--byt-border) !important;
+      border-radius:14px !important;
+      padding:14px 16px !important;
+      background:#fff !important;
+      box-shadow:none !important;
+      transition:border-color .12s ease, box-shadow .12s ease !important;
+    }
+    .partida-wrapper:hover{
+      border-color:#d1d5db !important;
+      box-shadow:var(--byt-shadow-soft) !important;
+    }
+    .partida-title{
+      font-size:14px !important;
+      font-weight:800 !important;
+    }
+    .partida-status{
+      padding:3px 10px !important;
+      font-size:10.5px !important;
+      letter-spacing:.06em !important;
+    }
+    .p-pend{
+      background:var(--byt-amber-soft) !important;
+      color:var(--byt-amber-text) !important;
+    }
+    .p-comp{
+      background:var(--byt-green-soft) !important;
+      color:var(--byt-green) !important;
+    }
+
+    /* Stage cards */
+    .stage-grid{
+      grid-template-columns:repeat(auto-fit, minmax(220px,1fr)) !important;
+      gap:8px !important;
+      margin-top:14px !important;
+    }
+    .stage-item{
+      border:1px solid var(--byt-border) !important;
+      border-radius:12px !important;
+      padding:12px 12px 10px !important;
+      background:#fff !important;
+      gap:6px !important;
+      transition:border-color .12s ease, box-shadow .12s ease !important;
+    }
+    .stage-item:hover{
+      border-color:#d1d5db !important;
+      box-shadow:var(--byt-shadow-soft) !important;
+    }
+    .stage-item.done{
+      background:var(--byt-green-soft) !important;
+      border-color:var(--byt-green-soft-border) !important;
+    }
+    .stage-item.in-progress{
+      background:#eff6ff !important;
+      border-color:#dbeafe !important;
+    }
+    .stage-name{
+      font-size:12.5px !important;
+      font-weight:700 !important;
+    }
+    .stage-select{
+      border-radius:8px !important;
+      padding:6px 8px !important;
+      font-size:12px !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 1280px){
+      .ops-hero{ grid-template-columns:1fr; }
+      .dashboard-extra{ grid-template-columns:1fr !important; }
+      .dashboard-extra > .top8-card{ grid-column:1 !important; grid-row:auto !important; }
+      .dashboard-extra > .upcoming-card{ grid-row:auto !important; }
+      .dashboard-extra > .postventa-card{ grid-row:auto !important; }
+    }
+    @media (max-width: 1100px){
+      .layout{ grid-template-columns:1fr !important; }
+      .layout > div:first-child{ position:static !important; }
+      .team-pulse-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+      .postventa-list{ grid-template-columns:1fr !important; }
+    }
+    @media (max-width: 760px){
+      .header{ padding:10px 12px !important; }
+      .header h2{ font-size:15px !important; }
+      .priority-card{ padding:18px 18px; }
+      .priority-title{ font-size:20px; }
+      .ops-summary-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+      .actions{ padding:8px !important; }
+    }
+    @media (max-width: 520px){
+      .ops-summary-grid{ grid-template-columns:1fr; }
+      .team-pulse-grid{ grid-template-columns:1fr; }
+    }
   </style>
 </head>
 <body>
@@ -1642,6 +2464,7 @@
     <div class="header">
       <button class="btn btn-ghost" onclick="window.history.back()">← Atrás</button>
       <h2>Estado de proyectos</h2>
+      <button class="alinearcito-fab" onclick="openAlinearcitoPanel()">🤖 Alinearcito</button>
     </div>
 
     <div id="kpi-dashboard" class="dashboard-card card"></div>
@@ -1673,8 +2496,6 @@
       <div id="detalle-wrapper" class="detail-card card"></div>
     </div>
   </div>
-
-  <button class="alinearcito-fab" onclick="openAlinearcitoPanel()">🤖 Alinearcito</button>
 
   <div id="intro-overlay" aria-hidden="true">
     <div id="intro-modal" class="intro-modal"></div>
@@ -3818,9 +4639,9 @@
         return `
           <div class="top8-card">
             <div class="top8-title-wrap">
-              <h4 class="top8-title">Top 8 de actividades con más pendientes</h4>
+              <h4 class="top8-title">Cuellos de botella</h4>
             </div>
-            <p class="top8-subtitle">Ranking global calculado sobre todas las partidas y proyectos cargados.</p>
+            <p class="top8-subtitle">Ranking de actividades con más pendientes en todos los proyectos.</p>
             ${
               items.length
                 ? `
@@ -3883,9 +4704,9 @@
         return `
           <div class="upcoming-card">
             <div class="upcoming-title-wrap">
-              <h4 class="upcoming-title">Próximos 10 proyectos a instalar</h4>
+              <h4 class="upcoming-title">Próximas instalaciones</h4>
             </div>
-            <p class="upcoming-subtitle">Ordenados de mayor urgencia a menor según fecha de instalación.</p>
+            <p class="upcoming-subtitle">Ordenadas de mayor a menor urgencia según fecha de instalación.</p>
             ${
               items.length
                 ? `
@@ -3924,7 +4745,7 @@
         return `
           <div class="postventa-card">
             <div class="postventa-title-wrap">
-              <h4 class="postventa-title">Próximas postventas</h4>
+              <h4 class="postventa-title">Postventas</h4>
             </div>
             <p class="postventa-subtitle">Ordenadas por urgencia según fecha de entrega postventa.</p>
             ${
@@ -3939,74 +4760,128 @@
                     </div>
                   </div>
                 `
-                : `<div class="postventa-empty">Sin postventas activas por mostrar</div>`
+                : `<div class="postventa-empty">Sin postventas activas. Todo bajo control.</div>`
             }
           </div>
         `;
       }
 
+      // Construye la "ops-hero" (priority + summary KPIs)
+      function renderOpsHero(){
+        const upcoming = kpis.upcomingInstallProjects || [];
+        const top = upcoming[0];
+        let priorityHTML;
+        if(top){
+          const totalStages = top.totalStages || 0;
+          const doneStages = top.doneStages || 0;
+          const pct = totalStages ? Math.round((doneStages/totalStages)*100) : 0;
+          const urgentClass = (top.instalacionText || '').toLowerCase().includes('hoy')
+            || (top.instalacionText || '').toLowerCase().includes('mañana')
+            || (top.instalacionText || '').toLowerCase().includes('vencid')
+            ? 'urgent' : '';
+          priorityHTML = `
+            <div class="priority-card" onclick="goToProjectFromUpcoming('${attr(top.key)}')">
+              <span class="priority-eyebrow">Prioridad de hoy</span>
+              <h3 class="priority-title">${esc(top.display)}</h3>
+              <div class="priority-meta-row">
+                <div class="priority-meta-block">
+                  <span class="priority-meta-label">Instalación</span>
+                  <span class="priority-meta-value ${urgentClass}">${esc(top.instalacionText || 'Sin fecha')}</span>
+                </div>
+                <div class="priority-meta-block">
+                  <span class="priority-meta-label">Avance</span>
+                  <span class="priority-meta-value">${doneStages}/${totalStages} etapas</span>
+                </div>
+              </div>
+              <div class="priority-progress-row">
+                <div class="priority-progress-bar"><div class="priority-progress-fill" style="width:${pct}%;"></div></div>
+                <span class="priority-progress-text">${pct}%</span>
+              </div>
+              <button class="priority-cta" onclick="event.stopPropagation();goToProjectFromUpcoming('${attr(top.key)}')">Ver proyecto →</button>
+            </div>
+          `;
+        } else {
+          priorityHTML = `
+            <div class="priority-card">
+              <span class="priority-eyebrow">Prioridad de hoy</span>
+              <h3 class="priority-title">Sin instalación urgente</h3>
+              <div class="priority-empty">No hay proyectos próximos a instalar. Aprovecha para adelantar pendientes.</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="ops-hero">
+            ${priorityHTML}
+            <div class="ops-summary">
+              <h4 class="ops-summary-title">Resumen operativo</h4>
+              <div class="ops-summary-grid">
+                <div class="ops-kpi">
+                  <span class="ops-kpi-label">Total pendientes</span>
+                  <span class="ops-kpi-value">${kpis.totalPendientes}</span>
+                  <span class="ops-kpi-foot">solo estado pendiente</span>
+                </div>
+                <div class="ops-kpi accent-green">
+                  <span class="ops-kpi-label">Proyectos activos</span>
+                  <span class="ops-kpi-value">${kpis.proyectosActivos}</span>
+                  <span class="ops-kpi-foot">no completados</span>
+                </div>
+                <div class="ops-kpi">
+                  <span class="ops-kpi-label">Promedio avance</span>
+                  <span class="ops-kpi-value">${kpis.promedioAvance}%</span>
+                  <span class="ops-kpi-foot">según etapas listas</span>
+                </div>
+                <div class="ops-kpi ${kpis.postventasUrgentes > 0 ? 'accent-red' : ''}">
+                  <span class="ops-kpi-label">Postventas urgentes</span>
+                  <span class="ops-kpi-value">${kpis.postventasUrgentes}</span>
+                  <span class="ops-kpi-foot">≤ 7 días o vencidas</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
       wrap.innerHTML = `
-        <div class="dashboard-head">
-          <div>
-            <h3 class="dashboard-title">Dashboard de gestión</h3>
-            <p class="dashboard-subtitle">Resumen ejecutivo calculado sobre las etapas visibles y su estado actual.</p>
-          </div>
-        </div>
-        <div class="dashboard-grid">
-          <div class="kpi-card kpi-has-hover">
-            <div class="kpi-label">Alejandro</div>
-            <div class="kpi-value">${kpis.byOwner.Alejandro}</div>
-            <div class="kpi-foot">tareas pendientes</div>
-            ${renderOwnerHover('Alejandro')}
-          </div>
-          <div class="kpi-card kpi-has-hover">
-            <div class="kpi-label">Jorge</div>
-            <div class="kpi-value">${kpis.byOwner.Jorge}</div>
-            <div class="kpi-foot">tareas pendientes</div>
-            ${renderOwnerHover('Jorge')}
-          </div>
-          <div class="kpi-card kpi-has-hover">
-            <div class="kpi-label">Luis</div>
-            <div class="kpi-value">${kpis.byOwner.Luis}</div>
-            <div class="kpi-foot">tareas pendientes</div>
-            ${renderOwnerHover('Luis')}
-          </div>
-          <div class="kpi-card kpi-has-hover">
-            <div class="kpi-label">Taller</div>
-            <div class="kpi-value">${kpis.byOwner.Taller}</div>
-            <div class="kpi-foot">tareas pendientes</div>
-            ${renderOwnerHover('Taller')}
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Total pendientes</div>
-            <div class="kpi-value">${kpis.totalPendientes}</div>
-            <div class="kpi-foot">solo estado pendiente</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Proyectos activos</div>
-            <div class="kpi-value">${kpis.proyectosActivos}</div>
-            <div class="kpi-foot">proyectos no completados</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Promedio avance</div>
-            <div class="kpi-value">${kpis.promedioAvance}%</div>
-            <div class="kpi-foot">según etapas en listo</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Postventas activas</div>
-            <div class="kpi-value">${kpis.postventasActivas}</div>
-            <div class="kpi-foot">postventas con activa = true</div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-label">Postventas urgentes</div>
-            <div class="kpi-value">${kpis.postventasUrgentes}</div>
-            <div class="kpi-foot">vencidas, hoy o dentro de 7 días</div>
-          </div>
-        </div>
+        ${renderOpsHero()}
         <div class="dashboard-extra">
           ${renderUpcomingProjects()}
-          ${renderUpcomingPostventas()}
           ${renderTop8()}
+          ${renderUpcomingPostventas()}
+        </div>
+        <div class="team-pulse">
+          <span class="team-pulse-title">Pendientes por responsable</span>
+          <div class="team-pulse-grid">
+            <div class="team-pulse-item kpi-card kpi-has-hover">
+              <div class="kpi-label">Alejandro</div>
+              <div class="kpi-value">${kpis.byOwner.Alejandro}</div>
+              <div class="kpi-foot">tareas pendientes</div>
+              ${renderOwnerHover('Alejandro')}
+            </div>
+            <div class="team-pulse-item kpi-card kpi-has-hover">
+              <div class="kpi-label">Jorge</div>
+              <div class="kpi-value">${kpis.byOwner.Jorge}</div>
+              <div class="kpi-foot">tareas pendientes</div>
+              ${renderOwnerHover('Jorge')}
+            </div>
+            <div class="team-pulse-item kpi-card kpi-has-hover">
+              <div class="kpi-label">Luis</div>
+              <div class="kpi-value">${kpis.byOwner.Luis}</div>
+              <div class="kpi-foot">tareas pendientes</div>
+              ${renderOwnerHover('Luis')}
+            </div>
+            <div class="team-pulse-item kpi-card kpi-has-hover">
+              <div class="kpi-label">Taller</div>
+              <div class="kpi-value">${kpis.byOwner.Taller}</div>
+              <div class="kpi-foot">tareas pendientes</div>
+              ${renderOwnerHover('Taller')}
+            </div>
+            <div class="team-pulse-item kpi-card">
+              <div class="kpi-label">Postventas activas</div>
+              <div class="kpi-value">${kpis.postventasActivas}</div>
+              <div class="kpi-foot">activa = true</div>
+            </div>
+          </div>
         </div>
       `;
     }
