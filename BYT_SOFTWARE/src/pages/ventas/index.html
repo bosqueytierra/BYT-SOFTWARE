@@ -128,6 +128,26 @@
       box-shadow:0 2px 8px rgba(0,0,0,0.04);
     }
     .project-details-inner .panel h4{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+    /* ---------- Section group headers (CON / SIN partidas pendientes) ---------- */
+    .projects-section-header{
+      display:flex;align-items:center;gap:8px;
+      padding:10px 14px;
+      background:#f5f7f6;
+      border-top:1px solid var(--border);
+      border-bottom:1px solid var(--border);
+      color:var(--muted);
+      font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;
+      cursor:default;user-select:none;
+    }
+    .projects-section-header:first-child{border-top:none;}
+    .projects-section-header .section-dot{
+      width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;
+    }
+    .projects-section-header .section-dot.dot-bad{background:var(--dot-bad);}
+    .projects-section-header .section-dot.dot-ok{background:var(--dot-ok);}
+    .projects-section-header .section-count{
+      margin-left:auto;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;
+    }
     .partidas-table{width:100%;border-collapse:collapse;}
     .partidas-table th,.partidas-table td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:14px;text-align:left;}
     .partidas-table tr:last-child td{border-bottom:none;}
@@ -379,8 +399,45 @@
           totalCobrado, totalCotizado: totalCotizadoBase, items, allGreen
         };
       });
+      // Ordenar: primero los que tienen partidas pendientes (rojo), luego los completos (verde).
+      // Dentro de los pendientes, por fecha de entrega más cercana; sin fecha al final del grupo pendiente.
+      proyectos = sortProjectsByPendingAndDate(proyectos);
       if(!selectedProyectoKey && proyectos.length) selectedProyectoKey=proyectos[0].key;
       if(selectedProyectoKey && !proyectos.find(p=>p.key===selectedProyectoKey)) selectedProyectoKey=null;
+    }
+
+    /* ============================================================
+       Agrupación visual: pendientes (rojo) arriba, sin pendientes (verde) abajo
+       ============================================================ */
+    function hasPendingParts(proyecto){
+      // Reutiliza el mismo criterio que pinta el dot rojo/verde en la fila.
+      return !!proyecto && proyecto.allGreen === false;
+    }
+    function getProjectDateForSort(proyecto){
+      const raw = proyecto && proyecto.fechaEntrega;
+      if(!raw) return null;
+      const s = String(raw).slice(0,10);
+      const t = Date.parse(s);
+      return Number.isFinite(t) ? t : null;
+    }
+    function sortProjectsByPendingAndDate(arr){
+      const list = Array.isArray(arr) ? arr.slice() : [];
+      list.sort((a,b)=>{
+        const ap = hasPendingParts(a) ? 0 : 1;
+        const bp = hasPendingParts(b) ? 0 : 1;
+        if(ap !== bp) return ap - bp; // pendientes primero
+        if(ap === 0){
+          // Dentro de pendientes: fecha más cercana primero, sin fecha al final
+          const ad = getProjectDateForSort(a);
+          const bd = getProjectDateForSort(b);
+          if(ad === null && bd === null) return 0;
+          if(ad === null) return 1;
+          if(bd === null) return -1;
+          return ad - bd;
+        }
+        return 0; // dentro de no-pendientes mantiene orden actual
+      });
+      return list;
     }
 
     /* ============================================================
@@ -399,7 +456,7 @@
         pw.innerHTML='<div class="empty"><span class="state-icon">📁</span>No hay proyectos</div>';
         return;
       }
-      const blocks=proyectos.map(p=>{
+      const blockHTML = (p)=>{
         const isOpen=p.key===selectedProyectoKey;
         const dotClass=p.allGreen?'dot-ok':'dot-bad';
         const totalCobrado=proyectoCobradoMap.has(p.key)?proyectoCobradoMap.get(p.key):p.totalCobrado;
@@ -448,7 +505,28 @@
             </div>
           </div>
         `;
-      }).join('');
+      };
+
+      const pendientes = proyectos.filter(p=>hasPendingParts(p));
+      const completos  = proyectos.filter(p=>!hasPendingParts(p));
+
+      const sectionHeader = (label, count, dotClass)=>`
+        <div class="projects-section-header" role="heading" aria-level="3">
+          <span class="section-dot ${dotClass}" aria-hidden="true"></span>
+          <span>${label}</span>
+          <span class="section-count" aria-label="${count} proyectos">${count}</span>
+        </div>
+      `;
+
+      let blocks = '';
+      if(pendientes.length){
+        blocks += sectionHeader('Con partidas pendientes', pendientes.length, 'dot-bad');
+        blocks += pendientes.map(blockHTML).join('');
+      }
+      if(completos.length){
+        blocks += sectionHeader('Sin partidas pendientes', completos.length, 'dot-ok');
+        blocks += completos.map(blockHTML).join('');
+      }
 
       pw.innerHTML=`
         <div class="projects-list">
