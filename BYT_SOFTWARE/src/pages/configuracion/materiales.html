@@ -651,11 +651,12 @@
       }
       empty.style.display = 'none';
 
-      // Si hay búsqueda activa, abrir automáticamente las que tengan match en materiales
-      const autoOpen = term ? new Set(visibleCats.filter(cat =>
-        !cat.toLowerCase().includes(term) ||
-        (categoriesData[cat] || []).some(m => (m.name || '').toLowerCase().includes(term))
-      )) : new Set();
+      // Si hay búsqueda activa, auto-expandir las categorías visibles para mostrar resultados
+      const autoOpen = term
+        ? new Set(visibleCats.filter(cat =>
+            (categoriesData[cat] || []).some(m => (m.name || '').toLowerCase().includes(term))
+          ))
+        : new Set();
 
       visibleCats.forEach(cat => {
         const materiales = categoriesData[cat] || [];
