@@ -214,8 +214,20 @@
       cotizacionId = urlParams.get('id');
 
       function formatPrecio(n) {
-        const num = Number(n || 0);
+        const num = Math.round(Number(n || 0));
         return '$' + num.toLocaleString('es-CL');
+      }
+
+      // Lee un valor numérico válido (>0) buscando en una lista de campos posibles.
+      // Devuelve null si ninguno existe o todos son 0/null/inválidos.
+      function pickStoredNumber(...candidates) {
+        for (const v of candidates) {
+          if (v === undefined || v === null || v === '') continue;
+          const n = Number(v);
+          if (!Number.isFinite(n)) continue;
+          if (n > 0) return n;
+        }
+        return null;
       }
       function escapeHtml(str) {
         if (str === undefined || str === null) return '';
@@ -343,9 +355,51 @@
         });
 
         const materialesConFactor = totalMateriales * factorGeneral;
-        const subtotalSinIVA = materialesConFactor + totalTraspasosBase + totalTraspasosFactor;
-        const iva = subtotalSinIVA * 0.19;
-        const totalConIVA = subtotalSinIVA + iva;
+
+        // Recalculados como respaldo
+        const subtotalCalc = materialesConFactor + totalTraspasosBase + totalTraspasosFactor;
+        const ivaCalc = subtotalCalc * 0.19;
+        const totalCalc = subtotalCalc + ivaCalc;
+
+        // Fuente de verdad: campos guardados en la cotización (lo que muestra el listado).
+        // Prioridad: top-level del registro -> dentro de data -> recalculado.
+        const c = cotizacionActual || {};
+        const storedSubtotal = pickStoredNumber(
+          c.subtotal, c.neto, c.total_neto,
+          data.subtotal, data.neto, data.subtotalSinIVA
+        );
+        const storedIva = pickStoredNumber(
+          c.iva, c.total_iva,
+          data.iva, data.total_iva
+        );
+        const storedTotal = pickStoredNumber(
+          c.total, c.total_proyecto, c.total_cotizado, c.totalConIVA,
+          data.total, data.total_proyecto, data.total_cotizado, data.totalConIVA
+        );
+
+        let subtotalSinIVA, iva, totalConIVA;
+        if (storedSubtotal !== null && storedTotal !== null) {
+          subtotalSinIVA = storedSubtotal;
+          totalConIVA = storedTotal;
+          iva = storedIva !== null ? storedIva : (totalConIVA - subtotalSinIVA);
+        } else if (storedTotal !== null && storedIva !== null) {
+          totalConIVA = storedTotal;
+          iva = storedIva;
+          subtotalSinIVA = storedSubtotal !== null ? storedSubtotal : (totalConIVA - iva);
+        } else if (storedSubtotal !== null) {
+          subtotalSinIVA = storedSubtotal;
+          iva = storedIva !== null ? storedIva : subtotalSinIVA * 0.19;
+          totalConIVA = storedTotal !== null ? storedTotal : (subtotalSinIVA + iva);
+        } else if (storedTotal !== null) {
+          totalConIVA = storedTotal;
+          iva = storedIva !== null ? storedIva : totalConIVA - (totalConIVA / 1.19);
+          subtotalSinIVA = totalConIVA - iva;
+        } else {
+          subtotalSinIVA = subtotalCalc;
+          iva = ivaCalc;
+          totalConIVA = totalCalc;
+        }
+
         const ganancia = subtotalSinIVA - totalMateriales - totalTraspasosBase;
 
         return {
