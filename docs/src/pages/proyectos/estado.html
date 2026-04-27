@@ -1186,9 +1186,10 @@
     .alinearcito-bubble{
       position:fixed;
       right:24px;
-      /* alinearcito-fab altura ~54 + bottom 24 + gap 12 */
-      bottom:96px;
-      z-index:9049;
+      /* Antes apuntaba al FAB (bottom:96px). El FAB se eliminó, así que ahora
+         la burbuja queda como único elemento abajo a la derecha. */
+      bottom:24px;
+      z-index:9050;
       display:none;
       align-items:center;
       gap:10px;
@@ -1200,7 +1201,11 @@
       box-shadow:0 14px 30px rgba(17,24,39,0.14);
       font-size:13px;
       color:#0f172a;
+      cursor:pointer;
       animation:alinearcitoBubbleIn .35s ease both;
+    }
+    .alinearcito-bubble:hover{
+      box-shadow:0 18px 34px rgba(17,24,39,0.18);
     }
     .alinearcito-bubble.is-visible{
       display:flex;
@@ -1247,22 +1252,14 @@
       background:#f1f5f9;
       color:#475569;
     }
-    /* Flecha apuntando hacia el botón */
+    /* Antes había una flecha apuntando al botón FAB de Alinearcito.
+       El FAB se eliminó, por lo que la flecha ya no aplica. */
     .alinearcito-bubble::after{
-      content:"";
-      position:absolute;
-      right:28px;
-      bottom:-7px;
-      width:12px;
-      height:12px;
-      background:#ffffff;
-      border-right:1px solid var(--border, #eceef2);
-      border-bottom:1px solid var(--border, #eceef2);
-      transform:rotate(45deg);
+      content:none;
     }
     @media (max-width:640px){
       .alinearcito-fab{ right:14px; bottom:14px; }
-      .alinearcito-bubble{ right:14px; bottom:80px; }
+      .alinearcito-bubble{ right:14px; bottom:14px; }
     }
     .alinearcito-panel{
       width:min(520px, 96vw);
@@ -2799,12 +2796,10 @@
     <div class="header">
       <button class="btn btn-ghost" onclick="window.history.back()">← Atrás</button>
       <h2>Estado de proyectos</h2>
-      <button class="alinearcito-fab" onclick="openAlinearcitoPanel()" aria-label="Abrir Alinearcito">
-        <img class="alinearcito-fab-img" src="../../assets/Alinearcito.gif" alt="">
-        <span>Alinearcito</span>
-      </button>
-      <div id="alinearcito-bubble" class="alinearcito-bubble" role="status" aria-live="polite">
-        <button type="button" class="alinearcito-bubble-close" aria-label="Cerrar mensaje" onclick="closeAlinearcitoBubble()">×</button>
+      <div id="alinearcito-bubble" class="alinearcito-bubble" role="status" aria-live="polite"
+           onclick="openAlinearcitoPanel()" tabindex="0"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAlinearcitoPanel();}">
+        <button type="button" class="alinearcito-bubble-close" aria-label="Cerrar mensaje" onclick="event.stopPropagation();closeAlinearcitoBubble();">×</button>
         <img class="alinearcito-bubble-gif" src="../../assets/Alinearcito_msg.gif" alt="">
         <span class="alinearcito-bubble-text">
           <span>Hey! 👋 acá estoy</span>
@@ -4955,65 +4950,28 @@
 
     // Burbuja de chat de Alinearcito (mensaje entrante).
     // Aparece a los pocos segundos de cargar la página. Si el usuario la cierra,
-    // vuelve a aparecer automáticamente luego de 5 minutos (y reproduce sonido
-    // nuevamente). El ciclo se repite indefinidamente. Si el panel está abierto,
-    // no se muestra encima.
+    // vuelve a aparecer automáticamente luego de 5 minutos. El ciclo se repite
+    // indefinidamente. Si el panel está abierto, no se muestra encima.
     const ALINEARCITO_BUBBLE_REAPPEAR_MS = 5 * 60 * 1000; // 5 minutos
     let alinearcitoBubbleReappearTimer = null;
-    let alinearcitoAudioCtx = null;
 
     function isAlinearcitoPanelOpen(){
       const modal = document.getElementById('alinearcito-modal-backdrop');
       return !!(modal && modal.getAttribute('aria-hidden') === 'false');
     }
 
-    function playAlinearcitoBubbleSound(){
-      // Sonido suave tipo notificación generado con Web Audio API.
-      // No requiere assets externos. Volumen bajo.
-      try{
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if(!Ctx) return;
-        if(!alinearcitoAudioCtx){
-          alinearcitoAudioCtx = new Ctx();
-        }
-        const ctx = alinearcitoAudioCtx;
-        // Algunos navegadores requieren resume() tras gesto del usuario.
-        if(ctx.state === 'suspended' && typeof ctx.resume === 'function'){
-          ctx.resume().catch(()=>{});
-        }
-        const now = ctx.currentTime;
-        // Dos tonos cortos suaves (mensaje entrante).
-        const tones = [
-          { freq: 880, start: 0,    dur: 0.12 },
-          { freq: 1175, start: 0.12, dur: 0.18 }
-        ];
-        tones.forEach(t=>{
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = 'sine';
-          osc.frequency.value = t.freq;
-          // Envolvente suave para evitar clicks
-          gain.gain.setValueAtTime(0.0001, now + t.start);
-          gain.gain.exponentialRampToValueAtTime(0.06, now + t.start + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.0001, now + t.start + t.dur);
-          osc.connect(gain).connect(ctx.destination);
-          osc.start(now + t.start);
-          osc.stop(now + t.start + t.dur + 0.02);
-        });
-      }catch(_e){
-        // Silencioso: si el navegador bloquea audio, no rompemos nada.
-      }
-    }
+    // Stub vacío: se eliminó el sonido automático para evitar el warning de
+    // AudioContext ("must be resumed after a user gesture"). Se mantiene la
+    // función como no-op por compatibilidad con cualquier referencia residual.
+    function playAlinearcitoBubbleSound(){ /* no-op: sonido automático deshabilitado */ }
 
     function showAlinearcitoBubble(){
       if(isAlinearcitoPanelOpen()) return; // no mostrar encima del panel
       const el = document.getElementById('alinearcito-bubble');
       if(!el) return;
-      // Si ya está visible, no resonar.
+      // Si ya está visible, no hacer nada.
       if(el.classList.contains('is-visible')) return;
       el.classList.add('is-visible');
-      // Reproducir sonido al aparecer.
-      try{ playAlinearcitoBubbleSound(); }catch(_e){}
     }
 
     function scheduleAlinearcitoBubbleReappear(){
@@ -5334,11 +5292,11 @@
         const upcoming = kpis.upcomingInstallProjects || [];
         const postventas = kpis.upcomingPostventas || [];
 
-        // Construir lista de slides para el carrusel:
-        // 1) hasta 4 próximos proyectos
-        // 2) hasta 2 postventas (urgentes primero, ya vienen ordenadas)
-        const projectSlides = upcoming.slice(0, 4).map(p=>({ type:'project', data:p }));
-        const postventaSlides = postventas.slice(0, 2).map(p=>({ type:'postventa', data:p }));
+        // Solo se muestra UNA tarjeta: la prioridad más urgente del día.
+        // Se mantiene la lógica existente que ordena upcoming/postventas por
+        // urgencia. Se elimina el carrusel (intervalos, dots y rotación).
+        const projectSlides = upcoming.slice(0, 1).map(p=>({ type:'project', data:p }));
+        const postventaSlides = projectSlides.length ? [] : postventas.slice(0, 1).map(p=>({ type:'postventa', data:p }));
         const slides = [...projectSlides, ...postventaSlides];
 
         function renderProjectSlide(top){
@@ -5408,21 +5366,10 @@
             // Marcar el primero como activo
             return inner.replace('class="priority-slide"', `class="priority-slide${idx === 0 ? ' is-active' : ''}"`);
           }).join('');
-          const dotsHtml = slides.length > 1 ? `
-            <div class="priority-dots" role="tablist" aria-label="Cambiar prioridad">
-              ${slides.map((_, idx)=>`
-                <button type="button" class="priority-dot${idx === 0 ? ' is-active' : ''}"
-                  data-index="${idx}"
-                  aria-label="Ir al item ${idx + 1}"
-                  onclick="event.stopPropagation();gotoPriorityCarouselSlide(${idx});"></button>
-              `).join('')}
-            </div>
-          ` : '';
+          // Sin carrusel ni dots: una sola tarjeta fija con la prioridad del día.
           priorityHTML = `
-            <div class="priority-card priority-carousel" id="priority-carousel"
-                 onmouseenter="pausePriorityCarousel()" onmouseleave="resumePriorityCarousel()">
+            <div class="priority-card" id="priority-carousel">
               ${slidesHtml}
-              ${dotsHtml}
             </div>
           `;
         } else {
@@ -5515,63 +5462,17 @@
       try { setupPriorityCarousel(); } catch(_e) {}
     }
 
-    // ---------------- Carrusel "Prioridad de hoy" ----------------
-    let priorityCarouselTimer = null;
-    let priorityCarouselIndex = 0;
-    let priorityCarouselPaused = false;
-    const PRIORITY_CAROUSEL_INTERVAL_MS = 5000;
-
-    function clearPriorityCarouselTimer(){
-      if(priorityCarouselTimer){
-        clearInterval(priorityCarouselTimer);
-        priorityCarouselTimer = null;
-      }
-    }
-
-    function setupPriorityCarousel(){
-      clearPriorityCarouselTimer();
-      const root = document.getElementById('priority-carousel');
-      if(!root) return;
-      const slides = root.querySelectorAll('.priority-slide');
-      if(slides.length <= 1) return; // no rotar con 1 solo elemento
-      priorityCarouselIndex = 0;
-      priorityCarouselPaused = false;
-      priorityCarouselTimer = setInterval(()=>{
-        if(priorityCarouselPaused) return;
-        const next = (priorityCarouselIndex + 1) % slides.length;
-        applyPriorityCarouselSlide(next);
-      }, PRIORITY_CAROUSEL_INTERVAL_MS);
-    }
-
-    function applyPriorityCarouselSlide(index){
-      const root = document.getElementById('priority-carousel');
-      if(!root) return;
-      const slides = root.querySelectorAll('.priority-slide');
-      if(!slides.length) return;
-      const safeIndex = ((index % slides.length) + slides.length) % slides.length;
-      slides.forEach((el, i)=> el.classList.toggle('is-active', i === safeIndex));
-      const dots = root.querySelectorAll('.priority-dot');
-      dots.forEach((el, i)=> el.classList.toggle('is-active', i === safeIndex));
-      priorityCarouselIndex = safeIndex;
-    }
-
-    function gotoPriorityCarouselSlide(index){
-      applyPriorityCarouselSlide(index);
-      // Reiniciar el intervalo para no cambiar inmediatamente después de un click.
-      const root = document.getElementById('priority-carousel');
-      if(!root) return;
-      const slides = root.querySelectorAll('.priority-slide');
-      if(slides.length <= 1) return;
-      clearPriorityCarouselTimer();
-      priorityCarouselTimer = setInterval(()=>{
-        if(priorityCarouselPaused) return;
-        const next = (priorityCarouselIndex + 1) % slides.length;
-        applyPriorityCarouselSlide(next);
-      }, PRIORITY_CAROUSEL_INTERVAL_MS);
-    }
-
-    function pausePriorityCarousel(){ priorityCarouselPaused = true; }
-    function resumePriorityCarousel(){ priorityCarouselPaused = false; }
+    // ---------------- "Prioridad de hoy" (carrusel deshabilitado) ----------------
+    // Se eliminó la rotación automática y los dots. Ahora se muestra una sola
+    // tarjeta fija con la prioridad más urgente. Las funciones se mantienen como
+    // no-ops por compatibilidad con cualquier referencia residual (p.ej. handlers
+    // antiguos en HTML cacheado).
+    function clearPriorityCarouselTimer(){ /* no-op */ }
+    function setupPriorityCarousel(){ /* no-op: una sola tarjeta, sin rotación */ }
+    function applyPriorityCarouselSlide(_index){ /* no-op */ }
+    function gotoPriorityCarouselSlide(_index){ /* no-op */ }
+    function pausePriorityCarousel(){ /* no-op */ }
+    function resumePriorityCarousel(){ /* no-op */ }
 
     // ---------------- Tooltip y resaltado del donut ----------------
     function setupBottleneckDonut(){
