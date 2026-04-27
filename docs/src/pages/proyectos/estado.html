@@ -2306,31 +2306,27 @@
       }
     }
 
-    /* Prioridad de hoy: carrusel */
+    /* Prioridad de hoy: tarjeta única fija (carrusel deshabilitado).
+       Se elimina la animación de entrada para evitar sobresalto visual
+       cada vez que el dashboard se re-renderiza por realtime/filtros. */
     .priority-carousel{
       position:relative;
     }
     .priority-slide{
       display:none;
       opacity:0;
-      transition:opacity .35s ease;
     }
     .priority-slide.is-active{
       display:flex;
       flex-direction:column;
       gap:14px;
       opacity:1;
-      animation:prioritySlideIn .4s ease both;
-    }
-    @keyframes prioritySlideIn{
-      from{opacity:0; transform:translateY(6px);}
-      to{opacity:1; transform:translateY(0);}
     }
     .priority-dots{
       position:absolute;
       bottom:10px;
       right:14px;
-      display:flex;
+      display:none;
       gap:6px;
       z-index:2;
     }
@@ -3435,6 +3431,15 @@
       return getProjectPendingPartidas(project) === 0;
     }
 
+    // Un proyecto con postventa activa se considera "pendiente operativo",
+    // aunque sus etapas normales estén 100% listas. Helper único para
+    // mantener la clasificación consistente en lista lateral, filtros y texto.
+    function hasActivePostventa(project){
+      if(!project) return false;
+      const postventa = postventaByProject.get(project.cotizacionId);
+      return !!(postventa && postventa.activa);
+    }
+
     function isProjectReadyForPostventa(project){
       if(!project) return false;
       return project.partidas.some(pt=>{
@@ -3559,6 +3564,24 @@
 
     function getProjectInstalacionText(project){
       const fechaLimite = projectFechaLimiteMap.get(project.cotizacionId) || project.fecha_entrega_limite || '';
+      // Si hay postventa activa, prima el texto de postventa sobre el de
+      // instalación (incluso si el proyecto está 100% completo). Esto evita
+      // que aparezca "Completado · instalación cerrada" ocultando que hay
+      // algo pendiente.
+      if(project && hasActivePostventa(project)){
+        const postventa = postventaByProject.get(project.cotizacionId);
+        const meta = getPostventaUrgencyMeta(postventa);
+        if(!postventa?.fecha_entrega_postventa || meta.diffDays === null){
+          return 'Postventa · sin fecha de entrega';
+        }
+        if(meta.diffDays < 0){
+          const dias = Math.abs(meta.diffDays);
+          return `Postventa vencida hace ${dias} ${dias === 1 ? 'día' : 'días'}`;
+        }
+        if(meta.diffDays === 0) return 'Postventa · entrega hoy';
+        if(meta.diffDays === 1) return 'Postventa · entrega mañana';
+        return `Postventa · entrega en ${meta.diffDays} días`;
+      }
       if(project && isProjectComplete(project)){
         return 'Completado · instalación cerrada';
       }
@@ -5731,30 +5754,44 @@
       const est=document.getElementById('filtro-estado').value;
 
       filtered = proyectos.filter(p=>{
-        const pend = getProjectPendingPartidas(p) > 0;
+        // Un proyecto con postventa activa se considera "abierto" aunque
+        // sus partidas estén 100% listas, porque tiene trabajo pendiente.
+        const pend = getProjectPendingPartidas(p) > 0 || hasActivePostventa(p);
         const matchTxt = !txt || p.display.toLowerCase().includes(txt) || p.cliente.toLowerCase().includes(txt);
         const matchEst = est==='todos' ? true : (est==='abierto'? pend : !pend);
         return matchTxt && matchEst;
       });
 
       filtered.sort((a,b)=>{
-        const pa = getProjectPendingPartidas(a) > 0 ? 0 : 1;
-        const pb = getProjectPendingPartidas(b) > 0 ? 0 : 1;
+        // Misma definición de "pendiente" que arriba: incluye postventa activa.
+        const pa = (getProjectPendingPartidas(a) > 0 || hasActivePostventa(a)) ? 0 : 1;
+        const pb = (getProjectPendingPartidas(b) > 0 || hasActivePostventa(b)) ? 0 : 1;
         if(pa!==pb) return pa-pb;
 
-        // Pendientes: ordenar por fecha de instalación más próxima → más lejana.
+        // Pendientes:
+        //  1) primero proyectos con postventa activa, ordenados por
+        //     fecha de entrega de postventa (vencidas arriba, sin fecha al final).
+        //  2) luego proyectos normales no completados, por fecha de instalación.
         if(pa === 0){
+          const hasPostventaA = hasActivePostventa(a);
+          const hasPostventaB = hasActivePostventa(b);
+          if(hasPostventaA !== hasPostventaB) return hasPostventaA ? -1 : 1;
+
+          if(hasPostventaA && hasPostventaB){
+            const ua = getPostventaUrgencyMeta(postventaByProject.get(a.cotizacionId));
+            const ub = getPostventaUrgencyMeta(postventaByProject.get(b.cotizacionId));
+            if(ua.urgencyRank !== ub.urgencyRank) return ua.urgencyRank - ub.urgencyRank;
+            const aDiff = ua.diffDays ?? Number.POSITIVE_INFINITY;
+            const bDiff = ub.diffDays ?? Number.POSITIVE_INFINITY;
+            if(aDiff !== bDiff) return aDiff - bDiff;
+            return (a.display||'').localeCompare(b.display||'');
+          }
+
           const dA = getProjectDiasRestantes(a);
           const dB = getProjectDiasRestantes(b);
           const da = dA === null ? Number.POSITIVE_INFINITY : dA;
           const db = dB === null ? Number.POSITIVE_INFINITY : dB;
           if(da !== db) return da - db;
-
-          const postventaA = postventaByProject.get(a.cotizacionId);
-          const postventaB = postventaByProject.get(b.cotizacionId);
-          const hasPostventaA = postventaA?.activa ? 0 : 1;
-          const hasPostventaB = postventaB?.activa ? 0 : 1;
-          if(hasPostventaA !== hasPostventaB) return hasPostventaA - hasPostventaB;
         }
 
         return (a.display||'').localeCompare(b.display||'');
@@ -5835,7 +5872,9 @@
       const pendientesArr = [];
       const completadosArr = [];
       filtered.forEach(p=>{
-        if(getProjectPendingPartidas(p) === 0){ completadosArr.push(p); }
+        // Completados solo si está 100% Y no tiene postventa activa.
+        // Un proyecto 100% con postventa activa va a Pendientes.
+        if(getProjectPendingPartidas(p) === 0 && !hasActivePostventa(p)){ completadosArr.push(p); }
         else{ pendientesArr.push(p); }
       });
 
