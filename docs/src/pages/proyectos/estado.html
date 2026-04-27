@@ -2601,6 +2601,116 @@
       transition:background .12s ease, border-color .12s ease, box-shadow .12s ease, transform .12s ease;
       position:relative;
       outline:none;
+      overflow:hidden;
+    }
+    /* ---------- Portada de proyecto en tarjeta del carrusel ---------- */
+    .project-carousel-cover-wrap{
+      position:relative;
+      width:calc(100% + 28px);
+      margin:-12px -14px 8px -14px;
+      height:96px;
+      background:linear-gradient(135deg,#eef1f5 0%,#e1e6ec 100%);
+      overflow:hidden;
+      border-top-left-radius:13px;
+      border-top-right-radius:13px;
+    }
+    .project-carousel-cover{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      transition:transform .35s ease;
+    }
+    .project-card-horizontal:hover .project-carousel-cover{ transform:scale(1.03); }
+    .project-carousel-cover-placeholder{
+      width:100%;
+      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:4px;
+      color:#8a96a3;
+      background:
+        radial-gradient(circle at 30% 20%, rgba(255,255,255,.7), transparent 60%),
+        linear-gradient(135deg,#eef1f5 0%,#d8dde4 100%);
+    }
+    .project-carousel-cover-placeholder svg{
+      width:30px; height:30px;
+      stroke:currentColor; fill:none;
+      stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round;
+      opacity:.7;
+    }
+    .project-carousel-cover-placeholder span{
+      font-size:10.5px; font-weight:500; letter-spacing:.3px;
+    }
+    .project-carousel-cover-menu-btn{
+      position:absolute;
+      top:6px; right:6px;
+      width:26px; height:26px;
+      border-radius:50%;
+      border:1px solid rgba(255,255,255,.6);
+      background:rgba(15,23,42,.45);
+      color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer;
+      opacity:0;
+      transition:opacity .18s ease, background .18s ease, transform .18s ease;
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+      padding:0;
+      font-size:15px; line-height:1; font-weight:700;
+      z-index:3;
+    }
+    .project-card-horizontal:hover .project-carousel-cover-menu-btn,
+    .project-carousel-cover-menu-btn:focus,
+    .project-carousel-cover-menu-btn.is-open{ opacity:1; }
+    .project-carousel-cover-menu-btn:hover{
+      background:rgba(15,23,42,.65);
+      transform:scale(1.05);
+    }
+    .project-carousel-cover-menu{
+      position:absolute;
+      top:38px; right:6px;
+      background:#fff;
+      border:1px solid var(--byt-border, #eceef2);
+      border-radius:10px;
+      box-shadow:0 10px 24px rgba(15,23,42,.12);
+      min-width:160px;
+      padding:6px;
+      z-index:6;
+      display:none;
+      flex-direction:column;
+      gap:2px;
+    }
+    .project-carousel-cover-menu.is-open{ display:flex; }
+    .project-carousel-cover-menu button{
+      background:transparent;
+      border:none;
+      text-align:left;
+      padding:7px 9px;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:12.5px;
+      color:var(--byt-text, #0f172a);
+      font-family:inherit;
+    }
+    .project-carousel-cover-menu button:hover{ background:#f3f4f6; }
+    .project-carousel-cover-menu button.danger{ color:#b91c1c; }
+    .project-carousel-cover-menu button.danger:hover{ background:#fef2f2; }
+    .project-card-horizontal.is-cover-uploading .project-carousel-cover-wrap::after{
+      content:'';
+      position:absolute; inset:0;
+      background:rgba(255,255,255,.55);
+      backdrop-filter:blur(2px);
+    }
+    .project-card-horizontal.is-cover-uploading .project-carousel-cover-wrap::before{
+      content:'Subiendo...';
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      z-index:4;
+      color:var(--byt-text, #0f172a);
+      font-weight:600; font-size:12px;
     }
     .project-card-horizontal:hover{
       background:#f8fafc;
@@ -3245,6 +3355,8 @@
   <!-- Loader global -->
   <div id="loader" class="loader-backdrop"><div class="spinner"></div></div>
   <div id="toast" class="toast"></div>
+
+  <input type="file" id="projectCoverFileInputEstado" accept="image/*" aria-label="Subir imagen de portada de proyecto" style="display:none;">
 
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
@@ -5839,6 +5951,220 @@
     }
     /* ---------- /Navegación rápida ---------- */
 
+    /* ===== Portadas de proyecto (compartidas con módulo Compras) =====
+       Reutiliza la misma tabla `project_cover_images` y el mismo bucket
+       `project_cover_images` que `pages/compras/index.html`. La clave
+       común es `proyecto_id` que en este módulo equivale a
+       `cotizacion_id` (mismo identificador que usa Compras).            */
+    const projectCoverMap = new Map(); // proyecto_id -> { id, image_path, image_url }
+    const COVER_ALLOWED_EXTS = ['jpg','jpeg','png','gif','webp','avif'];
+    const COVER_MAX_BYTES = 10 * 1024 * 1024;
+    let _activeCoverProjectIdEstado = null;
+    let _activeCoverModeEstado = null;
+
+    async function loadProjectCovers(){
+      try{
+        const sb = await waitForSupabase();
+        const { data, error } = await sb
+          .from('project_cover_images')
+          .select('id, proyecto_id, image_path, image_url');
+        if(error){ console.warn('loadProjectCovers', error); return; }
+        projectCoverMap.clear();
+        (data||[]).forEach(r=>{ if(r && r.proyecto_id) projectCoverMap.set(r.proyecto_id, r); });
+      }catch(e){ console.warn('loadProjectCovers exception', e); }
+    }
+
+    function closeAllCoverMenusEstado(){
+      document.querySelectorAll('.project-carousel-cover-menu.is-open').forEach(m=>m.classList.remove('is-open'));
+      document.querySelectorAll('.project-carousel-cover-menu-btn.is-open').forEach(b=>b.classList.remove('is-open'));
+    }
+
+    function toggleCoverMenuEstado(btn){
+      if(!btn) return;
+      const projectId = btn.dataset.projectId;
+      if(!projectId) return;
+      const menu = document.querySelector(`.project-carousel-cover-menu[data-cover-menu="${cssEscapeKey(projectId)}"]`);
+      if(!menu) return;
+      const willOpen = !menu.classList.contains('is-open');
+      closeAllCoverMenusEstado();
+      if(willOpen){
+        menu.classList.add('is-open');
+        btn.classList.add('is-open');
+      }
+    }
+
+    function triggerCoverUploadEstado(projectId, mode){
+      if(!projectId) return;
+      const input = document.getElementById('projectCoverFileInputEstado');
+      if(!input) return;
+      _activeCoverProjectIdEstado = projectId;
+      _activeCoverModeEstado = mode || 'create';
+      input.value = '';
+      input.click();
+    }
+
+    function setCoverCardUploadingEstado(projectId, busy){
+      if(!projectId) return;
+      document.querySelectorAll(`.project-card-horizontal[data-project-id="${cssEscapeKey(projectId)}"]`).forEach(card=>{
+        card.classList.toggle('is-cover-uploading', !!busy);
+      });
+    }
+
+    async function handleCoverFileSelectedEstado(file){
+      const projectId = _activeCoverProjectIdEstado;
+      const mode = _activeCoverModeEstado;
+      _activeCoverProjectIdEstado = null;
+      _activeCoverModeEstado = null;
+      if(!projectId || !file) return;
+
+      if(!file.type || !file.type.startsWith('image/')){
+        toast('Selecciona un archivo de imagen');
+        return;
+      }
+      if(file.size > COVER_MAX_BYTES){
+        toast('La imagen supera 10 MB');
+        return;
+      }
+
+      try{
+        setCoverCardUploadingEstado(projectId, true);
+        const sb = await waitForSupabase();
+        const rawExt = (file.name.split('.').pop()||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+        const ext = COVER_ALLOWED_EXTS.includes(rawExt) ? rawExt : 'jpg';
+        const rand = Math.random().toString(36).slice(2,10);
+        const path = `${projectId}/cover-${Date.now()}-${rand}.${ext}`;
+
+        const { error: upErr } = await sb.storage
+          .from('project_cover_images')
+          .upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type || undefined
+          });
+        if(upErr) throw upErr;
+
+        const { data: pubData } = sb.storage
+          .from('project_cover_images')
+          .getPublicUrl(path);
+        const publicUrl = pubData?.publicUrl || '';
+
+        const previous = projectCoverMap.get(projectId);
+
+        const { data: upserted, error: dbErr } = await sb
+          .from('project_cover_images')
+          .upsert(
+            { proyecto_id: projectId, image_path: path, image_url: publicUrl, updated_at: new Date().toISOString() },
+            { onConflict: 'proyecto_id' }
+          )
+          .select('id, proyecto_id, image_path, image_url')
+          .single();
+
+        if(dbErr){
+          try{ await sb.storage.from('project_cover_images').remove([path]); }catch(_){}
+          throw dbErr;
+        }
+
+        projectCoverMap.set(projectId, upserted);
+
+        if(previous && previous.image_path && previous.image_path !== path){
+          try{ await sb.storage.from('project_cover_images').remove([previous.image_path]); }
+          catch(e){ console.warn('remove previous cover', e); }
+        }
+
+        renderLista();
+        toast(mode === 'replace' ? 'Imagen reemplazada' : 'Imagen subida');
+      }catch(e){
+        console.error('handleCoverFileSelectedEstado', e);
+        toast('Error al subir imagen');
+      }finally{
+        setCoverCardUploadingEstado(projectId, false);
+      }
+    }
+
+    async function deleteProjectCoverEstado(projectId){
+      if(!projectId) return;
+      if(!window.confirm('¿Eliminar imagen de portada del proyecto?')) return;
+      try{
+        setCoverCardUploadingEstado(projectId, true);
+        const sb = await waitForSupabase();
+        const previous = projectCoverMap.get(projectId);
+
+        const { error: dbErr } = await sb
+          .from('project_cover_images')
+          .delete()
+          .eq('proyecto_id', projectId);
+        if(dbErr) throw dbErr;
+
+        if(previous && previous.image_path){
+          try{ await sb.storage.from('project_cover_images').remove([previous.image_path]); }
+          catch(e){ console.warn('remove cover storage', e); }
+        }
+
+        projectCoverMap.delete(projectId);
+        renderLista();
+        toast('Imagen eliminada');
+      }catch(e){
+        console.error('deleteProjectCoverEstado', e);
+        toast('Error al eliminar imagen');
+      }finally{
+        setCoverCardUploadingEstado(projectId, false);
+      }
+    }
+
+    // Click handler para menú de portada en tarjetas del carrusel.
+    // Se hace stopPropagation/preventDefault para no disparar la
+    // selección de proyecto del onclick de la tarjeta contenedora.
+    document.addEventListener('click', (e)=>{
+      const toggleBtn = e.target.closest('[data-action="estado-cover-menu-toggle"]');
+      const upBtn     = e.target.closest('[data-action="estado-cover-upload"]');
+      const repBtn    = e.target.closest('[data-action="estado-cover-replace"]');
+      const delBtn    = e.target.closest('[data-action="estado-cover-delete"]');
+
+      if(toggleBtn){
+        e.preventDefault(); e.stopPropagation();
+        toggleCoverMenuEstado(toggleBtn);
+        return;
+      }
+      if(upBtn){
+        e.preventDefault(); e.stopPropagation();
+        closeAllCoverMenusEstado();
+        triggerCoverUploadEstado(upBtn.dataset.projectId, 'create');
+        return;
+      }
+      if(repBtn){
+        e.preventDefault(); e.stopPropagation();
+        closeAllCoverMenusEstado();
+        triggerCoverUploadEstado(repBtn.dataset.projectId, 'replace');
+        return;
+      }
+      if(delBtn){
+        e.preventDefault(); e.stopPropagation();
+        closeAllCoverMenusEstado();
+        deleteProjectCoverEstado(delBtn.dataset.projectId);
+        return;
+      }
+
+      // Cerrar menús abiertos al hacer click fuera de ellos.
+      if(!e.target.closest('.project-carousel-cover-menu')
+         && !e.target.closest('[data-action="estado-cover-menu-toggle"]')){
+        closeAllCoverMenusEstado();
+      }
+    }, true); // useCapture: garantiza que se ejecute antes del onclick inline
+
+    document.addEventListener('change', (e)=>{
+      const input = e.target.closest('#projectCoverFileInputEstado');
+      if(!input) return;
+      const file = input.files && input.files[0];
+      if(!file){
+        _activeCoverProjectIdEstado = null;
+        _activeCoverModeEstado = null;
+        return;
+      }
+      handleCoverFileSelectedEstado(file);
+      input.value = '';
+    });
+    /* ===== /Portadas de proyecto ===== */
+
     document.addEventListener('DOMContentLoaded',()=>bootstrapEstado());
     document.addEventListener('DOMContentLoaded',()=>setupProjectCarouselKeyboardNav());
     window.addEventListener('beforeunload', () => {
@@ -5854,6 +6180,7 @@
         await cargarNotasEtapas();
         await loadProjectVideos();
         await loadProjectPostventas();
+        await loadProjectCovers();
         await startRealtimeSync();
         applyFiltersAndRender(true);
         wireFileInput();
@@ -6171,13 +6498,41 @@
         const postventaActiva = !!postventa?.activa;
         const postventaUrgency = postventaActiva ? getPostventaUrgencyMeta(postventa) : null;
         const isActive = p.key===selectedKey;
+        const projectId = p.cotizacionId || '';
+        const coverInfo = projectId ? projectCoverMap.get(projectId) : null;
+        const coverImg = coverInfo && coverInfo.image_url
+          ? `<img class="project-carousel-cover" src="${attr(coverInfo.image_url)}" alt="${attr(p.display||'Proyecto')}" loading="lazy">`
+          : `<div class="project-carousel-cover-placeholder">
+               <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-7 7"/></svg>
+               <span>Sin imagen</span>
+             </div>`;
+        const hasImage = !!(coverInfo && coverInfo.image_url);
+        const coverMenu = projectId ? `
+          <button type="button"
+                  class="project-carousel-cover-menu-btn"
+                  data-action="estado-cover-menu-toggle"
+                  data-project-id="${attr(projectId)}"
+                  title="Opciones de imagen"
+                  aria-label="Opciones de imagen">⋯</button>
+          <div class="project-carousel-cover-menu" data-cover-menu="${attr(projectId)}">
+            ${hasImage
+              ? `<button type="button" data-action="estado-cover-replace" data-project-id="${attr(projectId)}">Reemplazar imagen</button>
+                 <button type="button" class="danger" data-action="estado-cover-delete" data-project-id="${attr(projectId)}">Eliminar imagen</button>`
+              : `<button type="button" data-action="estado-cover-upload" data-project-id="${attr(projectId)}">Subir imagen</button>`}
+          </div>
+        ` : '';
         return `
           <div class="project-card-horizontal ${isActive?'project-card-active':''}"
                role="option"
                tabindex="-1"
                aria-selected="${isActive?'true':'false'}"
                data-project-key="${attr(p.key)}"
+               data-project-id="${attr(projectId)}"
                onclick="selectProject('${attr(p.key)}')">
+            <div class="project-carousel-cover-wrap">
+              ${coverImg}
+              ${coverMenu}
+            </div>
             <p class="pc-name">${esc(p.display)}</p>
             <div class="pc-client">Cliente: ${esc(p.cliente && p.cliente.trim() ? p.cliente : 'Cliente sin nombre')}</div>
             ${instalacionText ? `<div class="pc-deadline">${esc(instalacionText)}</div>` : ''}
