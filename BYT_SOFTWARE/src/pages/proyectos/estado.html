@@ -2608,7 +2608,7 @@
       position:relative;
       width:calc(100% + 28px);
       margin:-12px -14px 8px -14px;
-      height:96px;
+      aspect-ratio: 4 / 3;
       background:linear-gradient(135deg,#eef1f5 0%,#e1e6ec 100%);
       overflow:hidden;
       border-top-left-radius:13px;
@@ -3080,9 +3080,51 @@
       .ops-summary-grid{ grid-template-columns:1fr; }
       .team-pulse-grid{ grid-template-columns:1fr; }
     }
+    /* ---------- Loader inicial Alinearcita ---------- */
+    #alinearcita-loader{
+      position:fixed;
+      inset:0;
+      background:rgba(246, 247, 249, 0.96);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:99999;
+      transition:opacity .25s ease;
+    }
+    .alinearcita-loader-card{
+      background:#ffffff;
+      border:1px solid #e5e7eb;
+      border-radius:22px;
+      padding:28px 32px;
+      box-shadow:0 18px 45px rgba(15, 23, 42, 0.12);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:14px;
+      max-width:360px;
+      text-align:center;
+    }
+    .alinearcita-loader-card img{
+      width:120px;
+      height:auto;
+      display:block;
+    }
+    #alinearcita-frase{
+      margin:0;
+      font-size:14px;
+      font-weight:700;
+      color:#374151;
+      line-height:1.45;
+    }
   </style>
 </head>
 <body>
+  <div id="alinearcita-loader" role="status" aria-live="polite" aria-label="Cargando">
+    <div class="alinearcita-loader-card">
+      <img src="../../assets/Alinearcita.gif" alt="Alinearcita cargando">
+      <p id="alinearcita-frase">Cargando…</p>
+    </div>
+  </div>
   <div class="page">
     <div class="header">
       <button class="btn btn-ghost" onclick="window.history.back()">← Atrás</button>
@@ -6165,6 +6207,202 @@
     });
     /* ===== /Portadas de proyecto ===== */
 
+    /* ===== Loader inicial Alinearcita ===== */
+    const frasesAlinearcita = [
+      "Espera... Alinearcito aún no prende el cerebro.",
+      "Dame un segundo, está buscando su café.",
+      "Alinearcito está pensando... peligroso.",
+      "Esto debería ser rápido... en teoría.",
+      "Estamos cargando… con estilo.",
+      "Alinearcito se está peinando.",
+      "Un momento... está buscando sus lentes.",
+      "Cargando... con más fe que velocidad.",
+      "Esto es normal… creo.",
+      "Estamos alineando el caos.",
+      "Un segundo... esto es arte.",
+      "Alinearcito aún no se levanta.",
+      "Está viendo memes antes de empezar.",
+      "Procesando… con paciencia zen.",
+      "Esto es culpa del internet.",
+      "Alinearcito está calentando motores.",
+      "Cargando… versión artesanal.",
+      "Estamos casi… probablemente.",
+      "Esto se demora porque es importante.",
+      "Alinearcito está filosofando.",
+      "Un momento… está tomando decisiones de vida.",
+      "Esto va lento porque es premium.",
+      "Cargando… con drama.",
+      "Alinearcito está revisando todo dos veces.",
+      "Espera… se distrajo.",
+      "Esto es parte del proceso creativo.",
+      "Alinearcito está negociando con el servidor.",
+      "Cargando… con cariño.",
+      "Un momento… está ordenando su escritorio.",
+      "Esto es normal… no te preocupes.",
+      "Alinearcito está alineando chakras.",
+      "Cargando… nivel experto.",
+      "Está validando existencia.",
+      "Un segundo… está respirando.",
+      "Esto va lento pero seguro.",
+      "Alinearcito está revisando errores… o inventándolos.",
+      "Cargando… con personalidad.",
+      "Un momento… está pensando en la vida.",
+      "Esto debería estar listo ya… ups.",
+      "Alinearcito está buscando motivación.",
+      "Cargando… modo BYT.",
+      "Un segundo… está organizando el caos.",
+      "Esto va… va… ya casi.",
+      "Alinearcito está tomando decisiones importantes.",
+      "Cargando… con intención.",
+      "Un momento… está evaluando todo.",
+      "Esto es parte del show.",
+      "Alinearcito está calibrando su genialidad.",
+      "Cargando… nivel Dios.",
+      "Un segundo… está alineando ideas.",
+      "Esto es completamente normal.",
+      "Alinearcito está optimizando su flow.",
+      "Cargando… con estilo minimalista.",
+      "Un momento… está viendo si funciona.",
+      "Esto va a quedar bueno.",
+      "Alinearcito está en modo creativo.",
+      "Cargando… con paciencia infinita.",
+      "Un segundo… está afinando detalles.",
+      "Esto ya casi… creo.",
+      "Alinearcito está analizando todo.",
+      "Cargando… con precisión quirúrgica.",
+      "Un momento… está pensando en soluciones.",
+      "Esto está pasando… lento.",
+      "Alinearcito está evaluando opciones.",
+      "Cargando… versión premium.",
+      "Un segundo… está viendo qué pasa.",
+      "Esto debería terminar pronto.",
+      "Alinearcito está concentrado.",
+      "Cargando… sin estrés.",
+      "Un momento… está verificando datos.",
+      "Esto es parte del sistema.",
+      "Alinearcito está revisando todo otra vez.",
+      "Cargando… con buena onda.",
+      "Un segundo… está alineando procesos.",
+      "Esto se viene bueno.",
+      "Alinearcito está en su mejor momento.",
+      "Cargando… con flow.",
+      "Un momento… está validando cosas.",
+      "Esto ya casi termina.",
+      "Alinearcito está resolviendo.",
+      "Cargando… como campeón.",
+      "Un segundo… está chequeando.",
+      "Esto está bajo control.",
+      "Alinearcito está haciendo magia.",
+      "Cargando… versión final.",
+      "Un momento… está cerrando ciclos.",
+      "Esto está listo casi.",
+      "Alinearcito está ejecutando.",
+      "Cargando… con precisión.",
+      "Un segundo… está terminando.",
+      "Esto está funcionando.",
+      "Alinearcito está listo.",
+      "Cargando… finalizando.",
+      "Un momento… ya casi.",
+      "Esto está terminado.",
+      "Alinearcito dice: listo.",
+      "Alinearcita está viendo si Alinearcito llegó a trabajar.",
+      "Espera, Alinearcito todavía no encuentra sus zapatos.",
+      "Alinearcita está revisando si Alinearcito se puso las pilas.",
+      "Un segundo, Alinearcito está cargando su dignidad.",
+      "Alinearcita dice: esto lo hacía yo más rápido.",
+      "Alinearcito está poniéndose la ropa… al parecer.",
+      "Alinearcita está esperando que Alinearcito deje de improvisar.",
+      "Dale un momento, Alinearcito está despertando de a poco."
+    ];
+    let fraseAlinearcitaActual = -1;
+    let alinearcitaFrasesInterval = null;
+    let loaderStartedAt = Date.now();
+    let estadoReady = false;
+    let alinearcitaLoaderHidden = false;
+
+    function getFraseAlinearcitaRandom(){
+      if(!frasesAlinearcita.length) return "";
+      let nuevoIndex = Math.floor(Math.random() * frasesAlinearcita.length);
+      if(frasesAlinearcita.length > 1){
+        while(nuevoIndex === fraseAlinearcitaActual){
+          nuevoIndex = Math.floor(Math.random() * frasesAlinearcita.length);
+        }
+      }
+      fraseAlinearcitaActual = nuevoIndex;
+      return frasesAlinearcita[nuevoIndex];
+    }
+
+    function iniciarFrasesAlinearcita(){
+      const fraseEl = document.getElementById("alinearcita-frase");
+      if(!fraseEl) return;
+      fraseEl.textContent = getFraseAlinearcitaRandom();
+      if(alinearcitaFrasesInterval){
+        clearInterval(alinearcitaFrasesInterval);
+      }
+      alinearcitaFrasesInterval = setInterval(()=>{
+        const el = document.getElementById("alinearcita-frase");
+        if(el) el.textContent = getFraseAlinearcitaRandom();
+      }, 4000);
+    }
+
+    function showAlinearcitaLoader(){
+      loaderStartedAt = Date.now();
+      alinearcitaLoaderHidden = false;
+      const loader = document.getElementById("alinearcita-loader");
+      if(loader){
+        loader.style.display = "flex";
+        loader.style.opacity = "1";
+        loader.style.pointerEvents = "";
+      }
+      iniciarFrasesAlinearcita();
+    }
+
+    async function hideAlinearcitaLoaderAfterMinimumTime(){
+      if(alinearcitaLoaderHidden) return;
+      const elapsed = Date.now() - loaderStartedAt;
+      const remaining = Math.max(0, 4000 - elapsed);
+      await new Promise(resolve => setTimeout(resolve, remaining));
+      if(alinearcitaLoaderHidden) return;
+      alinearcitaLoaderHidden = true;
+      if(alinearcitaFrasesInterval){
+        clearInterval(alinearcitaFrasesInterval);
+        alinearcitaFrasesInterval = null;
+      }
+      const loader = document.getElementById("alinearcita-loader");
+      if(loader){
+        loader.style.opacity = "0";
+        loader.style.pointerEvents = "none";
+        setTimeout(()=>{
+          loader.style.display = "none";
+          loader.style.opacity = "1";
+        }, 250);
+      }
+    }
+
+    // Mostrar el loader (frases + timer) apenas cargue el DOM. El overlay ya es visible por HTML.
+    document.addEventListener('DOMContentLoaded', ()=>{ try{ showAlinearcitaLoader(); }catch(e){ console.warn(e); } });
+
+    // Fallback: si la carga principal no termina en 6s, intentar render con lo que haya.
+    setTimeout(()=>{
+      if(!estadoReady){
+        console.warn("Carga lenta o incompleta. Intentando render fallback.");
+        try{
+          if(typeof applyFiltersAndRender === "function") applyFiltersAndRender(true);
+          if(typeof renderKpis === "function") renderKpis();
+        }catch(e){ console.warn(e); }
+      }
+    }, 6000);
+
+    // Seguridad: nunca dejar el loader eterno (máx 12s).
+    setTimeout(()=>{
+      const loader = document.getElementById("alinearcita-loader");
+      if(loader && loader.style.display !== "none" && !alinearcitaLoaderHidden){
+        console.warn("Loader excedió tiempo máximo. Ocultando por seguridad.");
+        hideAlinearcitaLoaderAfterMinimumTime();
+      }
+    }, 12000);
+    /* ===== /Loader inicial Alinearcita ===== */
+
     document.addEventListener('DOMContentLoaded',()=>bootstrapEstado());
     document.addEventListener('DOMContentLoaded',()=>setupProjectCarouselKeyboardNav());
     window.addEventListener('beforeunload', () => {
@@ -6177,19 +6415,31 @@
     async function bootstrapEstado(){
       try{
         await cargarDatos();
-        await cargarNotasEtapas();
-        await loadProjectVideos();
-        await loadProjectPostventas();
-        await loadProjectCovers();
-        await startRealtimeSync();
-        applyFiltersAndRender(true);
-        wireFileInput();
-        maybeShowDailyIntro();
+        estadoReady = true;
       }catch(e){
-        console.error(e);
-        document.getElementById('proyectos-list').innerHTML='<div style="padding:22px;text-align:center;color:#b91c1c;">No se pudo cargar información</div>';
-        renderKpis();
+        console.error("Error inicializando Estado de proyectos:", e);
+        try{
+          const list = document.getElementById('proyectos-list');
+          if(list) list.innerHTML = '<div style="padding:22px;text-align:center;color:#b91c1c;">No se pudo cargar información</div>';
+          if(typeof renderKpis === "function") renderKpis();
+        }catch(err){ console.warn(err); }
+        estadoReady = true;
+        await hideAlinearcitaLoaderAfterMinimumTime();
+        return;
       }
+
+      // Cargas secundarias: si alguna falla, log y seguimos.
+      try{ await cargarNotasEtapas(); }catch(e){ console.warn("cargarNotasEtapas falló:", e); }
+      try{ await loadProjectVideos(); }catch(e){ console.warn("loadProjectVideos falló:", e); }
+      try{ await loadProjectPostventas(); }catch(e){ console.warn("loadProjectPostventas falló:", e); }
+      try{ await loadProjectCovers(); }catch(e){ console.warn("loadProjectCovers falló:", e); }
+      try{ await startRealtimeSync(); }catch(e){ console.warn("startRealtimeSync falló:", e); }
+
+      try{ applyFiltersAndRender(true); }catch(e){ console.warn("applyFiltersAndRender falló:", e); }
+      try{ wireFileInput(); }catch(e){ console.warn("wireFileInput falló:", e); }
+      try{ maybeShowDailyIntro(); }catch(e){ console.warn("maybeShowDailyIntro falló:", e); }
+
+      try{ await hideAlinearcitaLoaderAfterMinimumTime(); }catch(e){ console.warn(e); }
     }
 
     /* Carga de datos */
