@@ -1221,6 +1221,14 @@
       font-weight:600;
       line-height:1.35;
       color:#0f172a;
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .alinearcito-bubble-sub{
+      font-size:11.5px;
+      font-weight:500;
+      color:#64748b;
     }
     .alinearcito-bubble-close{
       position:absolute;
@@ -2181,6 +2189,198 @@
       min-width:34px !important;
     }
 
+    /* Cuellos de botella: gráfico donut moderno */
+    .top8-card--donut .donut-wrap{
+      display:flex;
+      align-items:center;
+      gap:22px;
+      margin-top:10px;
+      flex-wrap:wrap;
+    }
+    .donut-chart-wrap{
+      position:relative;
+      flex:0 0 auto;
+      width:220px;
+      max-width:100%;
+    }
+    .donut-chart{
+      width:100%;
+      height:auto;
+      display:block;
+      overflow:visible;
+    }
+    .donut-segment{
+      stroke:#ffffff;
+      stroke-width:2;
+      transition:transform .15s ease, opacity .15s ease, filter .15s ease;
+      transform-origin:50% 50%;
+      cursor:pointer;
+      outline:none;
+    }
+    .donut-segment:hover,
+    .donut-segment:focus,
+    .donut-segment.is-active{
+      transform:scale(1.035);
+      filter:drop-shadow(0 4px 10px rgba(15,23,42,0.12));
+    }
+    .donut-wrap.has-active .donut-segment:not(.is-active){
+      opacity:.45;
+    }
+    .donut-keyword{
+      font-size:9px;
+      font-weight:700;
+      fill:#ffffff;
+      letter-spacing:.02em;
+      paint-order:stroke;
+      stroke:rgba(15,23,42,0.18);
+      stroke-width:.4;
+    }
+    .donut-center-value{
+      font-size:26px;
+      font-weight:800;
+      fill:var(--byt-text);
+      letter-spacing:-0.02em;
+    }
+    .donut-center-label{
+      font-size:10px;
+      font-weight:700;
+      fill:var(--byt-muted);
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+    .donut-tooltip{
+      position:absolute;
+      pointer-events:none;
+      background:rgba(17,24,39,0.94);
+      color:#fff;
+      padding:7px 10px;
+      border-radius:8px;
+      font-size:12px;
+      font-weight:600;
+      white-space:nowrap;
+      transform:translate(-50%, -120%);
+      opacity:0;
+      transition:opacity .12s ease;
+      z-index:5;
+      box-shadow:0 6px 16px rgba(15,23,42,0.18);
+    }
+    .donut-tooltip.is-visible{
+      opacity:1;
+    }
+    .donut-tooltip::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      top:100%;
+      transform:translateX(-50%);
+      border:5px solid transparent;
+      border-top-color:rgba(17,24,39,0.94);
+    }
+    .donut-legend{
+      flex:1 1 180px;
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:6px 14px;
+      min-width:0;
+    }
+    .donut-legend-item{
+      display:grid;
+      grid-template-columns:12px minmax(0,1fr) auto;
+      align-items:center;
+      gap:8px;
+      padding:4px 2px;
+      font-size:12px;
+      color:var(--byt-text);
+      border-radius:6px;
+      transition:background .12s ease;
+    }
+    .donut-legend-item:hover,
+    .donut-legend-item.is-active{
+      background:#f3f4f6;
+    }
+    .donut-legend-dot{
+      width:10px;
+      height:10px;
+      border-radius:50%;
+      display:inline-block;
+    }
+    .donut-legend-label{
+      font-weight:600;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .donut-legend-count{
+      font-weight:800;
+      color:var(--byt-muted);
+      font-size:11.5px;
+    }
+    @media (max-width: 720px){
+      .top8-card--donut .donut-wrap{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .donut-chart-wrap{
+        margin:0 auto;
+      }
+      .donut-legend{
+        grid-template-columns:repeat(2, minmax(0,1fr));
+      }
+    }
+
+    /* Prioridad de hoy: carrusel */
+    .priority-carousel{
+      position:relative;
+    }
+    .priority-slide{
+      display:none;
+      opacity:0;
+      transition:opacity .35s ease;
+    }
+    .priority-slide.is-active{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      opacity:1;
+      animation:prioritySlideIn .4s ease both;
+    }
+    @keyframes prioritySlideIn{
+      from{opacity:0; transform:translateY(6px);}
+      to{opacity:1; transform:translateY(0);}
+    }
+    .priority-dots{
+      position:absolute;
+      bottom:10px;
+      right:14px;
+      display:flex;
+      gap:6px;
+      z-index:2;
+    }
+    .priority-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:rgba(47,111,79,0.22);
+      border:none;
+      padding:0;
+      cursor:pointer;
+      transition:background .15s ease, transform .15s ease;
+    }
+    .priority-dot:hover{
+      transform:scale(1.2);
+    }
+    .priority-dot.is-active{
+      background:var(--byt-green);
+      transform:scale(1.15);
+    }
+    .priority-eyebrow.priority-eyebrow--postventa{
+      color:var(--byt-red-text);
+    }
+    .priority-eyebrow.priority-eyebrow--postventa::before{
+      background:var(--byt-red-text);
+      box-shadow:0 0 0 4px var(--byt-red-soft);
+    }
+
     /* Postventas compacto */
     .postventa-list{
       display:grid !important;
@@ -2606,7 +2806,10 @@
       <div id="alinearcito-bubble" class="alinearcito-bubble" role="status" aria-live="polite">
         <button type="button" class="alinearcito-bubble-close" aria-label="Cerrar mensaje" onclick="closeAlinearcitoBubble()">×</button>
         <img class="alinearcito-bubble-gif" src="../../assets/Alinearcito_msg.gif" alt="">
-        <span class="alinearcito-bubble-text">Hey! 👋 acá estoy</span>
+        <span class="alinearcito-bubble-text">
+          <span>Hey! 👋 acá estoy</span>
+          <span class="alinearcito-bubble-sub">Te ayudo a priorizar.</span>
+        </span>
       </div>
     </div>
 
@@ -4468,9 +4671,11 @@
       const postventasUrgentes = activePostventas.filter(item => item.urgency.isUrgent);
       const upcomingPostventas = activePostventas.slice(0, 10).map(item=>({
         key: item.project.key,
+        cotizacionId: item.project.cotizacionId,
         display: item.project.display || 'Proyecto sin nombre',
         urgencyText: item.urgency.text,
-        diffDays: item.urgency.diffDays
+        diffDays: item.urgency.diffDays,
+        isUrgent: item.urgency.isUrgent
       }));
 
       const promedioAvance = totalStages ? Math.round((totalListo/totalStages)*100) : 0;
@@ -4735,8 +4940,10 @@
       modal.setAttribute('aria-hidden','false');
       document.body.style.overflow='hidden';
       selectAlinearcitoOwner(currentAlinearcitoOwner || 'Luis');
-      // Si el usuario abre el panel, también recogemos la burbuja.
-      closeAlinearcitoBubble();
+      // Si el usuario abre el panel, recogemos la burbuja sin disparar el
+      // ciclo de reaparición (ese ciclo es exclusivo del cierre con la X).
+      const bubble = document.getElementById('alinearcito-bubble');
+      if(bubble) bubble.classList.remove('is-visible');
     }
 
     function closeAlinearcitoPanel(){
@@ -4747,20 +4954,88 @@
     }
 
     // Burbuja de chat de Alinearcito (mensaje entrante).
-    // Aparece a los pocos segundos de cargar la página y, una vez cerrada,
-    // no vuelve a aparecer hasta recargar la página.
-    let alinearcitoBubbleDismissed = false;
-    function showAlinearcitoBubble(){
-      if(alinearcitoBubbleDismissed) return;
-      const el = document.getElementById('alinearcito-bubble');
-      if(!el) return;
-      el.classList.add('is-visible');
+    // Aparece a los pocos segundos de cargar la página. Si el usuario la cierra,
+    // vuelve a aparecer automáticamente luego de 5 minutos (y reproduce sonido
+    // nuevamente). El ciclo se repite indefinidamente. Si el panel está abierto,
+    // no se muestra encima.
+    const ALINEARCITO_BUBBLE_REAPPEAR_MS = 5 * 60 * 1000; // 5 minutos
+    let alinearcitoBubbleReappearTimer = null;
+    let alinearcitoAudioCtx = null;
+
+    function isAlinearcitoPanelOpen(){
+      const modal = document.getElementById('alinearcito-modal-backdrop');
+      return !!(modal && modal.getAttribute('aria-hidden') === 'false');
     }
-    function closeAlinearcitoBubble(){
-      alinearcitoBubbleDismissed = true;
+
+    function playAlinearcitoBubbleSound(){
+      // Sonido suave tipo notificación generado con Web Audio API.
+      // No requiere assets externos. Volumen bajo.
+      try{
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if(!Ctx) return;
+        if(!alinearcitoAudioCtx){
+          alinearcitoAudioCtx = new Ctx();
+        }
+        const ctx = alinearcitoAudioCtx;
+        // Algunos navegadores requieren resume() tras gesto del usuario.
+        if(ctx.state === 'suspended' && typeof ctx.resume === 'function'){
+          ctx.resume().catch(()=>{});
+        }
+        const now = ctx.currentTime;
+        // Dos tonos cortos suaves (mensaje entrante).
+        const tones = [
+          { freq: 880, start: 0,    dur: 0.12 },
+          { freq: 1175, start: 0.12, dur: 0.18 }
+        ];
+        tones.forEach(t=>{
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = t.freq;
+          // Envolvente suave para evitar clicks
+          gain.gain.setValueAtTime(0.0001, now + t.start);
+          gain.gain.exponentialRampToValueAtTime(0.06, now + t.start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + t.start + t.dur);
+          osc.connect(gain).connect(ctx.destination);
+          osc.start(now + t.start);
+          osc.stop(now + t.start + t.dur + 0.02);
+        });
+      }catch(_e){
+        // Silencioso: si el navegador bloquea audio, no rompemos nada.
+      }
+    }
+
+    function showAlinearcitoBubble(){
+      if(isAlinearcitoPanelOpen()) return; // no mostrar encima del panel
       const el = document.getElementById('alinearcito-bubble');
       if(!el) return;
-      el.classList.remove('is-visible');
+      // Si ya está visible, no resonar.
+      if(el.classList.contains('is-visible')) return;
+      el.classList.add('is-visible');
+      // Reproducir sonido al aparecer.
+      try{ playAlinearcitoBubbleSound(); }catch(_e){}
+    }
+
+    function scheduleAlinearcitoBubbleReappear(){
+      if(alinearcitoBubbleReappearTimer){
+        clearTimeout(alinearcitoBubbleReappearTimer);
+      }
+      alinearcitoBubbleReappearTimer = setTimeout(()=>{
+        alinearcitoBubbleReappearTimer = null;
+        // Si el panel está abierto cuando toca reaparecer, reagendar para más tarde.
+        if(isAlinearcitoPanelOpen()){
+          scheduleAlinearcitoBubbleReappear();
+          return;
+        }
+        showAlinearcitoBubble();
+      }, ALINEARCITO_BUBBLE_REAPPEAR_MS);
+    }
+
+    function closeAlinearcitoBubble(){
+      const el = document.getElementById('alinearcito-bubble');
+      if(el) el.classList.remove('is-visible');
+      // Programar reaparición a los 5 minutos.
+      scheduleAlinearcitoBubbleReappear();
     }
     // Auto-mostrar a los ~3.5s de cargada la página.
     window.addEventListener('load', ()=>{
@@ -4802,41 +5077,160 @@
 
       function renderTop8(){
         const items = kpis.topPendingStages || [];
-        const leftColumn = items.slice(0, 4);
-        const rightColumn = items.slice(4, 8);
+
+        // Paleta suave y profesional (verde BYT, ámbar, gris azulado, tonos suaves)
+        const PALETTE = [
+          '#2f6f4f', // verde BYT
+          '#4a9b6f', // verde claro
+          '#b45309', // ámbar oscuro
+          '#d4a24a', // ámbar suave
+          '#64748b', // gris azulado
+          '#94a3b8', // gris azulado claro
+          '#7c8aa0', // gris pizarra
+          '#a8b3c4'  // gris suave
+        ];
+
+        // Palabras clave cortas para etiquetar segmentos
+        function getShortKeyword(stage){
+          if(!stage) return '';
+          const s = String(stage).toLowerCase();
+          if(s.includes('corte')) return 'Cortes';
+          if(s.includes('melamin')) return 'Melaminas';
+          if(s.includes('plano')) return 'Planos';
+          if(s.includes('modelad')) return 'Modelado';
+          if(s.includes('modelo')) return 'Modelo';
+          if(s.includes('quincall')) return 'Quincallería';
+          if(s.includes('optimiz')) return 'Optimizado';
+          if(s.includes('revisi')) return 'Revisión';
+          if(s.includes('instal')) return 'Instalación';
+          if(s.includes('embal')) return 'Embalaje';
+          if(s.includes('despach')) return 'Despacho';
+          if(s.includes('arma')) return 'Armado';
+          if(s.includes('canto')) return 'Cantos';
+          if(s.includes('perfor')) return 'Perforado';
+          if(s.includes('pintur')) return 'Pintura';
+          if(s.includes('lacad')) return 'Lacado';
+          // Fallback: primera palabra capitalizada
+          const first = String(stage).trim().split(/\s+/)[0] || '';
+          return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+        }
+
+        if(!items.length){
+          return `
+            <div class="top8-card top8-card--donut">
+              <div class="top8-title-wrap">
+                <h4 class="top8-title">Cuellos de botella</h4>
+              </div>
+              <p class="top8-subtitle">Ranking de actividades con más pendientes en todos los proyectos.</p>
+              <div class="top8-empty">Sin actividades pendientes</div>
+            </div>
+          `;
+        }
+
+        const total = items.reduce((acc, it)=>acc + (Number(it.count)||0), 0);
+        const SIZE = 200;
+        const CX = SIZE/2, CY = SIZE/2;
+        const R_OUTER = 88;
+        const R_INNER = 56;
+        const TWO_PI = Math.PI * 2;
+
+        function polar(cx, cy, r, angle){
+          return [cx + r * Math.cos(angle), cy + r * Math.sin(angle)];
+        }
+
+        function arcPath(startAngle, endAngle){
+          // Donut segment path (annular sector)
+          const largeArc = (endAngle - startAngle) > Math.PI ? 1 : 0;
+          const [x1, y1] = polar(CX, CY, R_OUTER, startAngle);
+          const [x2, y2] = polar(CX, CY, R_OUTER, endAngle);
+          const [x3, y3] = polar(CX, CY, R_INNER, endAngle);
+          const [x4, y4] = polar(CX, CY, R_INNER, startAngle);
+          return [
+            `M ${x1.toFixed(2)} ${y1.toFixed(2)}`,
+            `A ${R_OUTER} ${R_OUTER} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`,
+            `L ${x3.toFixed(2)} ${y3.toFixed(2)}`,
+            `A ${R_INNER} ${R_INNER} 0 ${largeArc} 0 ${x4.toFixed(2)} ${y4.toFixed(2)}`,
+            'Z'
+          ].join(' ');
+        }
+
+        let cursor = -Math.PI / 2; // empezar arriba
+        const segments = items.map((item, idx)=>{
+          const value = Number(item.count) || 0;
+          const fraction = total ? value / total : 0;
+          const startAngle = cursor;
+          const endAngle = cursor + fraction * TWO_PI;
+          cursor = endAngle;
+          const midAngle = (startAngle + endAngle) / 2;
+          const labelR = (R_OUTER + R_INNER) / 2;
+          const [lx, ly] = polar(CX, CY, labelR, midAngle);
+          const color = PALETTE[idx % PALETTE.length];
+          const keyword = getShortKeyword(item.stage);
+          // Solo mostrar etiqueta dentro del segmento si la fracción es suficiente
+          const showInsideLabel = fraction >= 0.07 && keyword.length <= 12;
+          // Path: si solo hay 1 ítem (fraction=1), dibujar como anillo completo
+          let pathD;
+          if(items.length === 1 || fraction >= 0.999){
+            pathD = `M ${CX - R_OUTER} ${CY} A ${R_OUTER} ${R_OUTER} 0 1 1 ${CX + R_OUTER} ${CY} A ${R_OUTER} ${R_OUTER} 0 1 1 ${CX - R_OUTER} ${CY} Z `
+                  + `M ${CX - R_INNER} ${CY} A ${R_INNER} ${R_INNER} 0 1 0 ${CX + R_INNER} ${CY} A ${R_INNER} ${R_INNER} 0 1 0 ${CX - R_INNER} ${CY} Z`;
+          } else {
+            pathD = arcPath(startAngle, endAngle);
+          }
+          return {
+            item, value, fraction, color, keyword,
+            startAngle, endAngle, midAngle, lx, ly, pathD, showInsideLabel
+          };
+        });
+
+        const tooltipText = (s)=> `${s.item.stage} — ${s.value} pendiente${s.value === 1 ? '' : 's'}`;
+
+        const segmentsSvg = segments.map((s, i)=>`
+          <path
+            class="donut-segment"
+            d="${s.pathD}"
+            fill="${s.color}"
+            data-stage="${attr(s.item.stage)}"
+            data-count="${s.value}"
+            data-tooltip="${attr(tooltipText(s))}"
+            tabindex="0"
+            aria-label="${attr(tooltipText(s))}"
+          ><title>${esc(tooltipText(s))}</title></path>
+        `).join('');
+
+        const labelsSvg = segments.filter(s=>s.showInsideLabel).map(s=>`
+          <text class="donut-keyword" x="${s.lx.toFixed(2)}" y="${s.ly.toFixed(2)}"
+                text-anchor="middle" dominant-baseline="central"
+                pointer-events="none">${esc(s.keyword)}</text>
+        `).join('');
+
+        const legendHtml = segments.map(s=>`
+          <div class="donut-legend-item" data-stage="${attr(s.item.stage)}" title="${attr(tooltipText(s))}">
+            <span class="donut-legend-dot" style="background:${s.color};"></span>
+            <span class="donut-legend-label">${esc(s.keyword || s.item.stage)}</span>
+            <span class="donut-legend-count">${s.value}</span>
+          </div>
+        `).join('');
 
         return `
-          <div class="top8-card">
+          <div class="top8-card top8-card--donut">
             <div class="top8-title-wrap">
               <h4 class="top8-title">Cuellos de botella</h4>
             </div>
             <p class="top8-subtitle">Ranking de actividades con más pendientes en todos los proyectos.</p>
-            ${
-              items.length
-                ? `
-                  <div class="top8-list">
-                    <div class="top8-column">
-                      ${leftColumn.map((item, index)=>`
-                        <div class="top8-item">
-                          <div class="top8-rank">${index + 1}</div>
-                          <div class="top8-stage">${esc(item.stage)}</div>
-                          <div class="top8-count">${item.count}</div>
-                        </div>
-                      `).join('')}
-                    </div>
-                    <div class="top8-column">
-                      ${rightColumn.map((item, index)=>`
-                        <div class="top8-item">
-                          <div class="top8-rank">${index + 5}</div>
-                          <div class="top8-stage">${esc(item.stage)}</div>
-                          <div class="top8-count">${item.count}</div>
-                        </div>
-                      `).join('')}
-                    </div>
-                  </div>
-                `
-                : `<div class="top8-empty">Sin actividades pendientes</div>`
-            }
+            <div class="donut-wrap">
+              <div class="donut-chart-wrap">
+                <svg class="donut-chart" viewBox="0 0 ${SIZE} ${SIZE}" role="img" aria-label="Distribución de actividades con más pendientes">
+                  <g class="donut-segments">${segmentsSvg}</g>
+                  <g class="donut-labels">${labelsSvg}</g>
+                  <text class="donut-center-value" x="${CX}" y="${CY - 6}" text-anchor="middle" dominant-baseline="central">${total}</text>
+                  <text class="donut-center-label" x="${CX}" y="${CY + 16}" text-anchor="middle" dominant-baseline="central">pendientes</text>
+                </svg>
+                <div class="donut-tooltip" id="donut-tooltip" role="tooltip" aria-hidden="true"></div>
+              </div>
+              <div class="donut-legend" role="list">
+                ${legendHtml}
+              </div>
+            </div>
           </div>
         `;
       }
@@ -4938,18 +5332,26 @@
       // Construye la "ops-hero" (priority + summary KPIs)
       function renderOpsHero(){
         const upcoming = kpis.upcomingInstallProjects || [];
-        const top = upcoming[0];
-        let priorityHTML;
-        if(top){
+        const postventas = kpis.upcomingPostventas || [];
+
+        // Construir lista de slides para el carrusel:
+        // 1) hasta 4 próximos proyectos
+        // 2) hasta 2 postventas (urgentes primero, ya vienen ordenadas)
+        const projectSlides = upcoming.slice(0, 4).map(p=>({ type:'project', data:p }));
+        const postventaSlides = postventas.slice(0, 2).map(p=>({ type:'postventa', data:p }));
+        const slides = [...projectSlides, ...postventaSlides];
+
+        function renderProjectSlide(top){
           const totalStages = top.totalStages || 0;
           const doneStages = top.doneStages || 0;
           const pct = totalStages ? Math.round((doneStages/totalStages)*100) : 0;
           const urgentClass = (top.instalacionText || '').toLowerCase().includes('hoy')
             || (top.instalacionText || '').toLowerCase().includes('mañana')
             || (top.instalacionText || '').toLowerCase().includes('vencid')
+            || (top.instalacionText || '').toLowerCase().includes('atrasad')
             ? 'urgent' : '';
-          priorityHTML = `
-            <div class="priority-card" onclick="goToProjectFromUpcoming('${attr(top.key)}')">
+          return `
+            <div class="priority-slide" data-type="project" data-key="${attr(top.key)}" onclick="goToProjectFromUpcoming('${attr(top.key)}')">
               <span class="priority-eyebrow">Prioridad de hoy</span>
               <h3 class="priority-title">${esc(top.display)}</h3>
               <div class="priority-meta-row">
@@ -4967,6 +5369,60 @@
                 <span class="priority-progress-text">${pct}%</span>
               </div>
               <button class="priority-cta" onclick="event.stopPropagation();goToProjectFromUpcoming('${attr(top.key)}')">Ver proyecto →</button>
+            </div>
+          `;
+        }
+
+        function renderPostventaSlide(pv){
+          const urgencyText = pv.urgencyText || 'Sin fecha de entrega postventa';
+          const urgentClass = pv.isUrgent ? 'urgent' : '';
+          const cotId = pv.cotizacionId || '';
+          // Click va al proyecto (selección/scroll). El CTA abre el modal de postventa
+          // si existe cotizacionId, o cae al proyecto en su defecto.
+          const ctaHandler = cotId
+            ? `event.stopPropagation();openPostventaModal('${attr(cotId)}')`
+            : `event.stopPropagation();goToProjectFromUpcoming('${attr(pv.key)}')`;
+          return `
+            <div class="priority-slide" data-type="postventa" data-key="${attr(pv.key)}" onclick="goToProjectFromUpcoming('${attr(pv.key)}')">
+              <span class="priority-eyebrow priority-eyebrow--postventa">Postventa activa</span>
+              <h3 class="priority-title">${esc(pv.display)}</h3>
+              <div class="priority-meta-row">
+                <div class="priority-meta-block">
+                  <span class="priority-meta-label">Estado postventa</span>
+                  <span class="priority-meta-value ${urgentClass}">${esc(urgencyText)}</span>
+                </div>
+              </div>
+              <div class="priority-progress-row">
+                <div class="priority-progress-bar"><div class="priority-progress-fill" style="width:100%; background:linear-gradient(90deg, var(--byt-red-text), #ef9a9a);"></div></div>
+                <span class="priority-progress-text">Activa</span>
+              </div>
+              <button class="priority-cta" style="background:var(--byt-red-text);" onclick="${ctaHandler}">${cotId ? 'Abrir postventa →' : 'Ver proyecto →'}</button>
+            </div>
+          `;
+        }
+
+        let priorityHTML;
+        if(slides.length){
+          const slidesHtml = slides.map((s, idx)=>{
+            const inner = s.type === 'project' ? renderProjectSlide(s.data) : renderPostventaSlide(s.data);
+            // Marcar el primero como activo
+            return inner.replace('class="priority-slide"', `class="priority-slide${idx === 0 ? ' is-active' : ''}"`);
+          }).join('');
+          const dotsHtml = slides.length > 1 ? `
+            <div class="priority-dots" role="tablist" aria-label="Cambiar prioridad">
+              ${slides.map((_, idx)=>`
+                <button type="button" class="priority-dot${idx === 0 ? ' is-active' : ''}"
+                  data-index="${idx}"
+                  aria-label="Ir al item ${idx + 1}"
+                  onclick="event.stopPropagation();gotoPriorityCarouselSlide(${idx});"></button>
+              `).join('')}
+            </div>
+          ` : '';
+          priorityHTML = `
+            <div class="priority-card priority-carousel" id="priority-carousel"
+                 onmouseenter="pausePriorityCarousel()" onmouseleave="resumePriorityCarousel()">
+              ${slidesHtml}
+              ${dotsHtml}
             </div>
           `;
         } else {
@@ -5053,8 +5509,136 @@
           </div>
         </div>
       `;
+
+      // Post-render: enlazar interacciones del donut y arrancar el carrusel.
+      try { setupBottleneckDonut(); } catch(_e) {}
+      try { setupPriorityCarousel(); } catch(_e) {}
     }
 
+    // ---------------- Carrusel "Prioridad de hoy" ----------------
+    let priorityCarouselTimer = null;
+    let priorityCarouselIndex = 0;
+    let priorityCarouselPaused = false;
+    const PRIORITY_CAROUSEL_INTERVAL_MS = 5000;
+
+    function clearPriorityCarouselTimer(){
+      if(priorityCarouselTimer){
+        clearInterval(priorityCarouselTimer);
+        priorityCarouselTimer = null;
+      }
+    }
+
+    function setupPriorityCarousel(){
+      clearPriorityCarouselTimer();
+      const root = document.getElementById('priority-carousel');
+      if(!root) return;
+      const slides = root.querySelectorAll('.priority-slide');
+      if(slides.length <= 1) return; // no rotar con 1 solo elemento
+      priorityCarouselIndex = 0;
+      priorityCarouselPaused = false;
+      priorityCarouselTimer = setInterval(()=>{
+        if(priorityCarouselPaused) return;
+        const next = (priorityCarouselIndex + 1) % slides.length;
+        applyPriorityCarouselSlide(next);
+      }, PRIORITY_CAROUSEL_INTERVAL_MS);
+    }
+
+    function applyPriorityCarouselSlide(index){
+      const root = document.getElementById('priority-carousel');
+      if(!root) return;
+      const slides = root.querySelectorAll('.priority-slide');
+      if(!slides.length) return;
+      const safeIndex = ((index % slides.length) + slides.length) % slides.length;
+      slides.forEach((el, i)=> el.classList.toggle('is-active', i === safeIndex));
+      const dots = root.querySelectorAll('.priority-dot');
+      dots.forEach((el, i)=> el.classList.toggle('is-active', i === safeIndex));
+      priorityCarouselIndex = safeIndex;
+    }
+
+    function gotoPriorityCarouselSlide(index){
+      applyPriorityCarouselSlide(index);
+      // Reiniciar el intervalo para no cambiar inmediatamente después de un click.
+      const root = document.getElementById('priority-carousel');
+      if(!root) return;
+      const slides = root.querySelectorAll('.priority-slide');
+      if(slides.length <= 1) return;
+      clearPriorityCarouselTimer();
+      priorityCarouselTimer = setInterval(()=>{
+        if(priorityCarouselPaused) return;
+        const next = (priorityCarouselIndex + 1) % slides.length;
+        applyPriorityCarouselSlide(next);
+      }, PRIORITY_CAROUSEL_INTERVAL_MS);
+    }
+
+    function pausePriorityCarousel(){ priorityCarouselPaused = true; }
+    function resumePriorityCarousel(){ priorityCarouselPaused = false; }
+
+    // ---------------- Tooltip y resaltado del donut ----------------
+    function setupBottleneckDonut(){
+      const tooltip = document.getElementById('donut-tooltip');
+      if(!tooltip) return;
+      const wrap = tooltip.parentElement; // .donut-chart-wrap
+      const card = wrap && wrap.closest('.donut-wrap');
+      const segments = wrap ? wrap.querySelectorAll('.donut-segment') : [];
+      const legendItems = card ? card.querySelectorAll('.donut-legend-item') : [];
+
+      function positionTooltip(evt){
+        const rect = wrap.getBoundingClientRect();
+        const x = evt.clientX - rect.left;
+        const y = evt.clientY - rect.top;
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = (y - 6) + 'px';
+      }
+      function showTooltip(text){
+        tooltip.textContent = text;
+        tooltip.classList.add('is-visible');
+        tooltip.setAttribute('aria-hidden','false');
+      }
+      function hideTooltip(){
+        tooltip.classList.remove('is-visible');
+        tooltip.setAttribute('aria-hidden','true');
+      }
+      function setActiveStage(stage){
+        if(card) card.classList.toggle('has-active', !!stage);
+        segments.forEach(seg=>{
+          seg.classList.toggle('is-active', stage && seg.dataset.stage === stage);
+        });
+        legendItems.forEach(li=>{
+          li.classList.toggle('is-active', stage && li.dataset.stage === stage);
+        });
+      }
+
+      segments.forEach(seg=>{
+        seg.addEventListener('mouseenter', (e)=>{
+          showTooltip(seg.dataset.tooltip || '');
+          positionTooltip(e);
+          setActiveStage(seg.dataset.stage);
+        });
+        seg.addEventListener('mousemove', positionTooltip);
+        seg.addEventListener('mouseleave', ()=>{
+          hideTooltip();
+          setActiveStage(null);
+        });
+        seg.addEventListener('focus', ()=>{
+          showTooltip(seg.dataset.tooltip || '');
+          // posicionar arriba del segmento (centro del wrap)
+          const r = seg.getBoundingClientRect();
+          const wr = wrap.getBoundingClientRect();
+          tooltip.style.left = (r.left - wr.left + r.width/2) + 'px';
+          tooltip.style.top = (r.top - wr.top - 6) + 'px';
+          setActiveStage(seg.dataset.stage);
+        });
+        seg.addEventListener('blur', ()=>{
+          hideTooltip();
+          setActiveStage(null);
+        });
+      });
+
+      legendItems.forEach(li=>{
+        li.addEventListener('mouseenter', ()=> setActiveStage(li.dataset.stage));
+        li.addEventListener('mouseleave', ()=> setActiveStage(null));
+      });
+    }
     function rerenderMainUI(){
       renderKpis();
       renderLista();
