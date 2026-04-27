@@ -1182,7 +1182,8 @@
       box-shadow:0 14px 28px rgba(17,24,39,0.22);
     }
 
-    /* Burbuja de chat tipo mensaje entrante */
+    /* Burbuja de chat tipo mensaje entrante.
+       Permanente: siempre visible, no se puede cerrar y no usa timers. */
     .alinearcito-bubble{
       position:fixed;
       right:24px;
@@ -1190,11 +1191,11 @@
          la burbuja queda como único elemento abajo a la derecha. */
       bottom:24px;
       z-index:9050;
-      display:none;
+      display:flex;
       align-items:center;
       gap:10px;
       max-width:min(320px, calc(100vw - 48px));
-      padding:10px 36px 10px 12px;
+      padding:10px 14px;
       background:#ffffff;
       border:1px solid var(--border, #eceef2);
       border-radius:16px;
@@ -1206,9 +1207,6 @@
     }
     .alinearcito-bubble:hover{
       box-shadow:0 18px 34px rgba(17,24,39,0.18);
-    }
-    .alinearcito-bubble.is-visible{
-      display:flex;
     }
     @keyframes alinearcitoBubbleIn{
       from{ opacity:0; transform:translateY(8px); }
@@ -1234,23 +1232,6 @@
       font-size:11.5px;
       font-weight:500;
       color:#64748b;
-    }
-    .alinearcito-bubble-close{
-      position:absolute;
-      top:6px;
-      right:8px;
-      border:none;
-      background:transparent;
-      color:#94a3b8;
-      font-size:16px;
-      line-height:1;
-      cursor:pointer;
-      padding:2px 4px;
-      border-radius:6px;
-    }
-    .alinearcito-bubble-close:hover{
-      background:#f1f5f9;
-      color:#475569;
     }
     /* Antes había una flecha apuntando al botón FAB de Alinearcito.
        El FAB se eliminó, por lo que la flecha ya no aplica. */
@@ -2796,10 +2777,9 @@
     <div class="header">
       <button class="btn btn-ghost" onclick="window.history.back()">← Atrás</button>
       <h2>Estado de proyectos</h2>
-      <div id="alinearcito-bubble" class="alinearcito-bubble" role="status" aria-live="polite"
+      <div id="alinearcito-bubble" class="alinearcito-bubble" role="button" aria-label="Abrir Alinearcito"
            onclick="openAlinearcitoPanel()" tabindex="0"
            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAlinearcitoPanel();}">
-        <button type="button" class="alinearcito-bubble-close" aria-label="Cerrar mensaje" onclick="event.stopPropagation();closeAlinearcitoBubble();">×</button>
         <img class="alinearcito-bubble-gif" src="../../assets/Alinearcito_msg.gif" alt="">
         <span class="alinearcito-bubble-text">
           <span>Hey! 👋 acá estoy</span>
@@ -4935,10 +4915,6 @@
       modal.setAttribute('aria-hidden','false');
       document.body.style.overflow='hidden';
       selectAlinearcitoOwner(currentAlinearcitoOwner || 'Luis');
-      // Si el usuario abre el panel, recogemos la burbuja sin disparar el
-      // ciclo de reaparición (ese ciclo es exclusivo del cierre con la X).
-      const bubble = document.getElementById('alinearcito-bubble');
-      if(bubble) bubble.classList.remove('is-visible');
     }
 
     function closeAlinearcitoPanel(){
@@ -4949,56 +4925,14 @@
     }
 
     // Burbuja de chat de Alinearcito (mensaje entrante).
-    // Aparece a los pocos segundos de cargar la página. Si el usuario la cierra,
-    // vuelve a aparecer automáticamente luego de 5 minutos. El ciclo se repite
-    // indefinidamente. Si el panel está abierto, no se muestra encima.
-    const ALINEARCITO_BUBBLE_REAPPEAR_MS = 5 * 60 * 1000; // 5 minutos
-    let alinearcitoBubbleReappearTimer = null;
-
-    function isAlinearcitoPanelOpen(){
-      const modal = document.getElementById('alinearcito-modal-backdrop');
-      return !!(modal && modal.getAttribute('aria-hidden') === 'false');
-    }
+    // Es permanente: siempre visible abajo a la derecha. No se cierra,
+    // no usa timeout para ocultarse y no reaparece por intervalos.
+    // Toda la burbuja es clickeable y abre el panel de Alinearcito.
 
     // Stub vacío: se eliminó el sonido automático para evitar el warning de
     // AudioContext ("must be resumed after a user gesture"). Se mantiene la
     // función como no-op por compatibilidad con cualquier referencia residual.
     function playAlinearcitoBubbleSound(){ /* no-op: sonido automático deshabilitado */ }
-
-    function showAlinearcitoBubble(){
-      if(isAlinearcitoPanelOpen()) return; // no mostrar encima del panel
-      const el = document.getElementById('alinearcito-bubble');
-      if(!el) return;
-      // Si ya está visible, no hacer nada.
-      if(el.classList.contains('is-visible')) return;
-      el.classList.add('is-visible');
-    }
-
-    function scheduleAlinearcitoBubbleReappear(){
-      if(alinearcitoBubbleReappearTimer){
-        clearTimeout(alinearcitoBubbleReappearTimer);
-      }
-      alinearcitoBubbleReappearTimer = setTimeout(()=>{
-        alinearcitoBubbleReappearTimer = null;
-        // Si el panel está abierto cuando toca reaparecer, reagendar para más tarde.
-        if(isAlinearcitoPanelOpen()){
-          scheduleAlinearcitoBubbleReappear();
-          return;
-        }
-        showAlinearcitoBubble();
-      }, ALINEARCITO_BUBBLE_REAPPEAR_MS);
-    }
-
-    function closeAlinearcitoBubble(){
-      const el = document.getElementById('alinearcito-bubble');
-      if(el) el.classList.remove('is-visible');
-      // Programar reaparición a los 5 minutos.
-      scheduleAlinearcitoBubbleReappear();
-    }
-    // Auto-mostrar a los ~3.5s de cargada la página.
-    window.addEventListener('load', ()=>{
-      setTimeout(showAlinearcitoBubble, 3500);
-    });
 
     function renderKpis(){
       const wrap = document.getElementById('kpi-dashboard');
