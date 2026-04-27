@@ -2487,6 +2487,42 @@
       position:static !important;
     }
 
+    /* Tarjeta de error de carga inicial */
+    .load-error-card{
+      max-width:520px;
+      margin:24px auto;
+      padding:22px 24px;
+      border-radius:14px;
+      background:var(--byt-surface, #fff);
+      border:1px solid var(--byt-border, #e5e7eb);
+      box-shadow:var(--byt-shadow, 0 6px 18px rgba(0,0,0,.06));
+      text-align:center;
+      color:#111827;
+    }
+    .load-error-card h3{
+      margin:0 0 8px;
+      font-size:16px;
+      font-weight:700;
+      color:#b91c1c;
+    }
+    .load-error-card p{
+      margin:0 0 14px;
+      font-size:13px;
+      color:#374151;
+    }
+    .load-error-card button{
+      appearance:none;
+      border:none;
+      background:#111827;
+      color:#fff;
+      padding:9px 18px;
+      border-radius:10px;
+      font-size:13px;
+      font-weight:600;
+      cursor:pointer;
+    }
+    .load-error-card button:hover{ background:#1f2937; }
+
     /* Filtros compactos */
     .filters-card{
       padding:12px 14px !important;
@@ -6382,16 +6418,9 @@
     // Mostrar el loader (frases + timer) apenas cargue el DOM. El overlay ya es visible por HTML.
     document.addEventListener('DOMContentLoaded', ()=>{ try{ showAlinearcitaLoader(); }catch(e){ console.warn(e); } });
 
-    // Fallback: si la carga principal no termina en 6s, intentar render con lo que haya.
-    setTimeout(()=>{
-      if(!estadoReady){
-        console.warn("Carga lenta o incompleta. Intentando render fallback.");
-        try{
-          if(typeof applyFiltersAndRender === "function") applyFiltersAndRender(true);
-          if(typeof renderKpis === "function") renderKpis();
-        }catch(e){ console.warn(e); }
-      }
-    }, 6000);
+    // Fallback eliminado: la robustez de la carga inicial se maneja dentro de
+    // bootstrapEstado (timeout de 10s en cargarDatos + Reintentar). Mantener
+    // un render forzado vacío puede mostrar UI sin datos, así que no aplica.
 
     // Seguridad: nunca dejar el loader eterno (máx 12s).
     setTimeout(()=>{
@@ -6412,35 +6441,118 @@
       clearIntroCountdown();
     });
 
-    async function bootstrapEstado(){
+    /* ===== Helpers de robustez ===== */
+    function withTimeout(promise, ms, label){
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error(`${label} excedió ${ms}ms`)), ms);
+        })
+      ]);
+    }
+
+    function renderLoadError(error){
       try{
-        await cargarDatos();
-        estadoReady = true;
-      }catch(e){
-        console.error("Error inicializando Estado de proyectos:", e);
-        try{
-          const list = document.getElementById('proyectos-list');
-          if(list) list.innerHTML = '<div style="padding:22px;text-align:center;color:#b91c1c;">No se pudo cargar información</div>';
-          if(typeof renderKpis === "function") renderKpis();
-        }catch(err){ console.warn(err); }
-        estadoReady = true;
-        await hideAlinearcitaLoaderAfterMinimumTime();
+        const main = document.querySelector(".page") || document.body;
+        const target = document.getElementById("detalle-wrapper")
+                    || document.getElementById("proyectos-list")
+                    || main;
+        if(!target) return;
+        target.innerHTML = `
+          <div class="load-error-card">
+            <h3>No se pudo cargar Estado de proyectos</h3>
+            <p>Intenta nuevamente. Si vuelve a pasar, revisa consola.</p>
+            <button type="button" onclick="bootstrapEstado()">Reintentar</button>
+          </div>
+        `;
+      }catch(e){ console.warn("renderLoadError falló:", e); }
+    }
+    window.renderLoadError = renderLoadError;
+
+    let isBootstrappingEstado = false;
+
+    async function bootstrapEstado(){
+      if(isBootstrappingEstado){
+        console.warn("bootstrapEstado ya está corriendo, se evita doble ejecución");
         return;
       }
+      isBootstrappingEstado = true;
 
-      // Cargas secundarias: si alguna falla, log y seguimos.
-      try{ await cargarNotasEtapas(); }catch(e){ console.warn("cargarNotasEtapas falló:", e); }
-      try{ await loadProjectVideos(); }catch(e){ console.warn("loadProjectVideos falló:", e); }
-      try{ await loadProjectPostventas(); }catch(e){ console.warn("loadProjectPostventas falló:", e); }
-      try{ await loadProjectCovers(); }catch(e){ console.warn("loadProjectCovers falló:", e); }
-      try{ await startRealtimeSync(); }catch(e){ console.warn("startRealtimeSync falló:", e); }
+      console.time("estado:init total");
+      try{
+        // ---------- Etapa crítica: cargarDatos ----------
+        console.log("iniciando cargarDatos");
+        console.time("estado:cargarDatos");
+        try{
+          await withTimeout(cargarDatos(), 10000, "cargarDatos");
+          console.log("cargarDatos listo");
+        }catch(e){
+          console.error("cargarDatos falló o excedió timeout:", e);
+          estadoReady = true;
+          renderLoadError(e);
+          try{ await hideAlinearcitaLoaderAfterMinimumTime(); console.log("loader oculto"); }catch(err){ console.warn(err); }
+          return;
+        }finally{
+          console.timeEnd("estado:cargarDatos");
+        }
+        estadoReady = true;
 
-      try{ applyFiltersAndRender(true); }catch(e){ console.warn("applyFiltersAndRender falló:", e); }
-      try{ wireFileInput(); }catch(e){ console.warn("wireFileInput falló:", e); }
-      try{ maybeShowDailyIntro(); }catch(e){ console.warn("maybeShowDailyIntro falló:", e); }
+        // ---------- Render principal inmediato ----------
+        console.log("iniciando render");
+        console.time("estado:render");
+        try{ applyFiltersAndRender(true); }catch(e){ console.warn("applyFiltersAndRender falló:", e); }
+        try{ wireFileInput(); }catch(e){ console.warn("wireFileInput falló:", e); }
+        console.timeEnd("estado:render");
+        console.log("render listo");
 
-      try{ await hideAlinearcitaLoaderAfterMinimumTime(); }catch(e){ console.warn(e); }
+        // Ocultar loader apenas se cumpla el mínimo de 4s. No esperar secundarias.
+        hideAlinearcitaLoaderAfterMinimumTime()
+          .then(()=>console.log("loader oculto"))
+          .catch(err=>console.warn(err));
+
+        // ---------- Cargas secundarias (no bloquean la UI) ----------
+        // Se ejecutan en paralelo, cada una con su propio try/catch + timeout.
+        const secundarias = [
+          (async ()=>{
+            console.time("estado:cargarNotasEtapas");
+            try{ await withTimeout(cargarNotasEtapas(), 8000, "cargarNotasEtapas"); rerenderMainUI(); }
+            catch(e){ console.warn("cargarNotasEtapas falló o demoró:", e); }
+            finally{ console.timeEnd("estado:cargarNotasEtapas"); }
+          })(),
+          (async ()=>{
+            console.time("estado:loadProjectVideos");
+            try{ await withTimeout(loadProjectVideos(), 8000, "loadProjectVideos"); rerenderMainUI(); }
+            catch(e){ console.warn("loadProjectVideos falló o demoró:", e); }
+            finally{ console.timeEnd("estado:loadProjectVideos"); }
+          })(),
+          (async ()=>{
+            console.time("estado:loadProjectPostventas");
+            try{ await withTimeout(loadProjectPostventas(), 8000, "loadProjectPostventas"); rerenderMainUI(); }
+            catch(e){ console.warn("loadProjectPostventas falló o demoró:", e); }
+            finally{ console.timeEnd("estado:loadProjectPostventas"); }
+          })(),
+          (async ()=>{
+            console.time("estado:loadProjectCovers");
+            try{ await withTimeout(loadProjectCovers(), 8000, "loadProjectCovers"); rerenderMainUI(); }
+            catch(e){ console.warn("loadProjectCovers falló o demoró:", e); }
+            finally{ console.timeEnd("estado:loadProjectCovers"); }
+          })(),
+          (async ()=>{
+            console.time("estado:startRealtimeSync");
+            try{ await withTimeout(startRealtimeSync(), 8000, "startRealtimeSync"); }
+            catch(e){ console.warn("startRealtimeSync falló o demoró:", e); }
+            finally{ console.timeEnd("estado:startRealtimeSync"); }
+          })()
+        ];
+        try{ await Promise.allSettled(secundarias); }catch(e){ console.warn(e); }
+
+        try{ maybeShowDailyIntro(); }catch(e){ console.warn("maybeShowDailyIntro falló:", e); }
+      }finally{
+        console.timeEnd("estado:init total");
+        isBootstrappingEstado = false;
+      }
     }
+    window.bootstrapEstado = bootstrapEstado;
 
     /* Carga de datos */
     async function cargarDatos(){
