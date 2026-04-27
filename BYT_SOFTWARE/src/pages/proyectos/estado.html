@@ -160,11 +160,22 @@
       border-radius:14px;
       box-shadow:0 12px 28px rgba(17,24,39,0.12);
       padding:12px;
-      z-index:20;
+      /* Debe quedar por encima del header sticky (z:50), sidebar sticky,
+         filtros, cards y detalle. Usamos un z muy alto pero por debajo
+         del FAB de Alinearcito (9050) y modales (>=2000-9999). */
+      z-index:9000;
       opacity:0;
       transform:translateY(6px);
       pointer-events:none;
       transition:opacity .16s ease, transform .16s ease;
+    }
+    /* Asegurar que el item con hover gane stacking context cuando se muestra
+       el tooltip, para que ningún hermano con z-index lo tape. */
+    .kpi-card.kpi-has-hover:hover{
+      z-index:9001;
+    }
+    .team-pulse-item.kpi-has-hover:hover{
+      z-index:9001;
     }
     .kpi-card.kpi-has-hover:hover .kpi-hover{
       opacity:1;
@@ -1140,23 +1151,110 @@
 
     .alinearcito-fab{
       position:fixed;
-      right:22px;
-      bottom:22px;
+      right:24px;
+      bottom:24px;
       z-index:9050;
       border:none;
       border-radius:999px;
-      background:#111827;
-      color:#fff;
-      padding:12px 18px;
-      font-size:14px;
+      background:#ffffff;
+      color:#0f172a;
+      padding:6px 14px 6px 6px;
+      font-size:13px;
       font-weight:700;
       cursor:pointer;
-      box-shadow:0 8px 20px rgba(17,24,39,0.18);
+      box-shadow:0 10px 24px rgba(17,24,39,0.18);
       transition:transform .12s ease, box-shadow .12s ease;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      line-height:1;
+    }
+    .alinearcito-fab .alinearcito-fab-img{
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      object-fit:cover;
+      display:block;
+      background:#f1f5f9;
     }
     .alinearcito-fab:hover{
       transform:translateY(-1px);
-      box-shadow:0 10px 24px rgba(17,24,39,0.22);
+      box-shadow:0 14px 28px rgba(17,24,39,0.22);
+    }
+
+    /* Burbuja de chat tipo mensaje entrante */
+    .alinearcito-bubble{
+      position:fixed;
+      right:24px;
+      /* alinearcito-fab altura ~54 + bottom 24 + gap 12 */
+      bottom:96px;
+      z-index:9049;
+      display:none;
+      align-items:center;
+      gap:10px;
+      max-width:min(320px, calc(100vw - 48px));
+      padding:10px 36px 10px 12px;
+      background:#ffffff;
+      border:1px solid var(--border, #eceef2);
+      border-radius:16px;
+      box-shadow:0 14px 30px rgba(17,24,39,0.14);
+      font-size:13px;
+      color:#0f172a;
+      animation:alinearcitoBubbleIn .35s ease both;
+    }
+    .alinearcito-bubble.is-visible{
+      display:flex;
+    }
+    @keyframes alinearcitoBubbleIn{
+      from{ opacity:0; transform:translateY(8px); }
+      to{ opacity:1; transform:translateY(0); }
+    }
+    .alinearcito-bubble-gif{
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      object-fit:cover;
+      flex-shrink:0;
+      background:#f1f5f9;
+    }
+    .alinearcito-bubble-text{
+      font-weight:600;
+      line-height:1.35;
+      color:#0f172a;
+    }
+    .alinearcito-bubble-close{
+      position:absolute;
+      top:6px;
+      right:8px;
+      border:none;
+      background:transparent;
+      color:#94a3b8;
+      font-size:16px;
+      line-height:1;
+      cursor:pointer;
+      padding:2px 4px;
+      border-radius:6px;
+    }
+    .alinearcito-bubble-close:hover{
+      background:#f1f5f9;
+      color:#475569;
+    }
+    /* Flecha apuntando hacia el botón */
+    .alinearcito-bubble::after{
+      content:"";
+      position:absolute;
+      right:28px;
+      bottom:-7px;
+      width:12px;
+      height:12px;
+      background:#ffffff;
+      border-right:1px solid var(--border, #eceef2);
+      border-bottom:1px solid var(--border, #eceef2);
+      transform:rotate(45deg);
+    }
+    @media (max-width:640px){
+      .alinearcito-fab{ right:14px; bottom:14px; }
+      .alinearcito-bubble{ right:14px; bottom:80px; }
     }
     .alinearcito-panel{
       width:min(520px, 96vw);
@@ -1708,25 +1806,10 @@
       background:#e5e7eb !important;
       color:var(--byt-text) !important;
     }
-    /* Alinearcito integrado en el header (no más FAB suelto) */
+    /* Alinearcito vuelve a ser un FAB flotante abajo-derecha (chat) */
     .header .alinearcito-fab{
-      position:static !important;
-      right:auto !important;
-      bottom:auto !important;
-      box-shadow:none !important;
-      background:linear-gradient(135deg, var(--byt-green) 0%, #245840 100%) !important;
-      color:#fff !important;
-      border-radius:999px !important;
-      padding:9px 16px !important;
-      font-size:13px !important;
-      font-weight:700 !important;
-      transform:none !important;
-      transition:filter .15s ease, transform .12s ease !important;
-    }
-    .header .alinearcito-fab:hover{
-      filter:brightness(1.06) !important;
-      transform:translateY(-1px) !important;
-      box-shadow:0 6px 16px rgba(47, 111, 79, 0.22) !important;
+      /* Mantener fija en su posición original (bottom-right). No anclar al header. */
+      position:fixed !important;
     }
 
     /* ---------- DASHBOARD CARD WRAPPER ---------- */
@@ -1934,11 +2017,11 @@
       display:grid !important;
       grid-template-columns:minmax(0, 1.55fr) minmax(0, 1fr) !important;
       gap:18px !important;
-      align-items:start;
+      align-items:stretch !important;
     }
-    .dashboard-extra > .upcoming-card{ grid-column:1; grid-row:1; }
-    .dashboard-extra > .top8-card{ grid-column:2; grid-row:1; }
-    .dashboard-extra > .postventa-card{ grid-column:1 / -1; grid-row:2; }
+    .dashboard-extra > .upcoming-card{ grid-column:1; grid-row:1; margin:0 !important; }
+    .dashboard-extra > .top8-card{ grid-column:2; grid-row:1; margin:0 !important; }
+    .dashboard-extra > .postventa-card{ grid-column:1 / -1; grid-row:2; margin:0 !important; }
 
     .upcoming-card, .top8-card, .postventa-card{
       background:var(--byt-surface) !important;
@@ -1946,6 +2029,10 @@
       border-radius:var(--byt-radius-md) !important;
       padding:20px 22px !important;
       box-shadow:var(--byt-shadow) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      align-self:stretch !important;
+      height:100% !important;
     }
     .upcoming-title, .top8-title, .postventa-title{
       font-size:15px !important;
@@ -2272,6 +2359,33 @@
     .proj-section-header--completed{
       color:#16a34a;
     }
+    /* Encabezado clickeable que colapsa/expande la sección Completados */
+    .proj-section-header--toggle{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      cursor:pointer;
+      user-select:none;
+      border-radius:8px;
+      transition:background .12s ease, color .12s ease;
+    }
+    .proj-section-header--toggle:hover{
+      background:#f6f7f9;
+    }
+    .proj-section-header--toggle:focus-visible{
+      outline:2px solid var(--byt-green-soft-border, #cfe3d7);
+      outline-offset:2px;
+    }
+    .proj-completados-chev{
+      font-size:10px;
+      line-height:1;
+      color:var(--byt-muted);
+      transition:transform .12s ease;
+    }
+    .proj-completados-wrap{
+      /* Wrapper colapsable de los proyectos completados */
+    }
     .proj-item{
       border:1px solid transparent !important;
       border-radius:12px !important;
@@ -2485,7 +2599,15 @@
     <div class="header">
       <button class="btn btn-ghost" onclick="window.history.back()">← Atrás</button>
       <h2>Estado de proyectos</h2>
-      <button class="alinearcito-fab" onclick="openAlinearcitoPanel()">🤖 Alinearcito</button>
+      <button class="alinearcito-fab" onclick="openAlinearcitoPanel()" aria-label="Abrir Alinearcito">
+        <img class="alinearcito-fab-img" src="../../assets/Alinearcito.gif" alt="">
+        <span>Alinearcito</span>
+      </button>
+      <div id="alinearcito-bubble" class="alinearcito-bubble" role="status" aria-live="polite">
+        <button type="button" class="alinearcito-bubble-close" aria-label="Cerrar mensaje" onclick="closeAlinearcitoBubble()">×</button>
+        <img class="alinearcito-bubble-gif" src="../../assets/Alinearcito_msg.gif" alt="">
+        <span class="alinearcito-bubble-text">Hey! 👋 acá estoy</span>
+      </div>
     </div>
 
     <div id="kpi-dashboard" class="dashboard-card card"></div>
@@ -4613,6 +4735,8 @@
       modal.setAttribute('aria-hidden','false');
       document.body.style.overflow='hidden';
       selectAlinearcitoOwner(currentAlinearcitoOwner || 'Luis');
+      // Si el usuario abre el panel, también recogemos la burbuja.
+      closeAlinearcitoBubble();
     }
 
     function closeAlinearcitoPanel(){
@@ -4621,6 +4745,27 @@
       modal.setAttribute('aria-hidden','true');
       document.body.style.overflow='';
     }
+
+    // Burbuja de chat de Alinearcito (mensaje entrante).
+    // Aparece a los pocos segundos de cargar la página y, una vez cerrada,
+    // no vuelve a aparecer hasta recargar la página.
+    let alinearcitoBubbleDismissed = false;
+    function showAlinearcitoBubble(){
+      if(alinearcitoBubbleDismissed) return;
+      const el = document.getElementById('alinearcito-bubble');
+      if(!el) return;
+      el.classList.add('is-visible');
+    }
+    function closeAlinearcitoBubble(){
+      alinearcitoBubbleDismissed = true;
+      const el = document.getElementById('alinearcito-bubble');
+      if(!el) return;
+      el.classList.remove('is-visible');
+    }
+    // Auto-mostrar a los ~3.5s de cargada la página.
+    window.addEventListener('load', ()=>{
+      setTimeout(showAlinearcitoBubble, 3500);
+    });
 
     function renderKpis(){
       const wrap = document.getElementById('kpi-dashboard');
@@ -5216,30 +5361,33 @@
       return { total, done, percent };
     }
 
+    // Estado de la sección "Completados" en la lista lateral.
+    // Por defecto colapsada para mantener la vista limpia.
+    let completadosCollapsed = true;
+    function toggleCompletadosSection(){
+      completadosCollapsed = !completadosCollapsed;
+      const wrap = document.getElementById('proj-completados-wrap');
+      const chev = document.getElementById('proj-completados-chev');
+      if(wrap){ wrap.style.display = completadosCollapsed ? 'none' : 'block'; }
+      if(chev){ chev.textContent = completadosCollapsed ? '▸' : '▾'; }
+      const header = document.getElementById('proj-completados-header');
+      if(header){ header.setAttribute('aria-expanded', completadosCollapsed ? 'false' : 'true'); }
+    }
+
     function renderLista(){
       const list=document.getElementById('proyectos-list');
       if(!filtered.length){
         list.innerHTML='<div style="padding:22px;text-align:center;color:var(--muted);">No hay proyectos para los filtros aplicados.</div>';
         return;
       }
-      let lastGroup = null; // 'pendiente' | 'completado'
-      list.innerHTML = filtered.map(p=>{
+
+      const renderItem = (p)=>{
         const prog=computeProgress(p);
         const pendientes = getProjectPendingPartidas(p);
-        const isCompleto = pendientes === 0;
-        const group = isCompleto ? 'completado' : 'pendiente';
-        let header = '';
-        if(group !== lastGroup){
-          header = group === 'pendiente'
-            ? '<div class="proj-section-header">Pendientes</div>'
-            : '<div class="proj-section-header proj-section-header--completed">Completados</div>';
-          lastGroup = group;
-        }
         const instalacionText = getProjectInstalacionText(p);
         const postventa = postventaByProject.get(p.cotizacionId);
         const postventaUrgency = postventa?.activa ? getPostventaUrgencyMeta(postventa) : null;
         return `
-          ${header}
           <div class="proj-item ${p.key===selectedKey?'active':''}" onclick="selectProject('${attr(p.key)}')">
             <div style="display:flex;align-items:flex-start;gap:8px;">
               <div style="width:100%;">
@@ -5263,7 +5411,38 @@
             </div>
           </div>
         `;
-      }).join('');
+      };
+
+      const pendientesArr = [];
+      const completadosArr = [];
+      filtered.forEach(p=>{
+        if(getProjectPendingPartidas(p) === 0){ completadosArr.push(p); }
+        else{ pendientesArr.push(p); }
+      });
+
+      let html = '';
+      if(pendientesArr.length){
+        html += '<div class="proj-section-header">Pendientes</div>';
+        html += pendientesArr.map(renderItem).join('');
+      }
+      if(completadosArr.length){
+        const expanded = !completadosCollapsed;
+        html += `
+          <div id="proj-completados-header"
+               class="proj-section-header proj-section-header--completed proj-section-header--toggle"
+               role="button" tabindex="0"
+               aria-expanded="${expanded ? 'true' : 'false'}"
+               onclick="toggleCompletadosSection()"
+               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleCompletadosSection();}">
+            <span>Completados (${completadosArr.length})</span>
+            <span id="proj-completados-chev" class="proj-completados-chev">${expanded ? '▾' : '▸'}</span>
+          </div>
+          <div id="proj-completados-wrap" class="proj-completados-wrap" style="display:${expanded ? 'block' : 'none'};">
+            ${completadosArr.map(renderItem).join('')}
+          </div>
+        `;
+      }
+      list.innerHTML = html;
     }
 
     function selectProject(key){
