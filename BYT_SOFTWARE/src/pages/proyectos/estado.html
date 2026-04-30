@@ -792,6 +792,71 @@
       border-color:#f87171;
     }
 
+    /* Modal interno de clave para SKP Rectificado */
+    .skp-pass-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(20,25,35,0.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9300;
+      padding:20px;
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+    }
+    .skp-pass-modal{
+      width:min(420px, 96vw);
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:18px;
+      box-shadow:0 24px 60px rgba(15,23,42,0.28);
+      padding:22px 22px 18px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .skp-pass-title{
+      margin:0;
+      font-size:18px;
+      font-weight:800;
+      color:#1f2430;
+    }
+    .skp-pass-desc{
+      margin:0;
+      font-size:13px;
+      color:var(--muted);
+      font-weight:600;
+    }
+    .skp-pass-input{
+      width:100%;
+      box-sizing:border-box;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:10px 12px;
+      font-size:14px;
+      font-weight:600;
+      color:#1f2430;
+      background:#f9fafb;
+      outline:none;
+    }
+    .skp-pass-input:focus{
+      border-color:#fca5a5;
+      background:#fff;
+      box-shadow:0 0 0 3px rgba(252,165,165,0.25);
+    }
+    .skp-pass-error{
+      font-size:12px;
+      font-weight:700;
+      color:#b91c1c;
+    }
+    .skp-pass-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      margin-top:4px;
+    }
+
     .video-backdrop,
     .artefactos-backdrop,
     .alinearcito-backdrop,
@@ -3456,6 +3521,20 @@
         <div class="skp-rect-status">Cargando…</div>
       </div>
       <input id="skp-rect-file-input" type="file" aria-label="Archivo SKP Rectificado" style="display:none;">
+    </div>
+  </div>
+
+  <!-- Modal interno de clave para SKP Rectificado -->
+  <div id="skp-pass-backdrop" class="skp-pass-backdrop" aria-hidden="true">
+    <div class="skp-pass-modal" role="dialog" aria-modal="true" aria-labelledby="skp-pass-title">
+      <h3 id="skp-pass-title" class="skp-pass-title">Clave requerida</h3>
+      <p class="skp-pass-desc">Ingresa la clave para modificar el SKP Rectificado.</p>
+      <input id="skp-pass-input" class="skp-pass-input" type="password" placeholder="Clave" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div id="skp-pass-error" class="skp-pass-error" style="display:none;">Clave incorrecta</div>
+      <div class="skp-pass-actions">
+        <button type="button" class="skp-rect-btn" id="skp-pass-cancel">Cancelar</button>
+        <button type="button" class="skp-rect-btn skp-rect-btn-primary" id="skp-pass-confirm">Confirmar</button>
+      </div>
     </div>
   </div>
 
@@ -7640,7 +7719,18 @@
 
     function triggerSkpRectUpload(isReplace){
       if(skpRectState.busy) return;
+      // Si ya existe un archivo y es reemplazo, exigir clave antes de abrir el selector
+      if(isReplace && skpRectState.record){
+        requestSkpRectificadoPassword(()=> _doSkpRectFilePick(true));
+        return;
+      }
+      _doSkpRectFilePick(!!isReplace);
+    }
+
+    function _doSkpRectFilePick(isReplace){
+      if(skpRectState.busy) return;
       const input = document.getElementById('skp-rect-file-input');
+      if(!input) return;
       input.value = '';
       input.onchange = (ev)=>{
         const file = ev.target.files && ev.target.files[0];
@@ -7728,12 +7818,13 @@
       const rec = skpRectState.record;
       if(!rec){ toast('No hay archivo'); return; }
       if(skpRectState.busy) return;
-      const key = window.prompt('Ingresa la clave para eliminar el SKP Rectificado:');
-      if(key === null) return; // cancelado
-      if(key !== SKP_RECT_DELETE_KEY){
-        toast('Clave incorrecta');
-        return;
-      }
+      requestSkpRectificadoPassword(()=> _doSkpRectDelete());
+    }
+
+    async function _doSkpRectDelete(){
+      const rec = skpRectState.record;
+      if(!rec){ toast('No hay archivo'); return; }
+      if(skpRectState.busy) return;
       skpRectState.busy = true;
       renderSkpRectModal('Eliminando…');
       showLoader(true);
@@ -7760,6 +7851,87 @@
         renderSkpRectModal();
       }
     }
+
+    /* --- Modal interno de clave para SKP Rectificado --- */
+    let _skpPassCallback = null;
+
+    function requestSkpRectificadoPassword(actionCallback){
+      _skpPassCallback = (typeof actionCallback === 'function') ? actionCallback : null;
+      const bd = document.getElementById('skp-pass-backdrop');
+      const inp = document.getElementById('skp-pass-input');
+      const err = document.getElementById('skp-pass-error');
+      if(!bd) return;
+      if(err) err.style.display = 'none';
+      if(inp) inp.value = '';
+      bd.style.display = 'flex';
+      bd.setAttribute('aria-hidden','false');
+      setTimeout(()=>{ try{ inp && inp.focus(); }catch(_){} }, 30);
+    }
+
+    function closeSkpPassModal(){
+      const bd = document.getElementById('skp-pass-backdrop');
+      if(!bd) return;
+      bd.style.display = 'none';
+      bd.setAttribute('aria-hidden','true');
+      _skpPassCallback = null;
+      const err = document.getElementById('skp-pass-error');
+      if(err) err.style.display = 'none';
+      const inp = document.getElementById('skp-pass-input');
+      if(inp) inp.value = '';
+    }
+
+    function submitSkpPassModal(){
+      const inp = document.getElementById('skp-pass-input');
+      const err = document.getElementById('skp-pass-error');
+      const val = inp ? inp.value : '';
+      if(val === SKP_RECT_DELETE_KEY){
+        const cb = _skpPassCallback;
+        closeSkpPassModal();
+        if(typeof cb === 'function'){
+          try{ cb(); }catch(e){ console.error('SKP pass callback error', e); }
+        }
+      } else {
+        if(err) err.style.display = 'block';
+        if(inp){ try{ inp.focus(); inp.select(); }catch(_){} }
+      }
+    }
+
+    (function initSkpPassModal(){
+      const wire = ()=>{
+        const bd = document.getElementById('skp-pass-backdrop');
+        const inp = document.getElementById('skp-pass-input');
+        const btnOk = document.getElementById('skp-pass-confirm');
+        const btnCancel = document.getElementById('skp-pass-cancel');
+        if(!bd || bd.dataset.wired === '1') return;
+        bd.dataset.wired = '1';
+        if(btnOk) btnOk.addEventListener('click', submitSkpPassModal);
+        if(btnCancel) btnCancel.addEventListener('click', closeSkpPassModal);
+        if(inp){
+          inp.addEventListener('keydown', (ev)=>{
+            if(ev.key === 'Enter'){ ev.preventDefault(); submitSkpPassModal(); }
+          });
+          inp.addEventListener('input', ()=>{
+            const err = document.getElementById('skp-pass-error');
+            if(err) err.style.display = 'none';
+          });
+        }
+        // Click en backdrop (fuera de la caja) cierra
+        bd.addEventListener('click', (ev)=>{
+          if(ev.target === bd) closeSkpPassModal();
+        });
+        // Escape cierra
+        document.addEventListener('keydown', (ev)=>{
+          if(ev.key === 'Escape' && bd.style.display === 'flex'){
+            closeSkpPassModal();
+          }
+        });
+      };
+      if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', wire);
+      } else {
+        wire();
+      }
+    })();
 
     /* --- Pizarra: board por partida --- */
     async function openBoardModal(){
