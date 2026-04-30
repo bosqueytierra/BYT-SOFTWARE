@@ -662,6 +662,136 @@
       box-shadow:none;
     }
 
+    /* --- SKP Rectificado --- */
+    .btn-skp-rect{
+      background:linear-gradient(135deg,#fff1f2 0%,#fee2e2 100%) !important;
+      border-color:#fecaca !important;
+      color:#991b1b !important;
+    }
+    .btn-skp-rect:hover{
+      filter:brightness(0.98);
+      border-color:#fca5a5 !important;
+    }
+    .skp-rect-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(20,25,35,0.48);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:9100;
+      padding:20px;
+      backdrop-filter:blur(4px);
+      -webkit-backdrop-filter:blur(4px);
+    }
+    .skp-rect-modal{
+      width:min(560px, 96vw);
+      max-height:92vh;
+      overflow:auto;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:20px;
+      box-shadow:0 24px 60px rgba(15,23,42,0.24);
+    }
+    .skp-rect-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--border);
+    }
+    .skp-rect-title{
+      margin:0;
+      font-size:18px;
+      font-weight:800;
+      color:#991b1b;
+    }
+    .skp-rect-sub{
+      margin:4px 0 0;
+      font-size:12px;
+      color:var(--muted);
+      font-weight:600;
+    }
+    .skp-rect-close{
+      border:none;
+      background:transparent;
+      font-size:24px;
+      color:#6b7280;
+      cursor:pointer;
+      line-height:1;
+    }
+    .skp-rect-body{
+      padding:18px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+    .skp-rect-status{
+      font-size:13px;
+      color:var(--muted);
+      font-weight:700;
+    }
+    .skp-rect-file-card{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      padding:12px 14px;
+      border:1px solid #fecaca;
+      background:linear-gradient(135deg,#fff1f2 0%,#fee2e2 100%);
+      border-radius:12px;
+    }
+    .skp-rect-file-name{
+      font-weight:800;
+      color:#991b1b;
+      word-break:break-all;
+    }
+    .skp-rect-file-meta{
+      font-size:12px;
+      color:#7f1d1d;
+    }
+    .skp-rect-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .skp-rect-btn{
+      border:1px solid var(--border);
+      background:#f6f8fb;
+      color:#1f2430;
+      padding:10px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:800;
+      font-size:13px;
+    }
+    .skp-rect-btn:hover{
+      background:#eef2f7;
+      border-color:#cfd6e3;
+    }
+    .skp-rect-btn:disabled{
+      opacity:0.6;
+      cursor:not-allowed;
+    }
+    .skp-rect-btn-primary{
+      background:linear-gradient(135deg,#fff1f2 0%,#fee2e2 100%);
+      color:#991b1b;
+      border-color:#fecaca;
+    }
+    .skp-rect-btn-primary:hover{
+      background:#fee2e2;
+      border-color:#fca5a5;
+    }
+    .skp-rect-btn-danger{
+      border-color:#fda4af;
+      color:#b91c1c;
+      background:#fff;
+    }
+    .skp-rect-btn-danger:hover{
+      background:#fff1f2;
+      border-color:#f87171;
+    }
+
     .video-backdrop,
     .artefactos-backdrop,
     .alinearcito-backdrop,
@@ -3309,6 +3439,23 @@
         <button class="postventa-close" onclick="closePostventaModal()">×</button>
       </div>
       <div id="postventa-modal-body" class="postventa-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal SKP Rectificado -->
+  <div id="skp-rect-modal-backdrop" class="skp-rect-backdrop" aria-hidden="true">
+    <div class="skp-rect-modal">
+      <div class="skp-rect-head">
+        <div>
+          <h3 class="skp-rect-title">SKP Rectificado</h3>
+          <p class="skp-rect-sub">Proyecto: <span id="skp-rect-project-name">-</span></p>
+        </div>
+        <button class="skp-rect-close" onclick="closeSkpRectModal()">×</button>
+      </div>
+      <div class="skp-rect-body" id="skp-rect-body">
+        <div class="skp-rect-status">Cargando…</div>
+      </div>
+      <input id="skp-rect-file-input" type="file" aria-label="Archivo SKP Rectificado" style="display:none;">
     </div>
   </div>
 
@@ -7066,16 +7213,17 @@
         </div>
 
         <div class="actions">
-          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','cotizacion')">Adjuntos Cotización</button>
-          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','skp')">SKP Final</button>
-          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
-          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
-          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','revision')">Documentos de revisión</button>
-          <button class="btn btn-soft-green" onclick="openPostventaModal('${attr(proj.cotizacionId||'')}')">Post venta</button>
           <button class="btn btn-soft-green" onclick="verCotizacion('${attr(proj.cotizacionId||'')}')">Ver cotización</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','cotizacion')">Adjuntos Cotización</button>
+          <button class="btn btn-soft-green" style="background:#f0f7ff;border-color:#cfe2ff;" onclick="openBoardModal()">Notas y obs. presentación</button>
           <button class="btn btn-soft-green" onclick="openVideoModal('${attr(proj.cotizacionId||'')}')">Video explicativo proyecto${hasVideo ? ' ▶' : ''}</button>
           <button class="btn btn-soft-green" onclick="openArtefactosModal('${attr(proj.cotizacionId||'')}')">Artefactos y electrodomésticos</button>
-          <button class="btn btn-soft-green" style="background:#f0f7ff;border-color:#cfe2ff;" onclick="openBoardModal()">Notas y obs. presentación</button>
+          <button class="btn btn-soft-green btn-skp-rect" onclick="openSkpRectModal('${attr(proj.cotizacionId||'')}')">SKP Rectificado</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','skp')">SKP Final</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','revision')">Documentos de revisión</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','diagrama')">Diagrama de corte</button>
+          <button class="btn btn-soft-green" onclick="openAdj('${attr(proj.cotizacionId||'')}','planos')">Planos de Armado</button>
+          <button class="btn btn-soft-green" onclick="openPostventaModal('${attr(proj.cotizacionId||'')}')">Post venta</button>
         </div>
 
         <div style="height:12px;"></div>
@@ -7362,6 +7510,254 @@
         await sb.from('cotizacion_files').update({ nota }).eq('id', noteId);
       }else{
         await sb.from('cotizacion_files').insert({ cotizacion_id: cotId, path, filename:path.split('/').pop(), nota });
+      }
+    }
+
+    /* --- SKP Rectificado --- */
+    const SKP_RECT_BUCKET = 'skp-rectificados';
+    const SKP_RECT_TABLE = 'project_skp_rectificado';
+    const SKP_RECT_DELETE_KEY = 'mono123mono';
+    const skpRectState = { proyectoId:null, projectName:'', record:null, busy:false };
+
+    function sanitizeStorageFileName(fileName){
+      const original = String(fileName || 'archivo');
+      const lastDot = original.lastIndexOf('.');
+      const base = lastDot > -1 ? original.slice(0, lastDot) : original;
+      const ext = lastDot > -1 ? original.slice(lastDot + 1) : '';
+
+      const cleanBase = base
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ñ/g, 'n')
+        .replace(/Ñ/g, 'N')
+        .replace(/[^a-zA-Z0-9.\-_]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^[-_.]+|[-_.]+$/g, '')
+        .slice(0, 80) || 'archivo';
+
+      const cleanExt = ext
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toLowerCase()
+        .slice(0, 12);
+
+      return cleanExt ? `${cleanBase}.${cleanExt}` : cleanBase;
+    }
+
+    function findProjectName(proyectoId){
+      try{
+        const p = (proyectos || []).find(x => String(x.cotizacionId) === String(proyectoId));
+        return p ? (p.display || '') : '';
+      }catch(_){ return ''; }
+    }
+
+    async function openSkpRectModal(proyectoId){
+      if(!proyectoId){ toast('Proyecto no disponible'); return; }
+      skpRectState.proyectoId = String(proyectoId);
+      skpRectState.projectName = findProjectName(proyectoId);
+      skpRectState.record = null;
+      skpRectState.busy = false;
+      document.getElementById('skp-rect-project-name').textContent = skpRectState.projectName || '-';
+      const modal = document.getElementById('skp-rect-modal-backdrop');
+      modal.style.display = 'flex';
+      modal.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+      const fileInput = document.getElementById('skp-rect-file-input');
+      fileInput.value = '';
+      fileInput.onchange = null;
+      renderSkpRectModal('Cargando…');
+      try{
+        await loadSkpRectRecord();
+        renderSkpRectModal();
+      }catch(e){
+        console.warn('SKP Rectificado: no se pudo cargar', e);
+        renderSkpRectModal();
+        toast('Aviso: no se pudo cargar SKP Rectificado');
+      }
+    }
+
+    function closeSkpRectModal(){
+      const modal = document.getElementById('skp-rect-modal-backdrop');
+      modal.style.display = 'none';
+      modal.setAttribute('aria-hidden','true');
+      document.body.style.overflow = '';
+      skpRectState.proyectoId = null;
+      skpRectState.projectName = '';
+      skpRectState.record = null;
+      skpRectState.busy = false;
+      const fileInput = document.getElementById('skp-rect-file-input');
+      if(fileInput){ fileInput.value=''; fileInput.onchange=null; }
+      const body = document.getElementById('skp-rect-body');
+      if(body) body.innerHTML = '';
+    }
+
+    async function loadSkpRectRecord(){
+      const sb = await waitForSupabase();
+      const { data, error } = await sb
+        .from(SKP_RECT_TABLE)
+        .select('id, proyecto_id, file_name, storage_path, mime_type, size_bytes, uploaded_at, updated_at')
+        .eq('proyecto_id', skpRectState.proyectoId)
+        .maybeSingle();
+      if(error && error.code !== 'PGRST116'){ throw error; }
+      skpRectState.record = data || null;
+      return skpRectState.record;
+    }
+
+    function renderSkpRectModal(statusOverride){
+      const body = document.getElementById('skp-rect-body');
+      if(!body) return;
+      if(statusOverride){
+        body.innerHTML = `<div class="skp-rect-status">${esc(statusOverride)}</div>`;
+        return;
+      }
+      const rec = skpRectState.record;
+      if(!rec){
+        body.innerHTML = `
+          <div class="skp-rect-status">Sin archivo cargado.</div>
+          <div class="skp-rect-actions">
+            <button class="skp-rect-btn skp-rect-btn-primary" onclick="triggerSkpRectUpload(false)">Subir SKP Rectificado</button>
+            <button class="skp-rect-btn" onclick="closeSkpRectModal()">Cerrar</button>
+          </div>
+        `;
+        return;
+      }
+      const sizeMB = rec.size_bytes ? (Number(rec.size_bytes)/1024/1024).toFixed(2)+' MB' : '';
+      body.innerHTML = `
+        <div class="skp-rect-status">Archivo cargado.</div>
+        <div class="skp-rect-file-card">
+          <div class="skp-rect-file-name">${esc(rec.file_name||'(sin nombre)')}</div>
+          <div class="skp-rect-file-meta">${esc(rec.mime_type||'archivo')}${sizeMB?(' · '+sizeMB):''}</div>
+        </div>
+        <div class="skp-rect-actions">
+          <button class="skp-rect-btn skp-rect-btn-primary" onclick="handleSkpRectView()">Ver/Descargar</button>
+          <button class="skp-rect-btn" onclick="triggerSkpRectUpload(true)">Reemplazar</button>
+          <button class="skp-rect-btn skp-rect-btn-danger" onclick="handleSkpRectDelete()">Eliminar</button>
+          <button class="skp-rect-btn" onclick="closeSkpRectModal()">Cerrar</button>
+        </div>
+      `;
+    }
+
+    function triggerSkpRectUpload(isReplace){
+      if(skpRectState.busy) return;
+      const input = document.getElementById('skp-rect-file-input');
+      input.value = '';
+      input.onchange = (ev)=>{
+        const file = ev.target.files && ev.target.files[0];
+        input.onchange = null;
+        if(!file) return;
+        handleSkpRectUpload(file, !!isReplace);
+      };
+      input.click();
+    }
+
+    async function handleSkpRectUpload(file, isReplace){
+      if(!skpRectState.proyectoId || !file) return;
+      if(skpRectState.busy) return;
+      skpRectState.busy = true;
+      renderSkpRectModal('Subiendo…');
+      showLoader(true);
+      try{
+        const sb = await waitForSupabase();
+        const safeName = sanitizeStorageFileName(file.name);
+        const path = `${skpRectState.proyectoId}/${Date.now()}-${safeName}`;
+        const { error:upErr } = await sb.storage.from(SKP_RECT_BUCKET).upload(path, file, {
+          cacheControl:'3600',
+          upsert:false,
+          contentType: file.type || undefined
+        });
+        if(upErr) throw upErr;
+
+        const previousPath = (skpRectState.record && skpRectState.record.storage_path) || null;
+
+        const nowIso = new Date().toISOString();
+        const payload = {
+          proyecto_id: skpRectState.proyectoId,
+          file_name: file.name,
+          storage_path: path,
+          mime_type: file.type || null,
+          size_bytes: file.size || 0,
+          updated_at: nowIso
+        };
+        const { error:upsertErr } = await sb
+          .from(SKP_RECT_TABLE)
+          .upsert(payload, { onConflict:'proyecto_id' });
+        if(upsertErr){
+          // Try to clean up the just-uploaded file before re-throwing
+          try{ await sb.storage.from(SKP_RECT_BUCKET).remove([path]); }
+          catch(cleanupErr){ console.warn('SKP Rectificado: no se pudo limpiar archivo recién subido', cleanupErr); }
+          throw upsertErr;
+        }
+
+        if(previousPath && previousPath !== path){
+          try{ await sb.storage.from(SKP_RECT_BUCKET).remove([previousPath]); }
+          catch(cleanupErr){ console.warn('SKP Rectificado: no se pudo limpiar archivo previo', cleanupErr); }
+        }
+
+        await loadSkpRectRecord();
+        toast(isReplace ? 'SKP Rectificado reemplazado' : 'SKP Rectificado subido');
+      }catch(e){
+        console.error('SKP Rectificado upload error', e);
+        toast('Error subiendo: '+(e.message||''));
+      }finally{
+        skpRectState.busy = false;
+        showLoader(false);
+        renderSkpRectModal();
+      }
+    }
+
+    async function handleSkpRectView(){
+      const rec = skpRectState.record;
+      if(!rec || !rec.storage_path){ toast('No hay archivo'); return; }
+      try{
+        const sb = await waitForSupabase();
+        const { data, error } = await sb.storage
+          .from(SKP_RECT_BUCKET)
+          .createSignedUrl(rec.storage_path, 3600);
+        if(error) throw error;
+        const url = data && data.signedUrl;
+        if(!url) throw new Error('URL no disponible');
+        window.open(url, '_blank', 'noopener');
+      }catch(e){
+        console.error('SKP Rectificado view error', e);
+        toast('No se pudo abrir el archivo: '+(e.message||''));
+      }
+    }
+
+    async function handleSkpRectDelete(){
+      const rec = skpRectState.record;
+      if(!rec){ toast('No hay archivo'); return; }
+      if(skpRectState.busy) return;
+      const key = window.prompt('Ingresa la clave para eliminar el SKP Rectificado:');
+      if(key === null) return; // cancelado
+      if(key !== SKP_RECT_DELETE_KEY){
+        toast('Clave incorrecta');
+        return;
+      }
+      skpRectState.busy = true;
+      renderSkpRectModal('Eliminando…');
+      showLoader(true);
+      try{
+        const sb = await waitForSupabase();
+        if(rec.storage_path){
+          try{ await sb.storage.from(SKP_RECT_BUCKET).remove([rec.storage_path]); }
+          catch(stErr){ console.warn('SKP Rectificado: error eliminando del storage', stErr); }
+        }
+        const { error:delErr } = await sb
+          .from(SKP_RECT_TABLE)
+          .delete()
+          .eq('proyecto_id', skpRectState.proyectoId);
+        if(delErr) throw delErr;
+        skpRectState.record = null;
+        toast('SKP Rectificado eliminado');
+      }catch(e){
+        console.error('SKP Rectificado delete error', e);
+        toast('No se pudo eliminar: '+(e.message||''));
+        try{ await loadSkpRectRecord(); }catch(_){ /* ignore */ }
+      }finally{
+        skpRectState.busy = false;
+        showLoader(false);
+        renderSkpRectModal();
       }
     }
 
