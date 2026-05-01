@@ -348,6 +348,157 @@
       gap: 8px;
     }
 
+    /* Modal de clave (acciones financieras sensibles) */
+    .fin-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 30, 40, 0.55);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+    }
+    .fin-modal-backdrop.open { display: flex; }
+    .fin-modal {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.22);
+      width: min(420px, 92vw);
+      padding: 22px;
+      border: 1px solid var(--border);
+    }
+    .fin-modal h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .fin-modal p.fin-modal-help {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .fin-modal .fin-modal-error {
+      margin-top: 8px;
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: var(--bad-bg);
+      color: var(--bad-fg);
+      border: 1px solid var(--bad-border);
+      display: none;
+    }
+    .fin-modal .fin-modal-error.show { display: block; }
+    .fin-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    /* Modal grande (edición pago / comprobante) */
+    .fin-modal-lg {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.22);
+      width: min(560px, 94vw);
+      padding: 22px;
+      border: 1px solid var(--border);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .fin-modal-lg h3 {
+      margin: 0 0 4px;
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .fin-modal-lg .fin-modal-sub {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .fin-modal-lg .fin-form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .fin-modal-lg .fin-msg {
+      margin-top: 10px;
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      display: none;
+    }
+    .fin-modal-lg .fin-msg.show { display: block; }
+    .fin-modal-lg .fin-msg.error { background: var(--bad-bg); color: var(--bad-fg); border: 1px solid var(--bad-border); }
+    .fin-modal-lg .fin-msg.ok    { background: var(--ok-bg);  color: var(--ok-fg);  border: 1px solid var(--ok-border); }
+
+    /* Comprobante: bloque archivo actual */
+    .comp-current {
+      border: 1px solid var(--border);
+      background: #fafbfc;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .comp-current .comp-name {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 14px;
+      word-break: break-all;
+    }
+    .comp-current .comp-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .comp-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .comp-empty {
+      border: 1px dashed var(--border);
+      background: #fafbfc;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .btn-with-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-with-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      background: #c9ced4;
+    }
+    .btn-with-badge .dot.has { background: #1f9d6a; }
+
+    .row-actions {
+      display: inline-flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .row-actions .btn {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 8px;
+    }
+
     /* Inline form messages */
     .form-msg {
       margin-top: 8px;
@@ -382,6 +533,9 @@
       .page-header,
       .card,
       #modal-backdrop,
+      #fin-pwd-backdrop,
+      #fin-edit-backdrop,
+      #fin-comp-backdrop,
       #selector-list,
       [data-no-print] { display: none !important; }
       /* En caso de que el sidebar tenga clases conocidas */
@@ -662,7 +816,7 @@
                 <th>Método</th>
                 <th>Referencia</th>
                 <th>Nota</th>
-                <th style="width: 110px;">Acción</th>
+                <th style="width: 280px;">Acción</th>
               </tr>
             </thead>
             <tbody id="tabla-body"></tbody>
@@ -681,6 +835,98 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-soft" id="modal-cancel">Cancelar</button>
         <button type="button" class="btn btn-primary" id="modal-ok">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: clave para acciones financieras -->
+  <div class="fin-modal-backdrop" id="fin-pwd-backdrop" data-no-print>
+    <div class="fin-modal" role="dialog" aria-modal="true" aria-labelledby="fin-pwd-title">
+      <h3 id="fin-pwd-title">Clave requerida</h3>
+      <p class="fin-modal-help">Ingresa la clave para modificar información financiera.</p>
+      <input type="password" id="fin-pwd-input" autocomplete="current-password" placeholder="Clave" />
+      <div class="fin-modal-error" id="fin-pwd-error">Clave incorrecta</div>
+      <div class="fin-modal-actions">
+        <button type="button" class="btn btn-soft" id="fin-pwd-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="fin-pwd-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: editar pago -->
+  <div class="fin-modal-backdrop" id="fin-edit-backdrop" data-no-print>
+    <div class="fin-modal-lg" role="dialog" aria-modal="true" aria-labelledby="fin-edit-title">
+      <h3 id="fin-edit-title">Modificar pago</h3>
+      <p class="fin-modal-sub" id="fin-edit-sub">—</p>
+      <div class="fin-form-grid">
+        <div>
+          <label for="edit-fecha">Fecha pago</label>
+          <input type="date" id="edit-fecha" />
+        </div>
+        <div>
+          <label for="edit-monto">Monto</label>
+          <input type="number" id="edit-monto" min="0" step="1" placeholder="0" />
+        </div>
+        <div>
+          <label for="edit-metodo">Método pago</label>
+          <select id="edit-metodo">
+            <option value="Transferencia">Transferencia</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Tarjeta">Tarjeta</option>
+            <option value="Cheque">Cheque</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div>
+          <label for="edit-referencia">Referencia</label>
+          <input type="text" id="edit-referencia" placeholder="N° transacción / cheque..." />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label for="edit-nota">Nota</label>
+          <textarea id="edit-nota" placeholder="Comentario opcional..."></textarea>
+        </div>
+      </div>
+      <div class="fin-msg" id="fin-edit-msg"></div>
+      <div class="fin-modal-actions">
+        <button type="button" class="btn btn-soft" id="fin-edit-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="fin-edit-save">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: comprobante de pago -->
+  <div class="fin-modal-backdrop" id="fin-comp-backdrop" data-no-print>
+    <div class="fin-modal-lg" role="dialog" aria-modal="true" aria-labelledby="fin-comp-title">
+      <h3 id="fin-comp-title">Comprobante de pago</h3>
+      <p class="fin-modal-sub" id="fin-comp-sub">—</p>
+
+      <div id="fin-comp-current" class="comp-current" style="display:none;">
+        <div class="comp-name" id="fin-comp-name">—</div>
+        <div class="comp-meta" id="fin-comp-meta">—</div>
+        <div class="comp-actions">
+          <button type="button" class="btn btn-soft" id="fin-comp-view">Ver / Descargar</button>
+          <button type="button" class="btn btn-soft" id="fin-comp-replace-btn">Reemplazar</button>
+          <button type="button" class="btn btn-bad" id="fin-comp-delete">Eliminar</button>
+        </div>
+      </div>
+
+      <div id="fin-comp-empty" class="comp-empty" style="display:none;">
+        Aún no hay comprobante para este pago.
+      </div>
+
+      <div id="fin-comp-upload-wrap" style="margin-bottom:10px; display:none;">
+        <label for="fin-comp-file">Subir comprobante</label>
+        <input type="file" id="fin-comp-file" accept="image/*,.pdf" />
+      </div>
+
+      <!-- Input file oculto para reemplazo -->
+      <input type="file" id="fin-comp-replace-file" accept="image/*,.pdf" style="display:none;" />
+
+      <div class="fin-msg" id="fin-comp-msg"></div>
+
+      <div class="fin-modal-actions">
+        <button type="button" class="btn btn-soft" id="fin-comp-close">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="fin-comp-upload" style="display:none;">Subir</button>
       </div>
     </div>
   </div>
@@ -768,8 +1014,13 @@
     // --------- Estado global ---------
     let proyectos = [];          // [{ cotizacion_id, proyecto_nombre, cliente, fecha_venta, fecha_entrega, monto_venta, venta_id }]
     let pagos = [];              // pagos_clientes raw (más nombre/cliente normalizado)
+    let comprobantes = [];       // pagos_clientes_comprobantes raw
     let proyectoSel = null;      // proyecto actualmente seleccionado
     let modalResolver = null;    // Promise resolver para el modal interno
+
+    // --------- Constantes finanzas ---------
+    const FIN_PASSWORD = 'mono123mono';
+    const COMPROBANTES_BUCKET = 'comprobantes-pagos-clientes';
 
     // --------- Helpers de formato ---------
     function formatCLP(valor) {
@@ -940,15 +1191,23 @@
           throw new Error('Supabase no disponible');
         }
 
-        const [ventasResp, cotizacionesResp, pagosResp] = await Promise.all([
+        const [ventasResp, cotizacionesResp, pagosResp, comprobantesResp] = await Promise.all([
           client.from('ventas').select('id, cotizacion_id, proyecto, cliente, total_venta, total_cotizado, fecha_venta, fecha_entrega_limite'),
           client.from('cotizaciones').select('id, cliente, project_key, total, fecha_aprobacion, data, estado').eq('estado', 'aprobada'),
           client.from('pagos_clientes').select('id, cotizacion_id, venta_id, proyecto_nombre, cliente_nombre, fecha_pago, monto, metodo_pago, referencia, nota, created_at, updated_at'),
+          client.from('pagos_clientes_comprobantes').select('id, pago_id, cotizacion_id, file_name, storage_path, mime_type, size_bytes, created_at'),
         ]);
 
         if (ventasResp.error)       throw ventasResp.error;
         if (cotizacionesResp.error) throw cotizacionesResp.error;
         if (pagosResp.error)        throw pagosResp.error;
+        // No tirar la página si la tabla de comprobantes falla (p.ej. RLS aún no configurado)
+        if (comprobantesResp.error) {
+          console.warn('[pagos_clientes] No se pudo cargar pagos_clientes_comprobantes:', comprobantesResp.error);
+          comprobantes = [];
+        } else {
+          comprobantes = Array.isArray(comprobantesResp.data) ? comprobantesResp.data : [];
+        }
 
         const ventas       = Array.isArray(ventasResp.data)       ? ventasResp.data       : [];
         const cotizaciones = Array.isArray(cotizacionesResp.data) ? cotizacionesResp.data : [];
@@ -963,6 +1222,7 @@
         console.error('[finanzas/pagos_clientes] Error al cargar:', err);
         proyectos = [];
         pagos = [];
+        comprobantes = [];
         mostrarEstado('error');
         renderKPIs();
       }
@@ -1218,23 +1478,539 @@
     }
 
     async function eliminarPago(id) {
-      const ok = await confirmModal(
-        'Eliminar pago',
-        '¿Estás seguro de eliminar este pago? Esta acción no se puede deshacer.'
-      );
+      const ok = await requestFinancePassword({
+        title: 'Eliminar pago',
+        help: 'Ingresa la clave para eliminar este pago. Esta acción no se puede deshacer.',
+      });
       if (!ok) return;
       try {
         const client = await esperarSupabase(8000);
         if (!client) throw new Error('Supabase no disponible');
+
+        // Intentar borrar archivos asociados del bucket antes de eliminar metadata.
+        // Si falla el borrado de storage no abortamos: igual queremos limpiar la BD.
+        const compsDelPago = comprobantes.filter(c => String(c?.pago_id) === String(id));
+        const paths = compsDelPago.map(c => c.storage_path).filter(Boolean);
+        if (paths.length > 0) {
+          try {
+            await client.storage.from(COMPROBANTES_BUCKET).remove(paths);
+          } catch (e) {
+            console.warn('[pagos_clientes] No se pudieron borrar archivos del bucket:', e);
+          }
+        }
+
         const { error } = await client.from('pagos_clientes').delete().eq('id', id);
         if (error) throw error;
+
+        // ON DELETE CASCADE borra metadata; limpiamos también el estado local.
         pagos = pagos.filter(p => String(p.id) !== String(id));
+        comprobantes = comprobantes.filter(c => String(c?.pago_id) !== String(id));
         if (proyectoSel) renderFichaProyecto();
         aplicarFiltros();
       } catch (err) {
         console.error('[pagos_clientes] Error eliminando pago:', err);
         await confirmModal('Error', 'No se pudo eliminar el pago. ' + (err?.message || ''), { okOnly: true });
       }
+    }
+
+    // --------- Sanitizador nombre archivo storage ---------
+    function sanitizeStorageFileName(fileName) {
+      const original = String(fileName || 'archivo');
+      const lastDot = original.lastIndexOf('.');
+      const base = lastDot > -1 ? original.slice(0, lastDot) : original;
+      const ext = lastDot > -1 ? original.slice(lastDot + 1) : '';
+
+      const cleanBase = base
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ñ/g, 'n')
+        .replace(/Ñ/g, 'N')
+        .replace(/[^a-zA-Z0-9.*-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^[-*.]+|[-_.]+$/g, '')
+        .slice(0, 80) || 'archivo';
+
+      const cleanExt = ext
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toLowerCase()
+        .slice(0, 12);
+
+      return cleanExt ? `${cleanBase}.${cleanExt}` : cleanBase;
+    }
+
+    // --------- Modal reusable de clave ---------
+    // requestFinancePassword({ title, help }) => Promise<boolean>
+    // O bien:
+    // requestFinancePassword(actionCallback, options) => Promise (resultado del callback) si clave correcta
+    let _finPwdState = null;
+    function requestFinancePassword(arg1, arg2) {
+      // Modos de uso:
+      //   1) await requestFinancePassword()                               -> boolean
+      //   2) await requestFinancePassword({title, help})                  -> boolean
+      //   3) await requestFinancePassword(async () => {...}, {title})     -> resultado del callback (o false si cancela)
+      let actionCallback = null;
+      let options = {};
+      if (typeof arg1 === 'function') {
+        actionCallback = arg1;
+        options = arg2 || {};
+      } else if (arg1 && typeof arg1 === 'object') {
+        options = arg1;
+      }
+
+      const backdrop = document.getElementById('fin-pwd-backdrop');
+      const input = document.getElementById('fin-pwd-input');
+      const errBox = document.getElementById('fin-pwd-error');
+      const titleEl = document.getElementById('fin-pwd-title');
+      const helpEl = backdrop.querySelector('.fin-modal-help');
+      const okBtn = document.getElementById('fin-pwd-ok');
+      const cancelBtn = document.getElementById('fin-pwd-cancel');
+
+      titleEl.textContent = options.title || 'Clave requerida';
+      helpEl.textContent = options.help || 'Ingresa la clave para modificar información financiera.';
+      input.value = '';
+      errBox.classList.remove('show');
+      backdrop.classList.add('open');
+      // Pequeño delay para que el navegador haga focus correctamente.
+      setTimeout(() => { try { input.focus(); } catch (_) {} }, 30);
+
+      return new Promise((resolve) => {
+        const cleanup = (val) => {
+          backdrop.classList.remove('open');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          backdrop.removeEventListener('mousedown', onBackdrop);
+          document.removeEventListener('keydown', onKey);
+          input.removeEventListener('input', onTyping);
+          _finPwdState = null;
+          resolve(val);
+        };
+        const onTyping = () => {
+          if (errBox.classList.contains('show')) errBox.classList.remove('show');
+        };
+        const onOk = async () => {
+          const value = input.value;
+          if (value !== FIN_PASSWORD) {
+            errBox.textContent = 'Clave incorrecta';
+            errBox.classList.add('show');
+            input.select();
+            return;
+          }
+          // Clave correcta
+          if (actionCallback) {
+            // Cerrar modal antes de ejecutar callback (que puede abrir otro modal).
+            backdrop.classList.remove('open');
+            try {
+              const result = await actionCallback();
+              cleanup(result);
+            } catch (err) {
+              console.error('[requestFinancePassword] callback error:', err);
+              cleanup(false);
+            }
+          } else {
+            cleanup(true);
+          }
+        };
+        const onCancel = () => cleanup(false);
+        const onBackdrop = (e) => {
+          if (e.target === backdrop && options.simple) cleanup(false);
+        };
+        const onKey = (e) => {
+          if (e.key === 'Escape') { e.preventDefault(); cleanup(false); }
+          else if (e.key === 'Enter') { e.preventDefault(); onOk(); }
+        };
+        _finPwdState = { cleanup };
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        backdrop.addEventListener('mousedown', onBackdrop);
+        document.addEventListener('keydown', onKey);
+        input.addEventListener('input', onTyping);
+      });
+    }
+
+    // --------- Modificar pago ---------
+    let editPagoId = null;
+    async function modificarPago(id) {
+      const ok = await requestFinancePassword({
+        title: 'Modificar pago',
+        help: 'Ingresa la clave para modificar este pago.',
+      });
+      if (!ok) return;
+      const pago = pagos.find(p => String(p.id) === String(id));
+      if (!pago) {
+        await confirmModal('Error', 'No se encontró el pago seleccionado.', { okOnly: true });
+        return;
+      }
+      editPagoId = pago.id;
+
+      // Llenar inputs
+      const fecha = pago.fecha_pago ? String(pago.fecha_pago).slice(0, 10) : '';
+      document.getElementById('edit-fecha').value = fecha;
+      document.getElementById('edit-monto').value = pago.monto != null ? String(pago.monto) : '';
+      document.getElementById('edit-metodo').value = pago.metodo_pago || 'Transferencia';
+      document.getElementById('edit-referencia').value = pago.referencia || '';
+      document.getElementById('edit-nota').value = pago.nota || '';
+
+      const sub = [];
+      if (pago.proyecto_nombre) sub.push(pago.proyecto_nombre);
+      if (pago.cliente_nombre) sub.push(pago.cliente_nombre);
+      sub.push(formatCLP(pago.monto));
+      document.getElementById('fin-edit-sub').textContent = sub.join(' · ');
+
+      hideFinEditMsg();
+      abrirEditModal();
+    }
+
+    function abrirEditModal() {
+      document.getElementById('fin-edit-backdrop').classList.add('open');
+    }
+    function cerrarEditModal() {
+      document.getElementById('fin-edit-backdrop').classList.remove('open');
+      editPagoId = null;
+    }
+    function showFinEditMsg(text, kind) {
+      const el = document.getElementById('fin-edit-msg');
+      el.className = 'fin-msg show ' + (kind === 'error' ? 'error' : 'ok');
+      el.textContent = text;
+    }
+    function hideFinEditMsg() {
+      const el = document.getElementById('fin-edit-msg');
+      el.className = 'fin-msg';
+      el.textContent = '';
+    }
+
+    async function guardarEdicionPago() {
+      hideFinEditMsg();
+      if (editPagoId == null) return;
+
+      const fecha = document.getElementById('edit-fecha').value;
+      const monto = Number(document.getElementById('edit-monto').value);
+      const metodo = document.getElementById('edit-metodo').value;
+      const ref = document.getElementById('edit-referencia').value.trim();
+      const nota = document.getElementById('edit-nota').value.trim();
+
+      if (!fecha) { showFinEditMsg('La fecha de pago es obligatoria.', 'error'); return; }
+      if (!Number.isFinite(monto) || monto < 0) { showFinEditMsg('El monto debe ser mayor o igual a 0.', 'error'); return; }
+      if (!metodo) { showFinEditMsg('El método de pago es obligatorio.', 'error'); return; }
+
+      const btn = document.getElementById('fin-edit-save');
+      btn.disabled = true;
+      try {
+        const client = await esperarSupabase(8000);
+        if (!client) throw new Error('Supabase no disponible');
+        const payload = {
+          fecha_pago: fecha,
+          monto: monto,
+          metodo_pago: metodo || null,
+          referencia: ref || null,
+          nota: nota || null,
+          updated_at: new Date().toISOString(),
+        };
+        const { data, error } = await client
+          .from('pagos_clientes')
+          .update(payload)
+          .eq('id', editPagoId)
+          .select()
+          .single();
+        if (error) throw error;
+
+        // Actualizar estado local
+        if (data) {
+          const idx = pagos.findIndex(p => String(p.id) === String(editPagoId));
+          if (idx >= 0) {
+            // preservar campos que no devuelva el update (en general devuelve toda la fila)
+            pagos[idx] = { ...pagos[idx], ...data };
+          }
+        }
+        cerrarEditModal();
+        if (proyectoSel) renderFichaProyecto();
+        aplicarFiltros();
+      } catch (err) {
+        console.error('[pagos_clientes] Error actualizando pago:', err);
+        showFinEditMsg('No se pudo actualizar el pago. ' + (err?.message || ''), 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // --------- Comprobantes ---------
+    function tieneComprobante(pagoId) {
+      if (pagoId == null) return false;
+      return comprobantes.some(c => c && String(c.pago_id) === String(pagoId));
+    }
+    function comprobanteDePago(pagoId) {
+      if (pagoId == null) return null;
+      // Para esta primera versión: 1 comprobante por pago. Si hay varios, tomamos el más reciente.
+      const lista = comprobantes
+        .filter(c => c && String(c.pago_id) === String(pagoId))
+        .sort((a, b) => {
+          const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return tb - ta;
+        });
+      return lista[0] || null;
+    }
+
+    let compPagoId = null;
+    function abrirComprobanteModal(pagoId) {
+      const pago = pagos.find(p => String(p.id) === String(pagoId));
+      if (!pago) return;
+      compPagoId = pago.id;
+
+      const sub = [];
+      if (pago.proyecto_nombre) sub.push(pago.proyecto_nombre);
+      if (pago.cliente_nombre) sub.push(pago.cliente_nombre);
+      sub.push(formatCLP(pago.monto));
+      sub.push(formatFechaCL(pago.fecha_pago) || '—');
+      document.getElementById('fin-comp-sub').textContent = sub.join(' · ');
+
+      hideFinCompMsg();
+      // limpiar inputs file (por si quedaron de una sesión previa)
+      const fileInput = document.getElementById('fin-comp-file');
+      if (fileInput) fileInput.value = '';
+      const replInput = document.getElementById('fin-comp-replace-file');
+      if (replInput) replInput.value = '';
+
+      renderComprobanteModal();
+      document.getElementById('fin-comp-backdrop').classList.add('open');
+    }
+
+    function cerrarComprobanteModal() {
+      document.getElementById('fin-comp-backdrop').classList.remove('open');
+      compPagoId = null;
+    }
+
+    function renderComprobanteModal() {
+      const current = document.getElementById('fin-comp-current');
+      const empty = document.getElementById('fin-comp-empty');
+      const uploadWrap = document.getElementById('fin-comp-upload-wrap');
+      const uploadBtn = document.getElementById('fin-comp-upload');
+
+      const comp = comprobanteDePago(compPagoId);
+      if (comp) {
+        current.style.display = '';
+        empty.style.display = 'none';
+        uploadWrap.style.display = 'none';
+        uploadBtn.style.display = 'none';
+        document.getElementById('fin-comp-name').textContent = comp.file_name || '(sin nombre)';
+        const meta = [];
+        if (comp.mime_type) meta.push(comp.mime_type);
+        if (comp.size_bytes != null) meta.push(formatFileSize(comp.size_bytes));
+        if (comp.created_at) meta.push('Subido: ' + formatFechaCL(comp.created_at));
+        document.getElementById('fin-comp-meta').textContent = meta.join(' · ') || '—';
+      } else {
+        current.style.display = 'none';
+        empty.style.display = '';
+        uploadWrap.style.display = '';
+        uploadBtn.style.display = '';
+      }
+    }
+
+    function formatFileSize(n) {
+      const x = Number(n);
+      if (!Number.isFinite(x) || x < 0) return '';
+      if (x < 1024) return x + ' B';
+      if (x < 1024 * 1024) return (x / 1024).toFixed(1) + ' KB';
+      return (x / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function showFinCompMsg(text, kind) {
+      const el = document.getElementById('fin-comp-msg');
+      el.className = 'fin-msg show ' + (kind === 'error' ? 'error' : 'ok');
+      el.textContent = text;
+    }
+    function hideFinCompMsg() {
+      const el = document.getElementById('fin-comp-msg');
+      el.className = 'fin-msg';
+      el.textContent = '';
+    }
+
+    async function uploadComprobante(file, { replaceOf } = {}) {
+      if (!file) { showFinCompMsg('Selecciona un archivo.', 'error'); return; }
+      if (compPagoId == null) return;
+      const pago = pagos.find(p => String(p.id) === String(compPagoId));
+      if (!pago) { showFinCompMsg('Pago no encontrado.', 'error'); return; }
+
+      try {
+        const client = await esperarSupabase(8000);
+        if (!client) throw new Error('Supabase no disponible');
+
+        const safeName = sanitizeStorageFileName(file.name);
+        const path = `${pago.id}/${Date.now()}-${safeName}`;
+
+        showFinCompMsg('Subiendo comprobante...', 'ok');
+
+        const { error: upErr } = await client
+          .storage
+          .from(COMPROBANTES_BUCKET)
+          .upload(path, file, { cacheControl: '3600', upsert: false });
+        if (upErr) throw upErr;
+
+        const metaPayload = {
+          pago_id: pago.id,
+          cotizacion_id: pago.cotizacion_id || null,
+          file_name: file.name || safeName,
+          storage_path: path,
+          mime_type: file.type || null,
+          size_bytes: typeof file.size === 'number' ? file.size : null,
+        };
+
+        const { data: newMeta, error: metaErr } = await client
+          .from('pagos_clientes_comprobantes')
+          .insert([metaPayload])
+          .select()
+          .single();
+        if (metaErr) {
+          // Intentar limpiar el archivo subido si falló la metadata
+          try { await client.storage.from(COMPROBANTES_BUCKET).remove([path]); } catch (_) {}
+          throw metaErr;
+        }
+
+        // Si es reemplazo, borrar el anterior (storage + metadata)
+        if (replaceOf) {
+          try {
+            if (replaceOf.storage_path) {
+              await client.storage.from(COMPROBANTES_BUCKET).remove([replaceOf.storage_path]);
+            }
+          } catch (e) {
+            console.warn('[pagos_clientes] No se pudo borrar archivo anterior:', e);
+          }
+          try {
+            const { error: delMetaErr } = await client
+              .from('pagos_clientes_comprobantes')
+              .delete()
+              .eq('id', replaceOf.id);
+            if (delMetaErr) console.warn('[pagos_clientes] No se pudo borrar metadata anterior:', delMetaErr);
+          } catch (e) {
+            console.warn('[pagos_clientes] Error borrando metadata anterior:', e);
+          }
+          comprobantes = comprobantes.filter(c => String(c.id) !== String(replaceOf.id));
+        }
+
+        if (newMeta) comprobantes.push(newMeta);
+        showFinCompMsg('Comprobante guardado.', 'ok');
+        renderComprobanteModal();
+        // Refrescar tabla para que se actualice el badge
+        aplicarFiltros();
+      } catch (err) {
+        console.error('[pagos_clientes] Error subiendo comprobante:', err);
+        showFinCompMsg('No se pudo subir el comprobante. ' + (err?.message || ''), 'error');
+      }
+    }
+
+    async function verComprobante() {
+      const comp = comprobanteDePago(compPagoId);
+      if (!comp || !comp.storage_path) return;
+      try {
+        const client = await esperarSupabase(8000);
+        if (!client) throw new Error('Supabase no disponible');
+        const { data, error } = await client
+          .storage
+          .from(COMPROBANTES_BUCKET)
+          .createSignedUrl(comp.storage_path, 60 * 5); // 5 minutos
+        if (error) throw error;
+        const url = data?.signedUrl;
+        if (!url) throw new Error('Sin URL firmada');
+        window.open(url, '_blank', 'noopener');
+      } catch (err) {
+        console.error('[pagos_clientes] Error abriendo comprobante:', err);
+        showFinCompMsg('No se pudo abrir el comprobante.', 'error');
+      }
+    }
+
+    async function eliminarComprobanteActual() {
+      const comp = comprobanteDePago(compPagoId);
+      if (!comp) return;
+      const ok = await requestFinancePassword({
+        title: 'Eliminar comprobante',
+        help: 'Ingresa la clave para eliminar este comprobante.',
+      });
+      if (!ok) return;
+      try {
+        const client = await esperarSupabase(8000);
+        if (!client) throw new Error('Supabase no disponible');
+        // Borrar archivo del bucket (no abortar si falla)
+        if (comp.storage_path) {
+          try {
+            await client.storage.from(COMPROBANTES_BUCKET).remove([comp.storage_path]);
+          } catch (e) {
+            console.warn('[pagos_clientes] No se pudo borrar archivo del bucket:', e);
+          }
+        }
+        const { error } = await client
+          .from('pagos_clientes_comprobantes')
+          .delete()
+          .eq('id', comp.id);
+        if (error) throw error;
+        comprobantes = comprobantes.filter(c => String(c.id) !== String(comp.id));
+        showFinCompMsg('Comprobante eliminado.', 'ok');
+        renderComprobanteModal();
+        aplicarFiltros();
+      } catch (err) {
+        console.error('[pagos_clientes] Error eliminando comprobante:', err);
+        showFinCompMsg('No se pudo eliminar el comprobante. ' + (err?.message || ''), 'error');
+      }
+    }
+
+    function bindComprobanteModal() {
+      const closeBtn = document.getElementById('fin-comp-close');
+      closeBtn.addEventListener('click', cerrarComprobanteModal);
+
+      // ESC cierra modales (no si el modal de clave está abierto encima)
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const pwdBd = document.getElementById('fin-pwd-backdrop');
+        if (pwdBd && pwdBd.classList.contains('open')) return;
+        const compBd = document.getElementById('fin-comp-backdrop');
+        const editBd = document.getElementById('fin-edit-backdrop');
+        if (compBd.classList.contains('open')) cerrarComprobanteModal();
+        else if (editBd.classList.contains('open')) cerrarEditModal();
+      });
+
+      // Subir (caso sin comprobante actual)
+      document.getElementById('fin-comp-upload').addEventListener('click', async () => {
+        const file = document.getElementById('fin-comp-file').files?.[0];
+        if (!file) { showFinCompMsg('Selecciona un archivo.', 'error'); return; }
+        const ok = await requestFinancePassword({
+          title: 'Subir comprobante',
+          help: 'Ingresa la clave para subir el comprobante.',
+        });
+        if (!ok) return;
+        await uploadComprobante(file);
+        // Limpiar input file
+        document.getElementById('fin-comp-file').value = '';
+      });
+
+      // Ver / Descargar (sin clave)
+      document.getElementById('fin-comp-view').addEventListener('click', verComprobante);
+
+      // Eliminar (con clave)
+      document.getElementById('fin-comp-delete').addEventListener('click', eliminarComprobanteActual);
+
+      // Reemplazar (con clave): primero pedimos clave, luego abrimos selector de archivo.
+      const replInput = document.getElementById('fin-comp-replace-file');
+      document.getElementById('fin-comp-replace-btn').addEventListener('click', async () => {
+        const ok = await requestFinancePassword({
+          title: 'Reemplazar comprobante',
+          help: 'Ingresa la clave para reemplazar el comprobante.',
+        });
+        if (!ok) return;
+        replInput.value = '';
+        replInput.click();
+      });
+      replInput.addEventListener('change', async () => {
+        const file = replInput.files?.[0];
+        if (!file) return;
+        const prev = comprobanteDePago(compPagoId);
+        await uploadComprobante(file, { replaceOf: prev });
+        replInput.value = '';
+      });
+    }
+
+    function bindEditModal() {
+      document.getElementById('fin-edit-cancel').addEventListener('click', cerrarEditModal);
+      document.getElementById('fin-edit-save').addEventListener('click', guardarEdicionPago);
     }
 
     // --------- Modal interno ---------
@@ -1409,6 +2185,9 @@
         const met = escapeHtml(p.metodo_pago || '—');
         const ref = escapeHtml(p.referencia || '');
         const nota = escapeHtml(p.nota || '');
+        const tieneComp = tieneComprobante(p.id);
+        const compTitle = tieneComp ? 'Con comprobante' : 'Sin comprobante';
+        const pid = escapeHtml(String(p.id));
         return `<tr>
           <td>${fecha}</td>
           <td>${proy}</td>
@@ -1417,11 +2196,25 @@
           <td>${met}</td>
           <td>${ref}</td>
           <td><span class="muted">${nota}</span></td>
-          <td><button type="button" class="btn btn-bad" data-del="${escapeHtml(String(p.id))}" style="padding:6px 10px; font-size:12px;">Eliminar</button></td>
+          <td>
+            <div class="row-actions">
+              <button type="button" class="btn btn-soft" data-edit="${pid}">Modificar</button>
+              <button type="button" class="btn btn-soft btn-with-badge" data-comp="${pid}" title="${escapeHtml(compTitle)}">
+                <span class="dot ${tieneComp ? 'has' : ''}"></span>Comprobante
+              </button>
+              <button type="button" class="btn btn-bad" data-del="${pid}">Eliminar</button>
+            </div>
+          </td>
         </tr>`;
       }).join('');
       body.querySelectorAll('button[data-del]').forEach(btn => {
         btn.addEventListener('click', () => eliminarPago(btn.getAttribute('data-del')));
+      });
+      body.querySelectorAll('button[data-edit]').forEach(btn => {
+        btn.addEventListener('click', () => modificarPago(btn.getAttribute('data-edit')));
+      });
+      body.querySelectorAll('button[data-comp]').forEach(btn => {
+        btn.addEventListener('click', () => abrirComprobanteModal(btn.getAttribute('data-comp')));
       });
       mostrarEstado('data');
     }
@@ -1574,6 +2367,8 @@
       bindFiltros();
       bindSelector();
       bindFormulario();
+      bindEditModal();
+      bindComprobanteModal();
       cargarDatos();
     });
   </script>
