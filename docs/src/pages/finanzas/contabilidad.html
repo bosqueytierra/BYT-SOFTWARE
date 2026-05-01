@@ -3,26 +3,701 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contabilidad</title>
+  <title>Contabilidad - BYT SOFTWARE</title>
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css" />
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
   <style>
-    :root { --nav-offset: 260px; }
-    body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
-    .page-container { padding: 24px var(--nav-offset); }
-    .page-header h1 { margin: 0 0 8px; font-size: 22px; }
-    .placeholder { color: #6c7a86; font-size: 14px; }
+    :root {
+      --nav-offset: 260px;
+      --bg: #f6f7f8;
+      --card: #ffffff;
+      --border: #e4e7eb;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --primary: #2e5e4e;
+      --primary-soft: #3f705d;
+      --warn-bg: #fff6e0;
+      --warn-fg: #8a5a00;
+      --warn-border: #f1d899;
+      --ok-bg: #e8f3ee;
+      --ok-fg: #1f6b4d;
+      --ok-border: #c5e2d2;
+      --soft-bg: #eef1f4;
+      --soft-fg: #3a4654;
+      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
+    }
+    .page-container {
+      padding: 22px var(--nav-offset);
+      max-width: 100%;
+    }
+    .page-inner { max-width: 1280px; margin: 0 auto; }
+
+    .page-header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .page-header h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .page-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .card + .card { margin-top: 14px; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fdfdfd;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      transition: border 0.15s ease, box-shadow 0.15s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: rgba(46,94,78,0.6);
+      box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .kpi .kpi-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    .kpi .kpi-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .kpi.kpi-primary .kpi-value { color: var(--primary); }
+    .kpi.kpi-warn .kpi-value { color: var(--warn-fg); }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    table.contab {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+      background: #fff;
+      min-width: 880px;
+    }
+    table.contab thead th {
+      text-align: left;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: #f9fafb;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+    }
+    table.contab tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #eef0f3;
+      vertical-align: middle;
+    }
+    table.contab tbody tr:last-child td { border-bottom: none; }
+    table.contab tbody tr:hover { background: #fafbfc; }
+    .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge-ok {
+      background: var(--ok-bg);
+      color: var(--ok-fg);
+      border-color: var(--ok-border);
+    }
+    .badge-warn {
+      background: var(--warn-bg);
+      color: var(--warn-fg);
+      border-color: var(--warn-border);
+    }
+    .badge-soft {
+      background: var(--soft-bg);
+      color: var(--soft-fg);
+      border-color: #dde2e7;
+    }
+
+    .state {
+      padding: 28px 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .state.error { color: #b3261e; }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+    .section-title small {
+      font-weight: 500;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+
+    @media (max-width: 900px) {
+      .page-container { padding: 16px; }
+    }
   </style>
 </head>
 <body>
   <div class="page-container">
-    <div class="page-header">
-      <h1>Contabilidad</h1>
+    <div class="page-inner">
+
+      <div class="page-header">
+        <h1>Contabilidad</h1>
+        <p>Resumen de ventas aprobadas según fecha real de venta.</p>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Filtros</h2>
+        <div class="filters">
+          <div>
+            <label for="filtro-mes">Mes</label>
+            <select id="filtro-mes">
+              <option value="">Todos los meses</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-anio">Año</label>
+            <select id="filtro-anio">
+              <option value="">Todos los años</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-busqueda">Buscar proyecto / cliente</label>
+            <input type="text" id="filtro-busqueda" placeholder="Ej: cocina, Juan Pérez..." autocomplete="off" />
+          </div>
+          <div>
+            <label for="filtro-estado-fecha">Estado fecha</label>
+            <select id="filtro-estado-fecha">
+              <option value="todos">Todos</option>
+              <option value="con">Con fecha de venta</option>
+              <option value="sin">Sin fecha de venta</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-orden">Ordenar por</label>
+            <select id="filtro-orden">
+              <option value="fecha_desc">Fecha venta más reciente</option>
+              <option value="fecha_asc">Fecha venta más antigua</option>
+              <option value="total_desc">Total mayor a menor</option>
+              <option value="total_asc">Total menor a mayor</option>
+              <option value="cliente_az">Cliente A-Z</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Resumen del período <small id="periodo-label"></small></h2>
+        <div class="kpis" id="kpis-container">
+          <div class="kpi kpi-primary">
+            <div class="kpi-label">Total vendido</div>
+            <div class="kpi-value" id="kpi-total">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Neto vendido</div>
+            <div class="kpi-value" id="kpi-neto">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">IVA</div>
+            <div class="kpi-value" id="kpi-iva">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Cotizaciones aprobadas</div>
+            <div class="kpi-value" id="kpi-aprobadas">0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Ventas con fecha</div>
+            <div class="kpi-value" id="kpi-con-fecha">0</div>
+          </div>
+          <div class="kpi kpi-warn">
+            <div class="kpi-label">Ventas sin fecha</div>
+            <div class="kpi-value" id="kpi-sin-fecha">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Ventas aprobadas <small id="resultados-label"></small></h2>
+
+        <div id="estado-cargando" class="state">Cargando...</div>
+        <div id="estado-vacio" class="state" style="display:none;">Sin datos para este período.</div>
+        <div id="estado-error" class="state error" style="display:none;">Error al cargar información.</div>
+
+        <div class="table-wrap" id="tabla-wrap" style="display:none;">
+          <table class="contab">
+            <thead>
+              <tr>
+                <th>Proyecto</th>
+                <th>Cliente</th>
+                <th>Fecha cotización</th>
+                <th>Fecha venta</th>
+                <th class="num">Neto</th>
+                <th class="num">IVA</th>
+                <th class="num">Total</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
-    <p class="placeholder">En construcción</p>
   </div>
 
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/lib/supabaseConfig.js"></script>
+  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
+  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/globalSupabase.js"></script>
+
+  <script>
+    // ============================================================
+    // Contabilidad v1 — solo lectura.
+    // Lee cotizaciones aprobadas y usa fecha_aprobacion como fecha de venta.
+    // No modifica datos. No calcula utilidad/costos. No crea pagos.
+    // ============================================================
+
+    let cotizacionesContabilidad = [];
+    let cotizacionesContabilidadFiltradas = [];
+
+    // -------- Helpers --------
+    function formatCLP(valor) {
+      const n = Number(valor);
+      if (!isFinite(n)) return '$0';
+      try {
+        return '$' + Math.round(n).toLocaleString('es-CL');
+      } catch (_) {
+        return '$' + Math.round(n);
+      }
+    }
+
+    function formatFechaCL(fecha) {
+      if (!fecha) return '';
+      const d = new Date(fecha);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('es-CL');
+    }
+
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function parseData(c) {
+      // 'data' puede venir como objeto o como JSON string
+      const raw = c?.data;
+      if (!raw) return {};
+      if (typeof raw === 'object') return raw;
+      if (typeof raw === 'string') {
+        try { return JSON.parse(raw) || {}; } catch (_) { return {}; }
+      }
+      return {};
+    }
+
+    function getProjectName(c) {
+      const data = parseData(c);
+      const fromData = data?.cliente?.nombre_proyecto;
+      if (fromData && String(fromData).trim()) return String(fromData).trim();
+      if (c?.project_key && String(c.project_key).trim()) return String(c.project_key).trim();
+      if (c?.numero && String(c.numero).trim()) return String(c.numero).trim();
+      return 'Sin nombre';
+    }
+
+    function getClientName(c) {
+      // cliente puede ser objeto, string o estar en data.cliente.nombre
+      const cliente = c?.cliente;
+      if (cliente && typeof cliente === 'object' && cliente.nombre) {
+        return String(cliente.nombre).trim();
+      }
+      if (typeof cliente === 'string' && cliente.trim()) {
+        return cliente.trim();
+      }
+      const data = parseData(c);
+      const fromData = data?.cliente?.nombre;
+      if (fromData && String(fromData).trim()) return String(fromData).trim();
+      return 'Sin cliente';
+    }
+
+    function getNumeros(c) {
+      const subtotal = Number(c?.subtotal) || 0;
+      const iva = Number(c?.iva) || 0;
+      // total: si existe lo usamos; si no, subtotal + iva como fallback razonable de UI
+      const total = (c?.total != null && c.total !== '')
+        ? (Number(c.total) || 0)
+        : (subtotal + iva);
+      return { subtotal, iva, total };
+    }
+
+    // -------- Render de estado de la pantalla --------
+    function mostrarEstado(estado) {
+      const cargando = document.getElementById('estado-cargando');
+      const vacio = document.getElementById('estado-vacio');
+      const error = document.getElementById('estado-error');
+      const tabla = document.getElementById('tabla-wrap');
+      cargando.style.display = estado === 'loading' ? 'block' : 'none';
+      vacio.style.display    = estado === 'empty'   ? 'block' : 'none';
+      error.style.display    = estado === 'error'   ? 'block' : 'none';
+      tabla.style.display    = estado === 'data'    ? 'block' : 'none';
+    }
+
+    // -------- Carga inicial --------
+    async function cargarDatosContabilidad() {
+      mostrarEstado('loading');
+      try {
+        // Esperar a que el cliente Supabase global esté listo (lo expone supabaseBrowserClient)
+        const client = await esperarSupabase(8000);
+        if (!client || typeof client.from !== 'function') {
+          throw new Error('Supabase no disponible');
+        }
+
+        const { data, error } = await client
+          .from('cotizaciones')
+          .select('id, numero, cliente, project_key, estado, subtotal, iva, total, created_at, fecha_aprobacion, data')
+          .eq('estado', 'aprobada');
+
+        if (error) throw error;
+
+        cotizacionesContabilidad = Array.isArray(data) ? data : [];
+        poblarFiltroAnios(cotizacionesContabilidad);
+        aplicarFiltrosContabilidad();
+      } catch (err) {
+        console.error('[contabilidad] Error al cargar:', err);
+        cotizacionesContabilidad = [];
+        cotizacionesContabilidadFiltradas = [];
+        renderKPIsContabilidad([]);
+        mostrarEstado('error');
+      }
+    }
+
+    function esperarSupabase(timeoutMs = 5000) {
+      return new Promise((resolve) => {
+        const inicio = Date.now();
+        function check() {
+          if (window.supabase && typeof window.supabase.from === 'function') {
+            return resolve(window.supabase);
+          }
+          if (Date.now() - inicio >= timeoutMs) {
+            return resolve(window.supabase || null);
+          }
+          setTimeout(check, 100);
+        }
+        // También responder a evento de listo, si llega antes
+        try {
+          window.addEventListener('supabase:ready', () => {
+            if (window.supabase && typeof window.supabase.from === 'function') resolve(window.supabase);
+          }, { once: true });
+        } catch (_) {}
+        check();
+      });
+    }
+
+    // -------- Filtros / Orden --------
+    function poblarFiltroAnios(lista) {
+      const sel = document.getElementById('filtro-anio');
+      if (!sel) return;
+      const anios = new Set();
+      lista.forEach(c => {
+        if (c.fecha_aprobacion) {
+          const d = new Date(c.fecha_aprobacion);
+          if (!isNaN(d.getTime())) anios.add(d.getFullYear());
+        }
+      });
+      const actuales = Array.from(sel.options).map(o => o.value);
+      // Mantener "Todos" y rehacer
+      sel.innerHTML = '<option value="">Todos los años</option>';
+      Array.from(anios).sort((a, b) => b - a).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = String(a);
+        opt.textContent = String(a);
+        sel.appendChild(opt);
+      });
+      // Restaurar selección si seguía válida
+      const prev = actuales.find(v => v && v !== '');
+      if (prev && Array.from(sel.options).some(o => o.value === prev)) {
+        sel.value = prev;
+      }
+    }
+
+    function aplicarFiltrosContabilidad() {
+      const mes = document.getElementById('filtro-mes').value;          // '' o '1'..'12'
+      const anio = document.getElementById('filtro-anio').value;        // '' o 'YYYY'
+      const busqueda = (document.getElementById('filtro-busqueda').value || '').trim().toLowerCase();
+      const estadoFecha = document.getElementById('filtro-estado-fecha').value; // todos|con|sin
+      const orden = document.getElementById('filtro-orden').value;
+
+      const mesNum = mes ? parseInt(mes, 10) : null;
+      const anioNum = anio ? parseInt(anio, 10) : null;
+
+      let filtradas = cotizacionesContabilidad.filter(c => {
+        // Estado fecha
+        const tieneFecha = !!c.fecha_aprobacion;
+        if (estadoFecha === 'con' && !tieneFecha) return false;
+        if (estadoFecha === 'sin' &&  tieneFecha) return false;
+
+        // Mes/Año aplican sobre fecha_aprobacion.
+        // Si la cotización no tiene fecha_aprobacion, sólo se incluye cuando el filtro
+        // de fecha es "todos" o "sin" (ya filtrado arriba) y NO se está restringiendo por mes/año.
+        if (mesNum != null || anioNum != null) {
+          if (!tieneFecha) return false;
+          const d = new Date(c.fecha_aprobacion);
+          if (isNaN(d.getTime())) return false;
+          if (mesNum  != null && (d.getMonth() + 1) !== mesNum)  return false;
+          if (anioNum != null &&  d.getFullYear()    !== anioNum) return false;
+        }
+
+        // Búsqueda por proyecto / cliente
+        if (busqueda) {
+          const proyecto = getProjectName(c).toLowerCase();
+          const cliente = getClientName(c).toLowerCase();
+          const numero = (c.numero || '').toString().toLowerCase();
+          if (!proyecto.includes(busqueda) &&
+              !cliente.includes(busqueda) &&
+              !numero.includes(busqueda)) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      // Orden
+      filtradas.sort((a, b) => {
+        switch (orden) {
+          case 'fecha_asc': {
+            const ta = a.fecha_aprobacion ? new Date(a.fecha_aprobacion).getTime() : Infinity;
+            const tb = b.fecha_aprobacion ? new Date(b.fecha_aprobacion).getTime() : Infinity;
+            return ta - tb;
+          }
+          case 'total_desc': return getNumeros(b).total - getNumeros(a).total;
+          case 'total_asc':  return getNumeros(a).total - getNumeros(b).total;
+          case 'cliente_az': return getClientName(a).localeCompare(getClientName(b), 'es');
+          case 'fecha_desc':
+          default: {
+            // Sin fecha al final
+            const ta = a.fecha_aprobacion ? new Date(a.fecha_aprobacion).getTime() : -Infinity;
+            const tb = b.fecha_aprobacion ? new Date(b.fecha_aprobacion).getTime() : -Infinity;
+            return tb - ta;
+          }
+        }
+      });
+
+      cotizacionesContabilidadFiltradas = filtradas;
+
+      // KPIs siempre se calculan sobre las cotizaciones aprobadas que cumplen mes/año/búsqueda,
+      // sin importar el filtro "estado fecha", para que el período sea coherente.
+      const cotizacionesPeriodo = cotizacionesContabilidad.filter(c => {
+        const tieneFecha = !!c.fecha_aprobacion;
+        if (mesNum != null || anioNum != null) {
+          if (!tieneFecha) return false;
+          const d = new Date(c.fecha_aprobacion);
+          if (isNaN(d.getTime())) return false;
+          if (mesNum  != null && (d.getMonth() + 1) !== mesNum)  return false;
+          if (anioNum != null &&  d.getFullYear()    !== anioNum) return false;
+        }
+        if (busqueda) {
+          const proyecto = getProjectName(c).toLowerCase();
+          const cliente = getClientName(c).toLowerCase();
+          const numero = (c.numero || '').toString().toLowerCase();
+          if (!proyecto.includes(busqueda) &&
+              !cliente.includes(busqueda) &&
+              !numero.includes(busqueda)) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      renderKPIsContabilidad(cotizacionesPeriodo);
+      renderListadoContabilidad(filtradas);
+      actualizarEtiquetaPeriodo(mesNum, anioNum);
+      actualizarEtiquetaResultados(filtradas.length);
+    }
+
+    function actualizarEtiquetaPeriodo(mesNum, anioNum) {
+      const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      const partes = [];
+      if (mesNum != null) partes.push(meses[mesNum - 1]);
+      if (anioNum != null) partes.push(String(anioNum));
+      const lbl = document.getElementById('periodo-label');
+      if (lbl) lbl.textContent = partes.length ? '· ' + partes.join(' ') : '· Todos los períodos';
+    }
+
+    function actualizarEtiquetaResultados(n) {
+      const lbl = document.getElementById('resultados-label');
+      if (lbl) lbl.textContent = '· ' + n + (n === 1 ? ' resultado' : ' resultados');
+    }
+
+    // -------- KPIs --------
+    function renderKPIsContabilidad(lista) {
+      let neto = 0, iva = 0, total = 0, conFecha = 0, sinFecha = 0;
+      lista.forEach(c => {
+        const n = getNumeros(c);
+        neto  += n.subtotal;
+        iva   += n.iva;
+        total += n.total;
+        if (c.fecha_aprobacion) conFecha++;
+        else sinFecha++;
+      });
+      document.getElementById('kpi-total').textContent     = formatCLP(total);
+      document.getElementById('kpi-neto').textContent      = formatCLP(neto);
+      document.getElementById('kpi-iva').textContent       = formatCLP(iva);
+      document.getElementById('kpi-aprobadas').textContent = String(lista.length);
+      document.getElementById('kpi-con-fecha').textContent = String(conFecha);
+      document.getElementById('kpi-sin-fecha').textContent = String(sinFecha);
+    }
+
+    // -------- Listado --------
+    function renderListadoContabilidad(lista) {
+      const body = document.getElementById('tabla-body');
+      if (!body) return;
+
+      if (!lista || lista.length === 0) {
+        body.innerHTML = '';
+        mostrarEstado('empty');
+        return;
+      }
+
+      const filas = lista.map(c => {
+        const proyecto = escapeHtml(getProjectName(c));
+        const cliente = escapeHtml(getClientName(c));
+        const fechaCot = escapeHtml(formatFechaCL(c.created_at));
+        const fechaVentaTxt = formatFechaCL(c.fecha_aprobacion);
+        const fechaVentaCell = c.fecha_aprobacion
+          ? escapeHtml(fechaVentaTxt)
+          : '<span class="badge badge-warn">Falta fecha venta</span>';
+
+        const n = getNumeros(c);
+
+        return `
+          <tr>
+            <td>${proyecto}</td>
+            <td>${cliente}</td>
+            <td>${fechaCot}</td>
+            <td>${fechaVentaCell}</td>
+            <td class="num">${escapeHtml(formatCLP(n.subtotal))}</td>
+            <td class="num">${escapeHtml(formatCLP(n.iva))}</td>
+            <td class="num"><strong>${escapeHtml(formatCLP(n.total))}</strong></td>
+            <td><span class="badge badge-ok">Aprobada</span></td>
+          </tr>
+        `;
+      }).join('');
+
+      body.innerHTML = filas;
+      mostrarEstado('data');
+    }
+
+    // -------- Wire-up --------
+    function bindFiltros() {
+      const ids = ['filtro-mes','filtro-anio','filtro-busqueda','filtro-estado-fecha','filtro-orden'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+        el.addEventListener(evt, aplicarFiltrosContabilidad);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bindFiltros();
+      cargarDatosContabilidad();
+    });
+  </script>
 </body>
 </html>
