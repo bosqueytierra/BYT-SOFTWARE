@@ -891,10 +891,11 @@
       const base = new Date(fechaEntrega);
       if (isNaN(base.getTime())) return 0;
       base.setDate(base.getDate() + 5);
+      // Comparar a nivel de día (medianoche local) para evitar desfases por DST/horas.
+      const baseDay = new Date(base.getFullYear(), base.getMonth(), base.getDate()).getTime();
       const hoy = new Date();
-      // Comparar en días (ignorar hora exacta)
-      const ms = hoy.getTime() - base.getTime();
-      const d = Math.floor(ms / (1000 * 60 * 60 * 24));
+      const hoyDay = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
+      const d = Math.round((hoyDay - baseDay) / (1000 * 60 * 60 * 24));
       return d > 0 ? d : 0;
     }
     function estadoDeuda(montoVenta, pagosRecibidos, fechaEntrega) {
@@ -1174,9 +1175,12 @@
       const saldo = (Number(proyectoSel.monto_venta) || 0) - recibido;
 
       if (monto > saldo) {
+        const saldoTxt = saldo >= 0
+          ? '$' + Math.max(0, saldo).toLocaleString('es-CL')
+          : '-$' + Math.abs(saldo).toLocaleString('es-CL') + ' (sobrepago)';
         const ok = await confirmModal(
           'Pago excede el saldo',
-          `El pago ($${monto.toLocaleString('es-CL')}) supera el saldo pendiente ($${Math.max(0, saldo).toLocaleString('es-CL')}). ¿Guardar igualmente?`
+          `El pago ($${monto.toLocaleString('es-CL')}) supera el saldo pendiente (${saldoTxt}). ¿Guardar igualmente?`
         );
         if (!ok) return;
       }
@@ -1250,15 +1254,21 @@
           okBtn.removeEventListener('click', onOk);
           cancelBtn.removeEventListener('click', onCancel);
           backdrop.removeEventListener('click', onBackdrop);
+          document.removeEventListener('keydown', onKey);
           modalResolver = null;
           resolve(val);
         };
         const onOk = () => cleanup(true);
         const onCancel = () => cleanup(false);
         const onBackdrop = (e) => { if (e.target === backdrop && !okOnly) cleanup(false); };
+        const onKey = (e) => {
+          if (e.key === 'Escape' && !okOnly) cleanup(false);
+          else if (e.key === 'Enter') cleanup(true);
+        };
         okBtn.addEventListener('click', onOk);
         cancelBtn.addEventListener('click', onCancel);
         backdrop.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKey);
       });
     }
 
