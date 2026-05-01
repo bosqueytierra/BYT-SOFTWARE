@@ -105,7 +105,7 @@
 
     .kpis {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
     }
     .kpi {
@@ -139,36 +139,67 @@
       overflow-x: auto;
       border-radius: 12px;
       border: 1px solid var(--border);
-    }
-    table.contab {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: 14px;
       background: #fff;
-      min-width: 1100px;
     }
-    table.contab thead th {
+    .fin-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 13px;
+      background: #fff;
+      min-width: 960px;
+    }
+    .fin-table th,
+    .fin-table td {
+      padding: 14px 12px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: middle;
+      font-size: 13px;
       text-align: left;
+    }
+    .fin-table th {
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 11px;
       font-weight: 700;
-      font-size: 12px;
-      letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: var(--muted);
-      background: #f9fafb;
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
+      letter-spacing: 0.04em;
       position: sticky;
       top: 0;
     }
-    table.contab tbody td {
-      padding: 12px 14px;
-      border-bottom: 1px solid #eef0f3;
-      vertical-align: middle;
+    .fin-table tbody tr:last-child td { border-bottom: none; }
+    .fin-table tbody tr:hover { background: #fafbfc; }
+
+    /* Column widths (8 columnas) */
+    .fin-table col.col-proyecto    { width: 20%; }
+    .fin-table col.col-cliente     { width: 14%; }
+    .fin-table col.col-fecha       { width: 10%; }
+    .fin-table col.col-monto       { width: 11%; }
+    .fin-table col.col-diferencia  { width: 11%; }
+    .fin-table col.col-motivo      { width: 13%; }
+    .fin-table col.col-accion      { width: 10%; }
+
+    .fin-text-ellipsis {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
-    table.contab tbody tr:last-child td { border-bottom: none; }
-    table.contab tbody tr:hover { background: #fafbfc; }
-    .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .fin-money {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+    .fin-money-soft {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .fin-cell-center { text-align: center; }
     .muted { color: var(--muted); }
 
     .badge {
@@ -346,18 +377,26 @@
         <div id="estado-error" class="state error" style="display:none;">Error al cargar información.</div>
 
         <div class="table-wrap" id="tabla-wrap" style="display:none;">
-          <table class="contab">
+          <table class="fin-table">
+            <colgroup>
+              <col class="col-proyecto" />
+              <col class="col-cliente" />
+              <col class="col-fecha" />
+              <col class="col-monto" />
+              <col class="col-monto" />
+              <col class="col-diferencia" />
+              <col class="col-motivo" />
+              <col class="col-accion" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Proyecto</th>
                 <th>Cliente</th>
                 <th>Fecha venta</th>
-                <th>Fecha cotización</th>
-                <th class="num">Cotizado</th>
-                <th class="num">Cobrado</th>
-                <th class="num">Diferencia</th>
-                <th>Motivo variación</th>
-                <th>Estado</th>
+                <th class="fin-money">Cotizado</th>
+                <th class="fin-money">Cobrado</th>
+                <th class="fin-money">Diferencia</th>
+                <th>Motivo</th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -429,28 +468,47 @@
         .replace(/'/g, '&#39;');
     }
 
+    function parseMaybeJson(value) {
+      if (value == null) return null;
+      if (typeof value === 'object') return value;
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          try { return JSON.parse(trimmed); } catch (_) { return value; }
+        }
+        return value;
+      }
+      return value;
+    }
+
     function parseData(c) {
       // 'data' puede venir como objeto o como JSON string
-      const raw = c?.data;
-      if (!raw) return {};
-      if (typeof raw === 'object') return raw;
-      if (typeof raw === 'string') {
-        try { return JSON.parse(raw) || {}; } catch (_) { return {}; }
-      }
-      return {};
+      const parsed = parseMaybeJson(c?.data);
+      return (parsed && typeof parsed === 'object') ? parsed : {};
     }
 
     // -------- Helpers de negocio --------
     function getProjectName(reg) {
       const v = reg?.venta || {};
       const c = reg?.cotizacion || {};
-      const data = parseData(c);
+      const dataC = parseData(c);
+      const dataV = parseData(v);
 
-      if (v.proyecto && String(v.proyecto).trim()) return String(v.proyecto).trim();
-      const fromData = data?.cliente?.nombre_proyecto;
-      if (fromData && String(fromData).trim()) return String(fromData).trim();
-      if (c.project_key && String(c.project_key).trim()) return String(c.project_key).trim();
-      if (c.numero && String(c.numero).trim()) return String(c.numero).trim();
+      const candidatos = [
+        v.proyecto,
+        dataC?.cliente?.nombre_proyecto,
+        dataV?.cliente?.nombre_proyecto,
+        c.project_key,
+        v.project_key,
+        c.numero,
+        v.numero,
+      ];
+      for (const cand of candidatos) {
+        if (cand == null) continue;
+        if (typeof cand === 'object') continue; // nunca renderizar objeto crudo
+        const s = String(cand).trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
+      }
       return 'Sin nombre';
     }
 
@@ -458,18 +516,35 @@
       const v = reg?.venta || {};
       const c = reg?.cotizacion || {};
 
-      if (v.cliente && String(v.cliente).trim()) return String(v.cliente).trim();
+      // 1) ventas.cliente (puede ser string plano o JSON string u objeto)
+      const cliente = parseMaybeJson(v.cliente);
+      if (cliente && typeof cliente === 'object') {
+        const n = cliente.nombre || cliente.name || cliente.cliente;
+        if (n && String(n).trim()) return String(n).trim();
+      } else if (typeof cliente === 'string') {
+        const s = cliente.trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
+      }
 
-      const cliente = c.cliente;
-      if (cliente && typeof cliente === 'object' && cliente.nombre) {
-        return String(cliente.nombre).trim();
+      // 2) cotizaciones.cliente (puede ser string plano o JSON string u objeto)
+      const cotCliente = parseMaybeJson(c.cliente);
+      if (cotCliente && typeof cotCliente === 'object') {
+        const n = cotCliente.nombre || cotCliente.name || cotCliente.cliente;
+        if (n && String(n).trim()) return String(n).trim();
+      } else if (typeof cotCliente === 'string') {
+        const s = cotCliente.trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
       }
-      if (typeof cliente === 'string' && cliente.trim()) {
-        return cliente.trim();
+
+      // 3) cotizacion.data.cliente / venta.data.cliente
+      const dataC = parseData(c);
+      const dataV = parseData(v);
+      const dataCliente = dataC?.cliente || dataV?.cliente;
+      if (dataCliente && typeof dataCliente === 'object') {
+        const n = dataCliente.nombre || dataCliente.name || dataCliente.cliente;
+        if (n && String(n).trim()) return String(n).trim();
       }
-      const data = parseData(c);
-      const fromData = data?.cliente?.nombre;
-      if (fromData && String(fromData).trim()) return String(fromData).trim();
+
       return 'Sin cliente';
     }
 
@@ -902,39 +977,31 @@
         const fechaVentaRaw = getFechaVenta(reg);
         const fechaVentaCell = fechaVentaRaw
           ? escapeHtml(formatFechaCL(fechaVentaRaw))
-          : '<span class="badge badge-warn">Sin fecha de venta</span>';
-
-        const fechaCotRaw = getFechaCotizacion(reg);
-        const fechaCotCell = fechaCotRaw
-          ? escapeHtml(formatFechaCL(fechaCotRaw))
-          : '<span class="muted">—</span>';
+          : '<span class="badge badge-warn">Sin fecha</span>';
 
         const cotizado = getMontoCotizado(reg);
         const cobrado  = getMontoCobrado(reg);
         const diff     = cobrado - cotizado;
 
         const motivo = getMotivoVariacion(reg);
-        const motivoCell = motivo ? escapeHtml(motivo) : '<span class="muted">—</span>';
-
-        const estado = getEstado(reg);
-        const estadoCell = estadoBadge(estado, reg.venta == null);
+        const motivoCell = motivo
+          ? `<span class="fin-text-ellipsis" title="${escapeHtml(motivo)}">${escapeHtml(motivo)}</span>`
+          : '<span class="muted">—</span>';
 
         const cotId = reg?.cotizacion?.id || reg?.cotizacion_id;
         const accionCell = cotId
           ? `<a class="link-action" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/cotizaciones/detalle.html?id=${encodeURIComponent(cotId)}">Ver cotización</a>`
-          : '<span class="muted">—</span>';
+          : '<span class="muted">Sin link</span>';
 
         return `
           <tr>
-            <td>${proyecto}</td>
-            <td>${cliente}</td>
+            <td><span class="fin-text-ellipsis" title="${proyecto}">${proyecto}</span></td>
+            <td><span class="fin-text-ellipsis" title="${cliente}">${cliente}</span></td>
             <td>${fechaVentaCell}</td>
-            <td>${fechaCotCell}</td>
-            <td class="num">${escapeHtml(formatCLP(cotizado))}</td>
-            <td class="num"><strong>${escapeHtml(formatCLP(cobrado))}</strong></td>
-            <td class="num">${diferenciaBadge(diff)}</td>
+            <td class="fin-money-soft">${escapeHtml(formatCLP(cotizado))}</td>
+            <td class="fin-money">${escapeHtml(formatCLP(cobrado))}</td>
+            <td class="fin-money">${diferenciaBadge(diff)}</td>
             <td>${motivoCell}</td>
-            <td>${estadoCell}</td>
             <td>${accionCell}</td>
           </tr>
         `;
