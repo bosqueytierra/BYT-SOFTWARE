@@ -309,6 +309,25 @@
       </div>
     </div>
 
+    <!-- Modal de fecha de venta (al aprobar / agregar manual) -->
+    <div class="modal-backdrop" id="fecha-venta-modal" aria-hidden="true">
+      <div class="modal">
+        <h3 style="margin:0 0 8px;">Fecha de venta</h3>
+        <p style="margin:0 0 12px; color: var(--muted);">Esta fecha será usada por Finanzas como fecha real de venta.</p>
+        <div style="font-size:13px; color:var(--text); margin-bottom:12px; line-height:1.6;">
+          <div><strong>Proyecto:</strong> <span id="fv-proyecto">-</span></div>
+          <div><strong>Cliente:</strong> <span id="fv-cliente">-</span></div>
+        </div>
+        <label for="fv-fecha">Fecha de venta</label>
+        <input type="date" id="fv-fecha">
+        <div id="fv-error" style="color:#b3261e; font-size:13px; margin-top:6px; display:none;">Selecciona una fecha válida</div>
+        <div class="modal-actions" style="margin-top:14px;">
+          <button class="btn btn-secondary" id="fv-cancel" type="button">Cancelar</button>
+          <button class="btn btn-primary" id="fv-confirm" type="button">Confirmar aprobación</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal de confirmación para cambio de estado (custom, 10s) -->
     <div class="modal-backdrop" id="status-confirm-modal" aria-hidden="true">
       <div class="modal">
@@ -501,6 +520,22 @@
 
         const estado = c.estado || 'borrador';
 
+        // Fecha de venta (fecha_aprobacion) — sólo relevante para aprobadas
+        let fechaVentaInfoHtml = '';
+        let faltaFechaHtml = '';
+        if (estado === 'aprobada') {
+          if (c.fecha_aprobacion) {
+            const fv = new Date(c.fecha_aprobacion).toLocaleDateString('es-CL');
+            fechaVentaInfoHtml = ` &nbsp;|&nbsp; <strong>Fecha venta:</strong> ${escapeHtml(fv)}`;
+          } else {
+            faltaFechaHtml = `
+              <p class="quote-meta" style="color:#b35900; font-weight:600; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                <span>⚠ Falta fecha de venta</span>
+                <button class="btn btn-secondary btn-add-fecha-venta" data-id="${c.id}" style="padding:4px 10px; font-size:12px;" type="button">Agregar fecha de venta</button>
+              </p>`;
+          }
+        }
+
         return `
           <div class="card quote-card cotizacion-item" data-id="${c.id}">
             <div class="quote-head">
@@ -508,9 +543,10 @@
                 <h4 class="quote-title">
                   <a href="detalle.html?id=${c.id}" style="color:inherit; text-decoration:none;">${escapeHtml(nombreProyecto)}</a>
                 </h4>
-                <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}</p>
+                <p class="quote-meta"><strong>Cliente:</strong> ${escapeHtml(clienteNombre)} &nbsp;|&nbsp; <strong>Fecha:</strong> ${fecha}${fechaVentaInfoHtml}</p>
                 <p class="quote-total">Neto: ${escapeHtml(subtotalFmt)} · IVA: ${escapeHtml(ivaFmt)} · Total: ${escapeHtml(totalFmt)}</p>
                 <p class="quote-meta"><strong>Partidas:</strong> ${escapeHtml(partidasTxt)}</p>
+                ${faltaFechaHtml}
               </div>
               <div>
                 <select class="quote-status estado-cotizacion" data-id="${c.id}">
@@ -544,6 +580,7 @@
       container.innerHTML = html;
       wireDeleteButtons();
       wireEstadoSelects();
+      wireAddFechaVentaButtons();
       mostrarEstado('data');
     }
 
@@ -673,7 +710,17 @@
         sel.addEventListener('change', () => {
           const prev = sel.dataset.prev || sel.value;
           const newStatus = sel.value;
-          openStatusModal(sel, sel.dataset.id, prev, newStatus);
+          if (newStatus === 'aprobada') {
+            // Para aprobada, pedir fecha de venta antes de confirmar el cambio.
+            openFechaVentaModal({
+              id: sel.dataset.id,
+              mode: 'aprobacion',
+              selectEl: sel,
+              prevStatus: prev
+            });
+          } else {
+            openStatusModal(sel, sel.dataset.id, prev, newStatus);
+          }
         });
       });
     }
@@ -807,6 +854,260 @@
         window.utils?.mostrarNotificacion?.('No se pudo actualizar el estado: ' + (err.message || err), 'error');
         selectEl.value = prevEstado;
         selectEl.dataset.prev = prevEstado;
+        throw err;
+      }
+    }
+
+    // ===== Fecha de venta (CAMBIOS 1, 2, 5, 6, 7, 8) =====
+
+    function wireAddFechaVentaButtons() {
+      document.querySelectorAll('.btn-add-fecha-venta[data-id]').forEach(btn => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          openFechaVentaModal({ id: btn.dataset.id, mode: 'manual' });
+        };
+      });
+    }
+
+    function _formatDateLocalYMD(d) {
+      // Devuelve YYYY-MM-DD en hora local (sin shift por UTC)
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function openFechaVentaModal({ id, mode, selectEl = null, prevStatus = null }) {
+      const backdrop = document.getElementById('fecha-venta-modal');
+      const inputFecha = document.getElementById('fv-fecha');
+      const errorEl = document.getElementById('fv-error');
+      const cancelBtn = document.getElementById('fv-cancel');
+      const confirmBtn = document.getElementById('fv-confirm');
+      const proyectoEl = document.getElementById('fv-proyecto');
+      const clienteEl = document.getElementById('fv-cliente');
+
+      const cot = cotizacionesData.find(c => c.id === id);
+      const nombreProyecto = cot?.nombre_proyecto || cot?.project_key || cot?.data?.cliente?.nombre_proyecto || cot?.data?.cliente?.nombre || 'Sin nombre';
+      const clienteNombre = getClienteNombre(cot?.cliente || cot?.data?.cliente);
+
+      proyectoEl.textContent = nombreProyecto;
+      clienteEl.textContent = clienteNombre;
+
+      // Si la cotización ya tenía fecha_aprobacion, precargarla; si no, hoy.
+      let fechaDefault;
+      if (cot?.fecha_aprobacion) {
+        const d = new Date(cot.fecha_aprobacion);
+        fechaDefault = isNaN(d.getTime()) ? _formatDateLocalYMD(new Date()) : _formatDateLocalYMD(d);
+      } else {
+        fechaDefault = _formatDateLocalYMD(new Date());
+      }
+      inputFecha.value = fechaDefault;
+      errorEl.style.display = 'none';
+
+      confirmBtn.textContent = mode === 'aprobacion' ? 'Confirmar aprobación' : 'Guardar fecha';
+      confirmBtn.disabled = false;
+      cancelBtn.disabled = false;
+
+      const close = () => {
+        backdrop.style.display = 'none';
+        backdrop.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        // Limpiar handlers para evitar acumulación
+        cancelBtn.onclick = null;
+        confirmBtn.onclick = null;
+        backdrop.onclick = null;
+        window.removeEventListener('keydown', escHandler);
+      };
+
+      const cancelar = () => {
+        // Si veníamos del select de aprobada, restaurar al estado anterior.
+        if (mode === 'aprobacion' && selectEl && prevStatus != null) {
+          selectEl.value = prevStatus;
+          selectEl.dataset.prev = prevStatus;
+        }
+        close();
+      };
+
+      const escHandler = (e) => {
+        if (e.key === 'Escape' && backdrop.style.display === 'flex') cancelar();
+      };
+
+      cancelBtn.onclick = cancelar;
+      backdrop.onclick = (e) => { if (e.target === backdrop) cancelar(); };
+      window.addEventListener('keydown', escHandler);
+
+      confirmBtn.onclick = async () => {
+        const fechaInput = inputFecha.value;
+        if (!fechaInput) {
+          errorEl.textContent = 'Selecciona una fecha válida';
+          errorEl.style.display = 'block';
+          return;
+        }
+        // Mediodía local para evitar desfases de zona horaria al guardar como timestamptz
+        const fechaVentaISO = new Date(`${fechaInput}T12:00:00`).toISOString();
+        if (isNaN(new Date(fechaVentaISO).getTime())) {
+          errorEl.textContent = 'Fecha inválida';
+          errorEl.style.display = 'block';
+          return;
+        }
+        errorEl.style.display = 'none';
+        confirmBtn.disabled = true;
+        cancelBtn.disabled = true;
+        try {
+          if (mode === 'aprobacion') {
+            await aprobarConFechaVenta({ id, fechaVentaISO, selectEl, prevStatus });
+          } else {
+            await guardarFechaVentaManual({ id, fechaVentaISO });
+          }
+          close();
+        } catch (err) {
+          // El error ya fue notificado dentro de cada flujo; reactivar botones por si el usuario quiere reintentar.
+          confirmBtn.disabled = false;
+          cancelBtn.disabled = false;
+          console.error('Error en confirmación de fecha de venta:', err);
+        }
+      };
+
+      backdrop.style.display = 'flex';
+      backdrop.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      // Foco en el input para mejor UX
+      try { inputFecha.focus(); } catch (_) {}
+    }
+
+    async function _updateFechaAprobacionDirect(id, fechaVentaISO) {
+      // Update directo a Supabase: cotizaciones.fecha_aprobacion
+      if (!window.supabase || typeof window.supabase.from !== 'function') {
+        throw new Error('Supabase no disponible para actualizar fecha_aprobacion');
+      }
+      const { error } = await window.supabase
+        .from('cotizaciones')
+        .update({ fecha_aprobacion: fechaVentaISO })
+        .eq('id', id);
+      if (error) throw new Error(error.message || 'Error al guardar fecha_aprobacion');
+    }
+
+    async function _updateFechaVentaPorCotizacion(id, fechaVentaISO) {
+      // Update directo a Supabase: ventas.fecha_venta para todas las ventas de la cotización
+      if (!window.supabase || typeof window.supabase.from !== 'function') {
+        throw new Error('Supabase no disponible para actualizar fecha_venta');
+      }
+      const { error } = await window.supabase
+        .from('ventas')
+        .update({ fecha_venta: fechaVentaISO, updated_at: new Date().toISOString() })
+        .eq('cotizacion_id', id);
+      if (error) throw new Error(error.message || 'Error al guardar fecha_venta');
+    }
+
+    async function aprobarConFechaVenta({ id, fechaVentaISO, selectEl, prevStatus }) {
+      const nuevoEstado = 'aprobada';
+      const prevEstadoMem = cotizacionesData.find(c => c.id === id)?.estado || prevStatus || 'borrador';
+      if (selectEl) selectEl.disabled = true;
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+
+        // 1) Estado aprobada (función existente — no romper)
+        const res = await window.supabaseClient.actualizarEstadoCotizacion(id, nuevoEstado);
+        if (!res?.success) throw new Error(res?.error || 'No se pudo actualizar el estado');
+
+        // 2) fecha_aprobacion en cotizaciones (update directo)
+        await _updateFechaAprobacionDirect(id, fechaVentaISO);
+
+        // Actualizar estado y fecha en memoria
+        cotizacionesData = cotizacionesData.map(c =>
+          c.id === id ? { ...c, estado: nuevoEstado, fecha_aprobacion: fechaVentaISO } : c
+        );
+
+        const cot = cotizacionesData.find(c => c.id === id);
+        if (!cot || (!cot.partidas && !cot.data?.partidas)) {
+          // Igual que el flujo previo: si no hay partidas en memoria, no se puede vincular venta aquí.
+          console.warn('Cotización sin partidas en memoria, salteando vinculación de venta', cot);
+          window.utils?.mostrarNotificacion?.('Estado actualizado. Recarga la lista para gestionar la venta.', 'warning');
+          if (selectEl) {
+            selectEl.value = nuevoEstado;
+            selectEl.dataset.prev = nuevoEstado;
+          }
+          filtrarCotizaciones();
+          return;
+        }
+
+        // 3) Crear/vincular venta (igual que hoy)
+        const v = await window.supabaseClient.crearOVincularVentaDesdeCotizacion(cot, 'en_ejecucion');
+        if (!v?.success) throw new Error(v?.error || 'No se pudo crear/vincular la venta');
+
+        // 4) ventas.fecha_venta = misma fecha
+        try {
+          await _updateFechaVentaPorCotizacion(id, fechaVentaISO);
+        } catch (e) {
+          // No abortar la aprobación por error en fecha_venta; sí notificar.
+          console.error('Error actualizando ventas.fecha_venta:', e);
+          window.utils?.mostrarNotificacion?.('Aprobación guardada, pero falló la fecha de venta en ventas: ' + (e.message || e), 'warning');
+        }
+
+        // Bloque de compras (no crítico, igual que hoy)
+        try {
+          await window.supabaseClient.crearBloqueComprasDesdeCotizacion(cot);
+        } catch (e) {
+          console.warn('No se pudo crear bloque de compras', e);
+        }
+
+        if (selectEl) {
+          selectEl.value = nuevoEstado;
+          selectEl.dataset.prev = nuevoEstado;
+        }
+        filtrarCotizaciones();
+        window.utils?.mostrarNotificacion?.('Cotización aprobada con fecha de venta', 'success');
+      } catch (err) {
+        console.error('aprobarConFechaVenta error', err);
+        window.utils?.mostrarNotificacion?.('No se pudo aprobar la cotización: ' + (err.message || err), 'error');
+        if (selectEl) {
+          selectEl.value = prevEstadoMem;
+          selectEl.dataset.prev = prevEstadoMem;
+        }
+        throw err;
+      } finally {
+        if (selectEl) selectEl.disabled = false;
+      }
+    }
+
+    async function guardarFechaVentaManual({ id, fechaVentaISO }) {
+      try {
+        if (window.supabaseClient?.init) await window.supabaseClient.init();
+
+        // 1) Update fecha_aprobacion
+        await _updateFechaAprobacionDirect(id, fechaVentaISO);
+
+        // 2) Buscar venta vinculada por cotizacion_id
+        let ventasExistentes = [];
+        try {
+          const { data, error } = await window.supabase
+            .from('ventas')
+            .select('id')
+            .eq('cotizacion_id', id);
+          if (error) throw error;
+          ventasExistentes = data || [];
+        } catch (e) {
+          console.warn('No se pudo verificar ventas vinculadas:', e);
+        }
+
+        if (ventasExistentes.length > 0) {
+          // 3) Si existe, actualizar ventas.fecha_venta
+          await _updateFechaVentaPorCotizacion(id, fechaVentaISO);
+        } else {
+          // 4) Si no existe, NO crear venta automáticamente desde este botón.
+          console.warn(`No hay venta vinculada para cotizacion_id=${id}; sólo se guardó fecha_aprobacion.`);
+        }
+
+        // Actualizar memoria
+        cotizacionesData = cotizacionesData.map(c =>
+          c.id === id ? { ...c, fecha_aprobacion: fechaVentaISO } : c
+        );
+
+        filtrarCotizaciones();
+        window.utils?.mostrarNotificacion?.('Fecha de venta guardada', 'success');
+      } catch (err) {
+        console.error('guardarFechaVentaManual error', err);
+        window.utils?.mostrarNotificacion?.('No se pudo guardar la fecha de venta: ' + (err.message || err), 'error');
         throw err;
       }
     }
