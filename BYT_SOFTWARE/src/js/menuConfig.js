@@ -16,7 +16,18 @@ window.BYT_MENU = [
       { label: "Dashboard ventas", href: "../ventas/dashboard.html" }
     ]
   },
-  { label: "Finanzas", icon: "card", href: "" },
+  {
+    label: "Finanzas",
+    icon: "card",
+    children: [
+      { label: "Contabilidad", href: "../finanzas/contabilidad.html" },
+      { label: "Pagos clientes", href: "../finanzas/pagos_clientes.html" },
+      { label: "Estado resultados proyectos", href: "../finanzas/proyectos.html" },
+      { label: "RR.HH. y sueldos", href: "../finanzas/rrhh_sueldos.html" },
+      { label: "Costos operacionales", href: "../finanzas/costos_operacionales.html" },
+      { label: "Configuración", href: "../finanzas/configuracion.html" }
+    ]
+  },
   {
     label: "Proyectos",
     icon: "folder",
