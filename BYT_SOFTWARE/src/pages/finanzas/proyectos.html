@@ -147,7 +147,7 @@
       table-layout: fixed;
       font-size: 13px;
       background: #fff;
-      min-width: 1280px;
+      min-width: 1180px;
     }
     .fin-table th,
     .fin-table td {
@@ -170,7 +170,7 @@
     .fin-table tbody tr:last-child td { border-bottom: none; }
     .fin-table tbody tr:hover { background: #fafbfc; }
 
-    /* Column widths (13 columnas) */
+    /* Column widths (11 columnas) */
     .fin-table col.col-proyecto    { width: 13%; }
     .fin-table col.col-cliente     { width: 10%; }
     .fin-table col.col-fecha       { width: 8%;  }
@@ -300,10 +300,13 @@
             <label for="filtro-estado-resultado">Estado resultado</label>
             <select id="filtro-estado-resultado">
               <option value="todos">Todos</option>
-              <option value="ganancia">Ganancia</option>
-              <option value="perdida">Pérdida</option>
+              <option value="ganancia_real">Ganancia real</option>
+              <option value="perdida_real">Pérdida real</option>
+              <option value="rent_alta">Rentabilidad alta</option>
+              <option value="rent_media">Rentabilidad media</option>
+              <option value="rent_baja">Rentabilidad baja</option>
               <option value="sin_compras">Sin compras</option>
-              <option value="compra_pendiente">Compra pendiente</option>
+              <option value="sin_cobro">Sin cobro</option>
             </select>
           </div>
           <div>
@@ -312,9 +315,11 @@
               <option value="fecha_venta_desc">Fecha venta más reciente</option>
               <option value="fecha_entrega_asc">Fecha entrega más próxima</option>
               <option value="cobrado_desc">Cobrado mayor a menor</option>
-              <option value="resultado_desc">Resultado mayor a menor</option>
-              <option value="resultado_asc">Resultado menor a mayor</option>
-              <option value="compras_desc">Compras mayor a menor</option>
+              <option value="compras_reales_desc">Compras reales mayor a menor</option>
+              <option value="rent_real_desc">Rentabilidad real mayor a menor</option>
+              <option value="rent_real_asc">Rentabilidad real menor a mayor</option>
+              <option value="resultado_real_desc">Resultado real mayor a menor</option>
+              <option value="resultado_real_asc">Resultado real menor a mayor</option>
             </select>
           </div>
         </div>
@@ -328,28 +333,32 @@
             <div class="kpi-value" id="kpi-cobrado">$0</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Total cotizado</div>
-            <div class="kpi-value" id="kpi-cotizado">$0</div>
+            <div class="kpi-label">Compras proyectadas</div>
+            <div class="kpi-value" id="kpi-compras-proyectadas">$0</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Total compras</div>
-            <div class="kpi-value" id="kpi-compras">$0</div>
+            <div class="kpi-label">Compras reales</div>
+            <div class="kpi-value" id="kpi-compras-reales">$0</div>
           </div>
-          <div class="kpi" id="kpi-resultado-card">
-            <div class="kpi-label">Resultado total</div>
-            <div class="kpi-value" id="kpi-resultado">$0</div>
+          <div class="kpi" id="kpi-resultado-esperado-card">
+            <div class="kpi-label">Resultado esperado</div>
+            <div class="kpi-value" id="kpi-resultado-esperado">$0</div>
           </div>
-          <div class="kpi kpi-pos">
-            <div class="kpi-label">Proyectos con ganancia</div>
-            <div class="kpi-value" id="kpi-ganancia">0</div>
+          <div class="kpi" id="kpi-resultado-real-card">
+            <div class="kpi-label">Resultado real</div>
+            <div class="kpi-value" id="kpi-resultado-real">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Rent. esperada promedio</div>
+            <div class="kpi-value" id="kpi-rent-esperada">—</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Rent. real promedio</div>
+            <div class="kpi-value" id="kpi-rent-real">—</div>
           </div>
           <div class="kpi kpi-neg">
-            <div class="kpi-label">Proyectos con pérdida</div>
-            <div class="kpi-value" id="kpi-perdida">0</div>
-          </div>
-          <div class="kpi kpi-warn">
-            <div class="kpi-label">Compras pendientes</div>
-            <div class="kpi-value" id="kpi-pendientes">0</div>
+            <div class="kpi-label">Proyectos con pérdida real</div>
+            <div class="kpi-value" id="kpi-perdida-real">0</div>
           </div>
         </div>
       </div>
@@ -371,9 +380,7 @@
               <col class="col-monto" />
               <col class="col-monto" />
               <col class="col-monto" />
-              <col class="col-monto" />
-              <col class="col-monto" />
-              <col class="col-monto" />
+              <col class="col-resultado" />
               <col class="col-resultado" />
               <col class="col-estado" />
               <col class="col-accion" />
@@ -384,13 +391,11 @@
                 <th>Cliente</th>
                 <th>Fecha venta</th>
                 <th>Fecha entrega</th>
-                <th class="fin-money">Cotizado</th>
                 <th class="fin-money">Cobrado</th>
-                <th class="fin-money">Comprado</th>
-                <th class="fin-money">Stock</th>
-                <th class="fin-money">Por comprar</th>
-                <th class="fin-money">Total compras</th>
-                <th class="fin-money">Resultado</th>
+                <th class="fin-money">Compras proyectadas</th>
+                <th class="fin-money">Compras reales</th>
+                <th class="fin-money">Rent. esperada</th>
+                <th class="fin-money">Rent. real</th>
                 <th>Estado</th>
                 <th>Acción</th>
               </tr>
@@ -415,8 +420,9 @@
     //
     // Cruza:
     //   - ventas (cobrado real, agrupadas por cotizacion_id para no duplicar)
-    //   - cotizaciones aprobadas (complemento de nombre/cliente/fechas/totales)
-    //   - purchase_blocks + purchase_lines (compras por proyecto)
+    //   - cotizaciones aprobadas (complemento de nombre/cliente/fechas/totales
+    //     y origen de "Compras proyectadas" = Materiales Base + Traspasados Base)
+    //   - purchase_blocks + purchase_lines (compras reales por proyecto)
     //
     // Relación compras <-> proyecto:
     //   purchase_blocks.proyecto_id === cotizaciones.id (=== ventas.cotizacion_id)
@@ -428,11 +434,13 @@
     //   - 'porcomprar' -> total por comprar
     //
     // Reglas financieras:
-    //   cotizado            = ventas.total_cotizado || cotizaciones.total
-    //   cobrado             = ventas.total_venta    || ventas.total_cotizado || cotizaciones.total
-    //   compras_total       = comprado + stock + por_comprar
-    //   resultado           = cobrado - compras_total
-    //   diferencia_comercial= cobrado - cotizado
+    //   cobrado              = ventas.total_venta || ventas.total_cotizado || cotizaciones.total
+    //   comprasProyectadas   = Materiales Base + Traspasados Base (de la cotización)
+    //   comprasReales        = comprado + stock + por_comprar (de purchase_lines)
+    //   resultadoEsperado    = cobrado - comprasProyectadas
+    //   resultadoReal        = cobrado - comprasReales
+    //   rentEsperada (%)     = (cobrado - comprasProyectadas) / cobrado * 100  (— si cobrado=0)
+    //   rentReal (%)         = (cobrado - comprasReales)      / cobrado * 100  (— si cobrado=0)
     //
     // Fechas:
     //   fecha_venta   = ventas.fecha_venta || cotizaciones.fecha_aprobacion
@@ -556,15 +564,6 @@
       return reg?.venta?.fecha_entrega_limite || '';
     }
 
-    function getMontoCotizado(reg) {
-      const v = reg?.venta || {};
-      const c = reg?.cotizacion || {};
-      const tc = Number(v.total_cotizado);
-      if (isFinite(tc) && tc > 0) return tc;
-      const tcot = Number(c.total);
-      if (isFinite(tcot) && tcot > 0) return tcot;
-      return 0;
-    }
     function getMontoCobrado(reg) {
       const v = reg?.venta || {};
       const c = reg?.cotizacion || {};
@@ -577,6 +576,160 @@
       const tcot = Number(c.total);
       if (isFinite(tcot) && tcot > 0) return tcot;
       return 0;
+    }
+
+    // -------- Compras proyectadas (desde la cotización) --------
+    // Compras proyectadas = "Materiales Base" + "Traspasados Base"
+    // Toma los valores guardados en la cotización si existen con cualquiera de los
+    // alias conocidos; si no, los recalcula desde la estructura real de cotizaciones.data
+    // (data.materiales, data.valoresTraspasados, data.traspasosExtras y extras de materiales).
+    // Devuelve { total, materialesBase, traspasadosBase, fuente } donde fuente puede ser
+    // 'campo' (vino directo de un campo guardado) | 'calculado' | 'sin_dato'.
+    function _toFiniteNumber(value) {
+      if (value == null || value === '') return null;
+      const n = Number(value);
+      if (!isFinite(n)) return null;
+      return n;
+    }
+    function _pickNumber(...candidates) {
+      for (const c of candidates) {
+        const n = _toFiniteNumber(c);
+        if (n != null) return n;
+      }
+      return null;
+    }
+    function _findInContainers(containers, keys) {
+      for (const cont of containers) {
+        if (!cont || typeof cont !== 'object') continue;
+        for (const k of keys) {
+          if (cont[k] != null) {
+            const n = _toFiniteNumber(cont[k]);
+            if (n != null) return n;
+          }
+        }
+      }
+      return null;
+    }
+    function _calcMaterialesBaseFromData(data) {
+      let total = 0;
+      let encontrado = false;
+      const mats = data?.materiales;
+      if (mats && typeof mats === 'object') {
+        Object.keys(mats).forEach(cat => {
+          const grupo = mats[cat];
+          if (!grupo || typeof grupo !== 'object') return;
+          Object.values(grupo).forEach(mat => {
+            const cantidad = Number(mat?.cantidad || 0);
+            const precio   = Number(mat?.precio   || 0);
+            if (isFinite(cantidad) && isFinite(precio)) {
+              total += cantidad * precio;
+              encontrado = true;
+            }
+          });
+        });
+      }
+      // Extras de materiales (mismas claves que detalle.html)
+      const extraKeys = [
+        'quincalleriaExtras','tablerosExtras','tapacantosExtras',
+        'maquinariaExtras','elementosExtras','herramientasExtras',
+        'transportesExtras','manoObraExtras'
+      ];
+      extraKeys.forEach(k => {
+        const arr = data?.[k];
+        if (!Array.isArray(arr)) return;
+        arr.forEach(x => {
+          const t = Number(x?.total);
+          if (isFinite(t) && t !== 0) { total += t; encontrado = true; return; }
+          const cant = Number(x?.cantidad || 0);
+          const vu   = Number(x?.valor_unitario != null ? x.valor_unitario : x?.precio || 0);
+          if (isFinite(cant) && isFinite(vu) && (cant !== 0 || vu !== 0)) {
+            total += cant * vu;
+            encontrado = true;
+          }
+        });
+      });
+      return encontrado ? total : null;
+    }
+    function _calcTraspasadosBaseFromData(data) {
+      let total = 0;
+      let encontrado = false;
+      const vals = data?.valoresTraspasados;
+      if (vals && typeof vals === 'object') {
+        Object.keys(vals).forEach(k => {
+          const cat = vals[k];
+          const matsObj = cat?.materiales;
+          if (!matsObj || typeof matsObj !== 'object') return;
+          Object.values(matsObj).forEach(m => {
+            const cantidad = Number(m?.cantidad || 0);
+            const precio   = Number(m?.precio   || 0);
+            if (isFinite(cantidad) && isFinite(precio)) {
+              total += cantidad * precio;
+              encontrado = true;
+            }
+          });
+        });
+      }
+      const extras = data?.traspasosExtras;
+      if (Array.isArray(extras)) {
+        extras.forEach(x => {
+          const t = Number(x?.total);
+          if (isFinite(t) && t !== 0) { total += t; encontrado = true; return; }
+          const cant = Number(x?.cantidad || 0);
+          const precio = Number(x?.precio || 0);
+          if (isFinite(cant) && isFinite(precio) && (cant !== 0 || precio !== 0)) {
+            total += cant * precio;
+            encontrado = true;
+          }
+        });
+      }
+      return encontrado ? total : null;
+    }
+    function getComprasProyectadas(cotizacion) {
+      if (!cotizacion || typeof cotizacion !== 'object') {
+        return { total: 0, materialesBase: 0, traspasadosBase: 0, fuente: 'sin_dato' };
+      }
+      const data = parseData(cotizacion);
+      const resumen = (data && typeof data.resumen === 'object') ? data.resumen : null;
+      const totales = (data && typeof data.totales === 'object') ? data.totales : null;
+
+      const matKeys = [
+        'materiales_base','total_materiales_base',
+        'materialesBase','totalMaterialesBase',
+        'totalMateriales','total_materiales'
+      ];
+      const trasKeys = [
+        'traspasados_base','total_traspasados_base',
+        'traspasadosBase','totalTraspasadosBase',
+        'totalTraspasosBase','total_traspasos_base',
+        'totalTraspasos','total_traspasos'
+      ];
+      const containers = [cotizacion, data, resumen, totales];
+
+      let materialesBase = _findInContainers(containers, matKeys);
+      let traspasadosBase = _findInContainers(containers, trasKeys);
+
+      let huboCampo = (materialesBase != null) || (traspasadosBase != null);
+
+      if (materialesBase == null) {
+        const calc = _calcMaterialesBaseFromData(data);
+        if (calc != null) materialesBase = calc;
+      }
+      if (traspasadosBase == null) {
+        const calc = _calcTraspasadosBaseFromData(data);
+        if (calc != null) traspasadosBase = calc;
+      }
+
+      if (materialesBase == null && traspasadosBase == null) {
+        return { total: 0, materialesBase: 0, traspasadosBase: 0, fuente: 'sin_dato' };
+      }
+      const mb = materialesBase || 0;
+      const tb = traspasadosBase || 0;
+      return {
+        total: mb + tb,
+        materialesBase: mb,
+        traspasadosBase: tb,
+        fuente: huboCampo ? 'campo' : 'calculado'
+      };
     }
 
     // -------- Compras --------
@@ -607,9 +760,15 @@
         if (!l) return;
         const proyectoId = blockToProyecto.get(l.block_id);
         if (proyectoId == null) return;
-        const cantidad = Number(l.cantidad);
-        const precio   = Number(l.precio_unit);
-        const lineTotal = (isFinite(cantidad) && isFinite(precio)) ? cantidad * precio : 0;
+        // Monto: row.total si existe, si no cantidad * precio_unit
+        let lineTotal = 0;
+        if (l.total != null && l.total !== '' && isFinite(Number(l.total))) {
+          lineTotal = Number(l.total);
+        } else {
+          const cantidad = Number(l.cantidad);
+          const precio   = Number(l.precio_unit);
+          lineTotal = (isFinite(cantidad) && isFinite(precio)) ? cantidad * precio : 0;
+        }
         if (lineTotal <= 0) return;
         const estado = normalizeEstadoCompra(l.estado_pago);
         const acc = ensure(proyectoId);
@@ -622,7 +781,7 @@
     }
 
     function getCompras(reg) {
-      // Agregado precalculado en el registro
+      // Compras reales agregadas (purchase_lines), precalculado en el registro.
       const c = reg?.compras || { comprado: 0, stock: 0, por_comprar: 0 };
       const comprado    = Number(c.comprado)    || 0;
       const stock       = Number(c.stock)       || 0;
@@ -631,16 +790,28 @@
       return { comprado, stock, por_comprar, total };
     }
 
-    function getResultado(reg) {
+    function getComprasReales(reg)      { return getCompras(reg).total; }
+    function getResultadoEsperado(reg)  { return getMontoCobrado(reg) - getComprasProyectadas(reg?.cotizacion).total; }
+    function getResultadoReal(reg)      { return getMontoCobrado(reg) - getComprasReales(reg); }
+    function getRentEsperadaPct(reg) {
       const cobrado = getMontoCobrado(reg);
-      const compras = getCompras(reg).total;
-      return cobrado - compras;
+      if (!(cobrado > 0)) return null;
+      const cp = getComprasProyectadas(reg?.cotizacion).total;
+      return ((cobrado - cp) / cobrado) * 100;
+    }
+    function getRentRealPct(reg) {
+      const cobrado = getMontoCobrado(reg);
+      if (!(cobrado > 0)) return null;
+      const cr = getComprasReales(reg);
+      return ((cobrado - cr) / cobrado) * 100;
     }
 
     function getEstadoResultado(reg) {
-      const compras = getCompras(reg);
-      if (compras.total <= 0) return 'sin_compras';
-      const r = getResultado(reg);
+      const cobrado = getMontoCobrado(reg);
+      if (!(cobrado > 0)) return 'sin_cobro';
+      const reales = getComprasReales(reg);
+      if (reales <= 0) return 'sin_compras';
+      const r = cobrado - reales;
       if (r > 0) return 'ganancia';
       if (r < 0) return 'perdida';
       return 'cero';
@@ -701,7 +872,7 @@
             .select('id, proyecto_id'),
           client
             .from('purchase_lines')
-            .select('id, block_id, cantidad, precio_unit, estado_pago'),
+            .select('id, block_id, cantidad, precio_unit, total, estado_pago'),
         ]);
 
         if (ventasResp.error)       throw ventasResp.error;
@@ -864,18 +1035,33 @@
       };
       const matchEstadoResultado = (reg) => {
         if (estadoSel === 'todos') return true;
-        const compras = getCompras(reg);
-        const er = getEstadoResultado(reg);
-        if (estadoSel === 'ganancia')         return er === 'ganancia';
-        if (estadoSel === 'perdida')          return er === 'perdida';
-        if (estadoSel === 'sin_compras')      return er === 'sin_compras';
-        if (estadoSel === 'compra_pendiente') return compras.por_comprar > 0;
+        const cobrado = getMontoCobrado(reg);
+        const reales  = getComprasReales(reg);
+        const rentReal = getRentRealPct(reg);
+
+        if (estadoSel === 'sin_cobro')   return !(cobrado > 0);
+        if (estadoSel === 'sin_compras') return cobrado > 0 && reales <= 0;
+        if (estadoSel === 'ganancia_real') return cobrado > 0 && reales > 0 && (cobrado - reales) > 0;
+        if (estadoSel === 'perdida_real')  return cobrado > 0 && reales > 0 && (cobrado - reales) < 0;
+        if (estadoSel === 'rent_alta')   return rentReal != null && rentReal >= 30;
+        if (estadoSel === 'rent_media')  return rentReal != null && rentReal >= 15 && rentReal < 30;
+        if (estadoSel === 'rent_baja')   return rentReal != null && rentReal < 15;
         return true;
       };
 
       const filtrados = proyectosData.filter(reg =>
         matchPeriodo(reg) && matchTexto(reg) && matchEstadoResultado(reg)
       );
+
+      const cmpRentReal = (a, b, dir) => {
+        const ra = getRentRealPct(a);
+        const rb = getRentRealPct(b);
+        // Sin dato (rentabilidad null porque cobrado <= 0) siempre al final
+        if (ra == null && rb == null) return 0;
+        if (ra == null) return 1;
+        if (rb == null) return -1;
+        return dir === 'asc' ? ra - rb : rb - ra;
+      };
 
       filtrados.sort((a, b) => {
         switch (orden) {
@@ -884,10 +1070,12 @@
             const tb = getFechaEntrega(b) ? new Date(getFechaEntrega(b)).getTime() : Infinity;
             return ta - tb;
           }
-          case 'cobrado_desc':   return getMontoCobrado(b) - getMontoCobrado(a);
-          case 'resultado_desc': return getResultado(b)    - getResultado(a);
-          case 'resultado_asc':  return getResultado(a)    - getResultado(b);
-          case 'compras_desc':   return getCompras(b).total - getCompras(a).total;
+          case 'cobrado_desc':         return getMontoCobrado(b)     - getMontoCobrado(a);
+          case 'compras_reales_desc':  return getComprasReales(b)    - getComprasReales(a);
+          case 'rent_real_desc':       return cmpRentReal(a, b, 'desc');
+          case 'rent_real_asc':        return cmpRentReal(a, b, 'asc');
+          case 'resultado_real_desc':  return getResultadoReal(b)    - getResultadoReal(a);
+          case 'resultado_real_asc':   return getResultadoReal(a)    - getResultadoReal(b);
           case 'fecha_venta_desc':
           default: {
             const ta = getFechaVenta(a) ? new Date(getFechaVenta(a)).getTime() : -Infinity;
@@ -922,46 +1110,85 @@
     }
 
     // -------- KPIs --------
+    function formatPctOrDash(value) {
+      if (value == null || !isFinite(value)) return '—';
+      const rounded = Math.round(value * 10) / 10;
+      const sign = rounded > 0 ? '+' : (rounded < 0 ? '' : '');
+      return sign + rounded.toFixed(1) + '%';
+    }
+
     function renderKPIs(lista) {
-      let totalCobrado = 0, totalCotizado = 0, totalCompras = 0;
-      let conGanancia = 0, conPerdida = 0, conPendiente = 0;
+      let totalCobrado = 0;
+      let totalComprasProy = 0;
+      let totalComprasReales = 0;
+      let conPerdidaReal = 0;
+      let sumaRentEsp = 0, nRentEsp = 0;
+      let sumaRentReal = 0, nRentReal = 0;
 
       lista.forEach(reg => {
         const cobrado = getMontoCobrado(reg);
-        const cotizado = getMontoCotizado(reg);
-        const compras = getCompras(reg);
-        totalCobrado  += cobrado;
-        totalCotizado += cotizado;
-        totalCompras  += compras.total;
+        const cp = getComprasProyectadas(reg?.cotizacion).total;
+        const cr = getComprasReales(reg);
+        totalCobrado       += cobrado;
+        totalComprasProy   += cp;
+        totalComprasReales += cr;
 
-        const er = getEstadoResultado(reg);
-        if (er === 'ganancia') conGanancia++;
-        else if (er === 'perdida') conPerdida++;
-        if (compras.por_comprar > 0) conPendiente++;
+        if (cobrado > 0) {
+          const rEsp = ((cobrado - cp) / cobrado) * 100;
+          const rReal = ((cobrado - cr) / cobrado) * 100;
+          sumaRentEsp += rEsp;  nRentEsp++;
+          sumaRentReal += rReal; nRentReal++;
+          if ((cobrado - cr) < 0) conPerdidaReal++;
+        }
       });
 
-      const resultadoTotal = totalCobrado - totalCompras;
+      const resultadoEsperado = totalCobrado - totalComprasProy;
+      const resultadoReal     = totalCobrado - totalComprasReales;
+      const rentEspProm  = nRentEsp  > 0 ? (sumaRentEsp  / nRentEsp)  : null;
+      const rentRealProm = nRentReal > 0 ? (sumaRentReal / nRentReal) : null;
 
-      document.getElementById('kpi-cobrado').textContent   = formatCLP(totalCobrado);
-      document.getElementById('kpi-cotizado').textContent  = formatCLP(totalCotizado);
-      document.getElementById('kpi-compras').textContent   = formatCLP(totalCompras);
-      document.getElementById('kpi-resultado').textContent = formatCLPSigned(resultadoTotal);
-      document.getElementById('kpi-ganancia').textContent  = String(conGanancia);
-      document.getElementById('kpi-perdida').textContent   = String(conPerdida);
-      document.getElementById('kpi-pendientes').textContent = String(conPendiente);
+      document.getElementById('kpi-cobrado').textContent              = formatCLP(totalCobrado);
+      document.getElementById('kpi-compras-proyectadas').textContent  = formatCLP(totalComprasProy);
+      document.getElementById('kpi-compras-reales').textContent       = formatCLP(totalComprasReales);
+      document.getElementById('kpi-resultado-esperado').textContent   = formatCLPSigned(resultadoEsperado);
+      document.getElementById('kpi-resultado-real').textContent       = formatCLPSigned(resultadoReal);
+      document.getElementById('kpi-rent-esperada').textContent        = formatPctOrDash(rentEspProm);
+      document.getElementById('kpi-rent-real').textContent            = formatPctOrDash(rentRealProm);
+      document.getElementById('kpi-perdida-real').textContent         = String(conPerdidaReal);
 
-      const card = document.getElementById('kpi-resultado-card');
-      if (card) {
-        card.classList.remove('kpi-pos','kpi-neg');
-        if (resultadoTotal > 0) card.classList.add('kpi-pos');
-        else if (resultadoTotal < 0) card.classList.add('kpi-neg');
+      const cardEsp = document.getElementById('kpi-resultado-esperado-card');
+      if (cardEsp) {
+        cardEsp.classList.remove('kpi-pos','kpi-neg');
+        if (resultadoEsperado > 0) cardEsp.classList.add('kpi-pos');
+        else if (resultadoEsperado < 0) cardEsp.classList.add('kpi-neg');
+      }
+      const cardReal = document.getElementById('kpi-resultado-real-card');
+      if (cardReal) {
+        cardReal.classList.remove('kpi-pos','kpi-neg');
+        if (resultadoReal > 0) cardReal.classList.add('kpi-pos');
+        else if (resultadoReal < 0) cardReal.classList.add('kpi-neg');
       }
     }
 
     // -------- Tabla --------
-    function resultadoBadge(resultado, comprasTotal) {
-      if (comprasTotal <= 0) {
-        return `<span class="badge badge-soft" title="Sin compras registradas">${escapeHtml(formatCLP(resultado))}</span>`;
+    function rentBadge(pct) {
+      if (pct == null || !isFinite(pct)) {
+        return `<span class="badge badge-soft" title="Sin cobro">—</span>`;
+      }
+      const rounded = Math.round(pct * 10) / 10;
+      const txt = (rounded > 0 ? '+' : '') + rounded.toFixed(1) + '%';
+      let cls = 'badge-bad';
+      if (pct >= 30)      cls = 'badge-ok';
+      else if (pct >= 15) cls = 'badge-warn';
+      return `<span class="badge ${cls}">${escapeHtml(txt)}</span>`;
+    }
+
+    function resultadoRealBadge(resultado, cobrado, comprasReales) {
+      if (!(cobrado > 0)) {
+        return `<span class="badge badge-soft" title="Sin cobro">${escapeHtml(formatCLP(0))}</span>`;
+      }
+      if (comprasReales <= 0) {
+        return `<span class="badge badge-soft" title="Sin compras reales">${escapeHtml(formatCLP(resultado))}</span>`;
       }
       if (resultado > 0) return `<span class="badge badge-ok">${escapeHtml(formatCLPSigned(resultado))}</span>`;
       if (resultado < 0) return `<span class="badge badge-bad">${escapeHtml(formatCLPSigned(resultado))}</span>`;
@@ -969,19 +1196,34 @@
     }
 
     function estadoResultadoBadge(reg) {
-      const compras = getCompras(reg);
-      if (compras.total <= 0) return `<span class="badge badge-soft">Sin compras</span>`;
-      const r = getResultado(reg);
+      const cobrado = getMontoCobrado(reg);
+      if (!(cobrado > 0)) return `<span class="badge badge-soft">Sin cobro</span>`;
+      const reales = getComprasReales(reg);
+      if (reales <= 0) return `<span class="badge badge-soft">Sin compras</span>`;
+      const r = cobrado - reales;
       if (r > 0) return `<span class="badge badge-ok">Ganancia</span>`;
       if (r < 0) return `<span class="badge badge-bad">Pérdida</span>`;
       return `<span class="badge badge-soft">Equilibrio</span>`;
     }
 
-    function porComprarCell(valor) {
-      if (valor > 0) {
-        return `<span class="badge badge-warn">${escapeHtml(formatCLP(valor))}</span>`;
+    function comprasProyectadasCell(cp) {
+      if (cp.fuente === 'sin_dato') {
+        return `<span class="muted" title="No se encontraron Materiales Base ni Traspasados Base en la cotización">Sin dato</span>`;
       }
-      return `<span class="muted">${escapeHtml(formatCLP(0))}</span>`;
+      const tooltip = `Materiales Base: ${formatCLP(cp.materialesBase)}`
+        + ` · Traspasados Base: ${formatCLP(cp.traspasadosBase)}`;
+      return `<span title="${escapeHtml(tooltip)}">${escapeHtml(formatCLP(cp.total))}</span>`;
+    }
+
+    function comprasRealesCell(compras) {
+      const tooltip = `Comprado: ${formatCLP(compras.comprado)}`
+        + ` · Stock: ${formatCLP(compras.stock)}`
+        + ` · Por comprar: ${formatCLP(compras.por_comprar)}`;
+      const txt = formatCLP(compras.total);
+      if (compras.total <= 0) {
+        return `<span class="muted" title="${escapeHtml(tooltip)}">${escapeHtml(txt)}</span>`;
+      }
+      return `<span title="${escapeHtml(tooltip)}">${escapeHtml(txt)}</span>`;
     }
 
     function renderTabla(lista) {
@@ -1007,10 +1249,12 @@
           ? escapeHtml(formatFechaCL(fechaEntregaRaw))
           : '<span class="muted">—</span>';
 
-        const cotizado = getMontoCotizado(reg);
-        const cobrado  = getMontoCobrado(reg);
-        const compras  = getCompras(reg);
-        const resultado = cobrado - compras.total;
+        const cobrado = getMontoCobrado(reg);
+        const cp      = getComprasProyectadas(reg?.cotizacion);
+        const compras = getCompras(reg);
+        const rentEsp  = getRentEsperadaPct(reg);
+        const rentReal = getRentRealPct(reg);
+        const resultadoReal = cobrado - compras.total;
 
         const cotId = reg?.cotizacion?.id || reg?.cotizacion_id;
         const accionCell = cotId
@@ -1023,13 +1267,11 @@
             <td><span class="fin-text-ellipsis" title="${cliente}">${cliente}</span></td>
             <td>${fechaVentaCell}</td>
             <td>${fechaEntregaCell}</td>
-            <td class="fin-money-soft">${escapeHtml(formatCLP(cotizado))}</td>
             <td class="fin-money">${escapeHtml(formatCLP(cobrado))}</td>
-            <td class="fin-money-soft">${escapeHtml(formatCLP(compras.comprado))}</td>
-            <td class="fin-money-soft">${escapeHtml(formatCLP(compras.stock))}</td>
-            <td class="fin-money">${porComprarCell(compras.por_comprar)}</td>
-            <td class="fin-money">${escapeHtml(formatCLP(compras.total))}</td>
-            <td class="fin-money">${resultadoBadge(resultado, compras.total)}</td>
+            <td class="fin-money-soft">${comprasProyectadasCell(cp)}</td>
+            <td class="fin-money">${comprasRealesCell(compras)}</td>
+            <td class="fin-money">${rentBadge(rentEsp)}</td>
+            <td class="fin-money">${rentBadge(rentReal)}</td>
             <td>${estadoResultadoBadge(reg)}</td>
             <td>${accionCell}</td>
           </tr>
