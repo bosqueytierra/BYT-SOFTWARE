@@ -147,7 +147,7 @@
       table-layout: fixed;
       font-size: 13px;
       background: #fff;
-      min-width: 1180px;
+      min-width: 1250px;
     }
     .fin-table th,
     .fin-table td {
@@ -166,18 +166,27 @@
       letter-spacing: 0.04em;
       position: sticky;
       top: 0;
+      white-space: normal;
+      line-height: 1.2;
+      word-break: normal;
+      overflow-wrap: anywhere;
+    }
+    .fin-table td {
+      white-space: nowrap;
     }
     .fin-table tbody tr:last-child td { border-bottom: none; }
     .fin-table tbody tr:hover { background: #fafbfc; }
 
-    /* Column widths (11 columnas) */
-    .fin-table col.col-proyecto    { width: 13%; }
-    .fin-table col.col-cliente     { width: 10%; }
-    .fin-table col.col-fecha       { width: 8%;  }
-    .fin-table col.col-monto       { width: 8%;  }
-    .fin-table col.col-resultado   { width: 9%;  }
-    .fin-table col.col-estado      { width: 9%;  }
-    .fin-table col.col-accion      { width: 9%;  }
+    /* Column widths (9 columnas) */
+    .fin-table col.col-proyecto       { width: 18%; }
+    .fin-table col.col-cliente        { width: 12%; }
+    .fin-table col.col-fecha-venta    { width: 9%;  }
+    .fin-table col.col-fecha-entrega  { width: 9%;  }
+    .fin-table col.col-cobrado        { width: 11%; }
+    .fin-table col.col-compras-proy   { width: 13%; }
+    .fin-table col.col-compras-reales { width: 12%; }
+    .fin-table col.col-rent-esperada  { width: 8%;  }
+    .fin-table col.col-rent-real      { width: 8%;  }
 
     .fin-text-ellipsis {
       display: block;
@@ -375,15 +384,13 @@
             <colgroup>
               <col class="col-proyecto" />
               <col class="col-cliente" />
-              <col class="col-fecha" />
-              <col class="col-fecha" />
-              <col class="col-monto" />
-              <col class="col-monto" />
-              <col class="col-monto" />
-              <col class="col-resultado" />
-              <col class="col-resultado" />
-              <col class="col-estado" />
-              <col class="col-accion" />
+              <col class="col-fecha-venta" />
+              <col class="col-fecha-entrega" />
+              <col class="col-cobrado" />
+              <col class="col-compras-proy" />
+              <col class="col-compras-reales" />
+              <col class="col-rent-esperada" />
+              <col class="col-rent-real" />
             </colgroup>
             <thead>
               <tr>
@@ -396,8 +403,6 @@
                 <th class="fin-money">Compras reales</th>
                 <th class="fin-money">Rent. esperada</th>
                 <th class="fin-money">Rent. real</th>
-                <th>Estado</th>
-                <th>Acción</th>
               </tr>
             </thead>
             <tbody id="tabla-body"></tbody>
@@ -564,18 +569,34 @@
       return reg?.venta?.fecha_entrega_limite || '';
     }
 
-    function getMontoCobrado(reg) {
-      const v = reg?.venta || {};
-      const c = reg?.cotizacion || {};
-      if (v.total_venta != null && v.total_venta !== '') {
-        const tv = Number(v.total_venta);
-        if (isFinite(tv) && tv >= 0) return tv;
-      }
-      const tc = Number(v.total_cotizado);
-      if (isFinite(tc) && tc > 0) return tc;
-      const tcot = Number(c.total);
-      if (isFinite(tcot) && tcot > 0) return tcot;
+    function getMontoCobradoFromGrupo(items, cotizacion) {
+      const ventas = Array.isArray(items) ? items : [];
+
+      const ventaConCobro = ventas.find(v => {
+        const n = Number(v?.total_venta);
+        return Number.isFinite(n) && n > 0;
+      });
+      if (ventaConCobro) return Number(ventaConCobro.total_venta);
+
+      const ventaConCotizado = ventas.find(v => {
+        const n = Number(v?.total_cotizado);
+        return Number.isFinite(n) && n > 0;
+      });
+      if (ventaConCotizado) return Number(ventaConCotizado.total_cotizado);
+
+      const totalCotizacion = Number(cotizacion?.total);
+      if (Number.isFinite(totalCotizacion) && totalCotizacion > 0) return totalCotizacion;
+
       return 0;
+    }
+
+    function getMontoCobrado(reg) {
+      // Fuente única del Cobrado: el grupo de ventas del proyecto.
+      // Si no hay ventas (cotización aprobada sin venta), se evalúa el "venta" sintético.
+      const ventas = Array.isArray(reg?.ventas) && reg.ventas.length
+        ? reg.ventas
+        : (reg?.venta ? [reg.venta] : []);
+      return getMontoCobradoFromGrupo(ventas, reg?.cotizacion);
     }
 
     // -------- Compras proyectadas (desde la cotización) --------
@@ -955,6 +976,7 @@
           key,
           cotizacion_id: proyectoId || null,
           venta: ventaProyecto,
+          ventas: filas,
           cotizacion: cotizacionRel || {},
           compras: comprasMap.get(proyectoId) || { comprado: 0, stock: 0, por_comprar: 0 },
         });
@@ -968,6 +990,7 @@
           key: 'cot-only:' + c.id,
           cotizacion_id: c.id,
           venta: null,
+          ventas: [],
           cotizacion: c,
           compras: comprasMap.get(c.id) || { comprado: 0, stock: 0, por_comprar: 0 },
         });
@@ -1254,12 +1277,6 @@
         const compras = getCompras(reg);
         const rentEsp  = getRentEsperadaPct(reg);
         const rentReal = getRentRealPct(reg);
-        const resultadoReal = cobrado - compras.total;
-
-        const cotId = reg?.cotizacion?.id || reg?.cotizacion_id;
-        const accionCell = cotId
-          ? `<a class="link-action" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/cotizaciones/detalle.html?id=${encodeURIComponent(cotId)}">Ver cotización</a>`
-          : '<span class="muted">Sin link</span>';
 
         return `
           <tr>
@@ -1272,8 +1289,6 @@
             <td class="fin-money">${comprasRealesCell(compras)}</td>
             <td class="fin-money">${rentBadge(rentEsp)}</td>
             <td class="fin-money">${rentBadge(rentReal)}</td>
-            <td>${estadoResultadoBadge(reg)}</td>
-            <td>${accionCell}</td>
           </tr>
         `;
       }).join('');
