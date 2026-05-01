@@ -76,12 +76,17 @@
     gear: `<svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.69.05 1.25.61 1.3 1.3V10a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.21 1Z"/></svg>`
   };
 
-  function createNavItem(item, isChild = false) {
+  function createNavItem(item, isChild = false, hasChildren = false) {
     const hasHref = !!item.href;
-    const el = document.createElement(hasHref ? 'a' : 'div');
+    // Parent headers (with children) render as <div> regardless of href so click can toggle.
+    // Leaf items use <a> when there's an href, otherwise <div>.
+    const useAnchor = hasHref && !hasChildren;
+    const el = document.createElement(useAnchor ? 'a' : 'div');
     el.className = isChild ? 'submenu-link' : 'nav-item';
-    if (hasHref) el.setAttribute('href', item.href);
-    else el.classList.add('disabled');
+    if (useAnchor) el.setAttribute('href', item.href);
+    // Only mark as disabled when it's a true leaf with no destination and no children.
+    if (!hasHref && !hasChildren) el.classList.add('disabled');
+    if (hasChildren) el.classList.add('has-children');
 
     const icon = iconMap[item.icon] || '';
     el.innerHTML = `<span class="nav-icon">${icon}</span><span class="nav-label">${item.label}</span>`;
@@ -92,19 +97,28 @@
     if (!navStack) return;
     navStack.innerHTML = '';
     menu.forEach(item => {
-      if (item.children && item.children.length) {
-        const group = document.createElement('div');
-        group.className = 'nav-group';
-        const header = createNavItem(item, false);
-        group.appendChild(header);
+      const hasChildren = !!(item.children && item.children.length);
+      // Always wrap in .nav-group so CSS rules (hover/open) apply uniformly.
+      const group = document.createElement('div');
+      group.className = 'nav-group';
+      const header = createNavItem(item, false, hasChildren);
+      group.appendChild(header);
+      if (hasChildren) {
         const submenu = document.createElement('div');
         submenu.className = 'submenu';
-        item.children.forEach(ch => submenu.appendChild(createNavItem(ch, true)));
+        item.children.forEach(ch => submenu.appendChild(createNavItem(ch, true, false)));
         group.appendChild(submenu);
-        navStack.appendChild(group);
-      } else {
-        navStack.appendChild(createNavItem(item, false));
+        // Click on the parent header toggles open state (works as a fallback to hover).
+        header.addEventListener('click', (e) => {
+          e.preventDefault();
+          // Close other open groups so only one is open at a time.
+          navStack.querySelectorAll('.nav-group.open').forEach(g => {
+            if (g !== group) g.classList.remove('open');
+          });
+          group.classList.toggle('open');
+        });
       }
+      navStack.appendChild(group);
     });
   }
   renderMenu();
@@ -117,11 +131,13 @@
       const href = el.getAttribute('href') || '';
       if (!href) return;
       const target = href.split('/').pop();
-      if (CURRENT_PATH.endsWith(target)) {
+      if (target && CURRENT_PATH.endsWith(target)) {
         el.classList.add('active');
         const parentGroup = el.closest('.nav-group');
         const parentItem = parentGroup?.querySelector('.nav-item');
         parentItem?.classList.add('active');
+        // Keep the group open so the active child is visible.
+        parentGroup?.classList.add('open');
       }
     });
   }
