@@ -147,7 +147,7 @@
       table-layout: fixed;
       font-size: 13px;
       background: #fff;
-      min-width: 1250px;
+      min-width: 1450px;
     }
     .fin-table th,
     .fin-table td {
@@ -177,16 +177,18 @@
     .fin-table tbody tr:last-child td { border-bottom: none; }
     .fin-table tbody tr:hover { background: #fafbfc; }
 
-    /* Column widths (9 columnas) */
-    .fin-table col.col-proyecto       { width: 18%; }
-    .fin-table col.col-cliente        { width: 12%; }
-    .fin-table col.col-fecha-venta    { width: 9%;  }
-    .fin-table col.col-fecha-entrega  { width: 9%;  }
-    .fin-table col.col-cobrado        { width: 11%; }
-    .fin-table col.col-compras-proy   { width: 13%; }
-    .fin-table col.col-compras-reales { width: 12%; }
-    .fin-table col.col-rent-esperada  { width: 8%;  }
-    .fin-table col.col-rent-real      { width: 8%;  }
+    /* Column widths (11 columnas) */
+    .fin-table col.col-proyecto       { width: 15%; }
+    .fin-table col.col-cliente        { width: 11%; }
+    .fin-table col.col-fecha-venta    { width: 8%;  }
+    .fin-table col.col-fecha-entrega  { width: 8%;  }
+    .fin-table col.col-cobrado        { width: 9%;  }
+    .fin-table col.col-pagos-rec      { width: 9%;  }
+    .fin-table col.col-pagos-pend     { width: 9%;  }
+    .fin-table col.col-compras-proy   { width: 10%; }
+    .fin-table col.col-compras-reales { width: 9%;  }
+    .fin-table col.col-rent-esperada  { width: 6%;  }
+    .fin-table col.col-rent-real      { width: 6%;  }
 
     .fin-text-ellipsis {
       display: block;
@@ -341,6 +343,14 @@
             <div class="kpi-label">Total cobrado</div>
             <div class="kpi-value" id="kpi-cobrado">$0</div>
           </div>
+          <div class="kpi kpi-pos">
+            <div class="kpi-label">Total pagos recibidos</div>
+            <div class="kpi-value" id="kpi-pagos-recibidos">$0</div>
+          </div>
+          <div class="kpi kpi-warn">
+            <div class="kpi-label">Total pagos pendientes</div>
+            <div class="kpi-value" id="kpi-pagos-pendientes">$0</div>
+          </div>
           <div class="kpi">
             <div class="kpi-label">Compras proyectadas</div>
             <div class="kpi-value" id="kpi-compras-proyectadas">$0</div>
@@ -387,6 +397,8 @@
               <col class="col-fecha-venta" />
               <col class="col-fecha-entrega" />
               <col class="col-cobrado" />
+              <col class="col-pagos-rec" />
+              <col class="col-pagos-pend" />
               <col class="col-compras-proy" />
               <col class="col-compras-reales" />
               <col class="col-rent-esperada" />
@@ -399,6 +411,8 @@
                 <th>Fecha venta</th>
                 <th>Fecha entrega</th>
                 <th class="fin-money">Cobrado</th>
+                <th class="fin-money">Pagos recibidos</th>
+                <th class="fin-money">Pagos pendientes</th>
                 <th class="fin-money">Compras proyectadas</th>
                 <th class="fin-money">Compras reales</th>
                 <th class="fin-money">Rent. esperada</th>
@@ -801,6 +815,38 @@
       return map;
     }
 
+    // Devuelve Map<cotizacion_id, totalPagos>
+    // Sumatoria única por cotización (no se duplica por partidas porque pagos_clientes
+    // está indexado por cotizacion_id, no por partida).
+    function aggregatePagos(pagos) {
+      const map = new Map();
+      (pagos || []).forEach(p => {
+        if (!p || p.cotizacion_id == null) return;
+        const monto = Number(p.monto);
+        if (!isFinite(monto)) return;
+        const k = p.cotizacion_id;
+        map.set(k, (map.get(k) || 0) + monto);
+      });
+      return map;
+    }
+
+    function getPagosRecibidos(reg) {
+      return Number(reg?.pagosRecibidos) || 0;
+    }
+    // Pagos pendientes = cobrado - pagosRecibidos. Si <0, devolver 0 (sobrepago).
+    function getPagosPendientes(reg) {
+      const cobrado = getMontoCobrado(reg);
+      const recibidos = getPagosRecibidos(reg);
+      const diff = cobrado - recibidos;
+      return diff > 0 ? diff : 0;
+    }
+    function getSobrepago(reg) {
+      const cobrado = getMontoCobrado(reg);
+      const recibidos = getPagosRecibidos(reg);
+      const diff = recibidos - cobrado;
+      return diff > 0 ? diff : 0;
+    }
+
     function getCompras(reg) {
       // Compras reales agregadas (purchase_lines), precalculado en el registro.
       const c = reg?.compras || { comprado: 0, stock: 0, por_comprar: 0 };
@@ -880,7 +926,7 @@
           throw new Error('Supabase no disponible');
         }
 
-        const [ventasResp, cotizacionesResp, blocksResp, linesResp] = await Promise.all([
+        const [ventasResp, cotizacionesResp, blocksResp, linesResp, pagosResp] = await Promise.all([
           client
             .from('ventas')
             .select('id, cotizacion_id, proyecto, cliente, estado, fecha_venta, total_cotizado, total_venta, motivo_variacion, fecha_entrega_limite, partida_nombre, partida'),
@@ -894,20 +940,26 @@
           client
             .from('purchase_lines')
             .select('id, block_id, cantidad, precio_unit, total, estado_pago'),
+          client
+            .from('pagos_clientes')
+            .select('id, cotizacion_id, monto'),
         ]);
 
         if (ventasResp.error)       throw ventasResp.error;
         if (cotizacionesResp.error) throw cotizacionesResp.error;
         if (blocksResp.error)       throw blocksResp.error;
         if (linesResp.error)        throw linesResp.error;
+        if (pagosResp.error)        throw pagosResp.error;
 
         const ventas       = Array.isArray(ventasResp.data)       ? ventasResp.data       : [];
         const cotizaciones = Array.isArray(cotizacionesResp.data) ? cotizacionesResp.data : [];
         const blocks       = Array.isArray(blocksResp.data)       ? blocksResp.data       : [];
         const lines        = Array.isArray(linesResp.data)        ? linesResp.data        : [];
+        const pagos        = Array.isArray(pagosResp.data)        ? pagosResp.data        : [];
 
         const comprasPorProyecto = aggregateCompras(blocks, lines);
-        proyectosData = normalizarProyectos(ventas, cotizaciones, comprasPorProyecto);
+        const pagosPorCotizacion = aggregatePagos(pagos);
+        proyectosData = normalizarProyectos(ventas, cotizaciones, comprasPorProyecto, pagosPorCotizacion);
         poblarFiltroAnios(proyectosData);
         aplicarFiltros();
       } catch (err) {
@@ -922,7 +974,7 @@
     // -------- Normalización por proyecto --------
     // Agrupa ventas por cotizacion_id (no duplica totales por partidas).
     // Incluye también cotizaciones aprobadas sin venta.
-    function normalizarProyectos(ventas, cotizaciones, comprasMap) {
+    function normalizarProyectos(ventas, cotizaciones, comprasMap, pagosMap) {
       const cotizacionesById = new Map();
       cotizaciones.forEach(c => { if (c && c.id != null) cotizacionesById.set(c.id, c); });
 
@@ -979,6 +1031,7 @@
           ventas: filas,
           cotizacion: cotizacionRel || {},
           compras: comprasMap.get(proyectoId) || { comprado: 0, stock: 0, por_comprar: 0 },
+          pagosRecibidos: (proyectoId != null ? (pagosMap?.get(proyectoId) || 0) : 0),
         });
       });
 
@@ -993,6 +1046,7 @@
           ventas: [],
           cotizacion: c,
           compras: comprasMap.get(c.id) || { comprado: 0, stock: 0, por_comprar: 0 },
+          pagosRecibidos: pagosMap?.get(c.id) || 0,
         });
       });
 
@@ -1144,6 +1198,8 @@
       let totalCobrado = 0;
       let totalComprasProy = 0;
       let totalComprasReales = 0;
+      let totalPagosRec = 0;
+      let totalPagosPend = 0;
       let conPerdidaReal = 0;
       let sumaRentEsp = 0, nRentEsp = 0;
       let sumaRentReal = 0, nRentReal = 0;
@@ -1155,6 +1211,8 @@
         totalCobrado       += cobrado;
         totalComprasProy   += cp;
         totalComprasReales += cr;
+        totalPagosRec      += getPagosRecibidos(reg);
+        totalPagosPend     += getPagosPendientes(reg);
 
         if (cobrado > 0) {
           const rEsp = ((cobrado - cp) / cobrado) * 100;
@@ -1171,6 +1229,8 @@
       const rentRealProm = nRentReal > 0 ? (sumaRentReal / nRentReal) : null;
 
       document.getElementById('kpi-cobrado').textContent              = formatCLP(totalCobrado);
+      document.getElementById('kpi-pagos-recibidos').textContent      = formatCLP(totalPagosRec);
+      document.getElementById('kpi-pagos-pendientes').textContent     = formatCLP(totalPagosPend);
       document.getElementById('kpi-compras-proyectadas').textContent  = formatCLP(totalComprasProy);
       document.getElementById('kpi-compras-reales').textContent       = formatCLP(totalComprasReales);
       document.getElementById('kpi-resultado-esperado').textContent   = formatCLPSigned(resultadoEsperado);
@@ -1277,6 +1337,18 @@
         const compras = getCompras(reg);
         const rentEsp  = getRentEsperadaPct(reg);
         const rentReal = getRentRealPct(reg);
+        const pagosRec = getPagosRecibidos(reg);
+        const pagosPend = getPagosPendientes(reg);
+        const sobrepago = getSobrepago(reg);
+
+        const pagosRecCell = sobrepago > 0
+          ? `<span title="Sobrepago: ${escapeHtml(formatCLP(sobrepago))}">${escapeHtml(formatCLP(pagosRec))} <span class="badge badge-soft">+${escapeHtml(formatCLP(sobrepago))}</span></span>`
+          : escapeHtml(formatCLP(pagosRec));
+        const pagosPendCell = pagosPend > 0
+          ? `<span class="badge badge-warn">${escapeHtml(formatCLP(pagosPend))}</span>`
+          : (cobrado > 0
+              ? `<span class="badge badge-ok">${escapeHtml(formatCLP(0))}</span>`
+              : `<span class="muted">${escapeHtml(formatCLP(0))}</span>`);
 
         return `
           <tr>
@@ -1285,6 +1357,8 @@
             <td>${fechaVentaCell}</td>
             <td>${fechaEntregaCell}</td>
             <td class="fin-money">${escapeHtml(formatCLP(cobrado))}</td>
+            <td class="fin-money">${pagosRecCell}</td>
+            <td class="fin-money">${pagosPendCell}</td>
             <td class="fin-money-soft">${comprasProyectadasCell(cp)}</td>
             <td class="fin-money">${comprasRealesCell(compras)}</td>
             <td class="fin-money">${rentBadge(rentEsp)}</td>
