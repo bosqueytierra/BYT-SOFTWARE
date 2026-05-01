@@ -22,6 +22,9 @@
       --ok-bg: #e8f3ee;
       --ok-fg: #1f6b4d;
       --ok-border: #c5e2d2;
+      --bad-bg: #fdecec;
+      --bad-fg: #a3271e;
+      --bad-border: #f1c5c1;
       --soft-bg: #eef1f4;
       --soft-fg: #3a4654;
       --shadow: 0 6px 16px rgba(0,0,0,0.06);
@@ -129,6 +132,8 @@
     }
     .kpi.kpi-primary .kpi-value { color: var(--primary); }
     .kpi.kpi-warn .kpi-value { color: var(--warn-fg); }
+    .kpi.kpi-pos .kpi-value { color: var(--ok-fg); }
+    .kpi.kpi-neg .kpi-value { color: var(--bad-fg); }
 
     .table-wrap {
       overflow-x: auto;
@@ -141,7 +146,7 @@
       border-spacing: 0;
       font-size: 14px;
       background: #fff;
-      min-width: 880px;
+      min-width: 1100px;
     }
     table.contab thead th {
       text-align: left;
@@ -164,6 +169,7 @@
     table.contab tbody tr:last-child td { border-bottom: none; }
     table.contab tbody tr:hover { background: #fafbfc; }
     .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .muted { color: var(--muted); }
 
     .badge {
       display: inline-block;
@@ -184,11 +190,30 @@
       color: var(--warn-fg);
       border-color: var(--warn-border);
     }
+    .badge-bad {
+      background: var(--bad-bg);
+      color: var(--bad-fg);
+      border-color: var(--bad-border);
+    }
     .badge-soft {
       background: var(--soft-bg);
       color: var(--soft-fg);
       border-color: #dde2e7;
     }
+
+    .link-action {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+      padding: 6px 10px;
+      border: 1px solid var(--ok-border);
+      border-radius: 8px;
+      background: var(--ok-bg);
+      transition: background 0.15s ease;
+    }
+    .link-action:hover { background: #d8ecdf; }
 
     .state {
       padding: 28px 14px;
@@ -222,7 +247,7 @@
 
       <div class="page-header">
         <h1>Contabilidad</h1>
-        <p>Resumen de ventas aprobadas según fecha real de venta.</p>
+        <p>Resumen de ventas cobradas según fecha real de venta.</p>
       </div>
 
       <div class="card">
@@ -269,8 +294,10 @@
             <select id="filtro-orden">
               <option value="fecha_desc">Fecha venta más reciente</option>
               <option value="fecha_asc">Fecha venta más antigua</option>
-              <option value="total_desc">Total mayor a menor</option>
-              <option value="total_asc">Total menor a mayor</option>
+              <option value="cobrado_desc">Cobrado mayor a menor</option>
+              <option value="cobrado_asc">Cobrado menor a mayor</option>
+              <option value="cotizado_desc">Cotizado mayor a menor</option>
+              <option value="diferencia_desc">Diferencia mayor</option>
               <option value="cliente_az">Cliente A-Z</option>
             </select>
           </div>
@@ -281,20 +308,24 @@
         <h2 class="section-title">Resumen del período <small id="periodo-label"></small></h2>
         <div class="kpis" id="kpis-container">
           <div class="kpi kpi-primary">
-            <div class="kpi-label">Total vendido</div>
-            <div class="kpi-value" id="kpi-total">$0</div>
+            <div class="kpi-label">Total cobrado</div>
+            <div class="kpi-value" id="kpi-cobrado">$0</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">Neto vendido</div>
+            <div class="kpi-label">Total cotizado</div>
+            <div class="kpi-value" id="kpi-cotizado">$0</div>
+          </div>
+          <div class="kpi" id="kpi-diferencia-card">
+            <div class="kpi-label">Diferencia comercial</div>
+            <div class="kpi-value" id="kpi-diferencia">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Neto estimado cobrado</div>
             <div class="kpi-value" id="kpi-neto">$0</div>
           </div>
           <div class="kpi">
-            <div class="kpi-label">IVA</div>
+            <div class="kpi-label">IVA estimado cobrado</div>
             <div class="kpi-value" id="kpi-iva">$0</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">Cotizaciones aprobadas</div>
-            <div class="kpi-value" id="kpi-aprobadas">0</div>
           </div>
           <div class="kpi">
             <div class="kpi-label">Ventas con fecha</div>
@@ -308,7 +339,7 @@
       </div>
 
       <div class="card">
-        <h2 class="section-title">Ventas aprobadas <small id="resultados-label"></small></h2>
+        <h2 class="section-title">Ventas <small id="resultados-label"></small></h2>
 
         <div id="estado-cargando" class="state">Cargando...</div>
         <div id="estado-vacio" class="state" style="display:none;">Sin datos para este período.</div>
@@ -320,12 +351,14 @@
               <tr>
                 <th>Proyecto</th>
                 <th>Cliente</th>
-                <th>Fecha cotización</th>
                 <th>Fecha venta</th>
-                <th class="num">Neto</th>
-                <th class="num">IVA</th>
-                <th class="num">Total</th>
+                <th>Fecha cotización</th>
+                <th class="num">Cotizado</th>
+                <th class="num">Cobrado</th>
+                <th class="num">Diferencia</th>
+                <th>Motivo variación</th>
                 <th>Estado</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody id="tabla-body"></tbody>
@@ -345,14 +378,23 @@
   <script>
     // ============================================================
     // Contabilidad v1 — solo lectura.
-    // Lee cotizaciones aprobadas y usa fecha_aprobacion como fecha de venta.
+    // Fuente principal: tabla `ventas` (cobrado real). Se complementa con
+    // `cotizaciones` aprobadas para nombre de proyecto/cliente y fechas.
+    //
+    // Reglas:
+    //  - created_at NUNCA es fecha de venta.
+    //  - fecha real de venta = ventas.fecha_venta || cotizaciones.fecha_aprobacion
+    //  - monto cobrado = ventas.total_venta || ventas.total_cotizado || cotizaciones.total
+    //  - monto cotizado = ventas.total_cotizado || cotizaciones.total
+    //  - Agrupar ventas por cotizacion_id para no duplicar totales.
+    //
     // No modifica datos. No calcula utilidad/costos. No crea pagos.
     // ============================================================
 
-    let cotizacionesContabilidad = [];
-    let cotizacionesContabilidadFiltradas = [];
+    let registrosContabilidad = [];           // todos los registros normalizados
+    let registrosContabilidadFiltrados = [];  // filtrados + ordenados
 
-    // -------- Helpers --------
+    // -------- Helpers de formato --------
     function formatCLP(valor) {
       const n = Number(valor);
       if (!isFinite(n)) return '$0';
@@ -361,6 +403,13 @@
       } catch (_) {
         return '$' + Math.round(n);
       }
+    }
+
+    function formatCLPSigned(valor) {
+      const n = Math.round(Number(valor) || 0);
+      if (n === 0) return '$0';
+      const sign = n > 0 ? '+' : '-';
+      return sign + formatCLP(Math.abs(n));
     }
 
     function formatFechaCL(fecha) {
@@ -391,18 +440,27 @@
       return {};
     }
 
-    function getProjectName(c) {
+    // -------- Helpers de negocio --------
+    function getProjectName(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
       const data = parseData(c);
+
+      if (v.proyecto && String(v.proyecto).trim()) return String(v.proyecto).trim();
       const fromData = data?.cliente?.nombre_proyecto;
       if (fromData && String(fromData).trim()) return String(fromData).trim();
-      if (c?.project_key && String(c.project_key).trim()) return String(c.project_key).trim();
-      if (c?.numero && String(c.numero).trim()) return String(c.numero).trim();
+      if (c.project_key && String(c.project_key).trim()) return String(c.project_key).trim();
+      if (c.numero && String(c.numero).trim()) return String(c.numero).trim();
       return 'Sin nombre';
     }
 
-    function getClientName(c) {
-      // cliente puede ser objeto, string o estar en data.cliente.nombre
-      const cliente = c?.cliente;
+    function getClientName(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+
+      if (v.cliente && String(v.cliente).trim()) return String(v.cliente).trim();
+
+      const cliente = c.cliente;
       if (cliente && typeof cliente === 'object' && cliente.nombre) {
         return String(cliente.nombre).trim();
       }
@@ -415,14 +473,54 @@
       return 'Sin cliente';
     }
 
-    function getNumeros(c) {
-      const subtotal = Number(c?.subtotal) || 0;
-      const iva = Number(c?.iva) || 0;
-      // total: si existe lo usamos; si no, subtotal + iva como fallback razonable de UI
-      const total = (c?.total != null && c.total !== '')
-        ? (Number(c.total) || 0)
-        : (subtotal + iva);
-      return { subtotal, iva, total };
+    // Devuelve la fecha de venta como string ISO o '' si no existe.
+    function getFechaVenta(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+      if (v.fecha_venta) return v.fecha_venta;
+      if (c.fecha_aprobacion) return c.fecha_aprobacion;
+      return '';
+    }
+
+    function getFechaCotizacion(reg) {
+      return reg?.cotizacion?.created_at || '';
+    }
+
+    function getEstado(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+      return v.estado || c.estado || '';
+    }
+
+    function getMotivoVariacion(reg) {
+      const m = reg?.venta?.motivo_variacion;
+      return (m && String(m).trim()) ? String(m).trim() : '';
+    }
+
+    // Monto cotizado: ventas.total_cotizado -> cotizaciones.total -> 0
+    function getMontoCotizado(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+      const tc = Number(v.total_cotizado);
+      if (isFinite(tc) && tc > 0) return tc;
+      const tcot = Number(c.total);
+      if (isFinite(tcot) && tcot > 0) return tcot;
+      return 0;
+    }
+
+    // Monto cobrado: ventas.total_venta (>=0) -> ventas.total_cotizado -> cotizaciones.total -> 0
+    function getMontoCobrado(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+      if (v.total_venta != null && v.total_venta !== '') {
+        const tv = Number(v.total_venta);
+        if (isFinite(tv) && tv >= 0) return tv;
+      }
+      const tc = Number(v.total_cotizado);
+      if (isFinite(tc) && tc > 0) return tc;
+      const tcot = Number(c.total);
+      if (isFinite(tcot) && tcot > 0) return tcot;
+      return 0;
     }
 
     // -------- Render de estado de la pantalla --------
@@ -441,26 +539,35 @@
     async function cargarDatosContabilidad() {
       mostrarEstado('loading');
       try {
-        // Esperar a que el cliente Supabase global esté listo (lo expone supabaseBrowserClient)
         const client = await esperarSupabase(8000);
         if (!client || typeof client.from !== 'function') {
           throw new Error('Supabase no disponible');
         }
 
-        const { data, error } = await client
-          .from('cotizaciones')
-          .select('id, numero, cliente, project_key, estado, subtotal, iva, total, created_at, fecha_aprobacion, data')
-          .eq('estado', 'aprobada');
+        // Lectura paralela: ventas (fuente principal) + cotizaciones aprobadas (complemento)
+        const [ventasResp, cotizacionesResp] = await Promise.all([
+          client
+            .from('ventas')
+            .select('id, cotizacion_id, proyecto, cliente, estado, fecha_venta, total_cotizado, total_venta, motivo_variacion, created_at, fecha_entrega_limite, partida_nombre, partida'),
+          client
+            .from('cotizaciones')
+            .select('id, numero, cliente, project_key, estado, subtotal, iva, total, created_at, fecha_aprobacion, data')
+            .eq('estado', 'aprobada'),
+        ]);
 
-        if (error) throw error;
+        if (ventasResp.error) throw ventasResp.error;
+        if (cotizacionesResp.error) throw cotizacionesResp.error;
 
-        cotizacionesContabilidad = Array.isArray(data) ? data : [];
-        poblarFiltroAnios(cotizacionesContabilidad);
+        const ventas = Array.isArray(ventasResp.data) ? ventasResp.data : [];
+        const cotizaciones = Array.isArray(cotizacionesResp.data) ? cotizacionesResp.data : [];
+
+        registrosContabilidad = normalizarDatosContabilidad(ventas, cotizaciones);
+        poblarFiltroAnios(registrosContabilidad);
         aplicarFiltrosContabilidad();
       } catch (err) {
         console.error('[contabilidad] Error al cargar:', err);
-        cotizacionesContabilidad = [];
-        cotizacionesContabilidadFiltradas = [];
+        registrosContabilidad = [];
+        registrosContabilidadFiltrados = [];
         renderKPIsContabilidad([]);
         mostrarEstado('error');
       }
@@ -478,7 +585,6 @@
           }
           setTimeout(check, 100);
         }
-        // También responder a evento de listo, si llega antes
         try {
           window.addEventListener('supabase:ready', () => {
             if (window.supabase && typeof window.supabase.from === 'function') resolve(window.supabase);
@@ -488,19 +594,108 @@
       });
     }
 
+    // -------- Normalización / Agrupación --------
+    // Agrupar ventas por cotizacion_id. Para cada cotizacion_id usar:
+    //  - primera fila con total_venta válido
+    //  - primera fila con total_cotizado válido
+    //  - juntar partidas como detalle
+    // También incluir cotizaciones aprobadas SIN fila de venta (registro solo cotización).
+    function normalizarDatosContabilidad(ventas, cotizaciones) {
+      const cotizacionesById = new Map();
+      cotizaciones.forEach(c => { if (c && c.id != null) cotizacionesById.set(c.id, c); });
+
+      // Agrupar ventas por cotizacion_id (las sin cotizacion_id van con clave única)
+      const grupos = new Map();
+      ventas.forEach((v, idx) => {
+        const key = (v && v.cotizacion_id != null && v.cotizacion_id !== '')
+          ? 'cot:' + v.cotizacion_id
+          : 'venta:' + (v?.id != null ? v.id : 'idx_' + idx);
+        if (!grupos.has(key)) grupos.set(key, []);
+        grupos.get(key).push(v);
+      });
+
+      const registros = [];
+      const cotIdsConVenta = new Set();
+
+      grupos.forEach((filas, key) => {
+        // Fila con total_venta válido
+        const filaVenta = filas.find(f =>
+          f && f.total_venta != null && f.total_venta !== '' &&
+          isFinite(Number(f.total_venta)) && Number(f.total_venta) >= 0
+        );
+        // Fila con total_cotizado válido
+        const filaCotizado = filas.find(f =>
+          f && f.total_cotizado != null && f.total_cotizado !== '' &&
+          isFinite(Number(f.total_cotizado)) && Number(f.total_cotizado) > 0
+        );
+
+        // Construir un objeto venta sintético con los campos representativos del proyecto.
+        // No sumamos importes: usamos los del proyecto (total_venta/total_cotizado se repite por partida).
+        const base = filas[0] || {};
+        const ventaProyecto = {
+          id: base.id,
+          cotizacion_id: base.cotizacion_id,
+          proyecto: base.proyecto,
+          cliente: base.cliente,
+          estado: base.estado,
+          fecha_venta: filas.find(f => !!f.fecha_venta)?.fecha_venta || base.fecha_venta || '',
+          total_cotizado: filaCotizado ? Number(filaCotizado.total_cotizado) : null,
+          total_venta: filaVenta ? Number(filaVenta.total_venta) : null,
+          motivo_variacion: filas.find(f => !!f.motivo_variacion)?.motivo_variacion || base.motivo_variacion || '',
+          created_at: base.created_at,
+          fecha_entrega_limite: base.fecha_entrega_limite,
+          partidas: filas.map(f => ({
+            id: f.id,
+            partida_nombre: f.partida_nombre || f.partida || '',
+            estado: f.estado || ''
+          }))
+        };
+
+        const cotizacionRel = (base.cotizacion_id != null && cotizacionesById.has(base.cotizacion_id))
+          ? cotizacionesById.get(base.cotizacion_id)
+          : null;
+
+        if (cotizacionRel) cotIdsConVenta.add(cotizacionRel.id);
+
+        registros.push({
+          key,
+          cotizacion_id: base.cotizacion_id || null,
+          venta: ventaProyecto,
+          cotizacion: cotizacionRel || {}
+        });
+      });
+
+      // Cotizaciones aprobadas sin fila de venta -> también se muestran (cobrado fallback al total cotizado).
+      cotizaciones.forEach(c => {
+        if (!c || c.id == null) return;
+        if (cotIdsConVenta.has(c.id)) return;
+        registros.push({
+          key: 'cot-only:' + c.id,
+          cotizacion_id: c.id,
+          venta: null,
+          cotizacion: c
+        });
+      });
+
+      return registros;
+    }
+
     // -------- Filtros / Orden --------
     function poblarFiltroAnios(lista) {
       const sel = document.getElementById('filtro-anio');
       if (!sel) return;
       const anios = new Set();
-      lista.forEach(c => {
-        if (c.fecha_aprobacion) {
-          const d = new Date(c.fecha_aprobacion);
-          if (!isNaN(d.getTime())) anios.add(d.getFullYear());
-        }
+      lista.forEach(reg => {
+        const f = getFechaVenta(reg);
+        if (!f) return;
+        const d = new Date(f);
+        if (!isNaN(d.getTime())) anios.add(d.getFullYear());
       });
-      const actuales = Array.from(sel.options).map(o => o.value);
-      // Mantener "Todos" y rehacer
+
+      const anioActual = new Date().getFullYear();
+      anios.add(anioActual);
+
+      const valorPrev = sel.value;
       sel.innerHTML = '<option value="">Todos los años</option>';
       Array.from(anios).sort((a, b) => b - a).forEach(a => {
         const opt = document.createElement('option');
@@ -508,10 +703,12 @@
         opt.textContent = String(a);
         sel.appendChild(opt);
       });
-      // Restaurar selección si seguía válida
-      const prev = actuales.find(v => v && v !== '');
-      if (prev && Array.from(sel.options).some(o => o.value === prev)) {
-        sel.value = prev;
+
+      if (valorPrev && Array.from(sel.options).some(o => o.value === valorPrev)) {
+        sel.value = valorPrev;
+      } else {
+        // Por defecto: año actual (si está disponible)
+        sel.value = String(anioActual);
       }
     }
 
@@ -525,28 +722,28 @@
       const mesNum = mes ? parseInt(mes, 10) : null;
       const anioNum = anio ? parseInt(anio, 10) : null;
 
-      let filtradas = cotizacionesContabilidad.filter(c => {
-        // Estado fecha
-        const tieneFecha = !!c.fecha_aprobacion;
+      // ---- Listado para la tabla ----
+      let filtrados = registrosContabilidad.filter(reg => {
+        const fechaVenta = getFechaVenta(reg);
+        const tieneFecha = !!fechaVenta;
+
         if (estadoFecha === 'con' && !tieneFecha) return false;
         if (estadoFecha === 'sin' &&  tieneFecha) return false;
 
-        // Mes/Año aplican sobre fecha_aprobacion.
-        // Si la cotización no tiene fecha_aprobacion, sólo se incluye cuando el filtro
-        // de fecha es "todos" o "sin" (ya filtrado arriba) y NO se está restringiendo por mes/año.
+        // Mes/Año aplican sobre la fecha real de venta.
+        // Sin fecha de venta -> excluido del período cuando hay filtro mes/año.
         if (mesNum != null || anioNum != null) {
           if (!tieneFecha) return false;
-          const d = new Date(c.fecha_aprobacion);
+          const d = new Date(fechaVenta);
           if (isNaN(d.getTime())) return false;
           if (mesNum  != null && (d.getMonth() + 1) !== mesNum)  return false;
           if (anioNum != null &&  d.getFullYear()    !== anioNum) return false;
         }
 
-        // Búsqueda por proyecto / cliente
         if (busqueda) {
-          const proyecto = getProjectName(c).toLowerCase();
-          const cliente = getClientName(c).toLowerCase();
-          const numero = (c.numero || '').toString().toLowerCase();
+          const proyecto = getProjectName(reg).toLowerCase();
+          const cliente = getClientName(reg).toLowerCase();
+          const numero = (reg?.cotizacion?.numero || '').toString().toLowerCase();
           if (!proyecto.includes(busqueda) &&
               !cliente.includes(busqueda) &&
               !numero.includes(busqueda)) {
@@ -558,43 +755,47 @@
       });
 
       // Orden
-      filtradas.sort((a, b) => {
+      filtrados.sort((a, b) => {
         switch (orden) {
           case 'fecha_asc': {
-            const ta = a.fecha_aprobacion ? new Date(a.fecha_aprobacion).getTime() : Infinity;
-            const tb = b.fecha_aprobacion ? new Date(b.fecha_aprobacion).getTime() : Infinity;
+            const ta = getFechaVenta(a) ? new Date(getFechaVenta(a)).getTime() : Infinity;
+            const tb = getFechaVenta(b) ? new Date(getFechaVenta(b)).getTime() : Infinity;
             return ta - tb;
           }
-          case 'total_desc': return getNumeros(b).total - getNumeros(a).total;
-          case 'total_asc':  return getNumeros(a).total - getNumeros(b).total;
+          case 'cobrado_desc': return getMontoCobrado(b) - getMontoCobrado(a);
+          case 'cobrado_asc':  return getMontoCobrado(a) - getMontoCobrado(b);
+          case 'cotizado_desc': return getMontoCotizado(b) - getMontoCotizado(a);
+          case 'diferencia_desc':
+            return (getMontoCobrado(b) - getMontoCotizado(b)) - (getMontoCobrado(a) - getMontoCotizado(a));
           case 'cliente_az': return getClientName(a).localeCompare(getClientName(b), 'es');
           case 'fecha_desc':
           default: {
-            // Sin fecha al final
-            const ta = a.fecha_aprobacion ? new Date(a.fecha_aprobacion).getTime() : -Infinity;
-            const tb = b.fecha_aprobacion ? new Date(b.fecha_aprobacion).getTime() : -Infinity;
+            const ta = getFechaVenta(a) ? new Date(getFechaVenta(a)).getTime() : -Infinity;
+            const tb = getFechaVenta(b) ? new Date(getFechaVenta(b)).getTime() : -Infinity;
             return tb - ta;
           }
         }
       });
 
-      cotizacionesContabilidadFiltradas = filtradas;
+      registrosContabilidadFiltrados = filtrados;
 
-      // KPIs siempre se calculan sobre las cotizaciones aprobadas que cumplen mes/año/búsqueda,
-      // sin importar el filtro "estado fecha", para que el período sea coherente.
-      const cotizacionesPeriodo = cotizacionesContabilidad.filter(c => {
-        const tieneFecha = !!c.fecha_aprobacion;
+      // ---- KPIs: usar registros del período (mes/año + búsqueda), independientes del filtro estadoFecha
+      // Los KPIs de monto sólo cuentan registros con fecha de venta (sin fecha NO va a totales del mes).
+      const registrosPeriodo = registrosContabilidad.filter(reg => {
+        const fechaVenta = getFechaVenta(reg);
+        const tieneFecha = !!fechaVenta;
+
         if (mesNum != null || anioNum != null) {
           if (!tieneFecha) return false;
-          const d = new Date(c.fecha_aprobacion);
+          const d = new Date(fechaVenta);
           if (isNaN(d.getTime())) return false;
           if (mesNum  != null && (d.getMonth() + 1) !== mesNum)  return false;
           if (anioNum != null &&  d.getFullYear()    !== anioNum) return false;
         }
         if (busqueda) {
-          const proyecto = getProjectName(c).toLowerCase();
-          const cliente = getClientName(c).toLowerCase();
-          const numero = (c.numero || '').toString().toLowerCase();
+          const proyecto = getProjectName(reg).toLowerCase();
+          const cliente = getClientName(reg).toLowerCase();
+          const numero = (reg?.cotizacion?.numero || '').toString().toLowerCase();
           if (!proyecto.includes(busqueda) &&
               !cliente.includes(busqueda) &&
               !numero.includes(busqueda)) {
@@ -604,10 +805,10 @@
         return true;
       });
 
-      renderKPIsContabilidad(cotizacionesPeriodo);
-      renderListadoContabilidad(filtradas);
+      renderKPIsContabilidad(registrosPeriodo);
+      renderListadoContabilidad(filtrados);
       actualizarEtiquetaPeriodo(mesNum, anioNum);
-      actualizarEtiquetaResultados(filtradas.length);
+      actualizarEtiquetaResultados(filtrados.length);
     }
 
     function actualizarEtiquetaPeriodo(mesNum, anioNum) {
@@ -626,24 +827,64 @@
 
     // -------- KPIs --------
     function renderKPIsContabilidad(lista) {
-      let neto = 0, iva = 0, total = 0, conFecha = 0, sinFecha = 0;
-      lista.forEach(c => {
-        const n = getNumeros(c);
-        neto  += n.subtotal;
-        iva   += n.iva;
-        total += n.total;
-        if (c.fecha_aprobacion) conFecha++;
-        else sinFecha++;
+      let totalCobrado = 0, totalCotizado = 0, conFecha = 0, sinFecha = 0;
+      lista.forEach(reg => {
+        totalCobrado  += getMontoCobrado(reg);
+        totalCotizado += getMontoCotizado(reg);
+        if (getFechaVenta(reg)) conFecha++; else sinFecha++;
       });
-      document.getElementById('kpi-total').textContent     = formatCLP(total);
-      document.getElementById('kpi-neto').textContent      = formatCLP(neto);
-      document.getElementById('kpi-iva').textContent       = formatCLP(iva);
-      document.getElementById('kpi-aprobadas').textContent = String(lista.length);
-      document.getElementById('kpi-con-fecha').textContent = String(conFecha);
-      document.getElementById('kpi-sin-fecha').textContent = String(sinFecha);
+
+      const diferencia = totalCobrado - totalCotizado;
+      // Si el total cobrado incluye IVA (regla CL 19%): neto = total / 1.19
+      const neto = totalCobrado / 1.19;
+      const iva  = totalCobrado - neto;
+
+      document.getElementById('kpi-cobrado').textContent    = formatCLP(totalCobrado);
+      document.getElementById('kpi-cotizado').textContent   = formatCLP(totalCotizado);
+      document.getElementById('kpi-diferencia').textContent = formatCLPSigned(diferencia);
+      document.getElementById('kpi-neto').textContent       = formatCLP(neto);
+      document.getElementById('kpi-iva').textContent        = formatCLP(iva);
+      document.getElementById('kpi-con-fecha').textContent  = String(conFecha);
+      document.getElementById('kpi-sin-fecha').textContent  = String(sinFecha);
+
+      // Color de la tarjeta diferencia según signo
+      const card = document.getElementById('kpi-diferencia-card');
+      if (card) {
+        card.classList.remove('kpi-pos', 'kpi-neg');
+        if (diferencia > 0) card.classList.add('kpi-pos');
+        else if (diferencia < 0) card.classList.add('kpi-neg');
+      }
     }
 
     // -------- Listado --------
+    function diferenciaBadge(diff) {
+      if (diff > 0) {
+        return `<span class="badge badge-ok">${escapeHtml(formatCLPSigned(diff))}</span>`;
+      }
+      if (diff < 0) {
+        return `<span class="badge badge-bad">${escapeHtml(formatCLPSigned(diff))}</span>`;
+      }
+      return `<span class="badge badge-soft">$0</span>`;
+    }
+
+    function estadoBadge(estado, esCotizacionSola) {
+      const txt = (estado || '').toString().trim();
+      if (!txt) {
+        return `<span class="badge badge-soft">${esCotizacionSola ? 'Aprobada' : 'Sin estado'}</span>`;
+      }
+      const lower = txt.toLowerCase();
+      if (lower === 'aprobada' || lower === 'cobrada' || lower === 'pagada' || lower === 'completa' || lower === 'completado') {
+        return `<span class="badge badge-ok">${escapeHtml(txt)}</span>`;
+      }
+      if (lower === 'rechazada' || lower === 'anulada' || lower === 'cancelada') {
+        return `<span class="badge badge-bad">${escapeHtml(txt)}</span>`;
+      }
+      if (lower === 'pendiente' || lower === 'parcial' || lower === 'en proceso') {
+        return `<span class="badge badge-warn">${escapeHtml(txt)}</span>`;
+      }
+      return `<span class="badge badge-soft">${escapeHtml(txt)}</span>`;
+    }
+
     function renderListadoContabilidad(lista) {
       const body = document.getElementById('tabla-body');
       if (!body) return;
@@ -654,27 +895,47 @@
         return;
       }
 
-      const filas = lista.map(c => {
-        const proyecto = escapeHtml(getProjectName(c));
-        const cliente = escapeHtml(getClientName(c));
-        const fechaCot = escapeHtml(formatFechaCL(c.created_at));
-        const fechaVentaTxt = formatFechaCL(c.fecha_aprobacion);
-        const fechaVentaCell = c.fecha_aprobacion
-          ? escapeHtml(fechaVentaTxt)
-          : '<span class="badge badge-warn">Falta fecha venta</span>';
+      const filas = lista.map(reg => {
+        const proyecto = escapeHtml(getProjectName(reg));
+        const cliente = escapeHtml(getClientName(reg));
 
-        const n = getNumeros(c);
+        const fechaVentaRaw = getFechaVenta(reg);
+        const fechaVentaCell = fechaVentaRaw
+          ? escapeHtml(formatFechaCL(fechaVentaRaw))
+          : '<span class="badge badge-warn">Sin fecha de venta</span>';
+
+        const fechaCotRaw = getFechaCotizacion(reg);
+        const fechaCotCell = fechaCotRaw
+          ? escapeHtml(formatFechaCL(fechaCotRaw))
+          : '<span class="muted">—</span>';
+
+        const cotizado = getMontoCotizado(reg);
+        const cobrado  = getMontoCobrado(reg);
+        const diff     = cobrado - cotizado;
+
+        const motivo = getMotivoVariacion(reg);
+        const motivoCell = motivo ? escapeHtml(motivo) : '<span class="muted">—</span>';
+
+        const estado = getEstado(reg);
+        const estadoCell = estadoBadge(estado, reg.venta == null);
+
+        const cotId = reg?.cotizacion?.id || reg?.cotizacion_id;
+        const accionCell = cotId
+          ? `<a class="link-action" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/cotizaciones/detalle.html?id=${encodeURIComponent(cotId)}">Ver cotización</a>`
+          : '<span class="muted">—</span>';
 
         return `
           <tr>
             <td>${proyecto}</td>
             <td>${cliente}</td>
-            <td>${fechaCot}</td>
             <td>${fechaVentaCell}</td>
-            <td class="num">${escapeHtml(formatCLP(n.subtotal))}</td>
-            <td class="num">${escapeHtml(formatCLP(n.iva))}</td>
-            <td class="num"><strong>${escapeHtml(formatCLP(n.total))}</strong></td>
-            <td><span class="badge badge-ok">Aprobada</span></td>
+            <td>${fechaCotCell}</td>
+            <td class="num">${escapeHtml(formatCLP(cotizado))}</td>
+            <td class="num"><strong>${escapeHtml(formatCLP(cobrado))}</strong></td>
+            <td class="num">${diferenciaBadge(diff)}</td>
+            <td>${motivoCell}</td>
+            <td>${estadoCell}</td>
+            <td>${accionCell}</td>
           </tr>
         `;
       }).join('');
@@ -694,7 +955,20 @@
       });
     }
 
+    function aplicarDefaultsPeriodo() {
+      // Mes y año actuales por defecto.
+      const ahora = new Date();
+      const mesEl = document.getElementById('filtro-mes');
+      const anioEl = document.getElementById('filtro-anio');
+      if (mesEl) mesEl.value = String(ahora.getMonth() + 1);
+      if (anioEl) {
+        // El año actual lo asegura poblarFiltroAnios; aquí dejamos el valor por defecto.
+        anioEl.value = String(ahora.getFullYear());
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      aplicarDefaultsPeriodo();
       bindFiltros();
       cargarDatosContabilidad();
     });
