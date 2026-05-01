@@ -3,26 +3,1066 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Estado resultados proyectos</title>
+  <title>Estado resultados proyectos - BYT SOFTWARE</title>
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css" />
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
   <style>
-    :root { --nav-offset: 260px; }
-    body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
-    .page-container { padding: 24px var(--nav-offset); }
-    .page-header h1 { margin: 0 0 8px; font-size: 22px; }
-    .placeholder { color: #6c7a86; font-size: 14px; }
+    :root {
+      --nav-offset: 260px;
+      --bg: #f6f7f8;
+      --card: #ffffff;
+      --border: #e4e7eb;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --primary: #2e5e4e;
+      --primary-soft: #3f705d;
+      --warn-bg: #fff6e0;
+      --warn-fg: #8a5a00;
+      --warn-border: #f1d899;
+      --ok-bg: #e8f3ee;
+      --ok-fg: #1f6b4d;
+      --ok-border: #c5e2d2;
+      --bad-bg: #fdecec;
+      --bad-fg: #a3271e;
+      --bad-border: #f1c5c1;
+      --soft-bg: #eef1f4;
+      --soft-fg: #3a4654;
+      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
+    }
+    .page-container {
+      padding: 22px var(--nav-offset);
+      max-width: 100%;
+    }
+    .page-inner { max-width: 1480px; margin: 0 auto; }
+
+    .page-header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .page-header h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .page-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .card + .card { margin-top: 14px; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fdfdfd;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      transition: border 0.15s ease, box-shadow 0.15s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: rgba(46,94,78,0.6);
+      box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .kpi .kpi-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    .kpi .kpi-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .kpi.kpi-primary .kpi-value { color: var(--primary); }
+    .kpi.kpi-warn .kpi-value { color: var(--warn-fg); }
+    .kpi.kpi-pos .kpi-value { color: var(--ok-fg); }
+    .kpi.kpi-neg .kpi-value { color: var(--bad-fg); }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+    .fin-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 13px;
+      background: #fff;
+      min-width: 1280px;
+    }
+    .fin-table th,
+    .fin-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: middle;
+      font-size: 13px;
+      text-align: left;
+    }
+    .fin-table th {
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      position: sticky;
+      top: 0;
+    }
+    .fin-table tbody tr:last-child td { border-bottom: none; }
+    .fin-table tbody tr:hover { background: #fafbfc; }
+
+    /* Column widths (13 columnas) */
+    .fin-table col.col-proyecto    { width: 13%; }
+    .fin-table col.col-cliente     { width: 10%; }
+    .fin-table col.col-fecha       { width: 8%;  }
+    .fin-table col.col-monto       { width: 8%;  }
+    .fin-table col.col-resultado   { width: 9%;  }
+    .fin-table col.col-estado      { width: 9%;  }
+    .fin-table col.col-accion      { width: 9%;  }
+
+    .fin-text-ellipsis {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .fin-money {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+    .fin-money-soft {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .muted { color: var(--muted); }
+
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge-ok    { background: var(--ok-bg);   color: var(--ok-fg);   border-color: var(--ok-border); }
+    .badge-warn  { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-border); }
+    .badge-bad   { background: var(--bad-bg);  color: var(--bad-fg);  border-color: var(--bad-border); }
+    .badge-soft  { background: var(--soft-bg); color: var(--soft-fg); border-color: #dde2e7; }
+
+    .link-action {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+      padding: 6px 10px;
+      border: 1px solid var(--ok-border);
+      border-radius: 8px;
+      background: var(--ok-bg);
+      transition: background 0.15s ease;
+      margin-right: 4px;
+    }
+    .link-action:hover { background: #d8ecdf; }
+
+    .state {
+      padding: 28px 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .state.error { color: #b3261e; }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+    .section-title small {
+      font-weight: 500;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+
+    @media (max-width: 900px) {
+      .page-container { padding: 16px; }
+    }
   </style>
 </head>
 <body>
   <div class="page-container">
-    <div class="page-header">
-      <h1>Estado resultados proyectos</h1>
+    <div class="page-inner">
+
+      <div class="page-header">
+        <h1>Estado resultados proyectos</h1>
+        <p>Rentabilidad por proyecto cruzando ventas cobradas y compras asociadas.</p>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Filtros</h2>
+        <div class="filters">
+          <div>
+            <label for="filtro-mes">Mes venta</label>
+            <select id="filtro-mes">
+              <option value="">Todos los meses</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-anio">Año venta</label>
+            <select id="filtro-anio">
+              <option value="">Todos los años</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-busqueda">Buscar proyecto / cliente</label>
+            <input type="text" id="filtro-busqueda" placeholder="Ej: cocina, Juan Pérez..." autocomplete="off" />
+          </div>
+          <div>
+            <label for="filtro-estado-resultado">Estado resultado</label>
+            <select id="filtro-estado-resultado">
+              <option value="todos">Todos</option>
+              <option value="ganancia">Ganancia</option>
+              <option value="perdida">Pérdida</option>
+              <option value="sin_compras">Sin compras</option>
+              <option value="compra_pendiente">Compra pendiente</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-orden">Ordenar por</label>
+            <select id="filtro-orden">
+              <option value="fecha_venta_desc">Fecha venta más reciente</option>
+              <option value="fecha_entrega_asc">Fecha entrega más próxima</option>
+              <option value="cobrado_desc">Cobrado mayor a menor</option>
+              <option value="resultado_desc">Resultado mayor a menor</option>
+              <option value="resultado_asc">Resultado menor a mayor</option>
+              <option value="compras_desc">Compras mayor a menor</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Resumen del período <small id="periodo-label"></small></h2>
+        <div class="kpis" id="kpis-container">
+          <div class="kpi kpi-primary">
+            <div class="kpi-label">Total cobrado</div>
+            <div class="kpi-value" id="kpi-cobrado">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Total cotizado</div>
+            <div class="kpi-value" id="kpi-cotizado">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Total compras</div>
+            <div class="kpi-value" id="kpi-compras">$0</div>
+          </div>
+          <div class="kpi" id="kpi-resultado-card">
+            <div class="kpi-label">Resultado total</div>
+            <div class="kpi-value" id="kpi-resultado">$0</div>
+          </div>
+          <div class="kpi kpi-pos">
+            <div class="kpi-label">Proyectos con ganancia</div>
+            <div class="kpi-value" id="kpi-ganancia">0</div>
+          </div>
+          <div class="kpi kpi-neg">
+            <div class="kpi-label">Proyectos con pérdida</div>
+            <div class="kpi-value" id="kpi-perdida">0</div>
+          </div>
+          <div class="kpi kpi-warn">
+            <div class="kpi-label">Compras pendientes</div>
+            <div class="kpi-value" id="kpi-pendientes">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title">Proyectos <small id="resultados-label"></small></h2>
+
+        <div id="estado-cargando" class="state">Cargando...</div>
+        <div id="estado-vacio" class="state" style="display:none;">Sin datos para este período.</div>
+        <div id="estado-error" class="state error" style="display:none;">Error al cargar información.</div>
+
+        <div class="table-wrap" id="tabla-wrap" style="display:none;">
+          <table class="fin-table">
+            <colgroup>
+              <col class="col-proyecto" />
+              <col class="col-cliente" />
+              <col class="col-fecha" />
+              <col class="col-fecha" />
+              <col class="col-monto" />
+              <col class="col-monto" />
+              <col class="col-monto" />
+              <col class="col-monto" />
+              <col class="col-monto" />
+              <col class="col-monto" />
+              <col class="col-resultado" />
+              <col class="col-estado" />
+              <col class="col-accion" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Proyecto</th>
+                <th>Cliente</th>
+                <th>Fecha venta</th>
+                <th>Fecha entrega</th>
+                <th class="fin-money">Cotizado</th>
+                <th class="fin-money">Cobrado</th>
+                <th class="fin-money">Comprado</th>
+                <th class="fin-money">Stock</th>
+                <th class="fin-money">Por comprar</th>
+                <th class="fin-money">Total compras</th>
+                <th class="fin-money">Resultado</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
-    <p class="placeholder">En construcción</p>
   </div>
 
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/lib/supabaseConfig.js"></script>
+  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
+  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/globalSupabase.js"></script>
+
+  <script>
+    // ============================================================
+    // Estado resultados proyectos — solo lectura.
+    //
+    // Cruza:
+    //   - ventas (cobrado real, agrupadas por cotizacion_id para no duplicar)
+    //   - cotizaciones aprobadas (complemento de nombre/cliente/fechas/totales)
+    //   - purchase_blocks + purchase_lines (compras por proyecto)
+    //
+    // Relación compras <-> proyecto:
+    //   purchase_blocks.proyecto_id === cotizaciones.id (=== ventas.cotizacion_id)
+    //   purchase_lines.block_id     === purchase_blocks.id
+    //
+    // Estados de compra (purchase_lines.estado_pago) considerados:
+    //   - 'comprado'   -> total comprado
+    //   - 'stock'      -> total en stock
+    //   - 'porcomprar' -> total por comprar
+    //
+    // Reglas financieras:
+    //   cotizado            = ventas.total_cotizado || cotizaciones.total
+    //   cobrado             = ventas.total_venta    || ventas.total_cotizado || cotizaciones.total
+    //   compras_total       = comprado + stock + por_comprar
+    //   resultado           = cobrado - compras_total
+    //   diferencia_comercial= cobrado - cotizado
+    //
+    // Fechas:
+    //   fecha_venta   = ventas.fecha_venta || cotizaciones.fecha_aprobacion
+    //   fecha_entrega = ventas.fecha_entrega_limite
+    //   created_at NUNCA es fecha de venta.
+    //
+    // No edita datos. No modifica compras / ventas / cotizaciones.
+    // ============================================================
+
+    let proyectosData = [];           // todos los registros normalizados por proyecto
+    let proyectosFiltrados = [];      // tras filtros + orden
+
+    // -------- Helpers de formato --------
+    function formatCLP(valor) {
+      const n = Number(valor);
+      if (!isFinite(n)) return '$0';
+      try { return '$' + Math.round(n).toLocaleString('es-CL'); }
+      catch (_) { return '$' + Math.round(n); }
+    }
+    function formatCLPSigned(valor) {
+      const n = Math.round(Number(valor) || 0);
+      if (n === 0) return '$0';
+      const sign = n > 0 ? '+' : '-';
+      return sign + formatCLP(Math.abs(n));
+    }
+    function formatFechaCL(fecha) {
+      if (!fecha) return '';
+      const d = new Date(fecha);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('es-CL');
+    }
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function parseMaybeJson(value) {
+      if (value == null) return null;
+      if (typeof value === 'object') return value;
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          try { return JSON.parse(trimmed); } catch (_) { return value; }
+        }
+        return value;
+      }
+      return value;
+    }
+    function parseData(c) {
+      const parsed = parseMaybeJson(c?.data);
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    }
+
+    // -------- Helpers de negocio --------
+    function getProjectName(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+      const dataC = parseData(c);
+      const dataV = parseData(v);
+      const candidatos = [
+        v.proyecto,
+        dataC?.cliente?.nombre_proyecto,
+        dataV?.cliente?.nombre_proyecto,
+        c.project_key,
+        v.project_key,
+      ];
+      for (const cand of candidatos) {
+        if (cand == null) continue;
+        if (typeof cand === 'object') continue;
+        const s = String(cand).trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
+      }
+      return 'Sin nombre';
+    }
+
+    function getClientName(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+
+      const cliente = parseMaybeJson(v.cliente);
+      if (cliente && typeof cliente === 'object') {
+        const n = cliente.nombre || cliente.name || cliente.cliente;
+        if (n && String(n).trim()) return String(n).trim();
+      } else if (typeof cliente === 'string') {
+        const s = cliente.trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
+      }
+
+      const cotCliente = parseMaybeJson(c.cliente);
+      if (cotCliente && typeof cotCliente === 'object') {
+        const n = cotCliente.nombre || cotCliente.name || cotCliente.cliente;
+        if (n && String(n).trim()) return String(n).trim();
+      } else if (typeof cotCliente === 'string') {
+        const s = cotCliente.trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
+      }
+
+      const dataC = parseData(c);
+      const dataV = parseData(v);
+      const dataCliente = dataC?.cliente || dataV?.cliente;
+      if (dataCliente && typeof dataCliente === 'object') {
+        const n = dataCliente.nombre || dataCliente.name || dataCliente.cliente;
+        if (n && String(n).trim()) return String(n).trim();
+      }
+
+      return 'Sin cliente';
+    }
+
+    function getFechaVenta(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+      if (v.fecha_venta) return v.fecha_venta;
+      if (c.fecha_aprobacion) return c.fecha_aprobacion;
+      return '';
+    }
+    function getFechaEntrega(reg) {
+      return reg?.venta?.fecha_entrega_limite || '';
+    }
+
+    function getMontoCotizado(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+      const tc = Number(v.total_cotizado);
+      if (isFinite(tc) && tc > 0) return tc;
+      const tcot = Number(c.total);
+      if (isFinite(tcot) && tcot > 0) return tcot;
+      return 0;
+    }
+    function getMontoCobrado(reg) {
+      const v = reg?.venta || {};
+      const c = reg?.cotizacion || {};
+      if (v.total_venta != null && v.total_venta !== '') {
+        const tv = Number(v.total_venta);
+        if (isFinite(tv) && tv >= 0) return tv;
+      }
+      const tc = Number(v.total_cotizado);
+      if (isFinite(tc) && tc > 0) return tc;
+      const tcot = Number(c.total);
+      if (isFinite(tcot) && tcot > 0) return tcot;
+      return 0;
+    }
+
+    // -------- Compras --------
+    function normalizeEstadoCompra(raw) {
+      const v = String(raw || '').toLowerCase().trim();
+      if (!v) return '';
+      if (v.includes('comprado')) return 'comprado';
+      if (v.includes('stock'))    return 'stock';
+      if (v.includes('por comprar') || v.includes('porcomprar')) return 'porcomprar';
+      return '';
+    }
+
+    // Devuelve Map<proyecto_id, { comprado, stock, por_comprar }>
+    function aggregateCompras(blocks, lines) {
+      // block_id -> proyecto_id (relación existente en compras: purchase_blocks.proyecto_id)
+      const blockToProyecto = new Map();
+      (blocks || []).forEach(b => {
+        if (b && b.id != null) blockToProyecto.set(b.id, b.proyecto_id || null);
+      });
+
+      const map = new Map();
+      const ensure = (pid) => {
+        if (!map.has(pid)) map.set(pid, { comprado: 0, stock: 0, por_comprar: 0 });
+        return map.get(pid);
+      };
+
+      (lines || []).forEach(l => {
+        if (!l) return;
+        const proyectoId = blockToProyecto.get(l.block_id);
+        if (proyectoId == null) return;
+        const cantidad = Number(l.cantidad);
+        const precio   = Number(l.precio_unit);
+        const lineTotal = (isFinite(cantidad) && isFinite(precio)) ? cantidad * precio : 0;
+        if (lineTotal <= 0) return;
+        const estado = normalizeEstadoCompra(l.estado_pago);
+        const acc = ensure(proyectoId);
+        if (estado === 'comprado')        acc.comprado    += lineTotal;
+        else if (estado === 'stock')      acc.stock       += lineTotal;
+        else if (estado === 'porcomprar') acc.por_comprar += lineTotal;
+      });
+
+      return map;
+    }
+
+    function getCompras(reg) {
+      // Agregado precalculado en el registro
+      const c = reg?.compras || { comprado: 0, stock: 0, por_comprar: 0 };
+      const comprado    = Number(c.comprado)    || 0;
+      const stock       = Number(c.stock)       || 0;
+      const por_comprar = Number(c.por_comprar) || 0;
+      const total       = comprado + stock + por_comprar;
+      return { comprado, stock, por_comprar, total };
+    }
+
+    function getResultado(reg) {
+      const cobrado = getMontoCobrado(reg);
+      const compras = getCompras(reg).total;
+      return cobrado - compras;
+    }
+
+    function getEstadoResultado(reg) {
+      const compras = getCompras(reg);
+      if (compras.total <= 0) return 'sin_compras';
+      const r = getResultado(reg);
+      if (r > 0) return 'ganancia';
+      if (r < 0) return 'perdida';
+      return 'cero';
+    }
+
+    // -------- Estado UI --------
+    function mostrarEstado(estado) {
+      const cargando = document.getElementById('estado-cargando');
+      const vacio = document.getElementById('estado-vacio');
+      const error = document.getElementById('estado-error');
+      const tabla = document.getElementById('tabla-wrap');
+      cargando.style.display = estado === 'loading' ? 'block' : 'none';
+      vacio.style.display    = estado === 'empty'   ? 'block' : 'none';
+      error.style.display    = estado === 'error'   ? 'block' : 'none';
+      tabla.style.display    = estado === 'data'    ? 'block' : 'none';
+    }
+
+    // -------- Carga --------
+    function esperarSupabase(timeoutMs = 8000) {
+      return new Promise((resolve) => {
+        const inicio = Date.now();
+        function check() {
+          if (window.supabase && typeof window.supabase.from === 'function') {
+            return resolve(window.supabase);
+          }
+          if (Date.now() - inicio >= timeoutMs) {
+            return resolve(window.supabase || null);
+          }
+          setTimeout(check, 100);
+        }
+        try {
+          window.addEventListener('supabase:ready', () => {
+            if (window.supabase && typeof window.supabase.from === 'function') resolve(window.supabase);
+          }, { once: true });
+        } catch (_) {}
+        check();
+      });
+    }
+
+    async function cargarDatos() {
+      mostrarEstado('loading');
+      try {
+        const client = await esperarSupabase(8000);
+        if (!client || typeof client.from !== 'function') {
+          throw new Error('Supabase no disponible');
+        }
+
+        const [ventasResp, cotizacionesResp, blocksResp, linesResp] = await Promise.all([
+          client
+            .from('ventas')
+            .select('id, cotizacion_id, proyecto, cliente, estado, fecha_venta, total_cotizado, total_venta, motivo_variacion, fecha_entrega_limite, partida_nombre, partida'),
+          client
+            .from('cotizaciones')
+            .select('id, cliente, project_key, estado, subtotal, iva, total, fecha_aprobacion, data')
+            .eq('estado', 'aprobada'),
+          client
+            .from('purchase_blocks')
+            .select('id, proyecto_id'),
+          client
+            .from('purchase_lines')
+            .select('id, block_id, cantidad, precio_unit, estado_pago'),
+        ]);
+
+        if (ventasResp.error)       throw ventasResp.error;
+        if (cotizacionesResp.error) throw cotizacionesResp.error;
+        if (blocksResp.error)       throw blocksResp.error;
+        if (linesResp.error)        throw linesResp.error;
+
+        const ventas       = Array.isArray(ventasResp.data)       ? ventasResp.data       : [];
+        const cotizaciones = Array.isArray(cotizacionesResp.data) ? cotizacionesResp.data : [];
+        const blocks       = Array.isArray(blocksResp.data)       ? blocksResp.data       : [];
+        const lines        = Array.isArray(linesResp.data)        ? linesResp.data        : [];
+
+        const comprasPorProyecto = aggregateCompras(blocks, lines);
+        proyectosData = normalizarProyectos(ventas, cotizaciones, comprasPorProyecto);
+        poblarFiltroAnios(proyectosData);
+        aplicarFiltros();
+      } catch (err) {
+        console.error('[finanzas/proyectos] Error al cargar:', err);
+        proyectosData = [];
+        proyectosFiltrados = [];
+        renderKPIs([]);
+        mostrarEstado('error');
+      }
+    }
+
+    // -------- Normalización por proyecto --------
+    // Agrupa ventas por cotizacion_id (no duplica totales por partidas).
+    // Incluye también cotizaciones aprobadas sin venta.
+    function normalizarProyectos(ventas, cotizaciones, comprasMap) {
+      const cotizacionesById = new Map();
+      cotizaciones.forEach(c => { if (c && c.id != null) cotizacionesById.set(c.id, c); });
+
+      // Considerar SOLO ventas asociadas a cotizaciones aprobadas (consistente con ventas/index.html).
+      const grupos = new Map();
+      ventas.forEach((v, idx) => {
+        if (!v) return;
+        if (v.cotizacion_id != null && v.cotizacion_id !== '') {
+          if (!cotizacionesById.has(v.cotizacion_id)) return; // no aprobada
+          const key = 'cot:' + v.cotizacion_id;
+          if (!grupos.has(key)) grupos.set(key, []);
+          grupos.get(key).push(v);
+        }
+        // Ventas sin cotizacion_id se ignoran (no se pueden cruzar con compras/cotizaciones).
+      });
+
+      const registros = [];
+      const cotIdsConVenta = new Set();
+
+      grupos.forEach((filas, key) => {
+        const filaVenta = filas.find(f =>
+          f && f.total_venta != null && f.total_venta !== '' &&
+          isFinite(Number(f.total_venta)) && Number(f.total_venta) >= 0
+        );
+        const filaCotizado = filas.find(f =>
+          f && f.total_cotizado != null && f.total_cotizado !== '' &&
+          isFinite(Number(f.total_cotizado)) && Number(f.total_cotizado) > 0
+        );
+
+        const base = filas[0] || {};
+        const ventaProyecto = {
+          id: base.id,
+          cotizacion_id: base.cotizacion_id,
+          proyecto: base.proyecto,
+          cliente: base.cliente,
+          estado: base.estado,
+          fecha_venta: filas.find(f => !!f.fecha_venta)?.fecha_venta || base.fecha_venta || '',
+          total_cotizado: filaCotizado ? Number(filaCotizado.total_cotizado) : null,
+          total_venta:    filaVenta    ? Number(filaVenta.total_venta)       : null,
+          motivo_variacion: filas.find(f => !!f.motivo_variacion)?.motivo_variacion || base.motivo_variacion || '',
+          fecha_entrega_limite: filas.find(f => !!f.fecha_entrega_limite)?.fecha_entrega_limite || base.fecha_entrega_limite || '',
+        };
+
+        const cotizacionRel = (base.cotizacion_id != null && cotizacionesById.has(base.cotizacion_id))
+          ? cotizacionesById.get(base.cotizacion_id)
+          : null;
+        if (cotizacionRel) cotIdsConVenta.add(cotizacionRel.id);
+
+        const proyectoId = base.cotizacion_id;
+        registros.push({
+          key,
+          cotizacion_id: proyectoId || null,
+          venta: ventaProyecto,
+          cotizacion: cotizacionRel || {},
+          compras: comprasMap.get(proyectoId) || { comprado: 0, stock: 0, por_comprar: 0 },
+        });
+      });
+
+      // Cotizaciones aprobadas sin fila de venta -> también se muestran.
+      cotizaciones.forEach(c => {
+        if (!c || c.id == null) return;
+        if (cotIdsConVenta.has(c.id)) return;
+        registros.push({
+          key: 'cot-only:' + c.id,
+          cotizacion_id: c.id,
+          venta: null,
+          cotizacion: c,
+          compras: comprasMap.get(c.id) || { comprado: 0, stock: 0, por_comprar: 0 },
+        });
+      });
+
+      return registros;
+    }
+
+    // -------- Filtros / Orden --------
+    function poblarFiltroAnios(lista) {
+      const sel = document.getElementById('filtro-anio');
+      if (!sel) return;
+      const anios = new Set();
+      lista.forEach(reg => {
+        const f = getFechaVenta(reg);
+        if (!f) return;
+        const d = new Date(f);
+        if (!isNaN(d.getTime())) anios.add(d.getFullYear());
+      });
+
+      const anioActual = new Date().getFullYear();
+      anios.add(anioActual);
+
+      const valorPrev = sel.value;
+      sel.innerHTML = '<option value="">Todos los años</option>';
+      Array.from(anios).sort((a, b) => b - a).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = String(a);
+        opt.textContent = String(a);
+        sel.appendChild(opt);
+      });
+
+      if (valorPrev && Array.from(sel.options).some(o => o.value === valorPrev)) {
+        sel.value = valorPrev;
+      } else {
+        sel.value = String(anioActual);
+      }
+    }
+
+    function aplicarFiltros() {
+      const mes = document.getElementById('filtro-mes').value;
+      const anio = document.getElementById('filtro-anio').value;
+      const busqueda = (document.getElementById('filtro-busqueda').value || '').trim().toLowerCase();
+      const estadoSel = document.getElementById('filtro-estado-resultado').value;
+      const orden = document.getElementById('filtro-orden').value;
+
+      const mesNum = mes ? parseInt(mes, 10) : null;
+      const anioNum = anio ? parseInt(anio, 10) : null;
+
+      const matchPeriodo = (reg) => {
+        if (mesNum == null && anioNum == null) return true;
+        const fecha = getFechaVenta(reg);
+        if (!fecha) return false;
+        const d = new Date(fecha);
+        if (isNaN(d.getTime())) return false;
+        if (mesNum  != null && (d.getMonth() + 1) !== mesNum)  return false;
+        if (anioNum != null &&  d.getFullYear()    !== anioNum) return false;
+        return true;
+      };
+      const matchTexto = (reg) => {
+        if (!busqueda) return true;
+        const proyecto = getProjectName(reg).toLowerCase();
+        const cliente = getClientName(reg).toLowerCase();
+        return proyecto.includes(busqueda) || cliente.includes(busqueda);
+      };
+      const matchEstadoResultado = (reg) => {
+        if (estadoSel === 'todos') return true;
+        const compras = getCompras(reg);
+        const er = getEstadoResultado(reg);
+        if (estadoSel === 'ganancia')         return er === 'ganancia';
+        if (estadoSel === 'perdida')          return er === 'perdida';
+        if (estadoSel === 'sin_compras')      return er === 'sin_compras';
+        if (estadoSel === 'compra_pendiente') return compras.por_comprar > 0;
+        return true;
+      };
+
+      const filtrados = proyectosData.filter(reg =>
+        matchPeriodo(reg) && matchTexto(reg) && matchEstadoResultado(reg)
+      );
+
+      filtrados.sort((a, b) => {
+        switch (orden) {
+          case 'fecha_entrega_asc': {
+            const ta = getFechaEntrega(a) ? new Date(getFechaEntrega(a)).getTime() : Infinity;
+            const tb = getFechaEntrega(b) ? new Date(getFechaEntrega(b)).getTime() : Infinity;
+            return ta - tb;
+          }
+          case 'cobrado_desc':   return getMontoCobrado(b) - getMontoCobrado(a);
+          case 'resultado_desc': return getResultado(b)    - getResultado(a);
+          case 'resultado_asc':  return getResultado(a)    - getResultado(b);
+          case 'compras_desc':   return getCompras(b).total - getCompras(a).total;
+          case 'fecha_venta_desc':
+          default: {
+            const ta = getFechaVenta(a) ? new Date(getFechaVenta(a)).getTime() : -Infinity;
+            const tb = getFechaVenta(b) ? new Date(getFechaVenta(b)).getTime() : -Infinity;
+            return tb - ta;
+          }
+        }
+      });
+
+      proyectosFiltrados = filtrados;
+
+      // KPIs basados en período + búsqueda (no en estado resultado).
+      const registrosPeriodo = proyectosData.filter(reg => matchPeriodo(reg) && matchTexto(reg));
+
+      renderKPIs(registrosPeriodo);
+      renderTabla(filtrados);
+      actualizarEtiquetaPeriodo(mesNum, anioNum);
+      actualizarEtiquetaResultados(filtrados.length);
+    }
+
+    function actualizarEtiquetaPeriodo(mesNum, anioNum) {
+      const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      const partes = [];
+      if (mesNum != null) partes.push(meses[mesNum - 1]);
+      if (anioNum != null) partes.push(String(anioNum));
+      const lbl = document.getElementById('periodo-label');
+      if (lbl) lbl.textContent = partes.length ? '· ' + partes.join(' ') : '· Todos los períodos';
+    }
+    function actualizarEtiquetaResultados(n) {
+      const lbl = document.getElementById('resultados-label');
+      if (lbl) lbl.textContent = '· ' + n + (n === 1 ? ' resultado' : ' resultados');
+    }
+
+    // -------- KPIs --------
+    function renderKPIs(lista) {
+      let totalCobrado = 0, totalCotizado = 0, totalCompras = 0;
+      let conGanancia = 0, conPerdida = 0, conPendiente = 0;
+
+      lista.forEach(reg => {
+        const cobrado = getMontoCobrado(reg);
+        const cotizado = getMontoCotizado(reg);
+        const compras = getCompras(reg);
+        totalCobrado  += cobrado;
+        totalCotizado += cotizado;
+        totalCompras  += compras.total;
+
+        const er = getEstadoResultado(reg);
+        if (er === 'ganancia') conGanancia++;
+        else if (er === 'perdida') conPerdida++;
+        if (compras.por_comprar > 0) conPendiente++;
+      });
+
+      const resultadoTotal = totalCobrado - totalCompras;
+
+      document.getElementById('kpi-cobrado').textContent   = formatCLP(totalCobrado);
+      document.getElementById('kpi-cotizado').textContent  = formatCLP(totalCotizado);
+      document.getElementById('kpi-compras').textContent   = formatCLP(totalCompras);
+      document.getElementById('kpi-resultado').textContent = formatCLPSigned(resultadoTotal);
+      document.getElementById('kpi-ganancia').textContent  = String(conGanancia);
+      document.getElementById('kpi-perdida').textContent   = String(conPerdida);
+      document.getElementById('kpi-pendientes').textContent = String(conPendiente);
+
+      const card = document.getElementById('kpi-resultado-card');
+      if (card) {
+        card.classList.remove('kpi-pos','kpi-neg');
+        if (resultadoTotal > 0) card.classList.add('kpi-pos');
+        else if (resultadoTotal < 0) card.classList.add('kpi-neg');
+      }
+    }
+
+    // -------- Tabla --------
+    function resultadoBadge(resultado, comprasTotal) {
+      if (comprasTotal <= 0) {
+        return `<span class="badge badge-soft" title="Sin compras registradas">${escapeHtml(formatCLP(resultado))}</span>`;
+      }
+      if (resultado > 0) return `<span class="badge badge-ok">${escapeHtml(formatCLPSigned(resultado))}</span>`;
+      if (resultado < 0) return `<span class="badge badge-bad">${escapeHtml(formatCLPSigned(resultado))}</span>`;
+      return `<span class="badge badge-soft">$0</span>`;
+    }
+
+    function estadoResultadoBadge(reg) {
+      const compras = getCompras(reg);
+      if (compras.total <= 0) return `<span class="badge badge-soft">Sin compras</span>`;
+      const r = getResultado(reg);
+      if (r > 0) return `<span class="badge badge-ok">Ganancia</span>`;
+      if (r < 0) return `<span class="badge badge-bad">Pérdida</span>`;
+      return `<span class="badge badge-soft">Equilibrio</span>`;
+    }
+
+    function porComprarCell(valor) {
+      if (valor > 0) {
+        return `<span class="badge badge-warn">${escapeHtml(formatCLP(valor))}</span>`;
+      }
+      return `<span class="muted">${escapeHtml(formatCLP(0))}</span>`;
+    }
+
+    function renderTabla(lista) {
+      const body = document.getElementById('tabla-body');
+      if (!body) return;
+
+      if (!lista || lista.length === 0) {
+        body.innerHTML = '';
+        mostrarEstado('empty');
+        return;
+      }
+
+      const filas = lista.map(reg => {
+        const proyecto = escapeHtml(getProjectName(reg));
+        const cliente  = escapeHtml(getClientName(reg));
+
+        const fechaVentaRaw   = getFechaVenta(reg);
+        const fechaEntregaRaw = getFechaEntrega(reg);
+        const fechaVentaCell   = fechaVentaRaw
+          ? escapeHtml(formatFechaCL(fechaVentaRaw))
+          : '<span class="badge badge-warn">Sin fecha</span>';
+        const fechaEntregaCell = fechaEntregaRaw
+          ? escapeHtml(formatFechaCL(fechaEntregaRaw))
+          : '<span class="muted">—</span>';
+
+        const cotizado = getMontoCotizado(reg);
+        const cobrado  = getMontoCobrado(reg);
+        const compras  = getCompras(reg);
+        const resultado = cobrado - compras.total;
+
+        const cotId = reg?.cotizacion?.id || reg?.cotizacion_id;
+        const accionCell = cotId
+          ? `<a class="link-action" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/pages/cotizaciones/detalle.html?id=${encodeURIComponent(cotId)}">Ver cotización</a>`
+          : '<span class="muted">Sin link</span>';
+
+        return `
+          <tr>
+            <td><span class="fin-text-ellipsis" title="${proyecto}">${proyecto}</span></td>
+            <td><span class="fin-text-ellipsis" title="${cliente}">${cliente}</span></td>
+            <td>${fechaVentaCell}</td>
+            <td>${fechaEntregaCell}</td>
+            <td class="fin-money-soft">${escapeHtml(formatCLP(cotizado))}</td>
+            <td class="fin-money">${escapeHtml(formatCLP(cobrado))}</td>
+            <td class="fin-money-soft">${escapeHtml(formatCLP(compras.comprado))}</td>
+            <td class="fin-money-soft">${escapeHtml(formatCLP(compras.stock))}</td>
+            <td class="fin-money">${porComprarCell(compras.por_comprar)}</td>
+            <td class="fin-money">${escapeHtml(formatCLP(compras.total))}</td>
+            <td class="fin-money">${resultadoBadge(resultado, compras.total)}</td>
+            <td>${estadoResultadoBadge(reg)}</td>
+            <td>${accionCell}</td>
+          </tr>
+        `;
+      }).join('');
+
+      body.innerHTML = filas;
+      mostrarEstado('data');
+    }
+
+    // -------- Wire-up --------
+    function bindFiltros() {
+      const ids = ['filtro-mes','filtro-anio','filtro-busqueda','filtro-estado-resultado','filtro-orden'];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+        el.addEventListener(evt, aplicarFiltros);
+      });
+    }
+
+    function aplicarDefaultsPeriodo() {
+      // Por defecto: "Todos los meses" del año actual, para mostrar la mayor cantidad de proyectos.
+      const ahora = new Date();
+      const anioEl = document.getElementById('filtro-anio');
+      if (anioEl) anioEl.value = String(ahora.getFullYear());
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      aplicarDefaultsPeriodo();
+      bindFiltros();
+      cargarDatos();
+    });
+  </script>
 </body>
 </html>
