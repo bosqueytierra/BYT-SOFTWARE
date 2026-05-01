@@ -3,26 +3,1579 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pagos clientes</title>
+  <title>Pagos clientes - BYT SOFTWARE</title>
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css" />
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
   <style>
-    :root { --nav-offset: 260px; }
-    body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
-    .page-container { padding: 24px var(--nav-offset); }
-    .page-header h1 { margin: 0 0 8px; font-size: 22px; }
-    .placeholder { color: #6c7a86; font-size: 14px; }
+    :root {
+      --nav-offset: 260px;
+      --bg: #f6f7f8;
+      --card: #ffffff;
+      --border: #e4e7eb;
+      --text: #2d2d2d;
+      --muted: #6c7a86;
+      --primary: #2e5e4e;
+      --primary-soft: #3f705d;
+      --warn-bg: #fff6e0;
+      --warn-fg: #8a5a00;
+      --warn-border: #f1d899;
+      --ok-bg: #e8f3ee;
+      --ok-fg: #1f6b4d;
+      --ok-border: #c5e2d2;
+      --bad-bg: #fdecec;
+      --bad-fg: #a3271e;
+      --bad-border: #f1c5c1;
+      --soft-bg: #eef1f4;
+      --soft-fg: #3a4654;
+      --shadow: 0 6px 16px rgba(0,0,0,0.06);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
+    }
+    .page-container {
+      padding: 22px var(--nav-offset);
+      max-width: 100%;
+    }
+    .page-inner { max-width: 1480px; margin: 0 auto; }
+
+    .page-header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .page-header h1 {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .page-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .card + .card { margin-top: 14px; }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 0.02em;
+    }
+    .section-title small {
+      font-weight: 500;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fdfdfd;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--text);
+      transition: border 0.15s ease, box-shadow 0.15s ease;
+    }
+    textarea { resize: vertical; min-height: 38px; }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: rgba(46,94,78,0.6);
+      box-shadow: 0 0 0 3px rgba(46,94,78,0.12);
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .kpi .kpi-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    .kpi .kpi-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .kpi.kpi-primary .kpi-value { color: var(--primary); }
+    .kpi.kpi-warn .kpi-value { color: var(--warn-fg); }
+    .kpi.kpi-pos .kpi-value { color: var(--ok-fg); }
+    .kpi.kpi-neg .kpi-value { color: var(--bad-fg); }
+
+    /* Selector de proyecto (combobox custom) */
+    .selector-wrap { position: relative; }
+    .selector-input {
+      width: 100%;
+    }
+    .selector-list {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      max-height: 280px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+      z-index: 30;
+      display: none;
+    }
+    .selector-list.open { display: block; }
+    .selector-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f2f5;
+      font-size: 13px;
+    }
+    .selector-item:last-child { border-bottom: none; }
+    .selector-item:hover, .selector-item.active { background: #f3f7f5; }
+    .selector-item .si-title { font-weight: 700; color: var(--text); }
+    .selector-item .si-meta  { color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .selector-empty { padding: 12px; color: var(--muted); font-size: 13px; }
+
+    /* Ficha proyecto */
+    .ficha-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .ficha-item {
+      background: #fafbfc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .ficha-item .fi-label {
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .ficha-item .fi-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Formulario nuevo pago */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-soft); }
+    .btn-primary:disabled { background: #9eb5ac; cursor: not-allowed; }
+    .btn-soft {
+      background: var(--soft-bg);
+      color: var(--soft-fg);
+      border-color: #dde2e7;
+    }
+    .btn-soft:hover { background: #e3e7ec; }
+    .btn-bad {
+      background: var(--bad-bg);
+      color: var(--bad-fg);
+      border-color: var(--bad-border);
+    }
+    .btn-bad:hover { background: #fbdcd9; }
+
+    /* Tabla */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+    .pc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: #fff;
+      min-width: 900px;
+    }
+    .pc-table th, .pc-table td {
+      padding: 11px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: middle;
+      font-size: 13px;
+      text-align: left;
+    }
+    .pc-table th {
+      background: #f8fafc;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .pc-table tbody tr:last-child td { border-bottom: none; }
+    .pc-table tbody tr:hover { background: #fafbfc; }
+    .pc-money {
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+    .muted { color: var(--muted); }
+
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .badge-ok    { background: var(--ok-bg);   color: var(--ok-fg);   border-color: var(--ok-border); }
+    .badge-warn  { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-border); }
+    .badge-bad   { background: var(--bad-bg);  color: var(--bad-fg);  border-color: var(--bad-border); }
+    .badge-soft  { background: var(--soft-bg); color: var(--soft-fg); border-color: #dde2e7; }
+
+    .state {
+      padding: 28px 14px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .state.error { color: #b3271e; }
+
+    /* Modal interno */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20, 30, 40, 0.42);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.18);
+      width: min(440px, 92vw);
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+    .modal h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 800;
+    }
+    .modal p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    /* Inline form messages */
+    .form-msg {
+      margin-top: 8px;
+      font-size: 13px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      display: none;
+    }
+    .form-msg.show { display: block; }
+    .form-msg.error { background: var(--bad-bg); color: var(--bad-fg); border: 1px solid var(--bad-border); }
+    .form-msg.ok    { background: var(--ok-bg);  color: var(--ok-fg);  border: 1px solid var(--ok-border); }
+
+    .actions-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 900px) {
+      .page-container { padding: 16px; }
+    }
+
+    /* ============ Reporte imprimible ============ */
+    .print-report { display: none; }
+    @media print {
+      @page { size: A4; margin: 14mm; }
+      body { background: #fff; }
+      /* Ocultar sidebar y todo lo que no sea reporte */
+      .page-container { padding: 0 !important; }
+      .page-header,
+      .card,
+      #modal-backdrop,
+      #selector-list,
+      [data-no-print] { display: none !important; }
+      /* En caso de que el sidebar tenga clases conocidas */
+      nav, aside, .sidebar, #sidebar, .layout-sidebar, .menu, #menu, header { display: none !important; }
+
+      .print-report {
+        display: block !important;
+        color: #111;
+        font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif;
+        font-size: 12px;
+      }
+      .print-report .pr-header {
+        border-bottom: 2px solid #222;
+        padding-bottom: 8px;
+        margin-bottom: 12px;
+      }
+      .print-report h2 { margin: 0 0 4px; font-size: 18px; }
+      .print-report .pr-meta { color: #444; font-size: 11px; }
+      .print-report .pr-totales {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin: 12px 0;
+      }
+      .print-report .pr-tot {
+        border: 1px solid #ccc;
+        padding: 6px 8px;
+        border-radius: 6px;
+      }
+      .print-report .pr-tot .pr-tot-label {
+        font-size: 10px;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .print-report .pr-tot .pr-tot-value {
+        font-size: 14px;
+        font-weight: 700;
+      }
+      .print-report table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        margin-top: 6px;
+      }
+      .print-report th, .print-report td {
+        border: 1px solid #ccc;
+        padding: 5px 6px;
+        text-align: left;
+        vertical-align: top;
+      }
+      .print-report th {
+        background: #f0f0f0;
+        font-weight: 700;
+      }
+      .print-report .pr-money { text-align: right; font-variant-numeric: tabular-nums; }
+      .print-report .pr-section-title {
+        font-weight: 700;
+        margin: 14px 0 4px;
+        font-size: 13px;
+      }
+      .print-report .pr-debe  { color: #a3271e; }
+      .print-report .pr-haber { color: #1f6b4d; }
+    }
   </style>
 </head>
 <body>
   <div class="page-container">
-    <div class="page-header">
-      <h1>Pagos clientes</h1>
+    <div class="page-inner">
+
+      <div class="page-header">
+        <h1>Pagos clientes</h1>
+        <p>Registro de pagos recibidos, saldos pendientes y deuda por cliente.</p>
+      </div>
+
+      <!-- KPIs -->
+      <div class="card" data-no-print>
+        <h2 class="section-title">Resumen del período <small id="periodo-label"></small></h2>
+        <div class="kpis">
+          <div class="kpi kpi-primary">
+            <div class="kpi-label">Total ventas período</div>
+            <div class="kpi-value" id="kpi-ventas">$0</div>
+          </div>
+          <div class="kpi kpi-pos">
+            <div class="kpi-label">Pagos recibidos</div>
+            <div class="kpi-value" id="kpi-recibidos">$0</div>
+          </div>
+          <div class="kpi kpi-warn">
+            <div class="kpi-label">Pagos pendientes</div>
+            <div class="kpi-value" id="kpi-pendientes">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Proyectos con deuda</div>
+            <div class="kpi-value" id="kpi-con-deuda">0</div>
+          </div>
+          <div class="kpi kpi-neg">
+            <div class="kpi-label">Deuda atrasada</div>
+            <div class="kpi-value" id="kpi-atrasada">$0</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Pagos registrados</div>
+            <div class="kpi-value" id="kpi-num-pagos">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="card" data-no-print>
+        <h2 class="section-title">Filtros</h2>
+        <div class="filters">
+          <div>
+            <label for="filtro-mes">Mes</label>
+            <select id="filtro-mes">
+              <option value="">Todos los meses</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-anio">Año</label>
+            <select id="filtro-anio">
+              <option value="">Todos los años</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-busqueda">Buscar cliente / proyecto</label>
+            <input type="text" id="filtro-busqueda" placeholder="Ej: cocina, Juan Pérez..." autocomplete="off" />
+          </div>
+          <div>
+            <label for="filtro-estado-deuda">Estado deuda</label>
+            <select id="filtro-estado-deuda">
+              <option value="todos">Todos</option>
+              <option value="pagado">Pagado</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="atrasado">Atrasado</option>
+            </select>
+          </div>
+          <div>
+            <label for="filtro-metodo">Método pago</label>
+            <select id="filtro-metodo">
+              <option value="">Todos</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Tarjeta">Tarjeta</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="btn btn-soft" id="btn-imprimir" type="button">Imprimir reporte</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selector de proyecto + ficha + formulario -->
+      <div class="card" data-no-print>
+        <h2 class="section-title">Registrar pago</h2>
+
+        <div style="margin-bottom: 12px;">
+          <label for="selector-input">Seleccionar proyecto</label>
+          <div class="selector-wrap">
+            <input type="text" id="selector-input" class="selector-input"
+                   placeholder="Buscar por proyecto, cliente o ID cotización..."
+                   autocomplete="off" />
+            <div id="selector-list" class="selector-list"></div>
+          </div>
+        </div>
+
+        <!-- Ficha del proyecto -->
+        <div id="ficha-proyecto" style="display:none; margin-bottom: 14px;">
+          <div class="ficha-grid">
+            <div class="ficha-item">
+              <div class="fi-label">Proyecto</div>
+              <div class="fi-value" id="ficha-proyecto-nombre">—</div>
+            </div>
+            <div class="ficha-item">
+              <div class="fi-label">Cliente</div>
+              <div class="fi-value" id="ficha-cliente">—</div>
+            </div>
+            <div class="ficha-item">
+              <div class="fi-label">Fecha venta</div>
+              <div class="fi-value" id="ficha-fecha-venta">—</div>
+            </div>
+            <div class="ficha-item">
+              <div class="fi-label">Fecha entrega</div>
+              <div class="fi-value" id="ficha-fecha-entrega">—</div>
+            </div>
+            <div class="ficha-item">
+              <div class="fi-label">Monto venta</div>
+              <div class="fi-value" id="ficha-monto-venta">$0</div>
+            </div>
+            <div class="ficha-item">
+              <div class="fi-label">Pagos recibidos</div>
+              <div class="fi-value" id="ficha-pagos">$0</div>
+            </div>
+            <div class="ficha-item">
+              <div class="fi-label">Saldo pendiente</div>
+              <div class="fi-value" id="ficha-saldo">$0</div>
+            </div>
+            <div class="ficha-item">
+              <div class="fi-label">Estado deuda</div>
+              <div class="fi-value" id="ficha-estado">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario nuevo pago -->
+        <div id="form-pago" style="display:none;">
+          <div class="form-grid">
+            <div>
+              <label for="pago-fecha">Fecha pago</label>
+              <input type="date" id="pago-fecha" />
+            </div>
+            <div>
+              <label for="pago-monto">Monto</label>
+              <input type="number" id="pago-monto" min="0" step="1" placeholder="0" />
+            </div>
+            <div>
+              <label for="pago-metodo">Método pago</label>
+              <select id="pago-metodo">
+                <option value="Transferencia">Transferencia</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Tarjeta">Tarjeta</option>
+                <option value="Cheque">Cheque</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div>
+              <label for="pago-referencia">Referencia</label>
+              <input type="text" id="pago-referencia" placeholder="N° transacción / cheque..." />
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <label for="pago-nota">Nota</label>
+              <textarea id="pago-nota" placeholder="Comentario opcional..."></textarea>
+            </div>
+          </div>
+          <div id="form-msg" class="form-msg"></div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-soft" id="btn-limpiar">Limpiar</button>
+            <button type="button" class="btn btn-primary" id="btn-guardar">Guardar pago</button>
+          </div>
+        </div>
+
+        <div id="sin-proyecto-msg" class="muted" style="font-size: 13px;">
+          Selecciona un proyecto para ver su saldo y registrar pagos.
+        </div>
+      </div>
+
+      <!-- Tabla de pagos -->
+      <div class="card" data-no-print>
+        <div class="actions-row" style="margin-bottom: 10px;">
+          <h2 class="section-title" style="margin: 0;">Pagos registrados <small id="resultados-label"></small></h2>
+        </div>
+
+        <div id="estado-cargando" class="state">Cargando...</div>
+        <div id="estado-vacio" class="state" style="display:none;">No hay pagos para los filtros seleccionados.</div>
+        <div id="estado-error" class="state error" style="display:none;">Error al cargar información.</div>
+
+        <div class="table-wrap" id="tabla-wrap" style="display:none;">
+          <table class="pc-table">
+            <thead>
+              <tr>
+                <th>Fecha pago</th>
+                <th>Proyecto</th>
+                <th>Cliente</th>
+                <th class="pc-money">Monto</th>
+                <th>Método</th>
+                <th>Referencia</th>
+                <th>Nota</th>
+                <th style="width: 110px;">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
-    <p class="placeholder">En construcción</p>
+  </div>
+
+  <!-- Modal interno (confirmaciones) -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h3 id="modal-title">Confirmar</h3>
+      <p id="modal-message">¿Continuar?</p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-soft" id="modal-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="modal-ok">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reporte imprimible -->
+  <div class="print-report" id="print-report" aria-hidden="true">
+    <div class="pr-header">
+      <h2>Reporte de pagos clientes</h2>
+      <div class="pr-meta">
+        <div><strong>Período:</strong> <span id="pr-periodo">—</span></div>
+        <div><strong>Filtros:</strong> <span id="pr-filtros">—</span></div>
+        <div><strong>Fecha emisión:</strong> <span id="pr-emision">—</span></div>
+      </div>
+    </div>
+
+    <div class="pr-totales">
+      <div class="pr-tot">
+        <div class="pr-tot-label">Total vendido</div>
+        <div class="pr-tot-value" id="pr-total-vendido">$0</div>
+      </div>
+      <div class="pr-tot">
+        <div class="pr-tot-label">Total pagado (HABER)</div>
+        <div class="pr-tot-value pr-haber" id="pr-total-pagado">$0</div>
+      </div>
+      <div class="pr-tot">
+        <div class="pr-tot-label">Total pendiente (DEBE)</div>
+        <div class="pr-tot-value pr-debe" id="pr-total-pendiente">$0</div>
+      </div>
+      <div class="pr-tot">
+        <div class="pr-tot-label">Deuda atrasada</div>
+        <div class="pr-tot-value pr-debe" id="pr-total-atrasado">$0</div>
+      </div>
+    </div>
+
+    <div class="pr-section-title">Detalle por proyecto / cliente (formato Debe / Haber)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Proyecto</th>
+          <th>Cliente</th>
+          <th class="pr-money">Monto venta</th>
+          <th class="pr-money pr-haber">Pagos recibidos (HABER)</th>
+          <th class="pr-money pr-debe">Saldo pendiente (DEBE)</th>
+          <th>Fecha entrega</th>
+          <th class="pr-money">Días atraso</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="pr-detalle-body"></tbody>
+    </table>
   </div>
 
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
   <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
+  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/lib/supabaseConfig.js"></script>
+  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
+  <script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/globalSupabase.js"></script>
+
+  <script>
+    // ============================================================
+    // Pagos clientes
+    //
+    // Fuentes:
+    //   - ventas (id, cotizacion_id, proyecto, cliente, total_venta,
+    //             total_cotizado, fecha_venta, fecha_entrega_limite)
+    //   - cotizaciones aprobadas (id, cliente, project_key, total,
+    //                             fecha_aprobacion, data, estado)
+    //   - pagos_clientes (todos los campos)
+    //
+    // Reglas:
+    //   - Un "proyecto" se identifica por cotizacion_id (cotización aprobada).
+    //   - Monto venta:
+    //       1) ventas.total_venta > 0
+    //       2) ventas.total_cotizado > 0
+    //       3) cotizaciones.total
+    //       4) 0
+    //   - Pagos recibidos: suma pagos_clientes.monto por cotizacion_id.
+    //   - Saldo pendiente: monto venta - pagos recibidos (no negativo en KPIs).
+    //   - Atrasado: saldo > 0 && hoy > fecha_entrega + 5 días.
+    //   - Sin fecha entrega -> nunca "Atrasado", se muestra "Sin fecha".
+    //
+    // No modifica ventas/cotizaciones/compras.
+    // ============================================================
+
+    // --------- Estado global ---------
+    let proyectos = [];          // [{ cotizacion_id, proyecto_nombre, cliente, fecha_venta, fecha_entrega, monto_venta, venta_id }]
+    let pagos = [];              // pagos_clientes raw (más nombre/cliente normalizado)
+    let proyectoSel = null;      // proyecto actualmente seleccionado
+    let modalResolver = null;    // Promise resolver para el modal interno
+
+    // --------- Helpers de formato ---------
+    function formatCLP(valor) {
+      const n = Number(valor);
+      if (!isFinite(n)) return '$0';
+      try { return '$' + Math.round(n).toLocaleString('es-CL'); }
+      catch (_) { return '$' + Math.round(n); }
+    }
+    function formatFechaCL(fecha) {
+      if (!fecha) return '';
+      const d = new Date(fecha);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString('es-CL');
+    }
+    function escapeHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function parseMaybeJson(value) {
+      if (value == null) return null;
+      if (typeof value === 'object') return value;
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          try { return JSON.parse(trimmed); } catch (_) { return value; }
+        }
+        return value;
+      }
+      return value;
+    }
+    function parseData(c) {
+      const parsed = parseMaybeJson(c?.data);
+      return (parsed && typeof parsed === 'object') ? parsed : {};
+    }
+
+    // --------- Resolver nombre proyecto / cliente ---------
+    function resolveProjectName(venta, cotizacion) {
+      const v = venta || {};
+      const c = cotizacion || {};
+      const dataC = parseData(c);
+      const dataV = parseData(v);
+      const candidatos = [
+        v.proyecto,
+        dataC?.cliente?.nombre_proyecto,
+        dataV?.cliente?.nombre_proyecto,
+        c.project_key,
+        v.project_key,
+      ];
+      for (const cand of candidatos) {
+        if (cand == null) continue;
+        if (typeof cand === 'object') continue;
+        const s = String(cand).trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
+      }
+      return 'Sin nombre';
+    }
+    function resolveClientName(venta, cotizacion) {
+      const v = venta || {};
+      const c = cotizacion || {};
+
+      const cl1 = parseMaybeJson(v.cliente);
+      if (cl1 && typeof cl1 === 'object') {
+        const n = cl1.nombre || cl1.name || cl1.cliente;
+        if (n && String(n).trim()) return String(n).trim();
+      } else if (typeof cl1 === 'string') {
+        const s = cl1.trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
+      }
+
+      const cl2 = parseMaybeJson(c.cliente);
+      if (cl2 && typeof cl2 === 'object') {
+        const n = cl2.nombre || cl2.name || cl2.cliente;
+        if (n && String(n).trim()) return String(n).trim();
+      } else if (typeof cl2 === 'string') {
+        const s = cl2.trim();
+        if (s && !s.startsWith('{') && !s.startsWith('[')) return s;
+      }
+
+      const dataC = parseData(c);
+      const dataV = parseData(v);
+      const dataCliente = dataC?.cliente || dataV?.cliente;
+      if (dataCliente && typeof dataCliente === 'object') {
+        const n = dataCliente.nombre || dataCliente.name || dataCliente.cliente;
+        if (n && String(n).trim()) return String(n).trim();
+      }
+
+      return 'Sin cliente';
+    }
+
+    function resolveMontoVenta(ventas, cotizacion) {
+      // 1) ventas.total_venta > 0
+      const vv = (ventas || []).find(v => {
+        const n = Number(v?.total_venta);
+        return Number.isFinite(n) && n > 0;
+      });
+      if (vv) return Number(vv.total_venta);
+      // 2) ventas.total_cotizado > 0
+      const vc = (ventas || []).find(v => {
+        const n = Number(v?.total_cotizado);
+        return Number.isFinite(n) && n > 0;
+      });
+      if (vc) return Number(vc.total_cotizado);
+      // 3) cotizaciones.total
+      const tc = Number(cotizacion?.total);
+      if (Number.isFinite(tc) && tc > 0) return tc;
+      // 4) 0
+      return 0;
+    }
+
+    // --------- Estado de deuda ---------
+    function diasAtraso(saldoPendiente, fechaEntrega) {
+      if (!(saldoPendiente > 0)) return 0;
+      if (!fechaEntrega) return 0;
+      const base = new Date(fechaEntrega);
+      if (isNaN(base.getTime())) return 0;
+      base.setDate(base.getDate() + 5);
+      // Comparar a nivel de día (medianoche local) para evitar desfases por DST/horas.
+      const baseDay = new Date(base.getFullYear(), base.getMonth(), base.getDate()).getTime();
+      const hoy = new Date();
+      const hoyDay = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()).getTime();
+      const d = Math.round((hoyDay - baseDay) / (1000 * 60 * 60 * 24));
+      return d > 0 ? d : 0;
+    }
+    function estadoDeuda(montoVenta, pagosRecibidos, fechaEntrega) {
+      const saldo = (Number(montoVenta) || 0) - (Number(pagosRecibidos) || 0);
+      if (saldo <= 0 && (Number(montoVenta) || 0) > 0) return { codigo: 'pagado', label: 'Pagado', cls: 'badge-ok' };
+      if (saldo <= 0) return { codigo: 'pagado', label: 'Sin venta', cls: 'badge-soft' };
+      // saldo > 0
+      if (!fechaEntrega) return { codigo: 'pendiente_sin_fecha', label: 'Sin fecha entrega', cls: 'badge-soft' };
+      const dias = diasAtraso(saldo, fechaEntrega);
+      if (dias > 0) return { codigo: 'atrasado', label: 'Atrasado · ' + dias + 'd', cls: 'badge-bad' };
+      return { codigo: 'pendiente', label: 'Pendiente', cls: 'badge-warn' };
+    }
+
+    // --------- Esperar supabase ---------
+    function esperarSupabase(timeoutMs = 8000) {
+      return new Promise((resolve) => {
+        const inicio = Date.now();
+        function check() {
+          if (window.supabase && typeof window.supabase.from === 'function') {
+            return resolve(window.supabase);
+          }
+          if (Date.now() - inicio >= timeoutMs) {
+            return resolve(window.supabase || null);
+          }
+          setTimeout(check, 100);
+        }
+        try {
+          window.addEventListener('supabase:ready', () => {
+            if (window.supabase && typeof window.supabase.from === 'function') resolve(window.supabase);
+          }, { once: true });
+        } catch (_) {}
+        check();
+      });
+    }
+
+    // --------- Carga ---------
+    async function cargarDatos() {
+      mostrarEstado('loading');
+      try {
+        const client = await esperarSupabase(8000);
+        if (!client || typeof client.from !== 'function') {
+          throw new Error('Supabase no disponible');
+        }
+
+        const [ventasResp, cotizacionesResp, pagosResp] = await Promise.all([
+          client.from('ventas').select('id, cotizacion_id, proyecto, cliente, total_venta, total_cotizado, fecha_venta, fecha_entrega_limite'),
+          client.from('cotizaciones').select('id, cliente, project_key, total, fecha_aprobacion, data, estado').eq('estado', 'aprobada'),
+          client.from('pagos_clientes').select('id, cotizacion_id, venta_id, proyecto_nombre, cliente_nombre, fecha_pago, monto, metodo_pago, referencia, nota, created_at, updated_at'),
+        ]);
+
+        if (ventasResp.error)       throw ventasResp.error;
+        if (cotizacionesResp.error) throw cotizacionesResp.error;
+        if (pagosResp.error)        throw pagosResp.error;
+
+        const ventas       = Array.isArray(ventasResp.data)       ? ventasResp.data       : [];
+        const cotizaciones = Array.isArray(cotizacionesResp.data) ? cotizacionesResp.data : [];
+        pagos = Array.isArray(pagosResp.data) ? pagosResp.data : [];
+
+        proyectos = construirProyectos(ventas, cotizaciones);
+
+        poblarFiltroAnios();
+        renderSelector('');
+        aplicarFiltros();
+      } catch (err) {
+        console.error('[finanzas/pagos_clientes] Error al cargar:', err);
+        proyectos = [];
+        pagos = [];
+        mostrarEstado('error');
+        renderKPIs();
+      }
+    }
+
+    // Construye lista de proyectos canónica por cotizacion_id (solo aprobadas).
+    function construirProyectos(ventas, cotizaciones) {
+      const cotizacionesById = new Map();
+      cotizaciones.forEach(c => { if (c && c.id != null) cotizacionesById.set(c.id, c); });
+
+      // Agrupar ventas por cotizacion_id (solo si la cotización está aprobada).
+      const grupos = new Map();
+      ventas.forEach(v => {
+        if (!v || v.cotizacion_id == null || v.cotizacion_id === '') return;
+        if (!cotizacionesById.has(v.cotizacion_id)) return;
+        const k = String(v.cotizacion_id);
+        if (!grupos.has(k)) grupos.set(k, []);
+        grupos.get(k).push(v);
+      });
+
+      const out = [];
+      const cotIdsConVenta = new Set();
+
+      grupos.forEach((filas, key) => {
+        const cot = cotizacionesById.get(filas[0].cotizacion_id);
+        cotIdsConVenta.add(cot.id);
+        const base = filas[0];
+        const fechaVenta = filas.find(f => !!f.fecha_venta)?.fecha_venta || base.fecha_venta || cot.fecha_aprobacion || '';
+        const fechaEntrega = filas.find(f => !!f.fecha_entrega_limite)?.fecha_entrega_limite || base.fecha_entrega_limite || '';
+        // venta_id "principal" = la fila con total_venta > 0; si no, total_cotizado > 0; si no, la primera.
+        const ventaPrinc = filas.find(f => Number(f?.total_venta) > 0)
+          || filas.find(f => Number(f?.total_cotizado) > 0)
+          || base;
+        out.push({
+          cotizacion_id: cot.id,
+          venta_id: ventaPrinc?.id || null,
+          proyecto_nombre: resolveProjectName(base, cot),
+          cliente_nombre: resolveClientName(base, cot),
+          fecha_venta: fechaVenta,
+          fecha_entrega: fechaEntrega,
+          monto_venta: resolveMontoVenta(filas, cot),
+        });
+      });
+
+      // Cotizaciones aprobadas sin venta
+      cotizaciones.forEach(c => {
+        if (!c || c.id == null) return;
+        if (cotIdsConVenta.has(c.id)) return;
+        out.push({
+          cotizacion_id: c.id,
+          venta_id: null,
+          proyecto_nombre: resolveProjectName(null, c),
+          cliente_nombre: resolveClientName(null, c),
+          fecha_venta: c.fecha_aprobacion || '',
+          fecha_entrega: '',
+          monto_venta: resolveMontoVenta([], c),
+        });
+      });
+
+      return out;
+    }
+
+    // --------- Pagos por cotización ---------
+    function pagosPorCotizacion(cotId) {
+      if (cotId == null) return [];
+      return pagos.filter(p => p && String(p.cotizacion_id) === String(cotId));
+    }
+    function totalPagosPorCotizacion(cotId) {
+      return pagosPorCotizacion(cotId).reduce((s, p) => s + (Number(p.monto) || 0), 0);
+    }
+
+    // --------- Estado UI ---------
+    function mostrarEstado(estado) {
+      document.getElementById('estado-cargando').style.display = estado === 'loading' ? 'block' : 'none';
+      document.getElementById('estado-vacio').style.display    = estado === 'empty'   ? 'block' : 'none';
+      document.getElementById('estado-error').style.display    = estado === 'error'   ? 'block' : 'none';
+      document.getElementById('tabla-wrap').style.display      = estado === 'data'    ? 'block' : 'none';
+    }
+
+    // --------- Selector de proyecto ---------
+    function renderSelector(query) {
+      const list = document.getElementById('selector-list');
+      if (!list) return;
+      const q = (query || '').trim().toLowerCase();
+      let items = proyectos;
+      if (q) {
+        items = proyectos.filter(p => {
+          return (p.proyecto_nombre || '').toLowerCase().includes(q)
+            || (p.cliente_nombre || '').toLowerCase().includes(q)
+            || String(p.cotizacion_id || '').toLowerCase().includes(q);
+        });
+      }
+      items = items.slice(0, 50);
+      if (items.length === 0) {
+        list.innerHTML = '<div class="selector-empty">Sin coincidencias.</div>';
+        return;
+      }
+      list.innerHTML = items.map(p => {
+        const proy = escapeHtml(p.proyecto_nombre);
+        const cli = escapeHtml(p.cliente_nombre);
+        const fid = escapeHtml('Cotización #' + p.cotizacion_id);
+        return `<div class="selector-item" data-cot="${escapeHtml(String(p.cotizacion_id))}">
+          <div class="si-title">${proy}</div>
+          <div class="si-meta">${cli} · ${fid}</div>
+        </div>`;
+      }).join('');
+      list.querySelectorAll('.selector-item').forEach(el => {
+        el.addEventListener('mousedown', (e) => {
+          e.preventDefault(); // evita que el blur del input se dispare antes
+          const cot = el.getAttribute('data-cot');
+          seleccionarProyecto(cot);
+        });
+      });
+    }
+    function abrirSelector() {
+      document.getElementById('selector-list').classList.add('open');
+    }
+    function cerrarSelector() {
+      document.getElementById('selector-list').classList.remove('open');
+    }
+
+    function seleccionarProyecto(cotId) {
+      const p = proyectos.find(x => String(x.cotizacion_id) === String(cotId));
+      if (!p) return;
+      proyectoSel = p;
+      document.getElementById('selector-input').value =
+        p.proyecto_nombre + ' — ' + p.cliente_nombre + ' (#' + p.cotizacion_id + ')';
+      cerrarSelector();
+      renderFichaProyecto();
+    }
+
+    function renderFichaProyecto() {
+      const ficha = document.getElementById('ficha-proyecto');
+      const form = document.getElementById('form-pago');
+      const sinMsg = document.getElementById('sin-proyecto-msg');
+      if (!proyectoSel) {
+        ficha.style.display = 'none';
+        form.style.display = 'none';
+        sinMsg.style.display = '';
+        return;
+      }
+      sinMsg.style.display = 'none';
+      ficha.style.display = '';
+      form.style.display = '';
+
+      const recibido = totalPagosPorCotizacion(proyectoSel.cotizacion_id);
+      const saldo = Math.max(0, (Number(proyectoSel.monto_venta) || 0) - recibido);
+      const saldoBruto = (Number(proyectoSel.monto_venta) || 0) - recibido;
+      const est = estadoDeuda(proyectoSel.monto_venta, recibido, proyectoSel.fecha_entrega);
+
+      document.getElementById('ficha-proyecto-nombre').textContent = proyectoSel.proyecto_nombre || '—';
+      document.getElementById('ficha-cliente').textContent = proyectoSel.cliente_nombre || '—';
+      document.getElementById('ficha-fecha-venta').textContent = formatFechaCL(proyectoSel.fecha_venta) || '—';
+      document.getElementById('ficha-fecha-entrega').textContent = formatFechaCL(proyectoSel.fecha_entrega) || 'Sin fecha';
+      document.getElementById('ficha-monto-venta').textContent = formatCLP(proyectoSel.monto_venta);
+      document.getElementById('ficha-pagos').textContent = formatCLP(recibido);
+      const saldoEl = document.getElementById('ficha-saldo');
+      saldoEl.textContent = formatCLP(saldo);
+      if (saldoBruto < 0) {
+        saldoEl.innerHTML = `${escapeHtml(formatCLP(saldo))} <span class="badge badge-soft">Sobrepago: ${escapeHtml(formatCLP(Math.abs(saldoBruto)))}</span>`;
+      }
+      document.getElementById('ficha-estado').innerHTML =
+        `<span class="badge ${est.cls}">${escapeHtml(est.label)}</span>`;
+
+      // Default fecha pago = hoy
+      const hoy = new Date();
+      const yyyy = hoy.getFullYear();
+      const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+      const dd = String(hoy.getDate()).padStart(2, '0');
+      const fechaInput = document.getElementById('pago-fecha');
+      if (!fechaInput.value) fechaInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    // --------- Formulario nuevo pago ---------
+    function showFormMsg(text, kind) {
+      const el = document.getElementById('form-msg');
+      el.className = 'form-msg show ' + (kind === 'error' ? 'error' : 'ok');
+      el.textContent = text;
+    }
+    function hideFormMsg() {
+      const el = document.getElementById('form-msg');
+      el.className = 'form-msg';
+      el.textContent = '';
+    }
+    function limpiarFormulario() {
+      document.getElementById('pago-monto').value = '';
+      document.getElementById('pago-referencia').value = '';
+      document.getElementById('pago-nota').value = '';
+      document.getElementById('pago-metodo').value = 'Transferencia';
+      hideFormMsg();
+    }
+
+    async function guardarPago() {
+      hideFormMsg();
+      if (!proyectoSel) {
+        showFormMsg('Selecciona un proyecto antes de guardar un pago.', 'error');
+        return;
+      }
+      const fecha = document.getElementById('pago-fecha').value;
+      const monto = Number(document.getElementById('pago-monto').value);
+      const metodo = document.getElementById('pago-metodo').value;
+      const ref = document.getElementById('pago-referencia').value.trim();
+      const nota = document.getElementById('pago-nota').value.trim();
+
+      if (!fecha) { showFormMsg('La fecha de pago es obligatoria.', 'error'); return; }
+      if (!Number.isFinite(monto) || monto <= 0) { showFormMsg('El monto debe ser mayor a 0.', 'error'); return; }
+
+      // Saldo pendiente actual
+      const recibido = totalPagosPorCotizacion(proyectoSel.cotizacion_id);
+      const saldo = (Number(proyectoSel.monto_venta) || 0) - recibido;
+
+      if (monto > saldo) {
+        const saldoTxt = saldo >= 0
+          ? '$' + Math.max(0, saldo).toLocaleString('es-CL')
+          : '-$' + Math.abs(saldo).toLocaleString('es-CL') + ' (sobrepago)';
+        const ok = await confirmModal(
+          'Pago excede el saldo',
+          `El pago ($${monto.toLocaleString('es-CL')}) supera el saldo pendiente (${saldoTxt}). ¿Guardar igualmente?`
+        );
+        if (!ok) return;
+      }
+
+      const btn = document.getElementById('btn-guardar');
+      btn.disabled = true;
+      try {
+        const client = await esperarSupabase(8000);
+        if (!client) throw new Error('Supabase no disponible');
+        const payload = {
+          cotizacion_id: proyectoSel.cotizacion_id,
+          venta_id: proyectoSel.venta_id || null,
+          proyecto_nombre: proyectoSel.proyecto_nombre || null,
+          cliente_nombre: proyectoSel.cliente_nombre || null,
+          fecha_pago: fecha,
+          monto: monto,
+          metodo_pago: metodo || null,
+          referencia: ref || null,
+          nota: nota || null,
+        };
+        const { data, error } = await client.from('pagos_clientes').insert([payload]).select().single();
+        if (error) throw error;
+        // actualizar estado local
+        if (data) pagos.push(data);
+        showFormMsg('Pago guardado correctamente.', 'ok');
+        limpiarFormulario();
+        renderFichaProyecto();
+        aplicarFiltros();
+      } catch (err) {
+        console.error('[pagos_clientes] Error guardando pago:', err);
+        showFormMsg('No se pudo guardar el pago. ' + (err?.message || ''), 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function eliminarPago(id) {
+      const ok = await confirmModal(
+        'Eliminar pago',
+        '¿Estás seguro de eliminar este pago? Esta acción no se puede deshacer.'
+      );
+      if (!ok) return;
+      try {
+        const client = await esperarSupabase(8000);
+        if (!client) throw new Error('Supabase no disponible');
+        const { error } = await client.from('pagos_clientes').delete().eq('id', id);
+        if (error) throw error;
+        pagos = pagos.filter(p => String(p.id) !== String(id));
+        if (proyectoSel) renderFichaProyecto();
+        aplicarFiltros();
+      } catch (err) {
+        console.error('[pagos_clientes] Error eliminando pago:', err);
+        await confirmModal('Error', 'No se pudo eliminar el pago. ' + (err?.message || ''), { okOnly: true });
+      }
+    }
+
+    // --------- Modal interno ---------
+    function confirmModal(title, message, opts) {
+      const backdrop = document.getElementById('modal-backdrop');
+      const okBtn = document.getElementById('modal-ok');
+      const cancelBtn = document.getElementById('modal-cancel');
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-message').textContent = message;
+      const okOnly = !!(opts && opts.okOnly);
+      cancelBtn.style.display = okOnly ? 'none' : '';
+      backdrop.classList.add('open');
+      return new Promise(resolve => {
+        modalResolver = resolve;
+        const cleanup = (val) => {
+          backdrop.classList.remove('open');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          backdrop.removeEventListener('click', onBackdrop);
+          document.removeEventListener('keydown', onKey);
+          modalResolver = null;
+          resolve(val);
+        };
+        const onOk = () => cleanup(true);
+        const onCancel = () => cleanup(false);
+        const onBackdrop = (e) => { if (e.target === backdrop && !okOnly) cleanup(false); };
+        const onKey = (e) => {
+          if (e.key === 'Escape' && !okOnly) cleanup(false);
+          else if (e.key === 'Enter') cleanup(true);
+        };
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        backdrop.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKey);
+      });
+    }
+
+    // --------- Filtros / Tabla / KPIs ---------
+    function poblarFiltroAnios() {
+      const sel = document.getElementById('filtro-anio');
+      if (!sel) return;
+      const anios = new Set();
+      pagos.forEach(p => {
+        if (!p?.fecha_pago) return;
+        const d = new Date(p.fecha_pago);
+        if (!isNaN(d.getTime())) anios.add(d.getFullYear());
+      });
+      proyectos.forEach(p => {
+        if (!p?.fecha_venta) return;
+        const d = new Date(p.fecha_venta);
+        if (!isNaN(d.getTime())) anios.add(d.getFullYear());
+      });
+      const anioActual = new Date().getFullYear();
+      anios.add(anioActual);
+      const valorPrev = sel.value;
+      sel.innerHTML = '<option value="">Todos los años</option>';
+      Array.from(anios).sort((a, b) => b - a).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = String(a);
+        opt.textContent = String(a);
+        sel.appendChild(opt);
+      });
+      if (valorPrev && Array.from(sel.options).some(o => o.value === valorPrev)) {
+        sel.value = valorPrev;
+      } else {
+        sel.value = String(anioActual);
+      }
+    }
+
+    function getFiltros() {
+      const mes = document.getElementById('filtro-mes').value;
+      const anio = document.getElementById('filtro-anio').value;
+      const busqueda = (document.getElementById('filtro-busqueda').value || '').trim().toLowerCase();
+      const estado = document.getElementById('filtro-estado-deuda').value || 'todos';
+      const metodo = document.getElementById('filtro-metodo').value || '';
+      return {
+        mes: mes ? parseInt(mes, 10) : null,
+        anio: anio ? parseInt(anio, 10) : null,
+        busqueda, estado, metodo,
+      };
+    }
+
+    function pagoCoincide(p, f) {
+      if (f.metodo && (p.metodo_pago || '') !== f.metodo) return false;
+      if (f.busqueda) {
+        const proy = (p.proyecto_nombre || '').toLowerCase();
+        const cli  = (p.cliente_nombre || '').toLowerCase();
+        if (!proy.includes(f.busqueda) && !cli.includes(f.busqueda)) return false;
+      }
+      if (f.mes != null || f.anio != null) {
+        const d = p.fecha_pago ? new Date(p.fecha_pago) : null;
+        if (!d || isNaN(d.getTime())) return false;
+        if (f.mes  != null && (d.getMonth() + 1) !== f.mes)  return false;
+        if (f.anio != null &&  d.getFullYear()    !== f.anio) return false;
+      }
+      // Estado deuda aplica a nivel proyecto, no a pago individual; lo evaluamos sobre el proyecto del pago.
+      if (f.estado && f.estado !== 'todos') {
+        const proy = proyectos.find(x => String(x.cotizacion_id) === String(p.cotizacion_id));
+        if (!proy) return false;
+        const recibido = totalPagosPorCotizacion(proy.cotizacion_id);
+        const e = estadoDeuda(proy.monto_venta, recibido, proy.fecha_entrega);
+        if (f.estado === 'pagado'    && e.codigo !== 'pagado') return false;
+        if (f.estado === 'pendiente' && !(e.codigo === 'pendiente' || e.codigo === 'pendiente_sin_fecha')) return false;
+        if (f.estado === 'atrasado'  && e.codigo !== 'atrasado') return false;
+      }
+      return true;
+    }
+
+    function proyectoCoincide(p, f) {
+      // Para KPIs y reporte: filtrar proyectos por período (fecha_venta), búsqueda y estado.
+      if (f.busqueda) {
+        const proy = (p.proyecto_nombre || '').toLowerCase();
+        const cli  = (p.cliente_nombre || '').toLowerCase();
+        if (!proy.includes(f.busqueda) && !cli.includes(f.busqueda)) return false;
+      }
+      if (f.mes != null || f.anio != null) {
+        const d = p.fecha_venta ? new Date(p.fecha_venta) : null;
+        if (!d || isNaN(d.getTime())) return false;
+        if (f.mes  != null && (d.getMonth() + 1) !== f.mes)  return false;
+        if (f.anio != null &&  d.getFullYear()    !== f.anio) return false;
+      }
+      if (f.estado && f.estado !== 'todos') {
+        const recibido = totalPagosPorCotizacion(p.cotizacion_id);
+        const e = estadoDeuda(p.monto_venta, recibido, p.fecha_entrega);
+        if (f.estado === 'pagado'    && e.codigo !== 'pagado') return false;
+        if (f.estado === 'pendiente' && !(e.codigo === 'pendiente' || e.codigo === 'pendiente_sin_fecha')) return false;
+        if (f.estado === 'atrasado'  && e.codigo !== 'atrasado') return false;
+      }
+      return true;
+    }
+
+    function aplicarFiltros() {
+      const f = getFiltros();
+      const pagosFiltrados = pagos
+        .slice()
+        .filter(p => pagoCoincide(p, f))
+        .sort((a, b) => {
+          const ta = a.fecha_pago ? new Date(a.fecha_pago).getTime() : 0;
+          const tb = b.fecha_pago ? new Date(b.fecha_pago).getTime() : 0;
+          return tb - ta;
+        });
+
+      renderTabla(pagosFiltrados);
+      renderKPIs(f, pagosFiltrados);
+      actualizarEtiquetaPeriodo(f.mes, f.anio);
+      const lbl = document.getElementById('resultados-label');
+      if (lbl) lbl.textContent = '· ' + pagosFiltrados.length + (pagosFiltrados.length === 1 ? ' pago' : ' pagos');
+    }
+
+    function actualizarEtiquetaPeriodo(mesNum, anioNum) {
+      const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      const partes = [];
+      if (mesNum != null) partes.push(meses[mesNum - 1]);
+      if (anioNum != null) partes.push(String(anioNum));
+      const lbl = document.getElementById('periodo-label');
+      if (lbl) lbl.textContent = partes.length ? '· ' + partes.join(' ') : '· Todos los períodos';
+    }
+
+    function renderTabla(lista) {
+      const body = document.getElementById('tabla-body');
+      if (!body) return;
+      if (!lista || lista.length === 0) {
+        body.innerHTML = '';
+        mostrarEstado('empty');
+        return;
+      }
+      body.innerHTML = lista.map(p => {
+        const proy = escapeHtml(p.proyecto_nombre || '—');
+        const cli  = escapeHtml(p.cliente_nombre || '—');
+        const fecha = escapeHtml(formatFechaCL(p.fecha_pago) || '—');
+        const monto = escapeHtml(formatCLP(p.monto));
+        const met = escapeHtml(p.metodo_pago || '—');
+        const ref = escapeHtml(p.referencia || '');
+        const nota = escapeHtml(p.nota || '');
+        return `<tr>
+          <td>${fecha}</td>
+          <td>${proy}</td>
+          <td>${cli}</td>
+          <td class="pc-money">${monto}</td>
+          <td>${met}</td>
+          <td>${ref}</td>
+          <td><span class="muted">${nota}</span></td>
+          <td><button type="button" class="btn btn-bad" data-del="${escapeHtml(String(p.id))}" style="padding:6px 10px; font-size:12px;">Eliminar</button></td>
+        </tr>`;
+      }).join('');
+      body.querySelectorAll('button[data-del]').forEach(btn => {
+        btn.addEventListener('click', () => eliminarPago(btn.getAttribute('data-del')));
+      });
+      mostrarEstado('data');
+    }
+
+    function renderKPIs(filtros, pagosFiltrados) {
+      // Total ventas período: suma monto_venta de proyectos que pasan filtros (período + búsqueda + estado).
+      const proyFiltrados = proyectos.filter(p => proyectoCoincide(p, filtros));
+      const totalVentas = proyFiltrados.reduce((s, p) => s + (Number(p.monto_venta) || 0), 0);
+
+      // Pagos recibidos del período: suma de pagos filtrados (para coherencia con la tabla y filtros aplicados).
+      const totalRecibidos = pagosFiltrados.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+
+      // Pendientes y atrasada se calculan sobre proyectos filtrados (independiente del filtro de método).
+      let pendientes = 0;
+      let atrasada = 0;
+      let conDeuda = 0;
+      proyFiltrados.forEach(p => {
+        const rec = totalPagosPorCotizacion(p.cotizacion_id);
+        const saldo = Math.max(0, (Number(p.monto_venta) || 0) - rec);
+        pendientes += saldo;
+        if (saldo > 0) {
+          conDeuda++;
+          const dias = diasAtraso(saldo, p.fecha_entrega);
+          if (dias > 0) atrasada += saldo;
+        }
+      });
+
+      document.getElementById('kpi-ventas').textContent = formatCLP(totalVentas);
+      document.getElementById('kpi-recibidos').textContent = formatCLP(totalRecibidos);
+      document.getElementById('kpi-pendientes').textContent = formatCLP(pendientes);
+      document.getElementById('kpi-con-deuda').textContent = String(conDeuda);
+      document.getElementById('kpi-atrasada').textContent = formatCLP(atrasada);
+      document.getElementById('kpi-num-pagos').textContent = String(pagosFiltrados.length);
+    }
+
+    // --------- Reporte imprimible ---------
+    function construirReporte() {
+      const f = getFiltros();
+      const proyFiltrados = proyectos.filter(p => proyectoCoincide(p, f));
+
+      // Total vendido / pagado / pendiente / atrasado del reporte
+      let totalVendido = 0;
+      let totalPagado = 0;
+      let totalPendiente = 0;
+      let totalAtrasado = 0;
+
+      const filas = proyFiltrados.map(p => {
+        const recibido = totalPagosPorCotizacion(p.cotizacion_id);
+        const saldoBruto = (Number(p.monto_venta) || 0) - recibido;
+        const saldo = Math.max(0, saldoBruto);
+        const dias = diasAtraso(saldo, p.fecha_entrega);
+        const est = estadoDeuda(p.monto_venta, recibido, p.fecha_entrega);
+
+        totalVendido  += Number(p.monto_venta) || 0;
+        totalPagado   += recibido;
+        totalPendiente += saldo;
+        if (dias > 0) totalAtrasado += saldo;
+
+        return {
+          proyecto: p.proyecto_nombre,
+          cliente: p.cliente_nombre,
+          monto_venta: p.monto_venta,
+          pagos: recibido,
+          saldo,
+          fecha_entrega: p.fecha_entrega,
+          dias,
+          estado: est.label,
+        };
+      });
+
+      // Pintar
+      const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      const partes = [];
+      if (f.mes != null) partes.push(meses[f.mes - 1]);
+      if (f.anio != null) partes.push(String(f.anio));
+      document.getElementById('pr-periodo').textContent = partes.length ? partes.join(' ') : 'Todos los períodos';
+
+      const filtrosTxt = [];
+      if (f.busqueda) filtrosTxt.push('Búsqueda: "' + f.busqueda + '"');
+      if (f.estado && f.estado !== 'todos') filtrosTxt.push('Estado: ' + f.estado);
+      if (f.metodo) filtrosTxt.push('Método: ' + f.metodo);
+      document.getElementById('pr-filtros').textContent = filtrosTxt.length ? filtrosTxt.join(' · ') : 'Sin filtros adicionales';
+
+      document.getElementById('pr-emision').textContent = new Date().toLocaleString('es-CL');
+      document.getElementById('pr-total-vendido').textContent = formatCLP(totalVendido);
+      document.getElementById('pr-total-pagado').textContent = formatCLP(totalPagado);
+      document.getElementById('pr-total-pendiente').textContent = formatCLP(totalPendiente);
+      document.getElementById('pr-total-atrasado').textContent = formatCLP(totalAtrasado);
+
+      const body = document.getElementById('pr-detalle-body');
+      if (filas.length === 0) {
+        body.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#666;">Sin datos para los filtros aplicados.</td></tr>`;
+      } else {
+        body.innerHTML = filas.map(r => `
+          <tr>
+            <td>${escapeHtml(r.proyecto)}</td>
+            <td>${escapeHtml(r.cliente)}</td>
+            <td class="pr-money">${escapeHtml(formatCLP(r.monto_venta))}</td>
+            <td class="pr-money pr-haber">${escapeHtml(formatCLP(r.pagos))}</td>
+            <td class="pr-money pr-debe">${escapeHtml(formatCLP(r.saldo))}</td>
+            <td>${escapeHtml(formatFechaCL(r.fecha_entrega) || 'Sin fecha')}</td>
+            <td class="pr-money">${r.dias}</td>
+            <td>${escapeHtml(r.estado)}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    function imprimirReporte() {
+      construirReporte();
+      // Pequeño delay para que el navegador aplique estilos antes de abrir el diálogo de impresión.
+      setTimeout(() => {
+        window.print();
+      }, 50);
+    }
+
+    // --------- Wire-up ---------
+    function bindFiltros() {
+      ['filtro-mes','filtro-anio','filtro-busqueda','filtro-estado-deuda','filtro-metodo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const evt = el.tagName === 'SELECT' ? 'change' : 'input';
+        el.addEventListener(evt, aplicarFiltros);
+      });
+      document.getElementById('btn-imprimir').addEventListener('click', imprimirReporte);
+    }
+
+    function bindSelector() {
+      const input = document.getElementById('selector-input');
+      input.addEventListener('focus', () => { renderSelector(input.value); abrirSelector(); });
+      input.addEventListener('input', () => { renderSelector(input.value); abrirSelector(); });
+      input.addEventListener('blur', () => {
+        // pequeño delay para permitir click en items
+        setTimeout(cerrarSelector, 150);
+      });
+      document.addEventListener('click', (e) => {
+        const wrap = document.querySelector('.selector-wrap');
+        if (wrap && !wrap.contains(e.target)) cerrarSelector();
+      });
+    }
+
+    function bindFormulario() {
+      document.getElementById('btn-guardar').addEventListener('click', guardarPago);
+      document.getElementById('btn-limpiar').addEventListener('click', () => {
+        limpiarFormulario();
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bindFiltros();
+      bindSelector();
+      bindFormulario();
+      cargarDatos();
+    });
+  </script>
 </body>
 </html>
