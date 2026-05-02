@@ -212,6 +212,94 @@
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
     }
+
+    /* Bloque asignaciones multi-proyecto */
+    .asignaciones-block {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--border);
+    }
+    .asignaciones-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .asignaciones-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .asignaciones-help {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .asignacion-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 180px auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: #fafbfc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .asignacion-row label {
+      font-size: 11px;
+      margin-bottom: 4px;
+    }
+    .asignacion-row .selector-wrap { width: 100%; }
+    .asignacion-row .btn-remove {
+      padding: 8px 12px;
+      font-size: 12px;
+      align-self: end;
+    }
+    @media (max-width: 720px) {
+      .asignacion-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    .asignaciones-actions {
+      margin: 4px 0 14px;
+    }
+    .asignaciones-resumen {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 8px;
+      padding: 12px;
+      background: #fafbfc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .asignaciones-resumen .ar-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .asignaciones-resumen .ar-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .asignaciones-resumen .ar-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .asignaciones-resumen.ok .ar-value.diff { color: var(--ok-fg); }
+    .asignaciones-resumen.bad .ar-value.diff { color: var(--bad-fg); }
+    #resumen-badge {
+      grid-column: 1 / -1;
+      display: none;
+    }
+    #resumen-badge.show { display: block; }
     .form-actions {
       display: flex;
       gap: 10px;
@@ -701,67 +789,18 @@
         </div>
       </div>
 
-      <!-- Selector de proyecto + ficha + formulario -->
+      <!-- Formulario nuevo pago (multi-proyecto) -->
       <div class="card" data-no-print>
         <h2 class="section-title">Registrar pago</h2>
 
-        <div style="margin-bottom: 12px;">
-          <label for="selector-input">Seleccionar proyecto</label>
-          <div class="selector-wrap">
-            <input type="text" id="selector-input" class="selector-input"
-                   placeholder="Buscar por proyecto, cliente o ID cotización..."
-                   autocomplete="off" />
-            <div id="selector-list" class="selector-list"></div>
-          </div>
-        </div>
-
-        <!-- Ficha del proyecto -->
-        <div id="ficha-proyecto" style="display:none; margin-bottom: 14px;">
-          <div class="ficha-grid">
-            <div class="ficha-item">
-              <div class="fi-label">Proyecto</div>
-              <div class="fi-value" id="ficha-proyecto-nombre">—</div>
-            </div>
-            <div class="ficha-item">
-              <div class="fi-label">Cliente</div>
-              <div class="fi-value" id="ficha-cliente">—</div>
-            </div>
-            <div class="ficha-item">
-              <div class="fi-label">Fecha venta</div>
-              <div class="fi-value" id="ficha-fecha-venta">—</div>
-            </div>
-            <div class="ficha-item">
-              <div class="fi-label">Fecha entrega</div>
-              <div class="fi-value" id="ficha-fecha-entrega">—</div>
-            </div>
-            <div class="ficha-item">
-              <div class="fi-label">Monto venta</div>
-              <div class="fi-value" id="ficha-monto-venta">$0</div>
-            </div>
-            <div class="ficha-item">
-              <div class="fi-label">Pagos recibidos</div>
-              <div class="fi-value" id="ficha-pagos">$0</div>
-            </div>
-            <div class="ficha-item">
-              <div class="fi-label">Saldo pendiente</div>
-              <div class="fi-value" id="ficha-saldo">$0</div>
-            </div>
-            <div class="ficha-item">
-              <div class="fi-label">Estado deuda</div>
-              <div class="fi-value" id="ficha-estado">—</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Formulario nuevo pago -->
-        <div id="form-pago" style="display:none;">
+        <div id="form-pago">
           <div class="form-grid">
             <div>
               <label for="pago-fecha">Fecha pago</label>
               <input type="date" id="pago-fecha" />
             </div>
             <div>
-              <label for="pago-monto">Monto</label>
+              <label for="pago-monto">Monto total</label>
               <input type="number" id="pago-monto" min="0" step="1" placeholder="0" />
             </div>
             <div>
@@ -783,15 +822,38 @@
               <textarea id="pago-nota" placeholder="Comentario opcional..."></textarea>
             </div>
           </div>
+
+          <div class="asignaciones-block">
+            <div class="asignaciones-head">
+              <span class="asignaciones-title">Proyectos asociados</span>
+              <span class="asignaciones-help">Distribuye el pago entre uno o varios proyectos.</span>
+            </div>
+            <div id="asignaciones-list"></div>
+            <div class="asignaciones-actions">
+              <button type="button" class="btn btn-soft" id="btn-add-asignacion">+ Agregar otro proyecto</button>
+            </div>
+            <div class="asignaciones-resumen">
+              <div class="ar-row">
+                <span class="ar-label">Total pago</span>
+                <span class="ar-value" id="resumen-total-pago">$0</span>
+              </div>
+              <div class="ar-row">
+                <span class="ar-label">Total asignado</span>
+                <span class="ar-value" id="resumen-total-asignado">$0</span>
+              </div>
+              <div class="ar-row">
+                <span class="ar-label">Diferencia</span>
+                <span class="ar-value" id="resumen-diferencia">$0</span>
+              </div>
+              <div id="resumen-badge"></div>
+            </div>
+          </div>
+
           <div id="form-msg" class="form-msg"></div>
           <div class="form-actions">
             <button type="button" class="btn btn-soft" id="btn-limpiar">Limpiar</button>
             <button type="button" class="btn btn-primary" id="btn-guardar">Guardar pago</button>
           </div>
-        </div>
-
-        <div id="sin-proyecto-msg" class="muted" style="font-size: 13px;">
-          Selecciona un proyecto para ver su saldo y registrar pagos.
         </div>
       </div>
 
@@ -1014,9 +1076,14 @@
     // --------- Estado global ---------
     let proyectos = [];          // [{ cotizacion_id, proyecto_nombre, cliente, fecha_venta, fecha_entrega, monto_venta, venta_id }]
     let pagos = [];              // pagos_clientes raw (más nombre/cliente normalizado)
+    let asignaciones = [];       // pagos_clientes_asignaciones raw
     let comprobantes = [];       // pagos_clientes_comprobantes raw
-    let proyectoSel = null;      // proyecto actualmente seleccionado
     let modalResolver = null;    // Promise resolver para el modal interno
+
+    // Asignaciones del formulario "Registrar pago" en edición.
+    // [{ rowId, cotizacion_id|null, monto: number }]
+    let formAsignaciones = [];
+    let _formRowSeq = 0;
 
     // --------- Constantes finanzas ---------
     const FIN_PASSWORD = 'mono123mono';
@@ -1191,16 +1258,25 @@
           throw new Error('Supabase no disponible');
         }
 
-        const [ventasResp, cotizacionesResp, pagosResp, comprobantesResp] = await Promise.all([
+        const [ventasResp, cotizacionesResp, pagosResp, asignacionesResp, comprobantesResp] = await Promise.all([
           client.from('ventas').select('id, cotizacion_id, proyecto, cliente, total_venta, total_cotizado, fecha_venta, fecha_entrega_limite'),
           client.from('cotizaciones').select('id, cliente, project_key, total, fecha_aprobacion, data, estado').eq('estado', 'aprobada'),
           client.from('pagos_clientes').select('id, cotizacion_id, venta_id, proyecto_nombre, cliente_nombre, fecha_pago, monto, metodo_pago, referencia, nota, created_at, updated_at'),
+          client.from('pagos_clientes_asignaciones').select('id, pago_id, cotizacion_id, venta_id, proyecto_nombre, cliente_nombre, monto_asignado, created_at, updated_at'),
           client.from('pagos_clientes_comprobantes').select('id, pago_id, cotizacion_id, file_name, storage_path, mime_type, size_bytes, created_at'),
         ]);
 
         if (ventasResp.error)       throw ventasResp.error;
         if (cotizacionesResp.error) throw cotizacionesResp.error;
         if (pagosResp.error)        throw pagosResp.error;
+        // No tirar la página si la tabla de asignaciones falla (p.ej. tabla aún no creada).
+        // Sin asignaciones: cada pago se asume 100% asignado a su cotizacion_id (retro-compat).
+        if (asignacionesResp.error) {
+          console.warn('[pagos_clientes] No se pudo cargar pagos_clientes_asignaciones:', asignacionesResp.error);
+          asignaciones = [];
+        } else {
+          asignaciones = Array.isArray(asignacionesResp.data) ? asignacionesResp.data : [];
+        }
         // No tirar la página si la tabla de comprobantes falla (p.ej. RLS aún no configurado)
         if (comprobantesResp.error) {
           console.warn('[pagos_clientes] No se pudo cargar pagos_clientes_comprobantes:', comprobantesResp.error);
@@ -1216,12 +1292,13 @@
         proyectos = construirProyectos(ventas, cotizaciones);
 
         poblarFiltroAnios();
-        renderSelector('');
+        renderAsignacionesForm();
         aplicarFiltros();
       } catch (err) {
         console.error('[finanzas/pagos_clientes] Error al cargar:', err);
         proyectos = [];
         pagos = [];
+        asignaciones = [];
         comprobantes = [];
         mostrarEstado('error');
         renderKPIs();
@@ -1285,13 +1362,53 @@
       return out;
     }
 
-    // --------- Pagos por cotización ---------
+    // --------- Pagos por cotización (con asignaciones múltiples) ---------
+    // Si un pago tiene 1+ filas en pagos_clientes_asignaciones, se usan SOLO esas
+    // (cada asignación se imputa a su cotizacion_id).
+    // Si NO tiene asignaciones (datos antiguos), se asume 100% del pago.monto
+    // pertenece a la cotización indicada en pagos_clientes.cotizacion_id.
+    function asignacionesPorPago(pagoId) {
+      if (pagoId == null) return [];
+      return asignaciones.filter(a => a && String(a.pago_id) === String(pagoId));
+    }
+    function pagoTieneAsignaciones(pagoId) {
+      return asignacionesPorPago(pagoId).length > 0;
+    }
+    // Devuelve, para un pago dado, un arreglo de { cotizacion_id, monto } que
+    // representa cómo se reparte ese pago entre proyectos.
+    function repartoDePago(p) {
+      if (!p) return [];
+      const asigns = asignacionesPorPago(p.id);
+      if (asigns.length > 0) {
+        return asigns.map(a => ({
+          cotizacion_id: a.cotizacion_id,
+          monto: Number(a.monto_asignado) || 0,
+          proyecto_nombre: a.proyecto_nombre || null,
+          cliente_nombre: a.cliente_nombre || null,
+        }));
+      }
+      return [{
+        cotizacion_id: p.cotizacion_id,
+        monto: Number(p.monto) || 0,
+        proyecto_nombre: p.proyecto_nombre || null,
+        cliente_nombre: p.cliente_nombre || null,
+      }];
+    }
     function pagosPorCotizacion(cotId) {
       if (cotId == null) return [];
-      return pagos.filter(p => p && String(p.cotizacion_id) === String(cotId));
+      // Mantener firma original (lista de pagos) para compatibilidad: devuelve
+      // los pagos que aportan algo a la cotización.
+      return pagos.filter(p => repartoDePago(p).some(r => String(r.cotizacion_id) === String(cotId)));
     }
     function totalPagosPorCotizacion(cotId) {
-      return pagosPorCotizacion(cotId).reduce((s, p) => s + (Number(p.monto) || 0), 0);
+      if (cotId == null) return 0;
+      let total = 0;
+      for (const p of pagos) {
+        for (const r of repartoDePago(p)) {
+          if (String(r.cotizacion_id) === String(cotId)) total += r.monto;
+        }
+      }
+      return total;
     }
 
     // --------- Estado UI ---------
@@ -1302,9 +1419,26 @@
       document.getElementById('tabla-wrap').style.display      = estado === 'data'    ? 'block' : 'none';
     }
 
-    // --------- Selector de proyecto ---------
-    function renderSelector(query) {
-      const list = document.getElementById('selector-list');
+    // --------- Selector de proyecto reutilizable (combobox custom por fila) ---------
+    // Cada fila de asignación tiene su propio combobox.
+    function buildProyectoSelectorMarkup(rowId, proyectoId) {
+      const sel = proyectoId != null
+        ? proyectos.find(p => String(p.cotizacion_id) === String(proyectoId))
+        : null;
+      const inputVal = sel
+        ? `${sel.proyecto_nombre} — ${sel.cliente_nombre} (#${sel.cotizacion_id})`
+        : '';
+      return `
+        <div class="selector-wrap" data-row="${escapeHtml(String(rowId))}">
+          <input type="text" class="selector-input asig-proy-input"
+                 placeholder="Buscar por proyecto, cliente o ID cotización..."
+                 autocomplete="off"
+                 value="${escapeHtml(inputVal)}" />
+          <div class="selector-list asig-proy-list"></div>
+        </div>`;
+    }
+    function renderProyectoSelectorList(wrapEl, query) {
+      const list = wrapEl.querySelector('.asig-proy-list');
       if (!list) return;
       const q = (query || '').trim().toLowerCase();
       let items = proyectos;
@@ -1329,71 +1463,156 @@
           <div class="si-meta">${cli} · ${fid}</div>
         </div>`;
       }).join('');
-      list.querySelectorAll('.selector-item').forEach(el => {
-        el.addEventListener('mousedown', (e) => {
-          e.preventDefault(); // evita que el blur del input se dispare antes
-          const cot = el.getAttribute('data-cot');
-          seleccionarProyecto(cot);
-        });
+    }
+
+    // --------- Formulario de asignaciones (multi-proyecto) ---------
+    function nuevoRowId() { _formRowSeq += 1; return 'arow-' + _formRowSeq; }
+    function ensureAtLeastOneAsignacion() {
+      if (formAsignaciones.length === 0) {
+        formAsignaciones.push({ rowId: nuevoRowId(), cotizacion_id: null, monto: 0 });
+      }
+    }
+    function renderAsignacionesForm() {
+      const list = document.getElementById('asignaciones-list');
+      if (!list) return;
+      ensureAtLeastOneAsignacion();
+      list.innerHTML = formAsignaciones.map((a, idx) => {
+        const proySel = a.cotizacion_id != null
+          ? proyectos.find(p => String(p.cotizacion_id) === String(a.cotizacion_id))
+          : null;
+        const proyInfo = proySel
+          ? `Saldo pendiente: ${escapeHtml(formatCLP(Math.max(0, (Number(proySel.monto_venta)||0) - totalPagosPorCotizacion(proySel.cotizacion_id))))}`
+          : 'Selecciona un proyecto';
+        return `
+          <div class="asignacion-row" data-row="${escapeHtml(a.rowId)}">
+            <div>
+              <label>Proyecto</label>
+              ${buildProyectoSelectorMarkup(a.rowId, a.cotizacion_id)}
+              <div class="asig-row-meta muted" style="font-size:11px; margin-top:4px;">${proyInfo}</div>
+            </div>
+            <div>
+              <label>Monto asignado</label>
+              <input type="number" class="asig-monto" min="0" step="1" placeholder="0"
+                     value="${a.monto > 0 ? String(a.monto) : ''}" />
+            </div>
+            <div>
+              <button type="button" class="btn btn-bad btn-remove" data-row-remove="${escapeHtml(a.rowId)}"
+                      ${formAsignaciones.length === 1 ? 'disabled title="Debe existir al menos un proyecto"' : ''}>
+                Quitar
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Bind por fila
+      formAsignaciones.forEach(a => {
+        const rowEl = list.querySelector(`.asignacion-row[data-row="${cssEscape(a.rowId)}"]`);
+        if (!rowEl) return;
+        const wrap = rowEl.querySelector('.selector-wrap');
+        const input = rowEl.querySelector('.asig-proy-input');
+        const listEl = rowEl.querySelector('.asig-proy-list');
+        const montoInput = rowEl.querySelector('.asig-monto');
+        const removeBtn = rowEl.querySelector('button[data-row-remove]');
+
+        if (input && wrap && listEl) {
+          const open = () => { renderProyectoSelectorList(wrap, input.value); listEl.classList.add('open'); };
+          const close = () => { listEl.classList.remove('open'); };
+          input.addEventListener('focus', open);
+          input.addEventListener('input', () => { a.cotizacion_id = null; open(); });
+          input.addEventListener('blur', () => { setTimeout(close, 150); });
+          listEl.addEventListener('mousedown', (e) => {
+            const item = e.target.closest('.selector-item');
+            if (!item) return;
+            e.preventDefault();
+            const cotId = item.getAttribute('data-cot');
+            const proy = proyectos.find(p => String(p.cotizacion_id) === String(cotId));
+            if (!proy) return;
+            a.cotizacion_id = proy.cotizacion_id;
+            input.value = `${proy.proyecto_nombre} — ${proy.cliente_nombre} (#${proy.cotizacion_id})`;
+            close();
+            renderAsignacionesForm();
+            actualizarResumenAsignaciones();
+          });
+        }
+        if (montoInput) {
+          montoInput.addEventListener('input', () => {
+            const v = Number(montoInput.value);
+            a.monto = Number.isFinite(v) && v >= 0 ? v : 0;
+            actualizarResumenAsignaciones();
+          });
+        }
+        if (removeBtn) {
+          removeBtn.addEventListener('click', () => {
+            if (formAsignaciones.length <= 1) return;
+            formAsignaciones = formAsignaciones.filter(x => x.rowId !== a.rowId);
+            renderAsignacionesForm();
+            actualizarResumenAsignaciones();
+          });
+        }
       });
-    }
-    function abrirSelector() {
-      document.getElementById('selector-list').classList.add('open');
-    }
-    function cerrarSelector() {
-      document.getElementById('selector-list').classList.remove('open');
+
+      actualizarResumenAsignaciones();
     }
 
-    function seleccionarProyecto(cotId) {
-      const p = proyectos.find(x => String(x.cotizacion_id) === String(cotId));
-      if (!p) return;
-      proyectoSel = p;
-      document.getElementById('selector-input').value =
-        p.proyecto_nombre + ' — ' + p.cliente_nombre + ' (#' + p.cotizacion_id + ')';
-      cerrarSelector();
-      renderFichaProyecto();
+    // Helper: CSS.escape polyfill mínimo
+    function cssEscape(s) {
+      if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(s);
+      return String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
     }
 
-    function renderFichaProyecto() {
-      const ficha = document.getElementById('ficha-proyecto');
-      const form = document.getElementById('form-pago');
-      const sinMsg = document.getElementById('sin-proyecto-msg');
-      if (!proyectoSel) {
-        ficha.style.display = 'none';
-        form.style.display = 'none';
-        sinMsg.style.display = '';
-        return;
+    function agregarAsignacion() {
+      formAsignaciones.push({ rowId: nuevoRowId(), cotizacion_id: null, monto: 0 });
+      renderAsignacionesForm();
+    }
+
+    function totalAsignadoForm() {
+      return formAsignaciones.reduce((s, a) => s + (Number(a.monto) || 0), 0);
+    }
+
+    function actualizarResumenAsignaciones() {
+      const totalPago = Number(document.getElementById('pago-monto')?.value) || 0;
+      const totalAsig = totalAsignadoForm();
+      const diff = totalPago - totalAsig;
+      const elPago = document.getElementById('resumen-total-pago');
+      const elAsig = document.getElementById('resumen-total-asignado');
+      const elDiff = document.getElementById('resumen-diferencia');
+      const cont = document.querySelector('.asignaciones-resumen');
+      const badge = document.getElementById('resumen-badge');
+      if (elPago) elPago.textContent = formatCLP(totalPago);
+      if (elAsig) elAsig.textContent = formatCLP(totalAsig);
+      if (elDiff) {
+        elDiff.classList.add('diff');
+        if (diff === 0) {
+          elDiff.textContent = '$0';
+        } else if (diff > 0) {
+          elDiff.textContent = '+' + formatCLP(diff) + ' por asignar';
+        } else {
+          elDiff.textContent = '-' + formatCLP(Math.abs(diff)) + ' (excede el total)';
+        }
       }
-      sinMsg.style.display = 'none';
-      ficha.style.display = '';
-      form.style.display = '';
-
-      const recibido = totalPagosPorCotizacion(proyectoSel.cotizacion_id);
-      const saldo = Math.max(0, (Number(proyectoSel.monto_venta) || 0) - recibido);
-      const saldoBruto = (Number(proyectoSel.monto_venta) || 0) - recibido;
-      const est = estadoDeuda(proyectoSel.monto_venta, recibido, proyectoSel.fecha_entrega);
-
-      document.getElementById('ficha-proyecto-nombre').textContent = proyectoSel.proyecto_nombre || '—';
-      document.getElementById('ficha-cliente').textContent = proyectoSel.cliente_nombre || '—';
-      document.getElementById('ficha-fecha-venta').textContent = formatFechaCL(proyectoSel.fecha_venta) || '—';
-      document.getElementById('ficha-fecha-entrega').textContent = formatFechaCL(proyectoSel.fecha_entrega) || 'Sin fecha';
-      document.getElementById('ficha-monto-venta').textContent = formatCLP(proyectoSel.monto_venta);
-      document.getElementById('ficha-pagos').textContent = formatCLP(recibido);
-      const saldoEl = document.getElementById('ficha-saldo');
-      saldoEl.textContent = formatCLP(saldo);
-      if (saldoBruto < 0) {
-        saldoEl.innerHTML = `${escapeHtml(formatCLP(saldo))} <span class="badge badge-soft">Sobrepago: ${escapeHtml(formatCLP(Math.abs(saldoBruto)))}</span>`;
+      if (cont) {
+        cont.classList.remove('ok', 'bad');
+        if (totalPago > 0 && Math.abs(diff) < 0.5) cont.classList.add('ok');
+        else if (totalPago > 0) cont.classList.add('bad');
       }
-      document.getElementById('ficha-estado').innerHTML =
-        `<span class="badge ${est.cls}">${escapeHtml(est.label)}</span>`;
+      if (badge) {
+        if (totalPago > 0 && Math.abs(diff) >= 0.5) {
+          badge.className = 'show';
+          badge.innerHTML = `<span class="badge badge-bad">La suma asignada no coincide con el monto total del pago.</span>`;
+        } else {
+          badge.className = '';
+          badge.innerHTML = '';
+        }
+      }
+    }
 
-      // Default fecha pago = hoy
+    function setDefaultFechaPago() {
       const hoy = new Date();
       const yyyy = hoy.getFullYear();
       const mm = String(hoy.getMonth() + 1).padStart(2, '0');
       const dd = String(hoy.getDate()).padStart(2, '0');
       const fechaInput = document.getElementById('pago-fecha');
-      if (!fechaInput.value) fechaInput.value = `${yyyy}-${mm}-${dd}`;
+      if (fechaInput && !fechaInput.value) fechaInput.value = `${yyyy}-${mm}-${dd}`;
     }
 
     // --------- Formulario nuevo pago ---------
@@ -1412,15 +1631,13 @@
       document.getElementById('pago-referencia').value = '';
       document.getElementById('pago-nota').value = '';
       document.getElementById('pago-metodo').value = 'Transferencia';
+      formAsignaciones = [];
+      renderAsignacionesForm();
       hideFormMsg();
     }
 
     async function guardarPago() {
       hideFormMsg();
-      if (!proyectoSel) {
-        showFormMsg('Selecciona un proyecto antes de guardar un pago.', 'error');
-        return;
-      }
       const fecha = document.getElementById('pago-fecha').value;
       const monto = Number(document.getElementById('pago-monto').value);
       const metodo = document.getElementById('pago-metodo').value;
@@ -1428,19 +1645,52 @@
       const nota = document.getElementById('pago-nota').value.trim();
 
       if (!fecha) { showFormMsg('La fecha de pago es obligatoria.', 'error'); return; }
-      if (!Number.isFinite(monto) || monto <= 0) { showFormMsg('El monto debe ser mayor a 0.', 'error'); return; }
+      if (!Number.isFinite(monto) || monto <= 0) { showFormMsg('El monto total debe ser mayor a 0.', 'error'); return; }
 
-      // Saldo pendiente actual
-      const recibido = totalPagosPorCotizacion(proyectoSel.cotizacion_id);
-      const saldo = (Number(proyectoSel.monto_venta) || 0) - recibido;
+      // Validar asignaciones
+      const filas = formAsignaciones.filter(a => a && a.cotizacion_id != null);
+      if (filas.length === 0) {
+        showFormMsg('Selecciona al menos un proyecto para asignar el pago.', 'error');
+        return;
+      }
+      // No permitir cotizaciones duplicadas
+      const setCot = new Set();
+      for (const a of filas) {
+        const k = String(a.cotizacion_id);
+        if (setCot.has(k)) {
+          showFormMsg('No puedes repetir el mismo proyecto en varias asignaciones.', 'error');
+          return;
+        }
+        setCot.add(k);
+      }
+      // Cada monto > 0
+      for (const a of filas) {
+        if (!Number.isFinite(Number(a.monto)) || Number(a.monto) <= 0) {
+          showFormMsg('Cada proyecto debe tener un monto asignado mayor a 0.', 'error');
+          return;
+        }
+      }
+      const totalAsig = filas.reduce((s, a) => s + (Number(a.monto) || 0), 0);
+      if (Math.abs(totalAsig - monto) >= 0.5) {
+        showFormMsg(`La suma de montos asignados (${formatCLP(totalAsig)}) debe coincidir con el monto total (${formatCLP(monto)}).`, 'error');
+        return;
+      }
 
-      if (monto > saldo) {
-        const saldoTxt = saldo >= 0
-          ? '$' + Math.max(0, saldo).toLocaleString('es-CL')
-          : '-$' + Math.abs(saldo).toLocaleString('es-CL') + ' (sobrepago)';
+      // Aviso si alguna asignación supera el saldo de su proyecto.
+      const sobrepasos = [];
+      for (const a of filas) {
+        const proy = proyectos.find(p => String(p.cotizacion_id) === String(a.cotizacion_id));
+        if (!proy) continue;
+        const recibido = totalPagosPorCotizacion(proy.cotizacion_id);
+        const saldo = (Number(proy.monto_venta) || 0) - recibido;
+        if (Number(a.monto) > saldo) {
+          sobrepasos.push(`${proy.proyecto_nombre || ('#' + proy.cotizacion_id)}: asignación ${formatCLP(a.monto)} supera saldo ${formatCLP(Math.max(0, saldo))}`);
+        }
+      }
+      if (sobrepasos.length > 0) {
         const ok = await confirmModal(
-          'Pago excede el saldo',
-          `El pago ($${monto.toLocaleString('es-CL')}) supera el saldo pendiente (${saldoTxt}). ¿Guardar igualmente?`
+          'Asignación excede el saldo',
+          `Algunos proyectos quedarán con sobrepago:\n\n${sobrepasos.join('\n')}\n\n¿Guardar igualmente?`
         );
         if (!ok) return;
       }
@@ -1450,24 +1700,58 @@
       try {
         const client = await esperarSupabase(8000);
         if (!client) throw new Error('Supabase no disponible');
+
+        // Datos del proyecto principal (primera asignación) para llenar columnas
+        // legacy de pagos_clientes (cotizacion_id / venta_id / proyecto_nombre / cliente_nombre).
+        const principal = proyectos.find(p => String(p.cotizacion_id) === String(filas[0].cotizacion_id));
         const payload = {
-          cotizacion_id: proyectoSel.cotizacion_id,
-          venta_id: proyectoSel.venta_id || null,
-          proyecto_nombre: proyectoSel.proyecto_nombre || null,
-          cliente_nombre: proyectoSel.cliente_nombre || null,
+          cotizacion_id: principal?.cotizacion_id ?? filas[0].cotizacion_id,
+          venta_id: principal?.venta_id || null,
+          proyecto_nombre: principal?.proyecto_nombre || null,
+          cliente_nombre: principal?.cliente_nombre || null,
           fecha_pago: fecha,
           monto: monto,
           metodo_pago: metodo || null,
           referencia: ref || null,
           nota: nota || null,
         };
-        const { data, error } = await client.from('pagos_clientes').insert([payload]).select().single();
+        const { data: pagoData, error } = await client.from('pagos_clientes').insert([payload]).select().single();
         if (error) throw error;
-        // actualizar estado local
-        if (data) pagos.push(data);
+
+        // Insertar asignaciones (siempre N filas, incluso si N=1, para que la
+        // fuente de verdad de "pagos por proyecto" sea esta tabla).
+        const asignacionesPayload = filas.map(a => {
+          const proy = proyectos.find(p => String(p.cotizacion_id) === String(a.cotizacion_id));
+          return {
+            pago_id: pagoData.id,
+            cotizacion_id: a.cotizacion_id,
+            venta_id: proy?.venta_id || null,
+            proyecto_nombre: proy?.proyecto_nombre || null,
+            cliente_nombre: proy?.cliente_nombre || null,
+            monto_asignado: Number(a.monto) || 0,
+          };
+        });
+        const { data: asigsData, error: asigErr } = await client
+          .from('pagos_clientes_asignaciones')
+          .insert(asignacionesPayload)
+          .select();
+        if (asigErr) {
+          // Si falla la creación de asignaciones, revertir el pago para no dejar
+          // pagos sin asignaciones cuando el usuario quiso multi-proyecto.
+          try {
+            await client.from('pagos_clientes').delete().eq('id', pagoData.id);
+          } catch (e) {
+            console.warn('[pagos_clientes] No se pudo revertir pago tras fallo en asignaciones:', e);
+          }
+          throw asigErr;
+        }
+
+        // Estado local
+        if (pagoData) pagos.push(pagoData);
+        if (Array.isArray(asigsData)) asignaciones = asignaciones.concat(asigsData);
+
         showFormMsg('Pago guardado correctamente.', 'ok');
         limpiarFormulario();
-        renderFichaProyecto();
         aplicarFiltros();
       } catch (err) {
         console.error('[pagos_clientes] Error guardando pago:', err);
@@ -1502,10 +1786,10 @@
         const { error } = await client.from('pagos_clientes').delete().eq('id', id);
         if (error) throw error;
 
-        // ON DELETE CASCADE borra metadata; limpiamos también el estado local.
+        // ON DELETE CASCADE borra metadata y asignaciones; limpiamos también el estado local.
         pagos = pagos.filter(p => String(p.id) !== String(id));
+        asignaciones = asignaciones.filter(a => String(a?.pago_id) !== String(id));
         comprobantes = comprobantes.filter(c => String(c?.pago_id) !== String(id));
-        if (proyectoSel) renderFichaProyecto();
         aplicarFiltros();
       } catch (err) {
         console.error('[pagos_clientes] Error eliminando pago:', err);
@@ -1724,7 +2008,6 @@
           }
         }
         cerrarEditModal();
-        if (proyectoSel) renderFichaProyecto();
         aplicarFiltros();
       } catch (err) {
         console.error('[pagos_clientes] Error actualizando pago:', err);
@@ -2095,10 +2378,17 @@
 
     function pagoCoincide(p, f) {
       if (f.metodo && (p.metodo_pago || '') !== f.metodo) return false;
+      const reparto = repartoDePago(p);
       if (f.busqueda) {
-        const proy = (p.proyecto_nombre || '').toLowerCase();
-        const cli  = (p.cliente_nombre || '').toLowerCase();
-        if (!proy.includes(f.busqueda) && !cli.includes(f.busqueda)) return false;
+        const candidatos = [
+          (p.proyecto_nombre || '').toLowerCase(),
+          (p.cliente_nombre || '').toLowerCase(),
+        ];
+        for (const r of reparto) {
+          candidatos.push((r.proyecto_nombre || '').toLowerCase());
+          candidatos.push((r.cliente_nombre || '').toLowerCase());
+        }
+        if (!candidatos.some(t => t.includes(f.busqueda))) return false;
       }
       if (f.mes != null || f.anio != null) {
         const d = p.fecha_pago ? new Date(p.fecha_pago) : null;
@@ -2106,15 +2396,20 @@
         if (f.mes  != null && (d.getMonth() + 1) !== f.mes)  return false;
         if (f.anio != null &&  d.getFullYear()    !== f.anio) return false;
       }
-      // Estado deuda aplica a nivel proyecto, no a pago individual; lo evaluamos sobre el proyecto del pago.
+      // Estado deuda aplica a nivel proyecto: el pago coincide si CUALQUIERA
+      // de los proyectos a los que se asignó cumple el estado solicitado.
       if (f.estado && f.estado !== 'todos') {
-        const proy = proyectos.find(x => String(x.cotizacion_id) === String(p.cotizacion_id));
-        if (!proy) return false;
-        const recibido = totalPagosPorCotizacion(proy.cotizacion_id);
-        const e = estadoDeuda(proy.monto_venta, recibido, proy.fecha_entrega);
-        if (f.estado === 'pagado'    && e.codigo !== 'pagado') return false;
-        if (f.estado === 'pendiente' && !(e.codigo === 'pendiente' || e.codigo === 'pendiente_sin_fecha')) return false;
-        if (f.estado === 'atrasado'  && e.codigo !== 'atrasado') return false;
+        const ok = reparto.some(r => {
+          const proy = proyectos.find(x => String(x.cotizacion_id) === String(r.cotizacion_id));
+          if (!proy) return false;
+          const recibido = totalPagosPorCotizacion(proy.cotizacion_id);
+          const e = estadoDeuda(proy.monto_venta, recibido, proy.fecha_entrega);
+          if (f.estado === 'pagado')    return e.codigo === 'pagado';
+          if (f.estado === 'pendiente') return e.codigo === 'pendiente' || e.codigo === 'pendiente_sin_fecha';
+          if (f.estado === 'atrasado')  return e.codigo === 'atrasado';
+          return false;
+        });
+        if (!ok) return false;
       }
       return true;
     }
@@ -2178,8 +2473,17 @@
         return;
       }
       body.innerHTML = lista.map(p => {
-        const proy = escapeHtml(p.proyecto_nombre || '—');
-        const cli  = escapeHtml(p.cliente_nombre || '—');
+        const reparto = repartoDePago(p);
+        const multi = reparto.length > 1;
+        const proyHtml = multi
+          ? reparto.map(r => `<div>${escapeHtml(r.proyecto_nombre || '—')} <span class="muted">(${escapeHtml(formatCLP(r.monto))})</span></div>`).join('')
+          : escapeHtml(p.proyecto_nombre || reparto[0]?.proyecto_nombre || '—');
+        const cliHtml = multi
+          ? reparto.map(r => `<div>${escapeHtml(r.cliente_nombre || '—')}</div>`).join('')
+          : escapeHtml(p.cliente_nombre || reparto[0]?.cliente_nombre || '—');
+        const multiBadge = multi
+          ? ` <span class="badge badge-soft" title="Pago distribuido en varios proyectos">${reparto.length} proyectos</span>`
+          : '';
         const fecha = escapeHtml(formatFechaCL(p.fecha_pago) || '—');
         const monto = escapeHtml(formatCLP(p.monto));
         const met = escapeHtml(p.metodo_pago || '—');
@@ -2190,8 +2494,8 @@
         const pid = escapeHtml(String(p.id));
         return `<tr>
           <td>${fecha}</td>
-          <td>${proy}</td>
-          <td>${cli}</td>
+          <td>${proyHtml}${multiBadge}</td>
+          <td>${cliHtml}</td>
           <td class="pc-money">${monto}</td>
           <td>${met}</td>
           <td>${ref}</td>
@@ -2342,33 +2646,31 @@
       document.getElementById('btn-imprimir').addEventListener('click', imprimirReporte);
     }
 
-    function bindSelector() {
-      const input = document.getElementById('selector-input');
-      input.addEventListener('focus', () => { renderSelector(input.value); abrirSelector(); });
-      input.addEventListener('input', () => { renderSelector(input.value); abrirSelector(); });
-      input.addEventListener('blur', () => {
-        // pequeño delay para permitir click en items
-        setTimeout(cerrarSelector, 150);
-      });
-      document.addEventListener('click', (e) => {
-        const wrap = document.querySelector('.selector-wrap');
-        if (wrap && !wrap.contains(e.target)) cerrarSelector();
-      });
-    }
-
     function bindFormulario() {
       document.getElementById('btn-guardar').addEventListener('click', guardarPago);
       document.getElementById('btn-limpiar').addEventListener('click', () => {
         limpiarFormulario();
       });
+      document.getElementById('btn-add-asignacion').addEventListener('click', agregarAsignacion);
+      document.getElementById('pago-monto').addEventListener('input', actualizarResumenAsignaciones);
+
+      // Cierre de selectores de proyecto al click fuera
+      document.addEventListener('click', (e) => {
+        document.querySelectorAll('#asignaciones-list .asig-proy-list.open').forEach(listEl => {
+          const wrap = listEl.closest('.selector-wrap');
+          if (wrap && !wrap.contains(e.target)) listEl.classList.remove('open');
+        });
+      });
+
+      setDefaultFechaPago();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       bindFiltros();
-      bindSelector();
       bindFormulario();
       bindEditModal();
       bindComprobanteModal();
+      renderAsignacionesForm();
       cargarDatos();
     });
   </script>
