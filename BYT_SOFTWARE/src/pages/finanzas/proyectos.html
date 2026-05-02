@@ -816,12 +816,23 @@
     }
 
     // Devuelve Map<cotizacion_id, totalPagos>
-    // Sumatoria única por cotización (no se duplica por partidas porque pagos_clientes
-    // está indexado por cotizacion_id, no por partida).
-    function aggregatePagos(pagos) {
+    // Multi-proyecto: si un pago tiene filas en pagos_clientes_asignaciones,
+    // se usan SOLO esas (cada asignación se suma a su cotizacion_id).
+    // Retro-compat: pagos sin asignaciones se asumen 100% en su cotizacion_id.
+    function aggregatePagos(pagos, asignaciones) {
       const map = new Map();
+      const pagosConAsig = new Set();
+      (asignaciones || []).forEach(a => {
+        if (!a || a.cotizacion_id == null || a.pago_id == null) return;
+        pagosConAsig.add(String(a.pago_id));
+        const monto = Number(a.monto_asignado);
+        if (!isFinite(monto)) return;
+        const k = a.cotizacion_id;
+        map.set(k, (map.get(k) || 0) + monto);
+      });
       (pagos || []).forEach(p => {
         if (!p || p.cotizacion_id == null) return;
+        if (p.id != null && pagosConAsig.has(String(p.id))) return;
         const monto = Number(p.monto);
         if (!isFinite(monto)) return;
         const k = p.cotizacion_id;
@@ -926,7 +937,7 @@
           throw new Error('Supabase no disponible');
         }
 
-        const [ventasResp, cotizacionesResp, blocksResp, linesResp, pagosResp] = await Promise.all([
+        const [ventasResp, cotizacionesResp, blocksResp, linesResp, pagosResp, asignacionesResp] = await Promise.all([
           client
             .from('ventas')
             .select('id, cotizacion_id, proyecto, cliente, estado, fecha_venta, total_cotizado, total_venta, motivo_variacion, fecha_entrega_limite, partida_nombre, partida'),
@@ -943,6 +954,9 @@
           client
             .from('pagos_clientes')
             .select('id, cotizacion_id, monto'),
+          client
+            .from('pagos_clientes_asignaciones')
+            .select('id, pago_id, cotizacion_id, monto_asignado'),
         ]);
 
         if (ventasResp.error)       throw ventasResp.error;
@@ -950,6 +964,14 @@
         if (blocksResp.error)       throw blocksResp.error;
         if (linesResp.error)        throw linesResp.error;
         if (pagosResp.error)        throw pagosResp.error;
+        // No tirar la página si la tabla de asignaciones aún no existe (entornos
+        // antiguos): sin asignaciones se aplica retro-compat (100% por pago).
+        let asignacionesArr = [];
+        if (asignacionesResp.error) {
+          console.warn('[finanzas/proyectos] No se pudo cargar pagos_clientes_asignaciones:', asignacionesResp.error);
+        } else {
+          asignacionesArr = Array.isArray(asignacionesResp.data) ? asignacionesResp.data : [];
+        }
 
         const ventas       = Array.isArray(ventasResp.data)       ? ventasResp.data       : [];
         const cotizaciones = Array.isArray(cotizacionesResp.data) ? cotizacionesResp.data : [];
@@ -958,7 +980,7 @@
         const pagos        = Array.isArray(pagosResp.data)        ? pagosResp.data        : [];
 
         const comprasPorProyecto = aggregateCompras(blocks, lines);
-        const pagosPorCotizacion = aggregatePagos(pagos);
+        const pagosPorCotizacion = aggregatePagos(pagos, asignacionesArr);
         proyectosData = normalizarProyectos(ventas, cotizaciones, comprasPorProyecto, pagosPorCotizacion);
         poblarFiltroAnios(proyectosData);
         aplicarFiltros();
