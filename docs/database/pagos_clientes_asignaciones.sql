@@ -1,6 +1,3 @@
--- Mirror of BYT_SOFTWARE/database/pagos_clientes_asignaciones.sql
--- See that file for the canonical version. Kept in sync by docs unify workflow.
-
 -- =====================================================================
 -- Tabla: pagos_clientes_asignaciones
 -- Permite distribuir un pago en múltiples proyectos (cotizaciones).
