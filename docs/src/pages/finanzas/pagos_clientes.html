@@ -6,6 +6,9 @@
   <title>Pagos clientes - BYT SOFTWARE</title>
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css" />
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
+  <!-- jsPDF + autoTable para generación de PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
       --nav-offset: 260px;
@@ -784,7 +787,7 @@
           </div>
           <div>
             <label>&nbsp;</label>
-            <button class="btn btn-soft" id="btn-imprimir" type="button">Imprimir reporte</button>
+            <button class="btn btn-soft" id="btn-imprimir" type="button">Generar PDF</button>
           </div>
         </div>
       </div>
@@ -1225,6 +1228,27 @@
       const dias = diasAtraso(saldo, fechaEntrega);
       if (dias > 0) return { codigo: 'atrasado', label: 'Atrasado · ' + dias + 'd', cls: 'badge-bad' };
       return { codigo: 'pendiente', label: 'Pendiente', cls: 'badge-warn' };
+    }
+
+    // --------- Helpers para PDF ---------
+    async function imageUrlToDataUrl(url) {
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (err) {
+        console.warn('[PDF] No se pudo cargar imagen:', url, err);
+        return null;
+      }
+    }
+
+    function isImageMime(mime) {
+      return String(mime || '').toLowerCase().startsWith('image/');
     }
 
     // --------- Esperar supabase ---------
@@ -2627,12 +2651,362 @@
       }
     }
 
-    function imprimirReporte() {
-      construirReporte();
-      // Pequeño delay para que el navegador aplique estilos antes de abrir el diálogo de impresión.
-      setTimeout(() => {
-        window.print();
-      }, 50);
+    async function generarPDF() {
+      try {
+        // Verificar que jsPDF esté disponible
+        if (typeof window.jspdf === 'undefined') {
+          alert('Error: jsPDF no está cargado. Por favor, recarga la página.');
+          return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const f = getFiltros();
+        const proyFiltrados = proyectos.filter(p => proyectoCoincide(p, f));
+
+        // Calcular datos del reporte
+        let totalVendido = 0;
+        let totalPagado = 0;
+        let totalPendiente = 0;
+        let totalAtrasado = 0;
+        let conDeuda = 0;
+        let sumaAtrasos = 0;
+        let countAtrasos = 0;
+
+        const filas = proyFiltrados.map(p => {
+          const recibido = totalPagosPorCotizacion(p.cotizacion_id);
+          const saldoBruto = (Number(p.monto_venta) || 0) - recibido;
+          const saldo = Math.max(0, saldoBruto);
+          const dias = diasAtraso(saldo, p.fecha_entrega);
+          const est = estadoDeuda(p.monto_venta, recibido, p.fecha_entrega);
+
+          totalVendido  += Number(p.monto_venta) || 0;
+          totalPagado   += recibido;
+          totalPendiente += saldo;
+          if (saldo > 0) conDeuda++;
+          if (dias > 0) {
+            totalAtrasado += saldo;
+            sumaAtrasos += dias;
+            countAtrasos++;
+          }
+
+          return {
+            proyecto: p.proyecto_nombre || 'Sin nombre',
+            cliente: p.cliente_nombre || 'Sin cliente',
+            monto_venta: p.monto_venta || 0,
+            pagos: recibido,
+            saldo,
+            fecha_entrega: p.fecha_entrega,
+            dias: dias > 0 ? dias : (p.fecha_entrega ? 0 : 'Sin fecha'),
+            estado: est.label,
+          };
+        });
+
+        const promedioAtraso = countAtrasos > 0 ? Math.round(sumaAtrasos / countAtrasos) : 0;
+
+        // Crear PDF en horizontal
+        const doc = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        let yPos = 15;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const marginLeft = 15;
+        const marginRight = 15;
+        const usableWidth = pageWidth - marginLeft - marginRight;
+
+        // ===== HEADER =====
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18);
+        doc.text('Alinear', marginLeft, yPos);
+        
+        doc.setFontSize(14);
+        yPos += 7;
+        doc.text('Reporte de pagos clientes', marginLeft, yPos);
+
+        // Fecha emisión y ciudad
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        yPos += 5;
+        const ahora = new Date();
+        const fechaEmision = ahora.toLocaleString('es-CL', { 
+          day: '2-digit', 
+          month: '2-digit', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        doc.text(`Fecha emisión: ${fechaEmision}`, marginLeft, yPos);
+        yPos += 4;
+        doc.text('Ciudad: Santiago, Chile', marginLeft, yPos);
+
+        // Logo o texto en la derecha (simplificado - solo texto)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text('Bosque y Tierra', pageWidth - marginRight, 15, { align: 'right' });
+
+        yPos += 8;
+
+        // ===== BLOQUE DE FILTROS HORIZONTALES =====
+        doc.setDrawColor(220, 220, 220);
+        doc.line(marginLeft, yPos, pageWidth - marginRight, yPos);
+        yPos += 5;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+
+        const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        const partesPeriodo = [];
+        if (f.mes != null) partesPeriodo.push(meses[f.mes - 1]);
+        if (f.anio != null) partesPeriodo.push(String(f.anio));
+        const periodoTxt = partesPeriodo.length ? partesPeriodo.join(' ') : 'Todos los períodos';
+
+        const busquedaTxt = f.busqueda ? f.busqueda : 'Todos';
+        const estadoTxt = (f.estado && f.estado !== 'todos') ? f.estado : 'Todos';
+        const metodoTxt = f.metodo ? f.metodo : 'Todos';
+        const proyectosTxt = proyFiltrados.length;
+
+        const filtrosLinea = `Cliente/Filtro: ${busquedaTxt}  •  Estado deuda: ${estadoTxt}  •  Método pago: ${metodoTxt}  •  Período: ${periodoTxt}  •  Proyectos incluidos: ${proyectosTxt}`;
+        doc.text(filtrosLinea, marginLeft, yPos);
+        yPos += 6;
+
+        doc.line(marginLeft, yPos, pageWidth - marginRight, yPos);
+        yPos += 8;
+
+        // ===== KPIs HORIZONTALES =====
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        
+        const kpiWidth = usableWidth / 6;
+        const kpis = [
+          { label: 'Total vendido', value: formatCLP(totalVendido), color: [0, 0, 0] },
+          { label: 'Total pagado / HABER', value: formatCLP(totalPagado), color: [31, 107, 77] },
+          { label: 'Total pendiente / DEBE', value: formatCLP(totalPendiente), color: [163, 39, 30] },
+          { label: 'Deuda atrasada', value: formatCLP(totalAtrasado), color: [163, 39, 30] },
+          { label: 'Proyectos con deuda', value: String(conDeuda), color: [0, 0, 0] },
+          { label: 'Promedio días atraso', value: String(promedioAtraso) + 'd', color: [0, 0, 0] },
+        ];
+
+        kpis.forEach((kpi, idx) => {
+          const x = marginLeft + (idx * kpiWidth);
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 100, 100);
+          doc.text(kpi.label, x, yPos);
+          
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(kpi.color[0], kpi.color[1], kpi.color[2]);
+          doc.text(kpi.value, x, yPos + 5);
+        });
+
+        doc.setTextColor(0, 0, 0);
+        yPos += 12;
+
+        // ===== TÍTULO DE TABLA =====
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('Detalle por proyecto / cliente', marginLeft, yPos);
+        yPos += 6;
+
+        // ===== TABLA PRINCIPAL CON AUTOTABLE =====
+        const tableData = filas.map(r => [
+          r.proyecto,
+          r.cliente,
+          formatCLP(r.monto_venta),
+          formatCLP(r.pagos),
+          formatCLP(r.saldo),
+          formatFechaCL(r.fecha_entrega) || 'Sin fecha',
+          String(r.dias),
+          r.estado
+        ]);
+
+        doc.autoTable({
+          startY: yPos,
+          head: [['Proyecto', 'Cliente', 'Monto venta', 'Pagos recibidos (HABER)', 'Saldo pendiente (DEBE)', 'Fecha entrega', 'Días atraso', 'Estado']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: {
+            fillColor: [220, 220, 220],
+            textColor: [0, 0, 0],
+            fontStyle: 'bold',
+            fontSize: 8,
+            halign: 'left'
+          },
+          bodyStyles: {
+            fontSize: 8,
+            textColor: [0, 0, 0]
+          },
+          columnStyles: {
+            0: { cellWidth: 35 },  // Proyecto
+            1: { cellWidth: 35 },  // Cliente
+            2: { halign: 'right', cellWidth: 25 },  // Monto venta
+            3: { halign: 'right', cellWidth: 35, textColor: [31, 107, 77] },  // HABER verde
+            4: { halign: 'right', cellWidth: 35, textColor: [163, 39, 30] },  // DEBE rojo
+            5: { cellWidth: 25 },  // Fecha entrega
+            6: { halign: 'right', cellWidth: 20 },  // Días atraso
+            7: { cellWidth: 30 }   // Estado
+          },
+          margin: { left: marginLeft, right: marginRight },
+          didDrawPage: function(data) {
+            // Footer en cada página
+            doc.setFontSize(7);
+            doc.setTextColor(150, 150, 150);
+            doc.text('Bosque y Tierra - Reporte de pagos clientes', marginLeft, pageHeight - 10);
+            doc.text(`Página ${doc.internal.getCurrentPageInfo().pageNumber}`, pageWidth - marginRight, pageHeight - 10, { align: 'right' });
+          }
+        });
+
+        yPos = doc.lastAutoTable.finalY + 10;
+
+        // ===== COMPROBANTES =====
+        // Obtener pagos filtrados para comprobantes
+        const pagosFiltrados = pagos.filter(p => pagoCoincide(p, f));
+        const pagosIds = pagosFiltrados.map(p => p.id);
+        const comprobantesDelReporte = comprobantes.filter(c => pagosIds.includes(c.pago_id));
+
+        if (comprobantesDelReporte.length > 0) {
+          // Nueva página para comprobantes
+          doc.addPage();
+          yPos = 15;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.text('Comprobantes de pago', marginLeft, yPos);
+          yPos += 10;
+
+          const client = await esperarSupabase(5000);
+          if (!client) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.text('No se pudo cargar Supabase para obtener comprobantes.', marginLeft, yPos);
+          } else {
+            // Agrupar por pago_id para no duplicar
+            const comprobantesPorPago = {};
+            comprobantesDelReporte.forEach(c => {
+              if (!comprobantesPorPago[c.pago_id]) {
+                comprobantesPorPago[c.pago_id] = [];
+              }
+              comprobantesPorPago[c.pago_id].push(c);
+            });
+
+            for (const pagoId in comprobantesPorPago) {
+              const comps = comprobantesPorPago[pagoId];
+              const pago = pagos.find(p => String(p.id) === String(pagoId));
+              if (!pago) continue;
+
+              for (const comp of comps) {
+                // Información del comprobante
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(9);
+                
+                const proyNombre = pago.proyecto_nombre || 'Sin proyecto';
+                const clienteNombre = pago.cliente_nombre || 'Sin cliente';
+                const fechaPago = formatFechaCL(pago.fecha_pago) || '—';
+                const monto = formatCLP(pago.monto);
+
+                doc.text(`Proyecto: ${proyNombre}`, marginLeft, yPos);
+                yPos += 5;
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Cliente: ${clienteNombre}`, marginLeft, yPos);
+                yPos += 4;
+                doc.text(`Fecha pago: ${fechaPago}  •  Monto: ${monto}`, marginLeft, yPos);
+                yPos += 4;
+                doc.text(`Archivo: ${comp.file_name || 'sin nombre'}`, marginLeft, yPos);
+                yPos += 6;
+
+                // Si es imagen, intentar incluirla
+                if (isImageMime(comp.mime_type)) {
+                  try {
+                    const { data: urlData, error: urlError } = await client
+                      .storage
+                      .from(COMPROBANTES_BUCKET)
+                      .createSignedUrl(comp.storage_path, 300);
+                    
+                    if (!urlError && urlData?.signedUrl) {
+                      const dataUrl = await imageUrlToDataUrl(urlData.signedUrl);
+                      if (dataUrl) {
+                        const imgWidth = 80;
+                        const imgHeight = 60;
+                        
+                        // Verificar si necesitamos nueva página
+                        if (yPos + imgHeight > pageHeight - 20) {
+                          doc.addPage();
+                          yPos = 15;
+                        }
+                        
+                        doc.addImage(dataUrl, 'JPEG', marginLeft, yPos, imgWidth, imgHeight);
+                        yPos += imgHeight + 8;
+                      } else {
+                        doc.setFont('helvetica', 'italic');
+                        doc.setFontSize(8);
+                        doc.text('(No se pudo cargar la imagen)', marginLeft, yPos);
+                        yPos += 6;
+                      }
+                    } else {
+                      doc.setFont('helvetica', 'italic');
+                      doc.setFontSize(8);
+                      doc.text('(No se pudo obtener URL de la imagen)', marginLeft, yPos);
+                      yPos += 6;
+                    }
+                  } catch (err) {
+                    console.warn('[PDF] Error al cargar comprobante imagen:', err);
+                    doc.setFont('helvetica', 'italic');
+                    doc.setFontSize(8);
+                    doc.text('(Error al cargar imagen)', marginLeft, yPos);
+                    yPos += 6;
+                  }
+                } else {
+                  // No es imagen, mostrar referencia
+                  doc.setFont('helvetica', 'italic');
+                  doc.setFontSize(8);
+                  doc.text('Comprobante disponible como archivo externo (PDF u otro formato)', marginLeft, yPos);
+                  yPos += 4;
+                  
+                  try {
+                    const { data: urlData } = await client
+                      .storage
+                      .from(COMPROBANTES_BUCKET)
+                      .createSignedUrl(comp.storage_path, 3600);
+                    
+                    if (urlData?.signedUrl) {
+                      doc.setFontSize(7);
+                      doc.setTextColor(0, 0, 255);
+                      doc.textWithLink('Descargar comprobante', marginLeft, yPos, { url: urlData.signedUrl });
+                      doc.setTextColor(0, 0, 0);
+                      yPos += 6;
+                    }
+                  } catch (err) {
+                    console.warn('[PDF] Error al generar link de descarga:', err);
+                  }
+                }
+
+                // Línea separadora
+                doc.setDrawColor(220, 220, 220);
+                doc.line(marginLeft, yPos, pageWidth - marginRight, yPos);
+                yPos += 6;
+
+                // Verificar si necesitamos nueva página
+                if (yPos > pageHeight - 40) {
+                  doc.addPage();
+                  yPos = 15;
+                }
+              }
+            }
+          }
+        }
+
+        // ===== DESCARGAR PDF =====
+        const fechaDescarga = ahora.toISOString().split('T')[0];
+        const nombreArchivo = `reporte_pagos_clientes_${fechaDescarga}.pdf`;
+        doc.save(nombreArchivo);
+
+      } catch (error) {
+        console.error('[PDF] Error al generar PDF:', error);
+        alert('Error al generar el PDF. Por favor, revisa la consola para más detalles.');
+      }
     }
 
     // --------- Wire-up ---------
@@ -2643,7 +3017,7 @@
         const evt = el.tagName === 'SELECT' ? 'change' : 'input';
         el.addEventListener(evt, aplicarFiltros);
       });
-      document.getElementById('btn-imprimir').addEventListener('click', imprimirReporte);
+      document.getElementById('btn-imprimir').addEventListener('click', generarPDF);
     }
 
     function bindFormulario() {
