@@ -628,23 +628,38 @@ function setFieldValue(campo, valor) {
   if (el) el.value = valor ?? '';
 }
 
+/* ═══════════════════════════════════════════════════════
+   RESET FORM
+═══════════════════════════════════════════════════════ */
 function resetForm() {
   document.getElementById('field-id').value = '';
+
   CAMPOS.forEach(c => {
-    if (c === 'jornada_semanal')    { setFieldValue(c, '40'); return; }
-    if (c === 'hora_salida_normal') { setFieldValue(c, '17:30'); return; }
-    if (c === 'estado')             { setFieldValue(c, 'activo'); return; }
+    if (c === 'jornada_semanal') {
+      setFieldValue(c, '40');
+      return;
+    }
+    if (c === 'hora_salida_normal') {
+      setFieldValue(c, '17:30');
+      return;
+    }
+    if (c === 'estado') {
+      setFieldValue(c, 'activo');
+      return;
+    }
     setFieldValue(c, '');
   });
+
   document.getElementById('form-card-title').textContent = 'Nuevo trabajador';
   document.getElementById('btn-submit-label').textContent = 'Guardar trabajador';
   document.getElementById('btn-cancel').style.display = 'none';
-  document.getElementById('alert-box').classList.remove('show');
+
+  const alertBox = document.getElementById('alert-box');
+  if (alertBox) alertBox.classList.remove('show');
 }
 
 /* ═══════════════════════════════════════════════════════
    TABLA — RENDER
-   CAMBIO 1: type="button" en ambos botones de acción
 ═══════════════════════════════════════════════════════ */
 function renderTabla(trabajadores) {
   const tbody = document.getElementById('tabla-body');
@@ -680,9 +695,7 @@ function renderTabla(trabajadores) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   CAMBIO 2: Listener delegado a document (reemplaza el
-   anterior sobre tabla-body) para capturar botones
-   renderizados dinámicamente sin importar el momento.
+   LISTENER DELEGADO A document — botones de tabla
 ═══════════════════════════════════════════════════════ */
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-action]');
@@ -796,7 +809,6 @@ document.getElementById('trabajador-form').addEventListener('submit', async (e) 
 
 /* ═══════════════════════════════════════════════════════
    EDITAR
-   CAMBIO 3: log al inicio
 ═══════════════════════════════════════════════════════ */
 function editarTrabajador(id) {
   console.log('[RRHH] editarTrabajador ejecutado:', id);
@@ -816,7 +828,6 @@ function editarTrabajador(id) {
 
 /* ═══════════════════════════════════════════════════════
    ACTIVAR / INACTIVAR
-   CAMBIO 4: log al inicio
 ═══════════════════════════════════════════════════════ */
 async function toggleEstado(id, estadoActual) {
   console.log('[RRHH] toggleEstado ejecutado:', { id, estadoActual });
@@ -844,10 +855,15 @@ async function toggleEstado(id, estadoActual) {
 
 /* ═══════════════════════════════════════════════════════
    CANCELAR EDICIÓN
+   — capture:true garantiza que este listener se ejecuta
+     antes que el delegado de document que usa stopPropagation
 ═══════════════════════════════════════════════════════ */
-document.getElementById('btn-cancel').addEventListener('click', () => {
+document.getElementById('btn-cancel').addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  console.log('[RRHH] Cancelar edición');
   resetForm();
-});
+}, true);  /* <-- capture phase */
 
 /* ═══════════════════════════════════════════════════════
    RELOAD BTN
