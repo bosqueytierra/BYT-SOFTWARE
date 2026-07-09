@@ -184,6 +184,8 @@
       margin-top: 20px;
       padding-top: 16px;
       border-top: 1px solid var(--border);
+      flex-wrap: wrap;
+      align-items: center;
     }
 
     /* ── Section header ── */
@@ -447,6 +449,8 @@
           <button type="button" class="btn btn-secondary" id="btn-cancel" style="display:none;">
             Cancelar
           </button>
+          <!-- CAMBIO 11: mensaje de estado visible bajo los botones -->
+          <div id="debug-guardar" style="font-size:12px;color:#64748b;margin-top:8px;width:100%;"></div>
         </div>
       </form>
     </div>
@@ -555,6 +559,12 @@ function formatFechaCL(fecha) {
   return fecha;
 }
 
+/* ── helper: actualiza el mensaje de debug visible bajo el botón ── */
+function setDebug(msg) {
+  const el = document.getElementById('debug-guardar');
+  if (el) el.textContent = msg;
+}
+
 /* ═══════════════════════════════════════════════════════
    SUPABASE WAIT
 ═══════════════════════════════════════════════════════ */
@@ -653,6 +663,7 @@ function resetForm() {
   document.getElementById('form-card-title').textContent = 'Nuevo trabajador';
   document.getElementById('btn-submit-label').textContent = 'Guardar trabajador';
   document.getElementById('btn-cancel').style.display = 'none';
+  setDebug('');
 
   const alertBox = document.getElementById('alert-box');
   if (alertBox) alertBox.classList.remove('show');
@@ -747,6 +758,9 @@ async function cargarTrabajadores() {
       .select('*')
       .order('created_at', { ascending: false });
 
+    /* CAMBIO 10: log resultado cargar */
+    console.log('[RRHH] Resultado cargarTrabajadores:', { data, error });
+
     if (error) throw error;
 
     _trabajadores = data || [];
@@ -763,6 +777,29 @@ async function cargarTrabajadores() {
 ═══════════════════════════════════════════════════════ */
 document.getElementById('trabajador-form').addEventListener('submit', async (e) => {
   e.preventDefault();
+
+  /* CAMBIO 1: log al inicio del submit */
+  console.log('[RRHH] CLICK/SUBMIT guardar trabajador recibido');
+  setDebug('Intentando guardar…');
+
+  /* CAMBIO 2: validación con detalle en consola */
+  if (!e.target.checkValidity()) {
+    e.target.reportValidity();
+
+    const invalidos = [...e.target.querySelectorAll('input, select, textarea')]
+      .filter(el => !el.checkValidity())
+      .map(el => ({
+        id: el.id,
+        value: el.value,
+        error: el.validationMessage
+      }));
+
+    console.warn('[RRHH] Campos inválidos:', invalidos);
+    setDebug('Validación fallida');
+    showAlert('No se pudo guardar: hay campos obligatorios o inválidos. Revisa consola para detalle.');
+    return;
+  }
+
   const btnLabel  = document.getElementById('btn-submit-label');
   const btnSubmit = document.getElementById('btn-submit');
   btnSubmit.disabled = true;
@@ -785,21 +822,56 @@ document.getElementById('trabajador-form').addEventListener('submit', async (e) 
     });
     payload.updated_at = new Date().toISOString();
 
-    let error;
+    /* CAMBIO 3: log payload antes de enviar */
+    console.log('[RRHH] Payload enviado a Supabase:', payload);
+    setDebug('Enviando a Supabase…');
+
+    let data, error;
+
     if (id) {
-      ({ error } = await client.from('rrhh_trabajadores').update(payload).eq('id', id));
+      /* CAMBIO 5: UPDATE con .select().single() */
+      ({ data, error } = await client
+        .from('rrhh_trabajadores')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single());
     } else {
       payload.created_at = new Date().toISOString();
-      ({ error } = await client.from('rrhh_trabajadores').insert(payload));
+      /* CAMBIO 4: INSERT con .select().single() */
+      ({ data, error } = await client
+        .from('rrhh_trabajadores')
+        .insert(payload)
+        .select('*')
+        .single());
     }
 
-    if (error) throw error;
+    /* CAMBIO 6: log respuesta Supabase */
+    console.log('[RRHH] Respuesta Supabase guardar:', { data, error });
 
+    /* CAMBIO 7: si hay error, mostrar sin limpiar */
+    if (error) {
+      setDebug('Error Supabase: ' + (error.message || JSON.stringify(error)));
+      showAlert('Error Supabase al guardar: ' + (error.message || JSON.stringify(error)));
+      return;
+    }
+
+    /* CAMBIO 8: si no hay data, avisar sin limpiar */
+    if (!data) {
+      setDebug('Sin data devuelta por Supabase');
+      showAlert('Supabase no devolvió registro guardado. No se limpia el formulario.');
+      return;
+    }
+
+    /* CAMBIO 9: solo si hay data y sin error */
+    setDebug('Guardado confirmado');
     showAlert(id ? 'Trabajador actualizado correctamente.' : 'Trabajador creado correctamente.', 'success');
-    resetForm();
     await cargarTrabajadores();
+    resetForm();
+
   } catch (err) {
     console.error('guardarTrabajador:', err);
+    setDebug('Error inesperado: ' + (err.message || err));
     showAlert('Error al guardar: ' + (err.message || err));
   } finally {
     btnSubmit.disabled = false;
@@ -822,6 +894,7 @@ function editarTrabajador(id) {
   document.getElementById('form-card-title').textContent = 'Editar trabajador — ' + (t.nombre_completo || '');
   document.getElementById('btn-submit-label').textContent = 'Actualizar trabajador';
   document.getElementById('btn-cancel').style.display = 'inline-flex';
+  setDebug('');
 
   document.getElementById('form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
