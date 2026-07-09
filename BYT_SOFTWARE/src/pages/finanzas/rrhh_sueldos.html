@@ -308,7 +308,6 @@
     <div class="card" id="form-card">
       <div class="card-title" id="form-card-title">Nuevo trabajador</div>
 
-      <!-- CAMBIO 1: novalidate — sin validación nativa del navegador -->
       <form id="trabajador-form" autocomplete="off" novalidate>
         <input type="hidden" id="field-id" />
 
@@ -317,7 +316,6 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Nombre completo *</label>
-            <!-- CAMBIO 6: sin required — validamos manualmente -->
             <input type="text" id="field-nombre_completo" placeholder="Juan Pérez González" />
           </div>
           <div class="form-group">
@@ -445,8 +443,8 @@
         </div>
 
         <div class="form-actions">
-          <!-- CAMBIO 2: type="button" — no dispara submit -->
-          <button type="button" class="btn btn-primary" id="btn-submit">
+          <!-- CAMBIO 1: onclick="window.guardarTrabajador()" amarrado directamente -->
+          <button type="button" class="btn btn-primary" id="btn-submit" onclick="window.guardarTrabajador()">
             <span>💾</span> <span id="btn-submit-label">Guardar trabajador</span>
           </button>
           <button type="button" class="btn btn-secondary" id="btn-cancel" style="display:none;">
@@ -757,11 +755,19 @@ async function cargarTrabajadores() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   CAMBIO 4: GUARDAR — función directa, sin submit
+   GUARDAR TRABAJADOR
+   CAMBIO 4: log actualizado
+   CAMBIO 3: protección anti-doble guardado
+   CAMBIO 2: expuesta en window para onclick y consola
 ═══════════════════════════════════════════════════════ */
 async function guardarTrabajador() {
-  console.log('[RRHH] CLICK guardar trabajador recibido');
+  /* CAMBIO 4: log visible */
+  console.log('[RRHH] BOTÓN/FUNCIÓN guardarTrabajador ejecutada');
   setDebug('Intentando guardar…');
+
+  /* CAMBIO 3: protección si ya está procesando */
+  const btnSubmit = document.getElementById('btn-submit');
+  if (btnSubmit && btnSubmit.disabled) return;
 
   const nombre = getFieldValue('nombre_completo');
 
@@ -771,8 +777,7 @@ async function guardarTrabajador() {
     return;
   }
 
-  const btnLabel  = document.getElementById('btn-submit-label');
-  const btnSubmit = document.getElementById('btn-submit');
+  const btnLabel = document.getElementById('btn-submit-label');
 
   btnSubmit.disabled = true;
   btnLabel.textContent = 'Guardando…';
@@ -848,7 +853,10 @@ async function guardarTrabajador() {
   }
 }
 
-/* CAMBIO 5: listener directo en el botón */
+/* CAMBIO 2: exponer en window para onclick HTML y llamadas desde consola */
+window.guardarTrabajador = guardarTrabajador;
+
+/* listener adicional como respaldo */
 document.getElementById('btn-submit').addEventListener('click', guardarTrabajador);
 
 /* ═══════════════════════════════════════════════════════
