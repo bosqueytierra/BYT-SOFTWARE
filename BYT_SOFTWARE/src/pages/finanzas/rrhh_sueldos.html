@@ -644,8 +644,7 @@ function resetForm() {
 
 /* ═══════════════════════════════════════════════════════
    TABLA — RENDER
-   Usa data-id y data-estado en los botones.
-   Un único listener delegado en tbody maneja los clics.
+   CAMBIO 1: type="button" en ambos botones de acción
 ═══════════════════════════════════════════════════════ */
 function renderTabla(trabajadores) {
   const tbody = document.getElementById('tabla-body');
@@ -673,25 +672,44 @@ function renderTabla(trabajadores) {
       <td>${t.hora_salida_normal ? t.hora_salida_normal.slice(0,5) : '—'}</td>
       <td>${estadoBadge}</td>
       <td>
-        <button class="btn btn-sm btn-secondary" data-action="editar" data-id="${t.id}">✏️ Editar</button>
-        <button class="btn btn-sm ${toggleClass}" data-action="toggle" data-id="${t.id}" data-estado="${t.estado}" style="margin-left:4px;">${toggleLabel}</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-action="editar" data-id="${t.id}">✏️ Editar</button>
+        <button type="button" class="btn btn-sm ${toggleClass}" data-action="toggle" data-id="${t.id}" data-estado="${t.estado}" style="margin-left:4px;">${toggleLabel}</button>
       </td>
     </tr>`;
   }).join('');
 }
 
-/* ── Listener delegado — un solo handler para toda la tabla ── */
-document.getElementById('tabla-body').addEventListener('click', (e) => {
+/* ═══════════════════════════════════════════════════════
+   CAMBIO 2: Listener delegado a document (reemplaza el
+   anterior sobre tabla-body) para capturar botones
+   renderizados dinámicamente sin importar el momento.
+═══════════════════════════════════════════════════════ */
+document.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-action]');
   if (!btn) return;
 
+  e.preventDefault();
+  e.stopPropagation();
+
   const action = btn.dataset.action;
-  const id     = btn.dataset.id;      // UUID string, seguro
+  const id     = btn.dataset.id;
+  const estado = btn.dataset.estado;
+
+  console.log('[RRHH] Acción tabla trabajadores:', { action, id, estado });
+
+  if (!id) {
+    showAlert('No se encontró el ID del trabajador.');
+    return;
+  }
 
   if (action === 'editar') {
     editarTrabajador(id);
-  } else if (action === 'toggle') {
-    toggleEstado(id, btn.dataset.estado);
+    return;
+  }
+
+  if (action === 'toggle') {
+    toggleEstado(id, estado);
+    return;
   }
 });
 
@@ -778,8 +796,11 @@ document.getElementById('trabajador-form').addEventListener('submit', async (e) 
 
 /* ═══════════════════════════════════════════════════════
    EDITAR
+   CAMBIO 3: log al inicio
 ═══════════════════════════════════════════════════════ */
 function editarTrabajador(id) {
+  console.log('[RRHH] editarTrabajador ejecutado:', id);
+
   const t = _trabajadores.find(w => w.id === id);
   if (!t) return;
 
@@ -795,8 +816,11 @@ function editarTrabajador(id) {
 
 /* ═══════════════════════════════════════════════════════
    ACTIVAR / INACTIVAR
+   CAMBIO 4: log al inicio
 ═══════════════════════════════════════════════════════ */
 async function toggleEstado(id, estadoActual) {
+  console.log('[RRHH] toggleEstado ejecutado:', { id, estadoActual });
+
   const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
 
   try {
