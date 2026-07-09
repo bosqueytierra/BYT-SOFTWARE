@@ -24,7 +24,6 @@
       --radius-sm: 6px;
     }
 
-    /* ── Layout base ── */
     body {
       margin: 0;
       background: var(--bg);
@@ -38,21 +37,10 @@
       box-sizing: border-box;
     }
 
-    /* ── Page header ── */
     .page-header { margin-bottom: 24px; }
-    .page-header h1 {
-      margin: 0 0 4px;
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .page-header p {
-      margin: 0;
-      font-size: 13px;
-      color: var(--text-soft);
-    }
+    .page-header h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; color: var(--text); }
+    .page-header p { margin: 0; font-size: 13px; color: var(--text-soft); }
 
-    /* ── Tabs ── */
     .tabs-bar {
       display: flex;
       gap: 4px;
@@ -76,11 +64,9 @@
     .tab-btn:hover { color: var(--primary); }
     .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
 
-    /* ── Tab panels ── */
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    /* ── Placeholder tab ── */
     .placeholder-panel {
       background: var(--card);
       border-radius: var(--radius);
@@ -93,7 +79,6 @@
     .placeholder-panel h3 { margin: 0 0 6px; font-size: 15px; color: var(--text); }
     .placeholder-panel p { margin: 0; font-size: 13px; }
 
-    /* ── Card ── */
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -110,7 +95,6 @@
       border-bottom: 1px solid var(--border);
     }
 
-    /* ── Form ── */
     .form-section-title {
       font-size: 12px;
       font-weight: 700;
@@ -126,11 +110,7 @@
       gap: 12px 16px;
     }
     .form-group { display: flex; flex-direction: column; gap: 4px; }
-    .form-group label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-soft);
-    }
+    .form-group label { font-size: 12px; font-weight: 500; color: var(--text-soft); }
     .form-group input,
     .form-group select,
     .form-group textarea {
@@ -153,7 +133,6 @@
       box-shadow: 0 0 0 3px rgba(37,99,235,.12);
     }
 
-    /* ── Buttons ── */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -188,20 +167,14 @@
       align-items: center;
     }
 
-    /* ── Section header ── */
     .section-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 14px;
     }
-    .section-header h2 {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 600;
-    }
+    .section-header h2 { margin: 0; font-size: 15px; font-weight: 600; }
 
-    /* ── Table ── */
     .table-wrapper { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     thead tr { background: #f8fafc; }
@@ -225,7 +198,6 @@
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: #f8fafc; }
 
-    /* ── Badges ── */
     .badge {
       display: inline-block;
       padding: 2px 9px;
@@ -236,7 +208,6 @@
     .badge-active   { background: #dcfce7; color: #15803d; }
     .badge-inactive { background: #f1f5f9; color: #64748b; }
 
-    /* ── Alert ── */
     .alert {
       padding: 10px 14px;
       border-radius: var(--radius-sm);
@@ -248,12 +219,7 @@
     .alert-error   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
     .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
 
-    /* ── Loading state ── */
-    .loading-row td {
-      text-align: center;
-      padding: 32px;
-      color: var(--text-soft);
-    }
+    .loading-row td { text-align: center; padding: 32px; color: var(--text-soft); }
     .spinner {
       display: inline-block;
       width: 16px; height: 16px;
@@ -266,7 +232,6 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Responsive ── */
     @media (max-width: 900px) {
       .page-container { padding: 16px 16px 40px 16px; max-width: 100vw; }
       .form-grid { grid-template-columns: 1fr 1fr; }
@@ -282,13 +247,11 @@
 
 <div class="page-container">
 
-  <!-- Page header -->
   <div class="page-header">
     <h1>RR.HH. y sueldos</h1>
     <p>Gestión de trabajadores, horas extras, viajes, sueldos y vacaciones.</p>
   </div>
 
-  <!-- Internal tabs -->
   <div class="tabs-bar">
     <button class="tab-btn active" data-tab="trabajadores">Trabajadores</button>
     <button class="tab-btn" data-tab="horas-extras">Horas extras</button>
@@ -298,20 +261,17 @@
     <button class="tab-btn" data-tab="config-legal">Configuración legal</button>
   </div>
 
-  <!-- ───────────────────────────────── TAB: Trabajadores ── -->
+  <!-- ── TAB: Trabajadores ── -->
   <div id="tab-trabajadores" class="tab-panel active">
 
-    <!-- Alert -->
     <div id="alert-box" class="alert"></div>
 
-    <!-- Formulario crear / editar -->
     <div class="card" id="form-card">
       <div class="card-title" id="form-card-title">Nuevo trabajador</div>
 
       <form id="trabajador-form" autocomplete="off" novalidate>
         <input type="hidden" id="field-id" />
 
-        <!-- Datos personales -->
         <div class="form-section-title">Datos personales</div>
         <div class="form-grid">
           <div class="form-group">
@@ -356,7 +316,6 @@
           </div>
         </div>
 
-        <!-- Datos laborales -->
         <div class="form-section-title">Datos laborales</div>
         <div class="form-grid">
           <div class="form-group">
@@ -403,7 +362,6 @@
           </div>
         </div>
 
-        <!-- Datos pago / previsión -->
         <div class="form-section-title">Datos de pago y previsión</div>
         <div class="form-grid">
           <div class="form-group">
@@ -443,7 +401,6 @@
         </div>
 
         <div class="form-actions">
-          <!-- CAMBIO 1: onclick="window.guardarTrabajador()" amarrado directamente -->
           <button type="button" class="btn btn-primary" id="btn-submit" onclick="window.guardarTrabajador()">
             <span>💾</span> <span id="btn-submit-label">Guardar trabajador</span>
           </button>
@@ -455,13 +412,11 @@
       </form>
     </div>
 
-    <!-- Listado de trabajadores -->
     <div class="card">
       <div class="section-header">
         <h2>Trabajadores registrados</h2>
         <button class="btn btn-secondary btn-sm" id="btn-reload">↺ Actualizar</button>
       </div>
-
       <div class="table-wrapper">
         <table id="tabla-trabajadores">
           <thead>
@@ -486,9 +441,8 @@
       </div>
     </div>
   </div>
-  <!-- /tab trabajadores -->
 
-  <!-- ── Tabs placeholder ── -->
+  <!-- ── TAB: Horas extras placeholder ── -->
   <div id="tab-horas-extras" class="tab-panel">
     <div class="placeholder-panel">
       <div class="ph-icon">⏱️</div>
@@ -530,7 +484,6 @@
   </div>
 
 </div>
-<!-- /page-container -->
 
 <!-- ── Scripts ── -->
 <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
@@ -570,25 +523,16 @@ function setDebug(msg) {
 function esperarSupabase(timeoutMs = 8000) {
   return new Promise((resolve) => {
     const inicio = Date.now();
-
     function check() {
-      if (window.supabase && typeof window.supabase.from === 'function') {
-        return resolve(window.supabase);
-      }
-      if (Date.now() - inicio >= timeoutMs) {
-        return resolve(window.supabase || null);
-      }
+      if (window.supabase && typeof window.supabase.from === 'function') return resolve(window.supabase);
+      if (Date.now() - inicio >= timeoutMs) return resolve(window.supabase || null);
       setTimeout(check, 100);
     }
-
     try {
       window.addEventListener('supabase:ready', () => {
-        if (window.supabase && typeof window.supabase.from === 'function') {
-          resolve(window.supabase);
-        }
+        if (window.supabase && typeof window.supabase.from === 'function') resolve(window.supabase);
       }, { once: true });
     } catch (_) {}
-
     check();
   });
 }
@@ -642,25 +586,23 @@ function setFieldValue(campo, valor) {
 ═══════════════════════════════════════════════════════ */
 function resetForm() {
   document.getElementById('field-id').value = '';
-
   CAMPOS.forEach(c => {
     if (c === 'jornada_semanal') { setFieldValue(c, '40'); return; }
     if (c === 'hora_salida_normal') { setFieldValue(c, '17:30'); return; }
     if (c === 'estado') { setFieldValue(c, 'activo'); return; }
     setFieldValue(c, '');
   });
-
   document.getElementById('form-card-title').textContent = 'Nuevo trabajador';
   document.getElementById('btn-submit-label').textContent = 'Guardar trabajador';
   document.getElementById('btn-cancel').style.display = 'none';
   setDebug('');
-
   const alertBox = document.getElementById('alert-box');
   if (alertBox) alertBox.classList.remove('show');
 }
 
 /* ═══════════════════════════════════════════════════════
    TABLA — RENDER
+   CAMBIO: agrega botón Eliminar con data-action="eliminar"
 ═══════════════════════════════════════════════════════ */
 function renderTabla(trabajadores) {
   const tbody = document.getElementById('tabla-body');
@@ -687,16 +629,18 @@ function renderTabla(trabajadores) {
       <td>${t.jornada_semanal || '—'} hrs</td>
       <td>${t.hora_salida_normal ? t.hora_salida_normal.slice(0,5) : '—'}</td>
       <td>${estadoBadge}</td>
-      <td>
+      <td style="white-space:nowrap;">
         <button type="button" class="btn btn-sm btn-secondary" data-action="editar" data-id="${t.id}">✏️ Editar</button>
         <button type="button" class="btn btn-sm ${toggleClass}" data-action="toggle" data-id="${t.id}" data-estado="${t.estado}" style="margin-left:4px;">${toggleLabel}</button>
+        <button type="button" class="btn btn-sm btn-danger" data-action="eliminar" data-id="${t.id}" style="margin-left:4px;">🗑 Eliminar</button>
       </td>
     </tr>`;
   }).join('');
 }
 
 /* ═══════════════════════════════════════════════════════
-   LISTENER DELEGADO A document — botones de tabla
+   LISTENER DELEGADO A document
+   CAMBIO: soporta action === 'eliminar'
 ═══════════════════════════════════════════════════════ */
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('button[data-action]');
@@ -711,13 +655,11 @@ document.addEventListener('click', (e) => {
 
   console.log('[RRHH] Acción tabla trabajadores:', { action, id, estado });
 
-  if (!id) {
-    showAlert('No se encontró el ID del trabajador.');
-    return;
-  }
+  if (!id) { showAlert('No se encontró el ID del trabajador.'); return; }
 
-  if (action === 'editar') { editarTrabajador(id); return; }
-  if (action === 'toggle') { toggleEstado(id, estado); return; }
+  if (action === 'editar')   { editarTrabajador(id); return; }
+  if (action === 'toggle')   { toggleEstado(id, estado); return; }
+  if (action === 'eliminar') { eliminarTrabajador(id); return; }
 });
 
 /* ═══════════════════════════════════════════════════════
@@ -731,7 +673,6 @@ let _trabajadores = [];
 async function cargarTrabajadores() {
   const tbody = document.getElementById('tabla-body');
   tbody.innerHTML = `<tr class="loading-row"><td colspan="9"><span class="spinner"></span> Cargando…</td></tr>`;
-
   try {
     const client = await esperarSupabase(8000);
     if (!client) { showAlert('No se pudo conectar con Supabase.'); tbody.innerHTML = ''; return; }
@@ -742,7 +683,6 @@ async function cargarTrabajadores() {
       .order('created_at', { ascending: false });
 
     console.log('[RRHH] Resultado cargarTrabajadores:', { data, error });
-
     if (error) throw error;
 
     _trabajadores = data || [];
@@ -756,21 +696,15 @@ async function cargarTrabajadores() {
 
 /* ═══════════════════════════════════════════════════════
    GUARDAR TRABAJADOR
-   CAMBIO 4: log actualizado
-   CAMBIO 3: protección anti-doble guardado
-   CAMBIO 2: expuesta en window para onclick y consola
 ═══════════════════════════════════════════════════════ */
 async function guardarTrabajador() {
-  /* CAMBIO 4: log visible */
   console.log('[RRHH] BOTÓN/FUNCIÓN guardarTrabajador ejecutada');
   setDebug('Intentando guardar…');
 
-  /* CAMBIO 3: protección si ya está procesando */
   const btnSubmit = document.getElementById('btn-submit');
   if (btnSubmit && btnSubmit.disabled) return;
 
   const nombre = getFieldValue('nombre_completo');
-
   if (!nombre) {
     showAlert('Debes ingresar al menos el nombre completo del trabajador.');
     setDebug('Validación fallida: falta nombre');
@@ -778,7 +712,6 @@ async function guardarTrabajador() {
   }
 
   const btnLabel = document.getElementById('btn-submit-label');
-
   btnSubmit.disabled = true;
   btnLabel.textContent = 'Guardando…';
 
@@ -791,36 +724,21 @@ async function guardarTrabajador() {
     const payload = {};
     CAMPOS.forEach(c => {
       const v = getFieldValue(c);
-      if (c === 'sueldo_base') {
-        payload[c] = v !== '' ? Number(v) : 0;
-      } else if (c === 'jornada_semanal') {
-        payload[c] = v !== '' ? Number(v) : 40;
-      } else {
-        payload[c] = v !== '' ? v : null;
-      }
+      if (c === 'sueldo_base')      payload[c] = v !== '' ? Number(v) : 0;
+      else if (c === 'jornada_semanal') payload[c] = v !== '' ? Number(v) : 40;
+      else                          payload[c] = v !== '' ? v : null;
     });
-
     payload.updated_at = new Date().toISOString();
 
     console.log('[RRHH] Payload enviado a Supabase:', payload);
     setDebug('Enviando a Supabase…');
 
     let data, error;
-
     if (id) {
-      ({ data, error } = await client
-        .from('rrhh_trabajadores')
-        .update(payload)
-        .eq('id', id)
-        .select('*')
-        .single());
+      ({ data, error } = await client.from('rrhh_trabajadores').update(payload).eq('id', id).select('*').single());
     } else {
       payload.created_at = new Date().toISOString();
-      ({ data, error } = await client
-        .from('rrhh_trabajadores')
-        .insert(payload)
-        .select('*')
-        .single());
+      ({ data, error } = await client.from('rrhh_trabajadores').insert(payload).select('*').single());
     }
 
     console.log('[RRHH] Respuesta Supabase guardar:', { data, error });
@@ -830,7 +748,6 @@ async function guardarTrabajador() {
       showAlert('Error Supabase al guardar: ' + (error.message || JSON.stringify(error)));
       return;
     }
-
     if (!data) {
       setDebug('Supabase no devolvió registro.');
       showAlert('Supabase no devolvió registro guardado.');
@@ -839,7 +756,6 @@ async function guardarTrabajador() {
 
     setDebug('Guardado confirmado');
     showAlert(id ? 'Trabajador actualizado correctamente.' : 'Trabajador creado correctamente.', 'success');
-
     await cargarTrabajadores();
     resetForm();
 
@@ -852,19 +768,13 @@ async function guardarTrabajador() {
     btnLabel.textContent = document.getElementById('field-id').value ? 'Actualizar trabajador' : 'Guardar trabajador';
   }
 }
-
-/* CAMBIO 2: exponer en window para onclick HTML y llamadas desde consola */
 window.guardarTrabajador = guardarTrabajador;
-
-/* listener adicional como respaldo */
-document.getElementById('btn-submit').addEventListener('click', guardarTrabajador);
 
 /* ═══════════════════════════════════════════════════════
    EDITAR
 ═══════════════════════════════════════════════════════ */
 function editarTrabajador(id) {
   console.log('[RRHH] editarTrabajador ejecutado:', id);
-
   const t = _trabajadores.find(w => w.id === id);
   if (!t) return;
 
@@ -884,9 +794,7 @@ function editarTrabajador(id) {
 ═══════════════════════════════════════════════════════ */
 async function toggleEstado(id, estadoActual) {
   console.log('[RRHH] toggleEstado ejecutado:', { id, estadoActual });
-
   const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
-
   try {
     const client = await esperarSupabase(8000);
     if (!client) throw new Error('No se pudo conectar con Supabase.');
@@ -897,7 +805,6 @@ async function toggleEstado(id, estadoActual) {
       .eq('id', id);
 
     if (error) throw error;
-
     showAlert(`Trabajador marcado como ${nuevoEstado}.`, 'success');
     await cargarTrabajadores();
   } catch (err) {
@@ -907,7 +814,47 @@ async function toggleEstado(id, estadoActual) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   CANCELAR EDICIÓN — capture phase
+   ELIMINAR TRABAJADOR  ← NUEVO
+═══════════════════════════════════════════════════════ */
+async function eliminarTrabajador(id) {
+  const confirmado = confirm('¿Seguro que quieres eliminar este trabajador? Esta acción no se puede deshacer.');
+  if (!confirmado) return;
+
+  try {
+    const client = await esperarSupabase(8000);
+    if (!client) throw new Error('No se pudo conectar con Supabase.');
+
+    const { error } = await client
+      .from('rrhh_trabajadores')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      const msg = error.message || JSON.stringify(error);
+      if (
+        msg.toLowerCase().includes('foreign key') ||
+        msg.toLowerCase().includes('violates') ||
+        msg.toLowerCase().includes('constraint')
+      ) {
+        showAlert('No se puede eliminar este trabajador porque tiene movimientos asociados. Puedes inactivarlo.');
+        return;
+      }
+      showAlert('Error al eliminar trabajador: ' + msg);
+      return;
+    }
+
+    showAlert('Trabajador eliminado correctamente.', 'success');
+    await cargarTrabajadores();
+
+  } catch (err) {
+    console.error('eliminarTrabajador:', err);
+    showAlert('Error al eliminar trabajador: ' + (err.message || err));
+  }
+}
+window.eliminarTrabajador = eliminarTrabajador;
+
+/* ═══════════════════════════════════════════════════════
+   CANCELAR EDICIÓN
 ═══════════════════════════════════════════════════════ */
 document.getElementById('btn-cancel').addEventListener('click', (e) => {
   e.preventDefault();
@@ -916,9 +863,7 @@ document.getElementById('btn-cancel').addEventListener('click', (e) => {
   resetForm();
 }, true);
 
-/* ═══════════════════════════════════════════════════════
-   RELOAD BTN
-═══════════════════════════════════════════════════════ */
+document.getElementById('btn-submit').addEventListener('click', guardarTrabajador);
 document.getElementById('btn-reload').addEventListener('click', cargarTrabajadores);
 
 /* ═══════════════════════════════════════════════════════
