@@ -7,22 +7,834 @@
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/global.css" />
   <link rel="stylesheet" href="/BYT-SOFTWARE/BYT_SOFTWARE/src/styles/loader.css" />
   <style>
-    :root { --nav-offset: 260px; }
-    body { margin: 0; background: #f6f7f8; font-family: "Inter","SF Pro Display","Roboto",system-ui,sans-serif; }
-    .page-container { padding: 24px var(--nav-offset); }
-    .page-header h1 { margin: 0 0 8px; font-size: 22px; }
-    .placeholder { color: #6c7a86; font-size: 14px; }
+    /* ── Variables ── */
+    :root {
+      --nav-offset: 260px;
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --text: #1e293b;
+      --text-soft: #64748b;
+      --border: #e2e8f0;
+      --bg: #f6f7f8;
+      --card: #ffffff;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+
+    /* ── Layout base ── */
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: "Inter", "SF Pro Display", "Roboto", system-ui, sans-serif;
+      color: var(--text);
+      font-size: 14px;
+    }
+    .page-container {
+      padding: 28px 32px 40px var(--nav-offset);
+      max-width: calc(100vw - var(--nav-offset));
+      box-sizing: border-box;
+    }
+
+    /* ── Page header ── */
+    .page-header { margin-bottom: 24px; }
+    .page-header h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .page-header p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+
+    /* ── Tabs ── */
+    .tabs-bar {
+      display: flex;
+      gap: 4px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 24px;
+      overflow-x: auto;
+    }
+    .tab-btn {
+      padding: 9px 18px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-soft);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+    /* ── Tab panels ── */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Placeholder tab ── */
+    .placeholder-panel {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 60px 24px;
+      text-align: center;
+      color: var(--text-soft);
+    }
+    .placeholder-panel .ph-icon { font-size: 36px; margin-bottom: 12px; }
+    .placeholder-panel h3 { margin: 0 0 6px; font-size: 15px; color: var(--text); }
+    .placeholder-panel p { margin: 0; font-size: 13px; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0 0 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Form ── */
+    .form-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-soft);
+      margin: 20px 0 10px;
+    }
+    .form-section-title:first-child { margin-top: 0; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px 16px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-soft);
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+      transition: border-color .15s, box-shadow .15s;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+    .btn-secondary { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: #e2e8f0; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .btn-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .btn-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .btn-danger  { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Section header ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-header h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    /* ── Table ── */
+    .table-wrapper { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: #f8fafc; }
+    th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--text-soft);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--text);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f8fafc; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-active   { background: #dcfce7; color: #15803d; }
+    .badge-inactive { background: #f1f5f9; color: #64748b; }
+
+    /* ── Alert ── */
+    .alert {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .alert.show { display: flex; align-items: center; gap: 8px; }
+    .alert-error   { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .alert-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+
+    /* ── Loading state ── */
+    .loading-row td {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-soft);
+    }
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .page-container { padding: 16px 16px 40px 16px; max-width: 100vw; }
+      .form-grid { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .tabs-bar { gap: 0; }
+      .tab-btn { padding: 8px 12px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>
-  <div class="page-container">
-    <div class="page-header">
-      <h1>RR.HH. y sueldos</h1>
-    </div>
-    <p class="placeholder">En construcción</p>
+
+<div class="page-container">
+
+  <!-- Page header -->
+  <div class="page-header">
+    <h1>RR.HH. y sueldos</h1>
+    <p>Gestión de trabajadores, horas extras, viajes, sueldos y vacaciones.</p>
   </div>
 
-  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
-  <script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
+  <!-- Internal tabs -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" data-tab="trabajadores">Trabajadores</button>
+    <button class="tab-btn" data-tab="horas-extras">Horas extras</button>
+    <button class="tab-btn" data-tab="viajes">Gestiones / viajes</button>
+    <button class="tab-btn" data-tab="sueldos">Hoja de sueldos</button>
+    <button class="tab-btn" data-tab="vacaciones">Vacaciones</button>
+    <button class="tab-btn" data-tab="config-legal">Configuración legal</button>
+  </div>
+
+  <!-- ───────────────────────────────── TAB: Trabajadores ── -->
+  <div id="tab-trabajadores" class="tab-panel active">
+
+    <!-- Alert -->
+    <div id="alert-box" class="alert"></div>
+
+    <!-- Formulario crear / editar -->
+    <div class="card" id="form-card">
+      <div class="card-title" id="form-card-title">Nuevo trabajador</div>
+
+      <form id="trabajador-form" autocomplete="off">
+        <input type="hidden" id="field-id" />
+
+        <!-- Datos personales -->
+        <div class="form-section-title">Datos personales</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nombre completo *</label>
+            <input type="text" id="field-nombre_completo" required placeholder="Juan Pérez González" />
+          </div>
+          <div class="form-group">
+            <label>RUT *</label>
+            <input type="text" id="field-rut" required placeholder="12.345.678-9" />
+          </div>
+          <div class="form-group">
+            <label>Fecha de nacimiento</label>
+            <input type="date" id="field-fecha_nacimiento" />
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" id="field-telefono" placeholder="+56 9 1234 5678" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="field-email" placeholder="correo@ejemplo.cl" />
+          </div>
+          <div class="form-group">
+            <label>Dirección</label>
+            <input type="text" id="field-direccion" placeholder="Av. Ejemplo 123" />
+          </div>
+          <div class="form-group">
+            <label>Comuna</label>
+            <input type="text" id="field-comuna" placeholder="Santiago" />
+          </div>
+          <div class="form-group">
+            <label>Ciudad</label>
+            <input type="text" id="field-ciudad" placeholder="Santiago" />
+          </div>
+          <div class="form-group">
+            <label>Contacto emergencia — nombre</label>
+            <input type="text" id="field-contacto_emergencia_nombre" placeholder="María González" />
+          </div>
+          <div class="form-group">
+            <label>Contacto emergencia — teléfono</label>
+            <input type="text" id="field-contacto_emergencia_telefono" placeholder="+56 9 8765 4321" />
+          </div>
+        </div>
+
+        <!-- Datos laborales -->
+        <div class="form-section-title">Datos laborales</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Cargo *</label>
+            <input type="text" id="field-cargo" required placeholder="Administrador" />
+          </div>
+          <div class="form-group">
+            <label>Área</label>
+            <input type="text" id="field-area" placeholder="Administración" />
+          </div>
+          <div class="form-group">
+            <label>Fecha de ingreso *</label>
+            <input type="date" id="field-fecha_ingreso" required />
+          </div>
+          <div class="form-group">
+            <label>Tipo de contrato</label>
+            <select id="field-tipo_contrato">
+              <option value="">— seleccionar —</option>
+              <option value="indefinido">Indefinido</option>
+              <option value="plazo_fijo">Plazo fijo</option>
+              <option value="obra_faena">Obra o faena</option>
+              <option value="honorarios">Honorarios</option>
+              <option value="part_time">Part-time</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Jornada semanal (hrs)</label>
+            <input type="number" id="field-jornada_semanal" min="1" max="60" value="40" placeholder="40" />
+          </div>
+          <div class="form-group">
+            <label>Hora salida normal</label>
+            <input type="time" id="field-hora_salida_normal" value="17:30" />
+          </div>
+          <div class="form-group">
+            <label>Sueldo base (CLP) *</label>
+            <input type="number" id="field-sueldo_base" required min="0" placeholder="500000" />
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="field-estado">
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Datos pago / previsión -->
+        <div class="form-section-title">Datos de pago y previsión</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>AFP</label>
+            <select id="field-afp">
+              <option value="">— seleccionar —</option>
+              <option value="capital">Capital</option>
+              <option value="cuprum">Cuprum</option>
+              <option value="habitat">Hábitat</option>
+              <option value="planvital">PlanVital</option>
+              <option value="provida">ProVida</option>
+              <option value="uno">Uno</option>
+              <option value="model">Model</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Salud (Isapre / Fonasa)</label>
+            <input type="text" id="field-salud" placeholder="Fonasa / Cruz Blanca…" />
+          </div>
+          <div class="form-group">
+            <label>Banco</label>
+            <input type="text" id="field-banco" placeholder="Banco Estado" />
+          </div>
+          <div class="form-group">
+            <label>Tipo de cuenta</label>
+            <select id="field-tipo_cuenta">
+              <option value="">— seleccionar —</option>
+              <option value="cuenta_corriente">Cuenta corriente</option>
+              <option value="cuenta_vista">Cuenta vista / RUT</option>
+              <option value="cuenta_ahorro">Cuenta de ahorro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Número de cuenta</label>
+            <input type="text" id="field-numero_cuenta" placeholder="00-000-00000-00" />
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="btn-submit">
+            <span>💾</span> <span id="btn-submit-label">Guardar trabajador</span>
+          </button>
+          <button type="button" class="btn btn-secondary" id="btn-cancel" style="display:none;">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Listado de trabajadores -->
+    <div class="card">
+      <div class="section-header">
+        <h2>Trabajadores registrados</h2>
+        <button class="btn btn-secondary btn-sm" id="btn-reload">↺ Actualizar</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="tabla-trabajadores">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>RUT</th>
+              <th>Cargo</th>
+              <th>Fecha ingreso</th>
+              <th>Sueldo base</th>
+              <th>Jornada</th>
+              <th>Salida normal</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body">
+            <tr class="loading-row">
+              <td colspan="9"><span class="spinner"></span> Cargando trabajadores…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- /tab trabajadores -->
+
+  <!-- ── Tabs placeholder ── -->
+  <div id="tab-horas-extras" class="tab-panel">
+    <div class="placeholder-panel">
+      <div class="ph-icon">⏱️</div>
+      <h3>Horas extras</h3>
+      <p>Próxima fase.</p>
+    </div>
+  </div>
+
+  <div id="tab-viajes" class="tab-panel">
+    <div class="placeholder-panel">
+      <div class="ph-icon">🚗</div>
+      <h3>Gestiones / viajes</h3>
+      <p>Próxima fase.</p>
+    </div>
+  </div>
+
+  <div id="tab-sueldos" class="tab-panel">
+    <div class="placeholder-panel">
+      <div class="ph-icon">📋</div>
+      <h3>Hoja de sueldos</h3>
+      <p>Próxima fase.</p>
+    </div>
+  </div>
+
+  <div id="tab-vacaciones" class="tab-panel">
+    <div class="placeholder-panel">
+      <div class="ph-icon">🏖️</div>
+      <h3>Vacaciones</h3>
+      <p>Próxima fase.</p>
+    </div>
+  </div>
+
+  <div id="tab-config-legal" class="tab-panel">
+    <div class="placeholder-panel">
+      <div class="ph-icon">⚖️</div>
+      <h3>Configuración legal</h3>
+      <p>Próxima fase.</p>
+    </div>
+  </div>
+
+</div>
+<!-- /page-container -->
+
+<!-- ── Scripts ── -->
+<script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/menuConfig.js"></script>
+<script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/layout.js"></script>
+<script src="/BYT-SOFTWARE/BYT_SOFTWARE/src/lib/supabaseConfig.js"></script>
+<script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/supabaseBrowserClient.js"></script>
+<script type="module" src="/BYT-SOFTWARE/BYT_SOFTWARE/src/js/globalSupabase.js"></script>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════ */
+function formatCLP(value) {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    maximumFractionDigits: 0
+  }).format(Number(value || 0));
+}
+
+function formatFechaCL(fecha) {
+  if (!fecha) return '—';
+  const str = String(fecha).slice(0, 10);
+  const m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return fecha;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SUPABASE WAIT
+═══════════════════════════════════════════════════════ */
+function esperarSupabase(timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    const inicio = Date.now();
+
+    function check() {
+      if (window.supabase && typeof window.supabase.from === 'function') {
+        return resolve(window.supabase);
+      }
+      if (Date.now() - inicio >= timeoutMs) {
+        return resolve(window.supabase || null);
+      }
+      setTimeout(check, 100);
+    }
+
+    try {
+      window.addEventListener('supabase:ready', () => {
+        if (window.supabase && typeof window.supabase.from === 'function') {
+          resolve(window.supabase);
+        }
+      }, { once: true });
+    } catch (_) {}
+
+    check();
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════════════════ */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const panel = document.getElementById('tab-' + btn.dataset.tab);
+    if (panel) panel.classList.add('active');
+  });
+});
+
+/* ═══════════════════════════════════════════════════════
+   ALERT
+═══════════════════════════════════════════════════════ */
+function showAlert(msg, type = 'error') {
+  const el = document.getElementById('alert-box');
+  el.className = `alert alert-${type} show`;
+  el.innerHTML = (type === 'error' ? '⚠️ ' : '✅ ') + msg;
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  setTimeout(() => { el.classList.remove('show'); }, 5000);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CAMPOS
+═══════════════════════════════════════════════════════ */
+const CAMPOS = [
+  'nombre_completo','rut','fecha_nacimiento','telefono','email',
+  'direccion','comuna','ciudad','contacto_emergencia_nombre',
+  'contacto_emergencia_telefono','cargo','area','fecha_ingreso',
+  'tipo_contrato','jornada_semanal','hora_salida_normal','sueldo_base',
+  'estado','afp','salud','banco','tipo_cuenta','numero_cuenta'
+];
+
+function getFieldValue(campo) {
+  return document.getElementById('field-' + campo)?.value?.trim() ?? '';
+}
+
+function setFieldValue(campo, valor) {
+  const el = document.getElementById('field-' + campo);
+  if (el) el.value = valor ?? '';
+}
+
+function resetForm() {
+  document.getElementById('field-id').value = '';
+  CAMPOS.forEach(c => {
+    if (c === 'jornada_semanal')    { setFieldValue(c, '40'); return; }
+    if (c === 'hora_salida_normal') { setFieldValue(c, '17:30'); return; }
+    if (c === 'estado')             { setFieldValue(c, 'activo'); return; }
+    setFieldValue(c, '');
+  });
+  document.getElementById('form-card-title').textContent = 'Nuevo trabajador';
+  document.getElementById('btn-submit-label').textContent = 'Guardar trabajador';
+  document.getElementById('btn-cancel').style.display = 'none';
+  document.getElementById('alert-box').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════
+   TABLA — RENDER
+   Usa data-id y data-estado en los botones.
+   Un único listener delegado en tbody maneja los clics.
+═══════════════════════════════════════════════════════ */
+function renderTabla(trabajadores) {
+  const tbody = document.getElementById('tabla-body');
+
+  if (!trabajadores || trabajadores.length === 0) {
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="9" style="color:#94a3b8;">Sin trabajadores registrados.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = trabajadores.map(t => {
+    const estadoBadge = t.estado === 'activo'
+      ? '<span class="badge badge-active">Activo</span>'
+      : '<span class="badge badge-inactive">Inactivo</span>';
+
+    const toggleLabel = t.estado === 'activo' ? '⏸ Inactivar' : '▶ Activar';
+    const toggleClass = t.estado === 'activo' ? 'btn-warning' : 'btn-success';
+
+    return `<tr>
+      <td><strong>${t.nombre_completo || '—'}</strong></td>
+      <td>${t.rut || '—'}</td>
+      <td>${t.cargo || '—'}</td>
+      <td>${formatFechaCL(t.fecha_ingreso)}</td>
+      <td>${formatCLP(t.sueldo_base)}</td>
+      <td>${t.jornada_semanal || '—'} hrs</td>
+      <td>${t.hora_salida_normal ? t.hora_salida_normal.slice(0,5) : '—'}</td>
+      <td>${estadoBadge}</td>
+      <td>
+        <button class="btn btn-sm btn-secondary" data-action="editar" data-id="${t.id}">✏️ Editar</button>
+        <button class="btn btn-sm ${toggleClass}" data-action="toggle" data-id="${t.id}" data-estado="${t.estado}" style="margin-left:4px;">${toggleLabel}</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ── Listener delegado — un solo handler para toda la tabla ── */
+document.getElementById('tabla-body').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+
+  const action = btn.dataset.action;
+  const id     = btn.dataset.id;      // UUID string, seguro
+
+  if (action === 'editar') {
+    editarTrabajador(id);
+  } else if (action === 'toggle') {
+    toggleEstado(id, btn.dataset.estado);
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
+   CACHE
+═══════════════════════════════════════════════════════ */
+let _trabajadores = [];
+
+/* ═══════════════════════════════════════════════════════
+   CARGAR TRABAJADORES
+═══════════════════════════════════════════════════════ */
+async function cargarTrabajadores() {
+  const tbody = document.getElementById('tabla-body');
+  tbody.innerHTML = `<tr class="loading-row"><td colspan="9"><span class="spinner"></span> Cargando…</td></tr>`;
+
+  try {
+    const client = await esperarSupabase(8000);
+    if (!client) { showAlert('No se pudo conectar con Supabase.'); tbody.innerHTML = ''; return; }
+
+    const { data, error } = await client
+      .from('rrhh_trabajadores')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    _trabajadores = data || [];
+    renderTabla(_trabajadores);
+  } catch (err) {
+    console.error('cargarTrabajadores:', err);
+    showAlert('Error al cargar trabajadores: ' + (err.message || err));
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="9" style="color:#ef4444;">Error al cargar datos.</td></tr>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   GUARDAR (crear / editar)
+═══════════════════════════════════════════════════════ */
+document.getElementById('trabajador-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btnLabel  = document.getElementById('btn-submit-label');
+  const btnSubmit = document.getElementById('btn-submit');
+  btnSubmit.disabled = true;
+  btnLabel.textContent = 'Guardando…';
+
+  try {
+    const client = await esperarSupabase(8000);
+    if (!client) throw new Error('No se pudo conectar con Supabase.');
+
+    const id = document.getElementById('field-id').value;
+
+    const payload = {};
+    CAMPOS.forEach(c => {
+      const v = getFieldValue(c);
+      if (c === 'sueldo_base' || c === 'jornada_semanal') {
+        payload[c] = v !== '' ? Number(v) : null;
+      } else {
+        payload[c] = v !== '' ? v : null;
+      }
+    });
+    payload.updated_at = new Date().toISOString();
+
+    let error;
+    if (id) {
+      ({ error } = await client.from('rrhh_trabajadores').update(payload).eq('id', id));
+    } else {
+      payload.created_at = new Date().toISOString();
+      ({ error } = await client.from('rrhh_trabajadores').insert(payload));
+    }
+
+    if (error) throw error;
+
+    showAlert(id ? 'Trabajador actualizado correctamente.' : 'Trabajador creado correctamente.', 'success');
+    resetForm();
+    await cargarTrabajadores();
+  } catch (err) {
+    console.error('guardarTrabajador:', err);
+    showAlert('Error al guardar: ' + (err.message || err));
+  } finally {
+    btnSubmit.disabled = false;
+    btnLabel.textContent = document.getElementById('field-id').value ? 'Actualizar trabajador' : 'Guardar trabajador';
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
+   EDITAR
+═══════════════════════════════════════════════════════ */
+function editarTrabajador(id) {
+  const t = _trabajadores.find(w => w.id === id);
+  if (!t) return;
+
+  document.getElementById('field-id').value = t.id;
+  CAMPOS.forEach(c => setFieldValue(c, t[c] ?? ''));
+
+  document.getElementById('form-card-title').textContent = 'Editar trabajador — ' + (t.nombre_completo || '');
+  document.getElementById('btn-submit-label').textContent = 'Actualizar trabajador';
+  document.getElementById('btn-cancel').style.display = 'inline-flex';
+
+  document.getElementById('form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ═══════════════════════════════════════════════════════
+   ACTIVAR / INACTIVAR
+═══════════════════════════════════════════════════════ */
+async function toggleEstado(id, estadoActual) {
+  const nuevoEstado = estadoActual === 'activo' ? 'inactivo' : 'activo';
+
+  try {
+    const client = await esperarSupabase(8000);
+    if (!client) throw new Error('No se pudo conectar con Supabase.');
+
+    const { error } = await client
+      .from('rrhh_trabajadores')
+      .update({ estado: nuevoEstado, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    showAlert(`Trabajador marcado como ${nuevoEstado}.`, 'success');
+    await cargarTrabajadores();
+  } catch (err) {
+    console.error('toggleEstado:', err);
+    showAlert('Error al cambiar estado: ' + (err.message || err));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   CANCELAR EDICIÓN
+═══════════════════════════════════════════════════════ */
+document.getElementById('btn-cancel').addEventListener('click', () => {
+  resetForm();
+});
+
+/* ═══════════════════════════════════════════════════════
+   RELOAD BTN
+═══════════════════════════════════════════════════════ */
+document.getElementById('btn-reload').addEventListener('click', cargarTrabajadores);
+
+/* ═══════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════ */
+cargarTrabajadores();
+</script>
+
 </body>
 </html>
