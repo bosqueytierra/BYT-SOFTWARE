@@ -203,12 +203,12 @@
   </div>
 
   <div class="tabs-bar">
-    <button class="tab-btn active" data-tab="trabajadores">Trabajadores</button>
-    <button class="tab-btn" data-tab="horas-extras">Horas extras</button>
-    <button class="tab-btn" data-tab="viajes">Gestiones / viajes</button>
-    <button class="tab-btn" data-tab="sueldos">Hoja de sueldos</button>
-    <button class="tab-btn" data-tab="vacaciones">Vacaciones</button>
-    <button class="tab-btn" data-tab="config-legal">Configuración legal</button>
+    <button class="tab-btn active" data-tab="trabajadores" onclick="window.abrirTabRRHH('trabajadores')">Trabajadores</button>
+    <button class="tab-btn" data-tab="horas-extras" onclick="window.abrirTabRRHH('horas-extras')">Horas extras</button>
+    <button class="tab-btn" data-tab="viajes" onclick="window.abrirTabRRHH('viajes')">Gestiones / viajes</button>
+    <button class="tab-btn" data-tab="sueldos" onclick="window.abrirTabRRHH('sueldos')">Hoja de sueldos</button>
+    <button class="tab-btn" data-tab="vacaciones" onclick="window.abrirTabRRHH('vacaciones')">Vacaciones</button>
+    <button class="tab-btn" data-tab="config-legal" onclick="window.abrirTabRRHH('config-legal')">Configuración legal</button>
   </div>
 
   <!-- ════════════════════════════ TAB: Trabajadores ════════════════════════════ -->
@@ -477,17 +477,31 @@ function esperarSupabase(timeoutMs = 8000) {
 }
 
 /* ══════════════════════════════════════
-   TABS
+   TABS — onclick directo + función global
 ══════════════════════════════════════ */
+function abrirTabRRHH(tabName) {
+  console.log('[RRHH] abrirTabRRHH:', tabName);
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+  const panel = document.getElementById('tab-' + tabName);
+
+  if (btn) btn.classList.add('active');
+  if (panel) panel.classList.add('active');
+
+  if (tabName === 'horas-extras' && typeof poblarSelectorTrabajadores === 'function') {
+    poblarSelectorTrabajadores();
+  }
+}
+window.abrirTabRRHH = abrirTabRRHH;
+
 document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    const panel = document.getElementById('tab-' + btn.dataset.tab);
-    if (panel) panel.classList.add('active');
-    /* Si se activa Horas extras, poblar selector de trabajadores */
-    if (btn.dataset.tab === 'horas-extras') poblarSelectorTrabajadores();
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    abrirTabRRHH(btn.dataset.tab);
   });
 });
 
