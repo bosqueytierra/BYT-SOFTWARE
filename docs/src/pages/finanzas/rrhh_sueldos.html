@@ -308,7 +308,8 @@
     <div class="card" id="form-card">
       <div class="card-title" id="form-card-title">Nuevo trabajador</div>
 
-      <form id="trabajador-form" autocomplete="off">
+      <!-- CAMBIO 1: novalidate — sin validación nativa del navegador -->
+      <form id="trabajador-form" autocomplete="off" novalidate>
         <input type="hidden" id="field-id" />
 
         <!-- Datos personales -->
@@ -316,11 +317,12 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Nombre completo *</label>
-            <input type="text" id="field-nombre_completo" required placeholder="Juan Pérez González" />
+            <!-- CAMBIO 6: sin required — validamos manualmente -->
+            <input type="text" id="field-nombre_completo" placeholder="Juan Pérez González" />
           </div>
           <div class="form-group">
-            <label>RUT *</label>
-            <input type="text" id="field-rut" required placeholder="12.345.678-9" />
+            <label>RUT</label>
+            <input type="text" id="field-rut" placeholder="12.345.678-9" />
           </div>
           <div class="form-group">
             <label>Fecha de nacimiento</label>
@@ -360,16 +362,16 @@
         <div class="form-section-title">Datos laborales</div>
         <div class="form-grid">
           <div class="form-group">
-            <label>Cargo *</label>
-            <input type="text" id="field-cargo" required placeholder="Administrador" />
+            <label>Cargo</label>
+            <input type="text" id="field-cargo" placeholder="Administrador" />
           </div>
           <div class="form-group">
             <label>Área</label>
             <input type="text" id="field-area" placeholder="Administración" />
           </div>
           <div class="form-group">
-            <label>Fecha de ingreso *</label>
-            <input type="date" id="field-fecha_ingreso" required />
+            <label>Fecha de ingreso</label>
+            <input type="date" id="field-fecha_ingreso" />
           </div>
           <div class="form-group">
             <label>Tipo de contrato</label>
@@ -391,8 +393,8 @@
             <input type="time" id="field-hora_salida_normal" value="17:30" />
           </div>
           <div class="form-group">
-            <label>Sueldo base (CLP) *</label>
-            <input type="number" id="field-sueldo_base" required min="0" placeholder="500000" />
+            <label>Sueldo base (CLP)</label>
+            <input type="number" id="field-sueldo_base" min="0" placeholder="500000" />
           </div>
           <div class="form-group">
             <label>Estado</label>
@@ -443,13 +445,13 @@
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary" id="btn-submit">
+          <!-- CAMBIO 2: type="button" — no dispara submit -->
+          <button type="button" class="btn btn-primary" id="btn-submit">
             <span>💾</span> <span id="btn-submit-label">Guardar trabajador</span>
           </button>
           <button type="button" class="btn btn-secondary" id="btn-cancel" style="display:none;">
             Cancelar
           </button>
-          <!-- CAMBIO 11: mensaje de estado visible bajo los botones -->
           <div id="debug-guardar" style="font-size:12px;color:#64748b;margin-top:8px;width:100%;"></div>
         </div>
       </form>
@@ -559,7 +561,6 @@ function formatFechaCL(fecha) {
   return fecha;
 }
 
-/* ── helper: actualiza el mensaje de debug visible bajo el botón ── */
 function setDebug(msg) {
   const el = document.getElementById('debug-guardar');
   if (el) el.textContent = msg;
@@ -645,18 +646,9 @@ function resetForm() {
   document.getElementById('field-id').value = '';
 
   CAMPOS.forEach(c => {
-    if (c === 'jornada_semanal') {
-      setFieldValue(c, '40');
-      return;
-    }
-    if (c === 'hora_salida_normal') {
-      setFieldValue(c, '17:30');
-      return;
-    }
-    if (c === 'estado') {
-      setFieldValue(c, 'activo');
-      return;
-    }
+    if (c === 'jornada_semanal') { setFieldValue(c, '40'); return; }
+    if (c === 'hora_salida_normal') { setFieldValue(c, '17:30'); return; }
+    if (c === 'estado') { setFieldValue(c, 'activo'); return; }
     setFieldValue(c, '');
   });
 
@@ -726,15 +718,8 @@ document.addEventListener('click', (e) => {
     return;
   }
 
-  if (action === 'editar') {
-    editarTrabajador(id);
-    return;
-  }
-
-  if (action === 'toggle') {
-    toggleEstado(id, estado);
-    return;
-  }
+  if (action === 'editar') { editarTrabajador(id); return; }
+  if (action === 'toggle') { toggleEstado(id, estado); return; }
 });
 
 /* ═══════════════════════════════════════════════════════
@@ -758,7 +743,6 @@ async function cargarTrabajadores() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    /* CAMBIO 10: log resultado cargar */
     console.log('[RRHH] Resultado cargarTrabajadores:', { data, error });
 
     if (error) throw error;
@@ -773,35 +757,23 @@ async function cargarTrabajadores() {
 }
 
 /* ═══════════════════════════════════════════════════════
-   GUARDAR (crear / editar)
+   CAMBIO 4: GUARDAR — función directa, sin submit
 ═══════════════════════════════════════════════════════ */
-document.getElementById('trabajador-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  /* CAMBIO 1: log al inicio del submit */
-  console.log('[RRHH] CLICK/SUBMIT guardar trabajador recibido');
+async function guardarTrabajador() {
+  console.log('[RRHH] CLICK guardar trabajador recibido');
   setDebug('Intentando guardar…');
 
-  /* CAMBIO 2: validación con detalle en consola */
-  if (!e.target.checkValidity()) {
-    e.target.reportValidity();
+  const nombre = getFieldValue('nombre_completo');
 
-    const invalidos = [...e.target.querySelectorAll('input, select, textarea')]
-      .filter(el => !el.checkValidity())
-      .map(el => ({
-        id: el.id,
-        value: el.value,
-        error: el.validationMessage
-      }));
-
-    console.warn('[RRHH] Campos inválidos:', invalidos);
-    setDebug('Validación fallida');
-    showAlert('No se pudo guardar: hay campos obligatorios o inválidos. Revisa consola para detalle.');
+  if (!nombre) {
+    showAlert('Debes ingresar al menos el nombre completo del trabajador.');
+    setDebug('Validación fallida: falta nombre');
     return;
   }
 
   const btnLabel  = document.getElementById('btn-submit-label');
   const btnSubmit = document.getElementById('btn-submit');
+
   btnSubmit.disabled = true;
   btnLabel.textContent = 'Guardando…';
 
@@ -814,22 +786,23 @@ document.getElementById('trabajador-form').addEventListener('submit', async (e) 
     const payload = {};
     CAMPOS.forEach(c => {
       const v = getFieldValue(c);
-      if (c === 'sueldo_base' || c === 'jornada_semanal') {
-        payload[c] = v !== '' ? Number(v) : null;
+      if (c === 'sueldo_base') {
+        payload[c] = v !== '' ? Number(v) : 0;
+      } else if (c === 'jornada_semanal') {
+        payload[c] = v !== '' ? Number(v) : 40;
       } else {
         payload[c] = v !== '' ? v : null;
       }
     });
+
     payload.updated_at = new Date().toISOString();
 
-    /* CAMBIO 3: log payload antes de enviar */
     console.log('[RRHH] Payload enviado a Supabase:', payload);
     setDebug('Enviando a Supabase…');
 
     let data, error;
 
     if (id) {
-      /* CAMBIO 5: UPDATE con .select().single() */
       ({ data, error } = await client
         .from('rrhh_trabajadores')
         .update(payload)
@@ -838,7 +811,6 @@ document.getElementById('trabajador-form').addEventListener('submit', async (e) 
         .single());
     } else {
       payload.created_at = new Date().toISOString();
-      /* CAMBIO 4: INSERT con .select().single() */
       ({ data, error } = await client
         .from('rrhh_trabajadores')
         .insert(payload)
@@ -846,26 +818,23 @@ document.getElementById('trabajador-form').addEventListener('submit', async (e) 
         .single());
     }
 
-    /* CAMBIO 6: log respuesta Supabase */
     console.log('[RRHH] Respuesta Supabase guardar:', { data, error });
 
-    /* CAMBIO 7: si hay error, mostrar sin limpiar */
     if (error) {
       setDebug('Error Supabase: ' + (error.message || JSON.stringify(error)));
       showAlert('Error Supabase al guardar: ' + (error.message || JSON.stringify(error)));
       return;
     }
 
-    /* CAMBIO 8: si no hay data, avisar sin limpiar */
     if (!data) {
-      setDebug('Sin data devuelta por Supabase');
-      showAlert('Supabase no devolvió registro guardado. No se limpia el formulario.');
+      setDebug('Supabase no devolvió registro.');
+      showAlert('Supabase no devolvió registro guardado.');
       return;
     }
 
-    /* CAMBIO 9: solo si hay data y sin error */
     setDebug('Guardado confirmado');
     showAlert(id ? 'Trabajador actualizado correctamente.' : 'Trabajador creado correctamente.', 'success');
+
     await cargarTrabajadores();
     resetForm();
 
@@ -877,7 +846,10 @@ document.getElementById('trabajador-form').addEventListener('submit', async (e) 
     btnSubmit.disabled = false;
     btnLabel.textContent = document.getElementById('field-id').value ? 'Actualizar trabajador' : 'Guardar trabajador';
   }
-});
+}
+
+/* CAMBIO 5: listener directo en el botón */
+document.getElementById('btn-submit').addEventListener('click', guardarTrabajador);
 
 /* ═══════════════════════════════════════════════════════
    EDITAR
@@ -927,16 +899,14 @@ async function toggleEstado(id, estadoActual) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   CANCELAR EDICIÓN
-   — capture:true garantiza que este listener se ejecuta
-     antes que el delegado de document que usa stopPropagation
+   CANCELAR EDICIÓN — capture phase
 ═══════════════════════════════════════════════════════ */
 document.getElementById('btn-cancel').addEventListener('click', (e) => {
   e.preventDefault();
   e.stopPropagation();
   console.log('[RRHH] Cancelar edición');
   resetForm();
-}, true);  /* <-- capture phase */
+}, true);
 
 /* ═══════════════════════════════════════════════════════
    RELOAD BTN
